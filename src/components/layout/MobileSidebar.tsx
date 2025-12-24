@@ -1,0 +1,95 @@
+import { Link, useLocation } from "react-router-dom";
+import {
+  GraduationCap,
+  LayoutDashboard,
+  BookOpen,
+  Calendar,
+  FileText,
+  MessageSquare,
+  Settings,
+  LogOut,
+  X,
+  Bell,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: BookOpen, label: "My Courses", path: "/courses" },
+  { icon: Calendar, label: "Schedule", path: "/schedule" },
+  { icon: FileText, label: "Assignments", path: "/assignments" },
+  { icon: MessageSquare, label: "Messages", path: "/messages" },
+  { icon: Bell, label: "Notifications", path: "/notifications" },
+  { icon: Settings, label: "Settings", path: "/settings" },
+];
+
+interface MobileSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
+  const location = useLocation();
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40 lg:hidden"
+        onClick={onClose}
+      />
+
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 bottom-0 w-72 bg-surface border-r border-border z-50 lg:hidden animate-slide-in-right">
+        <div className="flex flex-col h-full p-4">
+          {/* Header */}
+          <div className="flex items-center justify-between px-3 mb-8">
+            <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
+              <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+                <GraduationCap className="size-5" />
+              </div>
+              <span className="text-xl font-bold tracking-tight">EduSpace</span>
+            </Link>
+            <button
+              onClick={onClose}
+              className="size-8 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex flex-col gap-1 flex-1">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={onClose}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="size-5" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Sign Out */}
+          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full">
+            <LogOut className="size-5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
