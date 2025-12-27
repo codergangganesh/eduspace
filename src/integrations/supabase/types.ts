@@ -14,16 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          advisor: string | null
+          assignment_reminders: boolean | null
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          country: string | null
+          course_announcements: boolean | null
+          created_at: string
+          credits_completed: number | null
+          credits_required: number | null
+          date_of_birth: string | null
+          department: string | null
+          email: string | null
+          email_notifications: boolean | null
+          enrollment_date: string | null
+          expected_graduation: string | null
+          full_name: string | null
+          gpa: number | null
+          grade_updates: boolean | null
+          id: string
+          language: string | null
+          phone: string | null
+          program: string | null
+          push_notifications: boolean | null
+          sms_notifications: boolean | null
+          state: string | null
+          street: string | null
+          student_id: string | null
+          theme: string | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+          verified: boolean | null
+          weekly_digest: boolean | null
+          year: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          advisor?: string | null
+          assignment_reminders?: boolean | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          country?: string | null
+          course_announcements?: boolean | null
+          created_at?: string
+          credits_completed?: number | null
+          credits_required?: number | null
+          date_of_birth?: string | null
+          department?: string | null
+          email?: string | null
+          email_notifications?: boolean | null
+          enrollment_date?: string | null
+          expected_graduation?: string | null
+          full_name?: string | null
+          gpa?: number | null
+          grade_updates?: boolean | null
+          id?: string
+          language?: string | null
+          phone?: string | null
+          program?: string | null
+          push_notifications?: boolean | null
+          sms_notifications?: boolean | null
+          state?: string | null
+          street?: string | null
+          student_id?: string | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+          verified?: boolean | null
+          weekly_digest?: boolean | null
+          year?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          advisor?: string | null
+          assignment_reminders?: boolean | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          country?: string | null
+          course_announcements?: boolean | null
+          created_at?: string
+          credits_completed?: number | null
+          credits_required?: number | null
+          date_of_birth?: string | null
+          department?: string | null
+          email?: string | null
+          email_notifications?: boolean | null
+          enrollment_date?: string | null
+          expected_graduation?: string | null
+          full_name?: string | null
+          gpa?: number | null
+          grade_updates?: boolean | null
+          id?: string
+          language?: string | null
+          phone?: string | null
+          program?: string | null
+          push_notifications?: boolean | null
+          sms_notifications?: boolean | null
+          state?: string | null
+          street?: string | null
+          student_id?: string | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+          verified?: boolean | null
+          weekly_digest?: boolean | null
+          year?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "lecturer" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +290,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "lecturer", "admin"],
+    },
   },
 } as const
