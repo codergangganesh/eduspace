@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export default function Register() {
   const navigate = useNavigate();
   const { signUp, signInWithGoogle } = useAuth();
-  const [role, setRole] = useState<AppRole>("student");
+  const [role, setRole] = useState<"student" | "lecturer">("student");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -137,7 +137,7 @@ export default function Register() {
             </div>
 
             {/* Role Switcher */}
-            <RoleSwitcher value={role} onChange={(val) => setRole(val as AppRole)} />
+            <RoleSwitcher value={role} onChange={setRole} />
 
             {/* Form */}
             <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
