@@ -2,24 +2,20 @@ import { Link, useLocation } from "react-router-dom";
 import {
   GraduationCap,
   LayoutDashboard,
-  BookOpen,
   Calendar,
   FileText,
   MessageSquare,
   Settings,
   LogOut,
   X,
-  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: BookOpen, label: "My Courses", path: "/courses" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
-  { icon: Bell, label: "Notifications", path: "/notifications" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

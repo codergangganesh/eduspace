@@ -2,17 +2,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   GraduationCap,
   LayoutDashboard,
-  BookOpen,
   Calendar,
   FileText,
   MessageSquare,
   Settings,
   LogOut,
   ChevronLeft,
-  Bell,
   User,
   Users,
-  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -20,22 +17,17 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: BookOpen, label: "My Courses", path: "/courses" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
-  { icon: Bell, label: "Notifications", path: "/notifications" },
 ];
 
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
-  { icon: BookOpen, label: "My Courses", path: "/courses" },
-  { icon: Users, label: "Students", path: "/courses" },
+  { icon: Users, label: "Students", path: "/assignments" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/assignments" },
-  { icon: TrendingUp, label: "Analytics", path: "/dashboard" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
-  { icon: Bell, label: "Notifications", path: "/notifications" },
 ];
 
 const bottomNavItems = [
