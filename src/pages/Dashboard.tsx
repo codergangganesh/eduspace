@@ -1,94 +1,27 @@
-import { BookOpen, Clock, Trophy, Target } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { CourseCard } from "@/components/dashboard/CourseCard";
-import { UpcomingTask } from "@/components/dashboard/UpcomingTask";
+import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { useAuth } from "@/contexts/AuthContext";
-
-const courses = [
-  {
-    title: "Introduction to Computer Science",
-    instructor: "Dr. Sarah Johnson",
-    progress: 75,
-    totalLessons: 24,
-    completedLessons: 18,
-    duration: "12 weeks",
-    students: 156,
-  },
-  {
-    title: "Data Structures & Algorithms",
-    instructor: "Prof. Michael Chen",
-    progress: 45,
-    totalLessons: 32,
-    completedLessons: 14,
-    duration: "16 weeks",
-    students: 89,
-  },
-  {
-    title: "Web Development Fundamentals",
-    instructor: "Emily Rodriguez",
-    progress: 90,
-    totalLessons: 20,
-    completedLessons: 18,
-    duration: "10 weeks",
-    students: 234,
-  },
-  {
-    title: "Database Management Systems",
-    instructor: "Dr. James Wilson",
-    progress: 30,
-    totalLessons: 28,
-    completedLessons: 8,
-    duration: "14 weeks",
-    students: 112,
-  },
-];
-
-const upcomingTasks = [
-  {
-    title: "Algorithm Analysis Report",
-    course: "Data Structures & Algorithms",
-    dueDate: "Dec 26, 2024",
-    dueTime: "11:59 PM",
-    type: "assignment" as const,
-    isUrgent: true,
-  },
-  {
-    title: "Database Design Project",
-    course: "Database Management Systems",
-    dueDate: "Dec 28, 2024",
-    dueTime: "5:00 PM",
-    type: "project" as const,
-  },
-  {
-    title: "Midterm Examination",
-    course: "Introduction to Computer Science",
-    dueDate: "Jan 5, 2025",
-    dueTime: "10:00 AM",
-    type: "exam" as const,
-  },
-  {
-    title: "JavaScript Quiz",
-    course: "Web Development Fundamentals",
-    dueDate: "Jan 8, 2025",
-    dueTime: "3:00 PM",
-    type: "quiz" as const,
-  },
-];
+import { useAssignments } from "@/hooks/useAssignments";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const { profile } = useAuth();
-  
+  const { stats, loading, error } = useAssignments();
+  const navigate = useNavigate();
+
   // Get first name for greeting
   const firstName = profile?.full_name?.split(" ")[0] || "Student";
-  
-  // Dynamic stats based on profile data
-  const stats = [
-    { title: "Enrolled Courses", value: 6, icon: BookOpen, trend: { value: 2, isPositive: true } },
-    { title: "Hours Learned", value: "48.5", subtitle: "This month", icon: Clock },
-    { title: "Completed", value: profile?.credits_completed || 12, subtitle: "Credits", icon: Trophy },
-    { title: "Current GPA", value: profile?.gpa?.toFixed(1) || "3.7", subtitle: `${profile?.credits_completed || 0}/${profile?.credits_required || 120} credits`, icon: Target },
-  ];
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -99,48 +32,52 @@ export default function Dashboard() {
             Welcome back, {firstName}! 👋
           </h1>
           <p className="text-muted-foreground">
-            Here's what's happening with your courses today.
+            Here's an overview of your assignments and schedule.
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Assignment Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <StatsCard key={stat.title} {...stat} />
-          ))}
+          <AssignmentCard
+            title="Assignments Assigned"
+            value={stats.total}
+            icon={FileText}
+            onClick={() => navigate("/assignments")}
+            subtitle="Total assignments"
+          />
+
+          <AssignmentCard
+            title="Completed Assignments"
+            value={stats.completed}
+            icon={CheckCircle}
+            onClick={() => navigate("/assignments?filter=completed")}
+            variant="success"
+            subtitle="Well done!"
+          />
+
+          <AssignmentCard
+            title="Pending Assignments"
+            value={stats.pending}
+            icon={AlertCircle}
+            onClick={() => navigate("/assignments?filter=pending")}
+            variant="danger"
+            subtitle="Needs attention"
+          />
+
+          <AssignmentCard
+            title="Upcoming Schedule"
+            value="View"
+            icon={Calendar}
+            onClick={() => navigate("/schedule")}
+            subtitle="Check your classes"
+          />
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Courses Section */}
-          <div className="xl:col-span-2 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">My Courses</h2>
-              <a href="/courses" className="text-sm text-primary hover:underline font-medium">
-                View All
-              </a>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {courses.map((course) => (
-                <CourseCard key={course.title} {...course} />
-              ))}
-            </div>
-          </div>
-
-          {/* Upcoming Tasks Section */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Upcoming Tasks</h2>
-              <a href="/assignments" className="text-sm text-primary hover:underline font-medium">
-                View All
-              </a>
-            </div>
-            <div className="flex flex-col gap-3">
-              {upcomingTasks.map((task) => (
-                <UpcomingTask key={task.title} {...task} />
-              ))}
-            </div>
-          </div>
+        {/* Quick Actions Info */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">
+            💡 <strong>Tip:</strong> Click on any card above to view more details and manage your assignments.
+          </p>
         </div>
       </div>
     </DashboardLayout>

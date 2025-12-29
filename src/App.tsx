@@ -12,7 +12,6 @@ import ForgotPassword from "./pages/ForgotPassword";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import LecturerDashboard from "./pages/LecturerDashboard";
-import Courses from "./pages/Courses";
 import Assignments from "./pages/Assignments";
 import AssignmentSubmit from "./pages/AssignmentSubmit";
 import Profile from "./pages/Profile";
@@ -38,7 +37,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            
+
             {/* Protected Student Routes */}
             <Route
               path="/dashboard"
@@ -48,7 +47,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
+
             {/* Protected Lecturer Routes */}
             <Route
               path="/lecturer-dashboard"
@@ -58,16 +57,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
+
             {/* Protected Common Routes */}
-            <Route
-              path="/courses"
-              element={
-                <ProtectedRoute>
-                  <Courses />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/assignments"
               element={
@@ -124,7 +115,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

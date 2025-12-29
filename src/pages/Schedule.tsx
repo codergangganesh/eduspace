@@ -20,9 +20,11 @@ import {
   CalendarDays,
   Grid3X3,
   List,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ClassEvent {
   id: string;
@@ -165,10 +167,14 @@ const timeSlots = [
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export default function Schedule() {
+  const { role } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
+  // Default to week view for all users
   const [viewMode, setViewMode] = useState<"week" | "month" | "list">("week");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+
+  const isStudent = role === "student";
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
 
@@ -223,6 +229,7 @@ export default function Schedule() {
             <p className="text-muted-foreground">Manage your class timetable and events</p>
           </div>
           <div className="flex items-center gap-2">
+            {/* View mode toggle */}
             <div className="flex items-center rounded-lg border border-border bg-surface p-1">
               <Button
                 variant={viewMode === "week" ? "secondary" : "ghost"}
@@ -232,14 +239,7 @@ export default function Schedule() {
                 <Grid3X3 className="size-4 mr-1" />
                 Week
               </Button>
-              <Button
-                variant={viewMode === "month" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("month")}
-              >
-                <CalendarDays className="size-4 mr-1" />
-                Month
-              </Button>
+
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="sm"
@@ -249,67 +249,71 @@ export default function Schedule() {
                 List
               </Button>
             </div>
-            <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="size-4 mr-2" />
-                  Add Event
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Event</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Event Title</Label>
-                    <Input id="title" placeholder="Enter event title" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="date">Date</Label>
-                      <Input id="date" type="date" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Type</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="lecture">Lecture</SelectItem>
-                          <SelectItem value="lab">Lab</SelectItem>
-                          <SelectItem value="tutorial">Tutorial</SelectItem>
-                          <SelectItem value="exam">Exam</SelectItem>
-                          <SelectItem value="event">Event</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="startTime">Start Time</Label>
-                      <Input id="startTime" type="time" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="endTime">End Time</Label>
-                      <Input id="endTime" type="time" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input id="location" placeholder="Enter location" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea id="notes" placeholder="Add any notes..." />
-                  </div>
-                  <Button className="w-full" onClick={() => setIsAddEventOpen(false)}>
+
+            {/* Add Event button - hidden for students */}
+            {!isStudent && (
+              <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="size-4 mr-2" />
                     Add Event
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Event</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Event Title</Label>
+                      <Input id="title" placeholder="Enter event title" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date">Date</Label>
+                        <Input id="date" type="date" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="type">Type</Label>
+                        <Select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="lecture">Lecture</SelectItem>
+                            <SelectItem value="lab">Lab</SelectItem>
+                            <SelectItem value="tutorial">Tutorial</SelectItem>
+                            <SelectItem value="exam">Exam</SelectItem>
+                            <SelectItem value="event">Event</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="startTime">Start Time</Label>
+                        <Input id="startTime" type="time" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="endTime">End Time</Label>
+                        <Input id="endTime" type="time" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input id="location" placeholder="Enter location" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea id="notes" placeholder="Add any notes..." />
+                    </div>
+                    <Button className="w-full" onClick={() => setIsAddEventOpen(false)}>
+                      Add Event
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
 
@@ -531,33 +535,37 @@ export default function Schedule() {
               </CardContent>
             </Card>
 
-            {/* Quick Stats */}
+            {/* Weekly Summary */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">This Week</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Weekly Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <BookOpen className="size-4" />
-                      Classes
-                    </span>
-                    <span className="font-medium">8</span>
+                <div className="space-y-4">
+                  {/* Classes */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40">
+                        <BookOpen className="size-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        Classes This Week
+                      </span>
+                    </div>
+                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">8</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="size-4" />
-                      Total Hours
-                    </span>
-                    <span className="font-medium">14h 30m</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="size-4" />
-                      Office Hours
-                    </span>
-                    <span className="font-medium">2</span>
+
+                  {/* Assignments Due */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/40">
+                        <FileText className="size-5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                        Assignments Due
+                      </span>
+                    </div>
+                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">3</span>
                   </div>
                 </div>
               </CardContent>
