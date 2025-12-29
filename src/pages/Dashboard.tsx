@@ -3,13 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { CourseCard } from "@/components/dashboard/CourseCard";
 import { UpcomingTask } from "@/components/dashboard/UpcomingTask";
-
-const stats = [
-  { title: "Enrolled Courses", value: 6, icon: BookOpen, trend: { value: 2, isPositive: true } },
-  { title: "Hours Learned", value: "48.5", subtitle: "This month", icon: Clock },
-  { title: "Completed", value: 12, subtitle: "Assignments", icon: Trophy },
-  { title: "Average Grade", value: "A-", subtitle: "GPA: 3.7", icon: Target },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 const courses = [
   {
@@ -83,13 +77,26 @@ const upcomingTasks = [
 ];
 
 export default function Dashboard() {
+  const { profile } = useAuth();
+  
+  // Get first name for greeting
+  const firstName = profile?.full_name?.split(" ")[0] || "Student";
+  
+  // Dynamic stats based on profile data
+  const stats = [
+    { title: "Enrolled Courses", value: 6, icon: BookOpen, trend: { value: 2, isPositive: true } },
+    { title: "Hours Learned", value: "48.5", subtitle: "This month", icon: Clock },
+    { title: "Completed", value: profile?.credits_completed || 12, subtitle: "Credits", icon: Trophy },
+    { title: "Current GPA", value: profile?.gpa?.toFixed(1) || "3.7", subtitle: `${profile?.credits_completed || 0}/${profile?.credits_required || 120} credits`, icon: Target },
+  ];
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
         {/* Welcome Section */}
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            Welcome back, John! 👋
+            Welcome back, {firstName}! 👋
           </h1>
           <p className="text-muted-foreground">
             Here's what's happening with your courses today.

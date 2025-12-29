@@ -65,7 +65,7 @@ export default function Register() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle(role);
     
     if (!result.success) {
       toast.error(result.error || "Google sign in failed");
@@ -95,6 +95,12 @@ export default function Register() {
 
           {/* Registration Form Card */}
           <div className="bg-surface rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:shadow-none border border-border p-6 sm:p-8 flex flex-col gap-6 animate-fade-in">
+            {/* Role Switcher - Moved to top */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">I am a</label>
+              <RoleSwitcher value={role} onChange={setRole} />
+            </div>
+
             {/* Google Sign In */}
             <Button
               variant="outline"
@@ -124,7 +130,7 @@ export default function Register() {
                   />
                 </svg>
               )}
-              Continue with Google
+              Continue with Google as {role === "lecturer" ? "Lecturer" : "Student"}
             </Button>
 
             {/* Divider */}

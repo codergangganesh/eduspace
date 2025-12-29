@@ -1,11 +1,20 @@
 import { Bell, Search, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { UserDropdown } from "./UserDropdown";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
 }
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+  const { profile } = useAuth();
+  
+  // Mock notification count - in a real app this would come from the database
+  const notificationCount = 3;
+
   return (
     <header className="h-16 border-b border-border bg-surface px-4 lg:px-6 flex items-center justify-between gap-4 sticky top-0 z-10">
       {/* Mobile Menu Button */}
@@ -31,21 +40,23 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       {/* Right Section */}
       <div className="flex items-center gap-3">
         {/* Notifications */}
-        <button className="size-10 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+        <Link 
+          to="/notifications"
+          className="size-10 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative"
+        >
           <Bell className="size-5" />
-          <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full" />
-        </button>
+          {notificationCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-1 -right-1 size-5 flex items-center justify-center p-0 text-xs"
+            >
+              {notificationCount > 9 ? "9+" : notificationCount}
+            </Badge>
+          )}
+        </Link>
 
-        {/* User Avatar */}
-        <button className="flex items-center gap-3 pl-3 pr-1 py-1 rounded-lg hover:bg-secondary transition-colors">
-          <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium">John Doe</p>
-            <p className="text-xs text-muted-foreground">Student</p>
-          </div>
-          <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-            JD
-          </div>
-        </button>
+        {/* User Dropdown */}
+        <UserDropdown />
       </div>
     </header>
   );
