@@ -24,84 +24,8 @@ interface Assignment {
   type: "assignment" | "quiz" | "project" | "exam";
 }
 
-const assignments: Assignment[] = [
-  {
-    id: "1",
-    title: "Algorithm Analysis Report",
-    course: "Data Structures & Algorithms",
-    courseCode: "CS201",
-    dueDate: "Dec 26, 2024",
-    dueTime: "11:59 PM",
-    status: "pending",
-    maxPoints: 100,
-    description: "Analyze the time and space complexity of given algorithms.",
-    type: "assignment",
-  },
-  {
-    id: "2",
-    title: "Database Design Project",
-    course: "Database Management Systems",
-    courseCode: "CS301",
-    dueDate: "Dec 28, 2024",
-    dueTime: "5:00 PM",
-    status: "pending",
-    maxPoints: 150,
-    description: "Design and implement a database schema for an e-commerce system.",
-    type: "project",
-  },
-  {
-    id: "3",
-    title: "Programming Assignment 3",
-    course: "Introduction to Computer Science",
-    courseCode: "CS101",
-    dueDate: "Dec 20, 2024",
-    dueTime: "11:59 PM",
-    status: "submitted",
-    maxPoints: 50,
-    description: "Implement a linked list data structure with basic operations.",
-    type: "assignment",
-  },
-  {
-    id: "4",
-    title: "JavaScript Quiz",
-    course: "Web Development Fundamentals",
-    courseCode: "WEB101",
-    dueDate: "Dec 18, 2024",
-    dueTime: "3:00 PM",
-    status: "graded",
-    grade: "A",
-    maxPoints: 25,
-    earnedPoints: 23,
-    description: "Quiz covering JavaScript fundamentals and DOM manipulation.",
-    type: "quiz",
-  },
-  {
-    id: "5",
-    title: "Midterm Examination",
-    course: "Introduction to Computer Science",
-    courseCode: "CS101",
-    dueDate: "Dec 15, 2024",
-    dueTime: "10:00 AM",
-    status: "graded",
-    grade: "B+",
-    maxPoints: 100,
-    earnedPoints: 87,
-    description: "Comprehensive exam covering first half of the semester.",
-    type: "exam",
-  },
-  {
-    id: "6",
-    title: "SQL Practice Assignment",
-    course: "Database Management Systems",
-    courseCode: "CS301",
-    dueDate: "Dec 10, 2024",
-    dueTime: "11:59 PM",
-    status: "overdue",
-    maxPoints: 40,
-    description: "Practice SQL queries with complex joins and subqueries.",
-    type: "assignment",
-  },
-];
+// Assignments will be fetched from Supabase
+const assignments: Assignment[] = [];
 
 const statusConfig = {
   pending: {

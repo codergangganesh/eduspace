@@ -25,14 +25,15 @@ import {
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSchedule } from "@/hooks/useSchedule";
 
 interface ClassEvent {
   id: string;
   title: string;
-  type: "lecture" | "lab" | "tutorial" | "exam" | "event";
+  type: "lecture" | "lab" | "tutorial" | "exam";
   startTime: string;
   endTime: string;
-  location: string;
+  location?: string;
   instructor?: string;
   color: string;
   dayOfWeek: number;
@@ -42,122 +43,22 @@ interface CalendarEvent {
   id: string;
   title: string;
   date: Date;
-  type: "assignment" | "exam" | "event" | "holiday";
+  type: "assignment" | "exam" | "holiday";
   color: string;
 }
 
-const weeklySchedule: ClassEvent[] = [
-  {
-    id: "1",
-    title: "CS101 - Introduction to Algorithms",
-    type: "lecture",
-    startTime: "09:00",
-    endTime: "10:30",
-    location: "Room 201, Engineering Building",
-    instructor: "Dr. Sarah Smith",
-    color: "bg-blue-500",
-    dayOfWeek: 1,
-  },
-  {
-    id: "2",
-    title: "MATH301 - Linear Algebra",
-    type: "lecture",
-    startTime: "11:00",
-    endTime: "12:30",
-    location: "Room 105, Math Building",
-    instructor: "Prof. Michael Chen",
-    color: "bg-purple-500",
-    dayOfWeek: 1,
-  },
-  {
-    id: "3",
-    title: "CS101 - Lab Session",
-    type: "lab",
-    startTime: "14:00",
-    endTime: "16:00",
-    location: "Computer Lab 3",
-    instructor: "TA Alex Johnson",
-    color: "bg-green-500",
-    dayOfWeek: 2,
-  },
-  {
-    id: "4",
-    title: "ENG202 - Literature Analysis",
-    type: "lecture",
-    startTime: "10:00",
-    endTime: "11:30",
-    location: "Room 302, Humanities Building",
-    instructor: "Dr. Emily Brown",
-    color: "bg-pink-500",
-    dayOfWeek: 2,
-  },
-  {
-    id: "5",
-    title: "MATH301 - Tutorial",
-    type: "tutorial",
-    startTime: "13:00",
-    endTime: "14:00",
-    location: "Room 108, Math Building",
-    color: "bg-purple-400",
-    dayOfWeek: 3,
-  },
-  {
-    id: "6",
-    title: "CS101 - Introduction to Algorithms",
-    type: "lecture",
-    startTime: "09:00",
-    endTime: "10:30",
-    location: "Room 201, Engineering Building",
-    instructor: "Dr. Sarah Smith",
-    color: "bg-blue-500",
-    dayOfWeek: 3,
-  },
-  {
-    id: "7",
-    title: "Physics 201",
-    type: "lecture",
-    startTime: "14:00",
-    endTime: "15:30",
-    location: "Room 401, Science Building",
-    instructor: "Prof. David Lee",
-    color: "bg-orange-500",
-    dayOfWeek: 4,
-  },
-  {
-    id: "8",
-    title: "ENG202 - Discussion Group",
-    type: "tutorial",
-    startTime: "11:00",
-    endTime: "12:00",
-    location: "Room 305, Humanities Building",
-    color: "bg-pink-400",
-    dayOfWeek: 5,
-  },
-];
-
-const upcomingEvents: CalendarEvent[] = [
-  {
-    id: "e1",
-    title: "CS101 Midterm Exam",
-    date: new Date(2024, 11, 15),
-    type: "exam",
-    color: "bg-red-500",
-  },
-  {
-    id: "e2",
-    title: "Project Proposal Due",
-    date: new Date(2024, 11, 20),
-    type: "assignment",
-    color: "bg-yellow-500",
-  },
-  {
-    id: "e3",
-    title: "Winter Break Begins",
-    date: new Date(2024, 11, 23),
-    type: "holiday",
-    color: "bg-green-500",
-  },
-];
+// Convert Supabase schedule to ClassEvent format
+const convertToClassEvent = (schedule: any): ClassEvent => ({
+  id: schedule.id,
+  title: schedule.title,
+  type: schedule.type,
+  startTime: schedule.start_time,
+  endTime: schedule.end_time,
+  location: schedule.location || undefined,
+  instructor: schedule.instructor || undefined,
+  color: schedule.color || "bg-blue-500",
+  dayOfWeek: schedule.day_of_week,
+});
 
 const timeSlots = [
   "08:00", "09:00", "10:00", "11:00", "12:00",
@@ -168,6 +69,7 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export default function Schedule() {
   const { role } = useAuth();
+  const { schedules, loading } = useSchedule();
   const [currentDate, setCurrentDate] = useState(new Date());
   // Default to week view for all users
   const [viewMode, setViewMode] = useState<"week" | "month" | "list">("week");
@@ -175,6 +77,10 @@ export default function Schedule() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
   const isStudent = role === "student";
+
+  // Convert Supabase schedules to ClassEvent format
+  const weeklySchedule: ClassEvent[] = schedules.map(convertToClassEvent);
+  const upcomingEvents: CalendarEvent[] = []; // Can be populated from assignments/exams
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
 
