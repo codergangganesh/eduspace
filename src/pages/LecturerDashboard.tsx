@@ -3,13 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-
-const stats = [
-  { title: "Active Courses", value: 4, icon: BookOpen, trend: { value: 1, isPositive: true } },
-  { title: "Total Students", value: 342, subtitle: "Across all courses", icon: Users },
-  { title: "Pending Reviews", value: 28, subtitle: "Assignments", icon: FileText },
-  { title: "Avg. Performance", value: "78%", subtitle: "Class average", icon: TrendingUp },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 const courses = [
   {
@@ -108,13 +102,28 @@ const upcomingClasses = [
 ];
 
 export default function LecturerDashboard() {
+  const { profile } = useAuth();
+  
+  // Get display name for greeting
+  const displayName = profile?.full_name || "Professor";
+  const title = displayName.startsWith("Dr.") || displayName.startsWith("Prof.") 
+    ? displayName 
+    : `Dr. ${displayName.split(" ").pop()}`;
+
+  const stats = [
+    { title: "Active Courses", value: 4, icon: BookOpen, trend: { value: 1, isPositive: true } },
+    { title: "Total Students", value: 342, subtitle: "Across all courses", icon: Users },
+    { title: "Pending Reviews", value: 28, subtitle: "Assignments", icon: FileText },
+    { title: "Avg. Performance", value: "78%", subtitle: "Class average", icon: TrendingUp },
+  ];
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
         {/* Welcome Section */}
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            Welcome back, Dr. Johnson! 👋
+            Welcome back, {title}! 👋
           </h1>
           <p className="text-muted-foreground">
             Here's an overview of your courses and student activity.

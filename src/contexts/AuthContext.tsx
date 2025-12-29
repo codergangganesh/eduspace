@@ -52,7 +52,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ success: boolean; error?: string }>;
-  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ success: boolean; error?: string }>;
   refreshProfile: () => Promise<void>;
@@ -98,7 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     if (user) {
       const profileData = await fetchProfile(user.id);
+      const userRole = await fetchRole(user.id);
       setProfile(profileData);
+      setRole(userRole);
     }
   };
 
@@ -176,15 +178,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (selectedRole: AppRole) => {
+    // Store the selected role in localStorage to use after OAuth callback
+    localStorage.setItem("pendingRole", selectedRole);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
 
     if (error) {
+      localStorage.removeItem("pendingRole");
       return { success: false, error: error.message };
     }
 
