@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { UserDropdown } from "./UserDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -11,9 +12,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const { profile } = useAuth();
-  
-  // Mock notification count - in a real app this would come from the database
-  const notificationCount = 3;
+  const { unreadCount } = useNotifications();
 
   return (
     <header className="h-16 border-b border-border bg-surface px-4 lg:px-6 flex items-center justify-between gap-4 sticky top-0 z-10">
@@ -40,17 +39,17 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       {/* Right Section */}
       <div className="flex items-center gap-3">
         {/* Notifications */}
-        <Link 
+        <Link
           to="/notifications"
           className="size-10 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative"
         >
           <Bell className="size-5" />
-          {notificationCount > 0 && (
-            <Badge 
-              variant="destructive" 
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 size-5 flex items-center justify-center p-0 text-xs"
             >
-              {notificationCount > 9 ? "9+" : notificationCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
         </Link>

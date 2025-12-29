@@ -167,6 +167,162 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          attachment_name: string | null
+          attachment_url: string | null
+          attachment_size: string | null
+          attachment_type: string | null
+          is_read: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          attachment_name?: string | null
+          attachment_url?: string | null
+          attachment_size?: string | null
+          attachment_type?: string | null
+          is_read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string
+          receiver_id?: string
+          content?: string
+          attachment_name?: string | null
+          attachment_url?: string | null
+          attachment_size?: string | null
+          attachment_type?: string | null
+          is_read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          id: string
+          participant_1: string
+          participant_2: string
+          last_message: string | null
+          last_message_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          participant_1: string
+          participant_2: string
+          last_message?: string | null
+          last_message_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          participant_1?: string
+          participant_2?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          message: string
+          type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement'
+          related_id: string | null
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          message: string
+          type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement'
+          related_id?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          message?: string
+          type?: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement'
+          related_id?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          id: string
+          title: string
+          course_code: string | null
+          type: 'lecture' | 'lab' | 'tutorial' | 'exam'
+          start_time: string
+          end_time: string
+          day_of_week: number
+          location: string | null
+          instructor: string | null
+          color: string | null
+          student_id: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          course_code?: string | null
+          type: 'lecture' | 'lab' | 'tutorial' | 'exam'
+          start_time: string
+          end_time: string
+          day_of_week: number
+          location?: string | null
+          instructor?: string | null
+          color?: string | null
+          student_id: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          course_code?: string | null
+          type?: 'lecture' | 'lab' | 'tutorial' | 'exam'
+          start_time?: string
+          end_time?: string
+          day_of_week?: number
+          location?: string | null
+          instructor?: string | null
+          color?: string | null
+          student_id?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

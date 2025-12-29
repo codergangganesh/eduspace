@@ -17,6 +17,7 @@ import {
   Check,
   Settings,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -25,92 +26,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useNotifications } from "@/hooks/useNotifications";
 
-interface Notification {
-  id: string;
-  type: "assignment" | "course" | "message" | "announcement" | "grade" | "reminder";
-  title: string;
-  description: string;
-  timestamp: string;
-  isRead: boolean;
-  actionUrl?: string;
-  priority?: "high" | "medium" | "low";
-}
+// All notification data now comes from Supabase via useNotifications hook
 
-const initialNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "assignment",
-    title: "Assignment Due Soon",
-    description: "Algorithm Analysis Report is due in 24 hours. Make sure to submit before the deadline.",
-    timestamp: "10 minutes ago",
-    isRead: false,
-    actionUrl: "/assignments/1/submit",
-    priority: "high",
-  },
-  {
-    id: "2",
-    type: "grade",
-    title: "New Grade Posted",
-    description: "Your grade for JavaScript Quiz has been posted. You earned 23/25 points (A).",
-    timestamp: "2 hours ago",
-    isRead: false,
-    actionUrl: "/assignments",
-  },
-  {
-    id: "3",
-    type: "message",
-    title: "New Message from Dr. Sarah Smith",
-    description: "Please review the attached assignment draft guidelines...",
-    timestamp: "3 hours ago",
-    isRead: false,
-    actionUrl: "/messages",
-  },
-  {
-    id: "4",
-    type: "course",
-    title: "New Course Material Available",
-    description: "Week 12 lecture slides have been uploaded for CS101 - Introduction to Computer Science.",
-    timestamp: "5 hours ago",
-    isRead: true,
-    actionUrl: "/courses",
-  },
-  {
-    id: "5",
-    type: "announcement",
-    title: "Campus Holiday Schedule",
-    description: "The campus will be closed for Winter Break from December 23rd to January 2nd.",
-    timestamp: "Yesterday",
-    isRead: true,
-  },
-  {
-    id: "6",
-    type: "reminder",
-    title: "Upcoming Class Reminder",
-    description: "CS201 - Data Structures & Algorithms starts in 1 hour at Room 301.",
-    timestamp: "Yesterday",
-    isRead: true,
-    actionUrl: "/schedule",
-  },
-  {
-    id: "7",
-    type: "assignment",
-    title: "Assignment Submitted Successfully",
-    description: "Your submission for Programming Assignment 3 has been received.",
-    timestamp: "2 days ago",
-    isRead: true,
-  },
-  {
-    id: "8",
-    type: "course",
-    title: "Course Enrollment Confirmed",
-    description: "You have been successfully enrolled in MATH301 - Linear Algebra for Spring 2025.",
-    timestamp: "3 days ago",
-    isRead: true,
-  },
-];
-
-const getNotificationIcon = (type: Notification["type"]) => {
+const getNotificationIcon = (type: string) => {
   switch (type) {
     case "assignment":
       return FileText;
@@ -122,14 +42,14 @@ const getNotificationIcon = (type: Notification["type"]) => {
       return Bell;
     case "grade":
       return CheckCircle;
-    case "reminder":
+    case "schedule":
       return Calendar;
     default:
       return Info;
   }
 };
 
-const getNotificationColor = (type: Notification["type"]) => {
+const getNotificationColor = (type: string) => {
   switch (type) {
     case "assignment":
       return "bg-blue-500";
@@ -141,7 +61,7 @@ const getNotificationColor = (type: Notification["type"]) => {
       return "bg-orange-500";
     case "grade":
       return "bg-emerald-500";
-    case "reminder":
+    case "schedule":
       return "bg-pink-500";
     default:
       return "bg-gray-500";
@@ -149,34 +69,24 @@ const getNotificationColor = (type: Notification["type"]) => {
 };
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
   const [activeTab, setActiveTab] = useState("all");
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const filteredNotifications = notifications.filter((notification) => {
     if (activeTab === "all") return true;
-    if (activeTab === "unread") return !notification.isRead;
+    if (activeTab === "unread") return !notification.is_read;
     return notification.type === activeTab;
   });
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
     );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
+  }
 
   return (
     <DashboardLayout>
@@ -206,7 +116,7 @@ export default function Notifications() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={clearAll}>
+                <DropdownMenuItem disabled>
                   <Trash2 className="size-4 mr-2" />
                   Clear all notifications
                 </DropdownMenuItem>
@@ -259,7 +169,7 @@ export default function Notifications() {
                         key={notification.id}
                         className={cn(
                           "flex items-start gap-4 p-4 rounded-lg border transition-all hover:bg-secondary/50 cursor-pointer group",
-                          notification.isRead
+                          notification.is_read
                             ? "bg-surface border-border"
                             : "bg-primary/5 border-primary/20"
                         )}
@@ -283,25 +193,20 @@ export default function Notifications() {
                                 <h4
                                   className={cn(
                                     "font-medium",
-                                    !notification.isRead && "text-foreground"
+                                    !notification.is_read && "text-foreground"
                                   )}
                                 >
                                   {notification.title}
                                 </h4>
-                                {notification.priority === "high" && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    Urgent
-                                  </Badge>
-                                )}
-                                {!notification.isRead && (
+                                {!notification.is_read && (
                                   <span className="size-2 rounded-full bg-primary shrink-0" />
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {notification.description}
+                                {notification.message}
                               </p>
                               <p className="text-xs text-muted-foreground mt-2">
-                                {notification.timestamp}
+                                {new Date(notification.created_at).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -309,7 +214,7 @@ export default function Notifications() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {!notification.isRead && (
+                          {!notification.is_read && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -322,17 +227,6 @@ export default function Notifications() {
                               <Check className="size-4" />
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
                         </div>
                       </div>
                     );
