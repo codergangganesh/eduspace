@@ -1,20 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, AppRole } from "@/contexts/AuthContext";
+import { RoleSwitcher } from "./RoleSwitcher";
 import { toast } from "sonner";
 
 export function LoginForm() {
   const navigate = useNavigate();
-  const { signIn, signInWithGoogle, role } = useAuth();
+  const { signIn, signInWithGoogle, isAuthenticated, role } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState<"student" | "lecturer">("student");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && role) {
+      navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,20 +39,16 @@ export function LoginForm() {
 
     if (result.success) {
       toast.success("Welcome back!");
-      // Navigate based on role after a brief delay to let auth state update
-      setTimeout(() => {
-        navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard");
-      }, 100);
+      // Navigation will be handled by the useEffect above when auth state updates
     } else {
       toast.error(result.error || "Login failed");
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle(selectedRole as AppRole);
     
     if (!result.success) {
       toast.error(result.error || "Google sign in failed");
@@ -54,6 +59,12 @@ export function LoginForm() {
 
   return (
     <div className="bg-surface rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:shadow-none border border-border p-6 sm:p-8 flex flex-col gap-6 animate-fade-in">
+      {/* Role Selector */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">I am a</label>
+        <RoleSwitcher value={selectedRole} onChange={setSelectedRole} />
+      </div>
+
       {/* Google Sign In */}
       <Button
         variant="outline"
@@ -83,7 +94,7 @@ export function LoginForm() {
             />
           </svg>
         )}
-        Continue with Google
+        Continue with Google as {selectedRole === "lecturer" ? "Lecturer" : "Student"}
       </Button>
 
       {/* Divider */}
