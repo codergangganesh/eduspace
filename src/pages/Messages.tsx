@@ -237,7 +237,7 @@ export default function Messages() {
     sender: msg.sender_name || 'Unknown',
     attachment: msg.attachment_name ? {
       name: msg.attachment_name,
-      size: msg.attachment_size || '',
+      size: '',
       type: msg.attachment_type || '',
       url: msg.attachment_url || ''
     } : undefined,

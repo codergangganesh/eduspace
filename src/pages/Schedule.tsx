@@ -48,24 +48,14 @@ interface CalendarEvent {
 }
 
 // Convert Supabase schedule to ClassEvent format
-const convertToClassEvent = (schedule: {
-  id: string;
-  title: string;
-  type: 'lecture' | 'lab' | 'tutorial' | 'exam';
-  start_time: string;
-  end_time: string;
-  location: string | null;
-  instructor: string | null;
-  color: string | null;
-  day_of_week: number;
-}): ClassEvent => ({
+const convertToClassEvent = (schedule: any): ClassEvent => ({
   id: schedule.id,
   title: schedule.title,
-  type: schedule.type,
+  type: schedule.type as ClassEvent['type'],
   startTime: schedule.start_time,
   endTime: schedule.end_time,
   location: schedule.location || undefined,
-  instructor: schedule.instructor || undefined,
+  instructor: schedule.course_title || undefined,
   color: schedule.color || "bg-blue-500",
   dayOfWeek: schedule.day_of_week,
 });

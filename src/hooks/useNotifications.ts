@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement' | 'general';
+
 interface Notification {
     id: string;
     user_id: string;
     title: string;
     message: string;
-    type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement';
+    type: NotificationType;
     related_id: string | null;
     is_read: boolean;
     created_at: string;
@@ -38,8 +40,12 @@ export function useNotifications() {
                     console.warn('Error fetching notifications:', fetchError);
                     setNotifications([]);
                 } else {
-                    setNotifications(data || []);
-                    setUnreadCount((data || []).filter(n => !n.is_read).length);
+                    const typedData = (data || []).map(n => ({
+                        ...n,
+                        type: n.type as NotificationType,
+                    }));
+                    setNotifications(typedData);
+                    setUnreadCount(typedData.filter(n => !n.is_read).length);
                 }
             } catch (err) {
                 console.error('Error fetching notifications:', err);
