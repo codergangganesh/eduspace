@@ -1,0 +1,18 @@
+{
+    "title": "Mensajes",
+    "directMessages": "Mensajes directos",
+    "searchConversations": "Buscar conversaciones...",
+    "noConversations": "Aún no hay conversaciones",
+    "selectConversation": "Seleccionar una conversación",
+    "selectConversationDescription": "Elige una conversación de la barra lateral para comenzar a enviar mensajes",
+    "typeMessage": "Escribe un mensaje...",
+    "sendMessage": "Enviar",
+    "deleteMessage": "Eliminar mensaje",
+    "deleteMessageConfirm": "Este mensaje se eliminará permanentemente. Esta acción no se puede deshacer.",
+    "messageDeleted": "Mensaje eliminado",
+    "failedToDelete": "Error al eliminar el mensaje",
+    "yesterday": "Ayer",
+    "today": "Hoy",
+    "online": "En línea",
+    "offline": "Desconectado"
+}

@@ -1,8 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Bell,
@@ -18,6 +25,7 @@ import {
   Settings,
   MoreHorizontal,
   Loader2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +35,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotifications } from "@/hooks/useNotifications";
+import { toast } from "sonner";
+
+interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement';
+  related_id: string | null;
+  is_read: boolean;
+  created_at: string;
+}
 
 // All notification data now comes from Supabase via useNotifications hook
 
@@ -69,8 +89,17 @@ const getNotificationColor = (type: string) => {
 };
 
 export default function Notifications() {
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+  const navigate = useNavigate();
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const handleClearAll = async () => {
+    await clearAllNotifications();
+    setShowClearConfirm(false);
+    toast.success("All notifications cleared");
+  };
 
   const filteredNotifications = notifications.filter((notification) => {
     if (activeTab === "all") return true;
@@ -116,11 +145,14 @@ export default function Notifications() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>
+                <DropdownMenuItem
+                  onClick={() => setShowClearConfirm(true)}
+                  disabled={notifications.length === 0}
+                >
                   <Trash2 className="size-4 mr-2" />
                   Clear all notifications
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile?tab=notifications')}>
                   <Settings className="size-4 mr-2" />
                   Notification settings
                 </DropdownMenuItem>
@@ -173,7 +205,12 @@ export default function Notifications() {
                             ? "bg-surface border-border"
                             : "bg-primary/5 border-primary/20"
                         )}
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => {
+                          setSelectedNotification(notification);
+                          if (!notification.is_read) {
+                            markAsRead(notification.id);
+                          }
+                        }}
                       >
                         {/* Icon */}
                         <div
@@ -236,6 +273,103 @@ export default function Notifications() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Notification Detail Modal */}
+        <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && setSelectedNotification(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                {selectedNotification && (() => {
+                  const Icon = getNotificationIcon(selectedNotification.type);
+                  return (
+                    <>
+                      <div className={cn(
+                        "size-10 rounded-full flex items-center justify-center text-white",
+                        getNotificationColor(selectedNotification.type)
+                      )}>
+                        <Icon className="size-5" />
+                      </div>
+                      <span>{selectedNotification.title}</span>
+                    </>
+                  );
+                })()}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedNotification && (
+              <div className="space-y-4">
+                {/* Type Badge */}
+                <div>
+                  <Badge variant="outline" className="capitalize">
+                    {selectedNotification.type}
+                  </Badge>
+                </div>
+
+                {/* Full Message */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedNotification.message}
+                  </p>
+                </div>
+
+                {/* Timestamp */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="size-4" />
+                  <span>
+                    {new Date(selectedNotification.created_at).toLocaleString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setSelectedNotification(null)}>
+                    Close
+                  </Button>
+                  {selectedNotification.related_id && (
+                    <Button onClick={() => {
+                      // TODO: Navigate to related content based on type
+                      console.log('Navigate to:', selectedNotification.type, selectedNotification.related_id);
+                      setSelectedNotification(null);
+                    }}>
+                      View Details
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Clear All Confirmation Dialog */}
+        <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Clear All Notifications?</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete all {notifications.length} notification{notifications.length !== 1 ? 's' : ''}.
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowClearConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleClearAll}>
+                  <Trash2 className="size-4 mr-2" />
+                  Clear All
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

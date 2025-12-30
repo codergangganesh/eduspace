@@ -1,0 +1,17 @@
+{
+    "title": "Notifications",
+    "description": "Stay updated with your courses, assignments, and messages",
+    "unread": "Unread",
+    "assignment": "Assignment",
+    "grade": "Grade",
+    "announcement": "Announcement",
+    "message": "Message",
+    "clearAllNotifications": "Clear all notifications",
+    "clearAllConfirm": "This will permanently delete all {{count}} notification. This action cannot be undone.",
+    "clearAllConfirm_plural": "This will permanently delete all {{count}} notifications. This action cannot be undone.",
+    "allCleared": "All notifications cleared",
+    "noNotifications": "No notifications yet",
+    "noNotificationsDescription": "You're all caught up! Check back later for updates.",
+    "newNotification": "{{count}} new",
+    "newNotification_plural": "{{count}} new"
+}

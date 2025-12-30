@@ -7,6 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Search,
   MessageSquare,
   Paperclip,
@@ -15,11 +22,14 @@ import {
   FileText,
   Download,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/useMessages";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLongPress } from "@/hooks/useLongPress";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -50,9 +60,22 @@ interface Conversation {
 
 export default function Messages() {
   const { user } = useAuth();
-  const { conversations, messages, sendMessage, selectedConversationId, setSelectedConversationId, loading } = useMessages();
+  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading } = useMessages();
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    try {
+      await deleteMessage(messageToDelete);
+      toast.success("Message deleted");
+    } catch (err) {
+      toast.error("Failed to delete message");
+    } finally {
+      setMessageToDelete(null);
+    }
+  };
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
@@ -81,6 +104,20 @@ export default function Messages() {
   const filteredConversations = conversations.filter((conv) =>
     (conv.other_user_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Transform messages from Supabase format to component format
+  const transformedMessages = messages.map((msg) => ({
+    id: msg.id,
+    content: msg.content,
+    timestamp: format(new Date(msg.created_at), 'h:mm a'),
+    isOwn: msg.sender_id === user?.id,
+    sender: msg.sender_name || 'Unknown',
+    attachment: msg.attachment_name ? {
+      name: msg.attachment_name,
+      size: msg.attachment_size || '',
+      type: msg.attachment_type || '',
+    } : undefined,
+  }));
 
   if (loading) {
     return (
@@ -197,73 +234,33 @@ export default function Messages() {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                {messages.slice(0, 2).map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex gap-3",
-                      message.isOwn && "flex-row-reverse"
-                    )}
-                  >
-                    {!message.isOwn && (
-                      <Avatar className="size-8 shrink-0">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {message.sender.split(" ").map((n) => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
+                {transformedMessages.slice(0, 2).map((message) => {
+                  const longPressHandlers = useLongPress({
+                    onLongPress: () => message.isOwn && setMessageToDelete(message.id),
+                    delay: 500,
+                  });
+
+                  return (
                     <div
+                      key={message.id}
                       className={cn(
-                        "max-w-[70%] rounded-2xl px-4 py-2.5",
-                        message.isOwn
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary"
+                        "flex gap-3",
+                        message.isOwn && "flex-row-reverse"
                       )}
                     >
                       {!message.isOwn && (
-                        <p className="text-xs font-medium text-primary mb-1">{message.sender}</p>
+                        <Avatar className="size-8 shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {message.sender.split(" ").map((n) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
                       )}
-                      <p className="text-sm">{message.content}</p>
-                      <p
-                        className={cn(
-                          "text-xs mt-1",
-                          message.isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                        )}
-                      >
-                        {message.timestamp}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Today Divider */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex-1 h-px bg-border" />
-                  <span>Today</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {messages.slice(2).map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex gap-3",
-                      message.isOwn && "flex-row-reverse"
-                    )}
-                  >
-                    {!message.isOwn && (
-                      <Avatar className="size-8 shrink-0">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {message.sender.split(" ").map((n) => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className="max-w-[70%] space-y-2">
                       <div
+                        {...(message.isOwn ? longPressHandlers : {})}
                         className={cn(
-                          "rounded-2xl px-4 py-2.5",
+                          "max-w-[70%] rounded-2xl px-4 py-2.5 transition-all",
                           message.isOwn
-                            ? "bg-primary text-primary-foreground"
+                            ? "bg-primary text-primary-foreground cursor-pointer active:scale-95"
                             : "bg-secondary"
                         )}
                       >
@@ -280,25 +277,81 @@ export default function Messages() {
                           {message.timestamp}
                         </p>
                       </div>
-                      {message.attachment && (
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary border border-border">
-                          <div className="size-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                            <FileText className="size-5 text-destructive" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{message.attachment.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {message.attachment.size} • {message.attachment.type}
-                            </p>
-                          </div>
-                          <Button variant="ghost" size="icon" className="shrink-0">
-                            <Download className="size-4" />
-                          </Button>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+
+                {/* Today Divider */}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex-1 h-px bg-border" />
+                  <span>Today</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {transformedMessages.slice(2).map((message) => {
+                  const longPressHandlers = useLongPress({
+                    onLongPress: () => message.isOwn && setMessageToDelete(message.id),
+                    delay: 500,
+                  });
+
+                  return (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "flex gap-3",
+                        message.isOwn && "flex-row-reverse"
+                      )}
+                    >
+                      {!message.isOwn && (
+                        <Avatar className="size-8 shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {message.sender.split(" ").map((n) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="max-w-[70%] space-y-2">
+                        <div
+                          {...(message.isOwn ? longPressHandlers : {})}
+                          className={cn(
+                            "rounded-2xl px-4 py-2.5 transition-all",
+                            message.isOwn
+                              ? "bg-primary text-primary-foreground cursor-pointer active:scale-95"
+                              : "bg-secondary"
+                          )}
+                        >
+                          {!message.isOwn && (
+                            <p className="text-xs font-medium text-primary mb-1">{message.sender}</p>
+                          )}
+                          <p className="text-sm">{message.content}</p>
+                          <p
+                            className={cn(
+                              "text-xs mt-1",
+                              message.isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                            )}
+                          >
+                            {message.timestamp}
+                          </p>
+                        </div>
+                        {message.attachment && (
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary border border-border">
+                            <div className="size-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                              <FileText className="size-5 text-destructive" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{message.attachment.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {message.attachment.size} • {message.attachment.type}
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="shrink-0">
+                              <Download className="size-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
 
@@ -346,6 +399,27 @@ export default function Messages() {
             </div>
           </div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!messageToDelete} onOpenChange={(open) => !open && setMessageToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Message?</DialogTitle>
+              <DialogDescription>
+                This message will be permanently deleted. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setMessageToDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteMessage}>
+                <Trash2 className="size-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

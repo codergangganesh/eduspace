@@ -110,11 +110,30 @@ export function useNotifications() {
         }
     };
 
+    const clearAllNotifications = async () => {
+        if (!user) return;
+
+        try {
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (err) {
+            console.error('Error clearing all notifications:', err);
+        }
+    };
+
     return {
         notifications,
         unreadCount,
         loading,
         markAsRead,
         markAllAsRead,
+        clearAllNotifications,
     };
 }
