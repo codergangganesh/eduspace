@@ -1,15 +1,15 @@
 import { useState, useRef } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  FileText, 
-  Upload, 
-  X, 
-  File, 
-  Image, 
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  FileText,
+  Upload,
+  X,
+  File,
+  Image,
   FileCode,
   AlertCircle,
   CheckCircle,
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 // Mock assignment data - in real app, fetch from API
 const assignmentData = {
@@ -89,7 +90,7 @@ export default function AssignmentSubmit() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [comments, setComments] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +113,7 @@ export default function AssignmentSubmit() {
     );
   }
 
-  const handleFileSelect = (selectedFiles: FileList | null) => {
+  const handleFileSelect = async (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
 
     const newFiles: UploadedFile[] = Array.from(selectedFiles).map((file) => ({
@@ -126,26 +127,36 @@ export default function AssignmentSubmit() {
 
     setFiles((prev) => [...prev, ...newFiles]);
 
-    // Simulate upload progress
-    newFiles.forEach((file) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 30;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === file.id ? { ...f, progress: 100, status: "complete" } : f
-            )
-          );
-        } else {
-          setFiles((prev) =>
-            prev.map((f) => (f.id === file.id ? { ...f, progress } : f))
-          );
-        }
-      }, 200);
-    });
+    // Import the upload service dynamically or at top lvl (Added at top level in imports)
+    // Assuming uploadToCloudinary is imported
+
+    // Process uploads
+    for (const fileObj of newFiles) {
+      const file = Array.from(selectedFiles).find(f => f.name === fileObj.name);
+      if (!file) continue;
+
+      try {
+        await uploadToCloudinary(file);
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileObj.id ? { ...f, progress: 100, status: "complete" } : f
+          )
+        );
+      } catch (error) {
+        console.error("Upload failed", error);
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileObj.id ? { ...f, status: "error" } : f
+          )
+        );
+        toast({
+          title: "Upload failed",
+          description: `Failed to upload ${file.name}`,
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -252,7 +263,7 @@ export default function AssignmentSubmit() {
         <div className="bg-surface rounded-xl border border-border p-5">
           <h2 className="text-lg font-semibold text-foreground mb-3">Assignment Details</h2>
           <p className="text-muted-foreground">{assignment.description}</p>
-          
+
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Requirements:</h3>
           <ul className="space-y-2">
             {assignment.requirements.map((req, index) => (
@@ -272,7 +283,7 @@ export default function AssignmentSubmit() {
         {/* File Upload */}
         <div className="bg-surface rounded-xl border border-border p-5">
           <h2 className="text-lg font-semibold text-foreground mb-4">Upload Files</h2>
-          
+
           {/* Drop Zone */}
           <div
             className={cn(

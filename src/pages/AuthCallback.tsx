@@ -38,9 +38,16 @@ export default function AuthCallback() {
           // User already has a role, use it
           userRole = existingRole.role as AppRole;
         } else {
-          // New user via OAuth - check for pending role from localStorage
+          // New user via OAuth
+          // 1. Try localStorage (most immediate user intent)
           const pendingRole = localStorage.getItem("pendingRole") as AppRole | null;
-          userRole = pendingRole || "student";
+
+          // 2. Fallback to metadata (passed during OAuth init - robust for mobile/cross-device)
+          const metadataRole = session.user.user_metadata?.role as AppRole | null;
+
+          // 3. Default to student
+          userRole = pendingRole || metadataRole || "student";
+
           localStorage.removeItem("pendingRole");
 
           // Create the role for the new user

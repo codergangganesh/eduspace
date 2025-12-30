@@ -51,6 +51,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -182,37 +183,23 @@ export default function Profile() {
     setIsUploadingImage(true);
 
     try {
-      // Convert image to base64
-      const reader = new FileReader();
+      // Upload to Cloudinary
+      const uploaded = await uploadToCloudinary(file);
+      console.log('Image uploaded to Cloudinary:', uploaded.url);
 
-      reader.onloadend = async () => {
-        const base64String = reader.result as string;
+      const result = await updateProfile({ avatar_url: uploaded.url } as Partial<ProfileType>);
 
-        console.log('Image converted to base64, updating profile...');
+      if (result.success) {
+        toast.success('Profile image updated successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
+      }
 
-        // Update profile with base64 image
-        const result = await updateProfile({ avatar_url: base64String } as Partial<ProfileType>);
+      setIsUploadingImage(false);
 
-        if (result.success) {
-          toast.success('Profile image updated successfully!');
-        } else {
-          throw new Error(result.error || 'Failed to update profile');
-        }
-
-        setIsUploadingImage(false);
-
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      };
-
-      reader.onerror = () => {
-        throw new Error('Failed to read image file');
-      };
-
-      // Read file as base64
-      reader.readAsDataURL(file);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
 
     } catch (error: unknown) {
       console.error('Error uploading image:', error);
@@ -220,7 +207,6 @@ export default function Profile() {
       toast.error(errorMessage);
       setIsUploadingImage(false);
 
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
