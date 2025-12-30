@@ -285,7 +285,7 @@ export default function Profile() {
     setIsSaving(false);
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("New passwords do not match");
       return;
@@ -294,9 +294,27 @@ export default function Profile() {
       toast.error("Password must be at least 6 characters");
       return;
     }
-    // Password change would require Supabase auth.updateUser
-    toast.success("Password change feature coming soon!");
-    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+
+    setIsSaving(true);
+
+    try {
+      // Update password using Supabase auth
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to update password");
+      } else {
+        toast.success("Password updated successfully!");
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const bioMaxLength = 250;
@@ -797,8 +815,15 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  <Button onClick={handlePasswordChange} className="mt-2">
-                    Update Password
+                  <Button onClick={handlePasswordChange} disabled={isSaving} className="mt-2">
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
                   </Button>
                 </div>
               </div>
