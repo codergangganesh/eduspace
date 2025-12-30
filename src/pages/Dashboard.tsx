@@ -1,49 +1,23 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Bell } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
-import { useAuth } from "@/contexts/AuthContext";
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { UpcomingTask } from "@/components/dashboard/UpcomingTask";
 import { useAssignments } from "@/hooks/useAssignments";
+import { useSchedule } from "@/hooks/useSchedule";
 import { useNavigate } from "react-router-dom";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { createTestAssignmentNotificationWithPreference, testAssignmentReminderToggle } from "@/lib/testNotifications";
-import { toast } from "sonner";
+
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Dashboard() {
-  const { profile } = useAuth();
-  const { stats, loading, error } = useAssignments();
+  const { assignments, stats, loading: assignmentsLoading } = useAssignments();
+  const { schedules, loading: scheduleLoading } = useSchedule();
   const navigate = useNavigate();
 
-  // Get first name for greeting
-  const firstName = profile?.full_name?.split(" ")[0] || "Student";
-
-  const handleTestNotification = async () => {
-    // First check current setting
-    const statusCheck = await testAssignmentReminderToggle();
-
-    if (!statusCheck.success) {
-      toast.error("Failed to check notification settings");
-      return;
-    }
-
-    // Show current status
-    if (!statusCheck.willReceiveNotifications) {
-      toast.warning("Assignment reminders are OFF. Enable them in Profile → Notifications to receive notifications.");
-      return;
-    }
-
-    // Try to create notification
-    const result = await createTestAssignmentNotificationWithPreference();
-
-    if (result.success) {
-      if (result.reminderStatus) {
-        toast.success("✅ Test notification sent! Check the bell icon.");
-      } else {
-        toast.info("ℹ️ Notification not sent - assignment reminders are disabled in your profile.");
-      }
-    } else {
-      toast.error("Failed to create notification");
-    }
-  };
+  const loading = assignmentsLoading || scheduleLoading;
 
   if (loading) {
     return (
@@ -55,76 +29,170 @@ export default function Dashboard() {
     );
   }
 
+  // Process upcoming assignments
+  const upcomingTasks = assignments
+    .filter(a => a.status === 'pending' && a.due_date)
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+    .slice(0, 3) // Limit to 3 to save space
+    .map(a => {
+      const dateDate = parseISO(a.due_date!);
+      const isUrgent = isBefore(dateDate, addDays(new Date(), 2)) && isAfter(dateDate, new Date());
+
+      return {
+        id: a.id,
+        title: a.title,
+        course: a.course_name || "General Course",
+        dueDate: format(dateDate, "MMM d"),
+        dueTime: format(dateDate, "h:mm a"),
+        type: "assignment" as const,
+        isUrgent
+      };
+    });
+
+  // Process upcoming classes
+  const todayIndex = new Date().getDay(); // 0 is Sunday
+  const upcomingClasses = schedules
+    .filter(s => s.day_of_week >= todayIndex) // Today onwards
+    .sort((a, b) => {
+      if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+      return a.start_time.localeCompare(b.start_time);
+    })
+    .slice(0, 4) // Limit to 4
+    .map(s => ({
+      id: s.id,
+      title: s.title,
+      course: s.location || "Room TBD", // Using location as subtitle context
+      dueDate: s.day_of_week === todayIndex ? "Today" : days[s.day_of_week],
+      dueTime: s.start_time.slice(0, 5),
+      type: s.type as any, // 'lecture' | 'lab' etc
+      isUrgent: s.day_of_week === todayIndex // Highlight today's classes
+    }));
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
-        {/* Welcome Section */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            Welcome back, {firstName}! 👋
-          </h1>
-          <p className="text-muted-foreground">
-            Here's an overview of your assignments and schedule.
-          </p>
-        </div>
+      <div className="space-y-8">
+        {/* Hero Section */}
+        <DashboardHero />
 
-        {/* Assignment Cards Grid */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <AssignmentCard
-            title="Assignments Assigned"
+          <StatsCard
+            title="Assigned"
             value={stats.total}
             icon={FileText}
-            onClick={() => navigate("/assignments")}
-            subtitle="Total assignments"
+            subtitle="Total active tasks"
+            className="border-l-4 border-l-blue-500"
           />
-
-          <AssignmentCard
-            title="Completed Assignments"
+          <StatsCard
+            title="Completed"
             value={stats.completed}
             icon={CheckCircle}
-            onClick={() => navigate("/assignments?filter=completed")}
-            variant="success"
-            subtitle="Well done!"
+            subtitle="Tasks finished"
+            trend={{ value: 12, isPositive: true }}
+            className="border-l-4 border-l-green-500"
           />
-
-          <AssignmentCard
-            title="Pending Assignments"
+          <StatsCard
+            title="Pending"
             value={stats.pending}
             icon={AlertCircle}
-            onClick={() => navigate("/assignments?filter=pending")}
-            variant="danger"
-            subtitle="Needs attention"
+            subtitle="Require attention"
+            className="border-l-4 border-l-orange-500"
           />
-
-          <AssignmentCard
-            title="Upcoming Schedule"
+          <StatsCard
+            title="Schedule"
             value="View"
             icon={Calendar}
+            subtitle="Upcoming classes"
+            className="border-l-4 border-l-purple-500 hover:border-l-purple-600 dark:border-l-purple-600"
             onClick={() => navigate("/schedule")}
-            subtitle="Check your classes"
           />
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">🧪 Test Assignment Notification (Preference-Based)</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Test the notification system. Notifications will only be sent if "Assignment Reminders" is enabled in Profile → Notifications.
-              </p>
-            </div>
-            <Button onClick={handleTestNotification} variant="outline" size="sm" className="gap-2">
-              <Bell className="size-4" />
-              Test Notification
-            </Button>
-          </div>
-        </div>
+        {/* Main Content Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* Quick Actions Info */}
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">
-            💡 <strong>Tip:</strong> Click on any card above to view more details and manage your assignments.
-          </p>
+          {/* Left Column (Main Content) */}
+          <div className="lg:col-span-2 space-y-8">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-foreground">Current Assignments</h2>
+                <Button
+                  variant="link"
+                  onClick={() => navigate("/assignments")}
+                  className="text-primary hover:no-underline px-0"
+                >
+                  View All
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <AssignmentCard
+                  title="Assignments Assigned"
+                  value={stats.total}
+                  icon={FileText}
+                  onClick={() => navigate("/assignments")}
+                  subtitle="View all assignments"
+                />
+                <AssignmentCard
+                  title="Action Required"
+                  value={stats.pending}
+                  icon={AlertCircle}
+                  onClick={() => navigate("/assignments?filter=pending")}
+                  variant="danger"
+                  subtitle="Pending submissions"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column (Sidebar) */}
+          <div className="space-y-6">
+
+            {/* Upcoming Classes Widget (Replacing Activity Feed position) */}
+            <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
+              <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Clock className="size-4 text-purple-500" />
+                Upcoming Classes
+              </h3>
+
+              <div className="space-y-3">
+                {upcomingClasses.length > 0 ? (
+                  upcomingClasses.map(cls => (
+                    <UpcomingTask key={cls.id} {...cls} />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No upcoming classes</p>
+                )}
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/schedule")}
+                className="w-full mt-2 text-xs"
+              >
+                View Full Schedule
+              </Button>
+            </div>
+
+            {/* Upcoming Assignments Widget */}
+            <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
+              <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Calendar className="size-4 text-primary" />
+                Assignments Due
+              </h3>
+              <div className="space-y-3">
+                {upcomingTasks.length > 0 ? (
+                  upcomingTasks.map(task => (
+                    <UpcomingTask key={task.id} {...task} />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No pending deadlines</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </div>
     </DashboardLayout>

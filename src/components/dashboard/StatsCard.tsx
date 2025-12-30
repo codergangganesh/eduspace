@@ -11,11 +11,19 @@ interface StatsCardProps {
     isPositive: boolean;
   };
   className?: string;
+  onClick?: () => void;
 }
 
-export function StatsCard({ title, value, subtitle, icon: Icon, trend, className }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon: Icon, trend, className, onClick }: StatsCardProps) {
   return (
-    <div className={cn("bg-surface rounded-xl border border-border p-5 transition-all hover:shadow-md", className)}>
+    <div
+      onClick={onClick}
+      className={cn(
+        "bg-surface rounded-xl border border-border p-5 transition-all hover:shadow-md",
+        onClick && "cursor-pointer hover:bg-accent/50",
+        className
+      )}
+    >
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-muted-foreground">{title}</span>
