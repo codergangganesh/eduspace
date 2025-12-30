@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth, Profile as ProfileType } from "@/contexts/AuthContext";
@@ -15,6 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   User,
   GraduationCap,
@@ -37,9 +43,11 @@ import {
   Globe,
   Palette,
   Loader2,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -55,6 +63,9 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("personal");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [showPublicProfile, setShowPublicProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -148,6 +159,70 @@ export default function Profile() {
       navigate("/login");
     }
   }, [authLoading, isAuthenticated, navigate]);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB for base64)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size should be less than 2MB');
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      // Convert image to base64
+      const reader = new FileReader();
+
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+
+        console.log('Image converted to base64, updating profile...');
+
+        // Update profile with base64 image
+        const result = await updateProfile({ avatar_url: base64String } as Partial<ProfileType>);
+
+        if (result.success) {
+          toast.success('Profile image updated successfully!');
+        } else {
+          throw new Error(result.error || 'Failed to update profile');
+        }
+
+        setIsUploadingImage(false);
+
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
+
+      reader.onerror = () => {
+        throw new Error('Failed to read image file');
+      };
+
+      // Read file as base64
+      reader.readAsDataURL(file);
+
+    } catch (error: unknown) {
+      console.error('Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+      toast.error(errorMessage);
+      setIsUploadingImage(false);
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   if (authLoading) {
     return (
@@ -292,8 +367,24 @@ export default function Profile() {
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <button className="absolute bottom-0 right-0 size-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
-                  <Camera className="size-4" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="absolute bottom-0 right-0 size-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Upload profile image"
+                >
+                  {isUploadingImage ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Camera className="size-4" />
+                  )}
                 </button>
               </div>
 
@@ -316,7 +407,10 @@ export default function Profile() {
               </div>
 
               {/* Action Button */}
-              <Button variant="outline">View Public Profile</Button>
+              <Button variant="outline" onClick={() => setShowPublicProfile(true)}>
+                <Eye className="size-4 mr-2" />
+                View Public Profile
+              </Button>
             </div>
           </div>
 
@@ -587,57 +681,6 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Credits Progress */}
-              <div className="bg-surface border border-border rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-6">Credits Progress</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Credits Completed</label>
-                    <Input
-                      type="number"
-                      value={formData.credits_completed}
-                      onChange={(e) => handleInputChange("credits_completed", e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="e.g., 90"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Credits Required</label>
-                    <Input
-                      type="number"
-                      value={formData.credits_required}
-                      onChange={(e) => handleInputChange("credits_required", e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="e.g., 120"
-                    />
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">
-                      {formData.credits_completed || 0} / {formData.credits_required || 120} credits
-                    </span>
-                  </div>
-                  <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(
-                          ((parseInt(formData.credits_completed) || 0) /
-                            (parseInt(formData.credits_required) || 120)) *
-                            100,
-                          100
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Dates */}
               <div className="bg-surface border border-border rounded-xl p-6">
                 <h2 className="text-lg font-semibold text-foreground mb-6">Important Dates</h2>
@@ -769,26 +812,6 @@ export default function Profile() {
                   <Smartphone className="size-4 mr-2" />
                   Enable 2FA
                 </Button>
-              </div>
-
-              <div className="bg-surface border border-border rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-6">Active Sessions</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Globe className="size-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Current Session</p>
-                        <p className="text-sm text-muted-foreground">Browser • Active now</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
-                      Current
-                    </Badge>
-                  </div>
-                </div>
               </div>
             </>
           )}
@@ -987,6 +1010,102 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Public Profile Modal */}
+      <Dialog open={showPublicProfile} onOpenChange={setShowPublicProfile}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Public Profile</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Profile Header */}
+            <div className="flex items-center gap-6 pb-6 border-b">
+              <Avatar className="size-24">
+                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold">{formData.full_name || "User"}</h2>
+                <p className="text-muted-foreground mt-1">
+                  {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                    {role === "lecturer" ? "Lecturer" : "Student"}
+                  </Badge>
+                  {profile?.verified && (
+                    <Badge variant="outline" className="bg-green-500/5 text-green-600 border-green-500/20">
+                      <CheckCircle className="size-3 mr-1" />
+                      Verified
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            {formData.bio && (
+              <div>
+                <h3 className="font-semibold mb-2">About</h3>
+                <p className="text-muted-foreground">{formData.bio}</p>
+              </div>
+            )}
+
+            {/* Academic Info */}
+            <div className="grid grid-cols-2 gap-4">
+              {formData.department && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Department</p>
+                  <p className="font-medium">{formData.department}</p>
+                </div>
+              )}
+              {formData.gpa && (
+                <div>
+                  <p className="text-sm text-muted-foreground">GPA</p>
+                  <p className="font-medium">{formData.gpa}</p>
+                </div>
+              )}
+              {formData.student_id && role === "student" && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Student ID</p>
+                  <p className="font-medium">{formData.student_id}</p>
+                </div>
+              )}
+              {formData.expected_graduation && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Expected Graduation</p>
+                  <p className="font-medium">
+                    {new Date(formData.expected_graduation).toLocaleDateString('en-US', {
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h3 className="font-semibold mb-3">Contact Information</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="size-4 text-muted-foreground" />
+                  <span>{formData.email}</span>
+                </div>
+                {formData.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="size-4 text-muted-foreground" />
+                    <span>{formData.phone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

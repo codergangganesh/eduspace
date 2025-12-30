@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async (selectedRole: AppRole) => {
     // Store the selected role in localStorage to use after OAuth callback
     localStorage.setItem("pendingRole", selectedRole);
-    
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
