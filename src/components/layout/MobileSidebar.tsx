@@ -8,11 +8,22 @@ import {
   Settings,
   LogOut,
   X,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
-const navItems = [
+const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Calendar, label: "Schedule", path: "/schedule" },
+  { icon: FileText, label: "Assignments", path: "/assignments" },
+  { icon: MessageSquare, label: "Messages", path: "/messages" },
+  { icon: Settings, label: "Settings", path: "/settings" },
+];
+
+const lecturerNavItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
+  { icon: Users, label: "Students", path: "/students" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
@@ -26,6 +37,9 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const location = useLocation();
+  const { role } = useAuth();
+
+  const navItems = role === "lecturer" ? lecturerNavItems : studentNavItems;
 
   if (!isOpen) return null;
 
@@ -42,7 +56,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
         <div className="flex flex-col h-full p-4">
           {/* Header */}
           <div className="flex items-center justify-between px-3 mb-8">
-            <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
+            <Link to={role === "lecturer" ? "/lecturer-dashboard" : "/dashboard"} className="flex items-center gap-3" onClick={onClose}>
               <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
                 <GraduationCap className="size-5" />
               </div>
@@ -62,7 +76,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               const isActive = location.pathname === item.path;
               return (
                 <Link
-                  key={item.path}
+                  key={item.path + item.label}
                   to={item.path}
                   onClick={onClose}
                   className={cn(
