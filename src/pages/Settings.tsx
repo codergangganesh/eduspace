@@ -2,9 +2,14 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { deleteUserAccount } from "@/lib/accountService";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   Trash2,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -20,14 +25,39 @@ import {
 
 export default function Settings() {
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteAccount = async () => {
-    // This would be connected to a real API endpoint
-    toast({
-      title: "Account Deletion Requested",
-      description: "This action would permanently delete your account.",
-      variant: "destructive",
-    });
+    if (!user) return;
+
+    setIsDeleting(true);
+    try {
+      const { success, error } = await deleteUserAccount(user.id);
+
+      if (success) {
+        toast({
+          title: "Account Deleted",
+          description: "Your account has been successfully reset. You will be signed out.",
+        });
+
+        // Wait briefly for the toast to be visible
+        setTimeout(async () => {
+          await signOut();
+          navigate("/login");
+        }, 1500);
+      } else {
+        throw new Error(error || "Failed to delete account");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+    }
   };
 
   return (
