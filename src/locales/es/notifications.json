@@ -1,0 +1,17 @@
+{
+    "title": "Notificaciones",
+    "description": "Mantente actualizado con tus cursos, tareas y mensajes",
+    "unread": "No leídos",
+    "assignment": "Tarea",
+    "grade": "Calificación",
+    "announcement": "Anuncio",
+    "message": "Mensaje",
+    "clearAllNotifications": "Borrar todas las notificaciones",
+    "clearAllConfirm": "Esto eliminará permanentemente {{count}} notificación. Esta acción no se puede deshacer.",
+    "clearAllConfirm_plural": "Esto eliminará permanentemente todas las {{count}} notificaciones. Esta acción no se puede deshacer.",
+    "allCleared": "Todas las notificaciones borradas",
+    "noNotifications": "Aún no hay notificaciones",
+    "noNotificationsDescription": "¡Estás al día! Vuelve más tarde para ver actualizaciones.",
+    "newNotification": "{{count}} nueva",
+    "newNotification_plural": "{{count}} nuevas"
+}

@@ -1,0 +1,21 @@
+{
+    "welcomeBack": "Bienvenido de nuevo",
+    "overview": "Resumen",
+    "upcomingAssignments": "Próximas tareas",
+    "upcomingClasses": "Próximas clases",
+    "recentActivity": "Actividad reciente",
+    "quickActions": "Acciones rápidas",
+    "stats": {
+        "totalCourses": "Cursos totales",
+        "activeAssignments": "Tareas activas",
+        "completedAssignments": "Tareas completadas",
+        "upcomingClasses": "Próximas clases"
+    },
+    "viewAllAssignments": "Ver todas las tareas",
+    "viewSchedule": "Ver horario",
+    "noAssignments": "No hay tareas próximas",
+    "noClasses": "No hay clases próximas",
+    "dueToday": "Vence hoy",
+    "dueTomorrow": "Vence mañana",
+    "overdue": "Vencido"
+}

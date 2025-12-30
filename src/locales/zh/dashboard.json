@@ -1,0 +1,21 @@
+{
+    "welcomeBack": "Welcome back",
+    "overview": "Overview",
+    "upcomingAssignments": "Upcoming Assignments",
+    "upcomingClasses": "Upcoming Classes",
+    "recentActivity": "Recent Activity",
+    "quickActions": "Quick Actions",
+    "stats": {
+        "totalCourses": "Total Courses",
+        "activeAssignments": "Active Assignments",
+        "completedAssignments": "Completed Assignments",
+        "upcomingClasses": "Upcoming Classes"
+    },
+    "viewAllAssignments": "View All Assignments",
+    "viewSchedule": "View Schedule",
+    "noAssignments": "No upcoming assignments",
+    "noClasses": "No upcoming classes",
+    "dueToday": "Due Today",
+    "dueTomorrow": "Due Tomorrow",
+    "overdue": "Overdue"
+}

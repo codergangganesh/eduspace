@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth, Profile as ProfileType } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext"; // Added for theme management
+import { ThemeSelector } from "@/components/theme/ThemeSelector";
+import { LanguageSelector } from "@/components/language/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -928,74 +931,16 @@ export default function Profile() {
               <h2 className="text-lg font-semibold text-foreground mb-6">App Preferences</h2>
 
               <div className="space-y-6 max-w-md">
-                {/* Language */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Globe className="size-4" />
-                    Language
-                  </label>
-                  <Select
-                    value={formData.language}
-                    onValueChange={(value) => handleInputChange("language", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                      <SelectItem value="ja">Japanese</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Timezone */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Clock className="size-4" />
-                    Timezone
-                  </label>
-                  <Select
-                    value={formData.timezone}
-                    onValueChange={(value) => handleInputChange("timezone", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                      <SelectItem value="Europe/London">Greenwich Mean Time (GMT)</SelectItem>
-                      <SelectItem value="Europe/Paris">Central European Time (CET)</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Japan Standard Time (JST)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Theme */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Palette className="size-4" />
                     Theme
                   </label>
-                  <Select
-                    value={formData.theme}
-                    onValueChange={(value) => handleInputChange("theme", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select theme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ThemeSelector />
+                  <p className="text-xs text-muted-foreground">
+                    Choose your preferred theme. System will follow your device settings.
+                  </p>
                 </div>
               </div>
             </div>

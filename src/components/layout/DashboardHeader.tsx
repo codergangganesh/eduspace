@@ -2,6 +2,7 @@ import { Bell, Search, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { UserDropdown } from "./UserDropdown";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -38,6 +39,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
 
       {/* Right Section */}
       <div className="flex items-center gap-3">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
         {/* Notifications */}
         <Link
           to="/notifications"

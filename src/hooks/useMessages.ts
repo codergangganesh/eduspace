@@ -237,12 +237,34 @@ export function useMessages() {
         }
     };
 
+    // Delete message
+    const deleteMessage = async (messageId: string) => {
+        if (!user) return;
+
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .delete()
+                .eq('id', messageId)
+                .eq('sender_id', user.id); // Only allow deleting own messages
+
+            if (error) throw error;
+
+            // Update local state
+            setMessages(prev => prev.filter(m => m.id !== messageId));
+        } catch (err) {
+            console.error('Error deleting message:', err);
+            throw err;
+        }
+    };
+
     return {
         conversations,
         messages,
         selectedConversationId,
         setSelectedConversationId,
         sendMessage,
+        deleteMessage,
         loading,
         error,
     };

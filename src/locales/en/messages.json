@@ -1,0 +1,18 @@
+{
+    "title": "Messages",
+    "directMessages": "Direct Messages",
+    "searchConversations": "Search conversations...",
+    "noConversations": "No conversations yet",
+    "selectConversation": "Select a conversation",
+    "selectConversationDescription": "Choose a conversation from the sidebar to start messaging",
+    "typeMessage": "Type a message...",
+    "sendMessage": "Send",
+    "deleteMessage": "Delete Message",
+    "deleteMessageConfirm": "This message will be permanently deleted. This action cannot be undone.",
+    "messageDeleted": "Message deleted",
+    "failedToDelete": "Failed to delete message",
+    "yesterday": "Yesterday",
+    "today": "Today",
+    "online": "Online",
+    "offline": "Offline"
+}

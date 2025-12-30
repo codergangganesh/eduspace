@@ -1,9 +1,12 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2 } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Bell } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAssignments } from "@/hooks/useAssignments";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { createTestNotification, createTestAssignmentNotification, createTestGradeNotification } from "@/lib/testNotifications";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -12,6 +15,15 @@ export default function Dashboard() {
 
   // Get first name for greeting
   const firstName = profile?.full_name?.split(" ")[0] || "Student";
+
+  const handleTestNotification = async () => {
+    const result = await createTestNotification();
+    if (result.success) {
+      toast.success("Test notification created! Check the bell icon.");
+    } else {
+      toast.error("Failed to create notification");
+    }
+  };
 
   if (loading) {
     return (
@@ -71,6 +83,22 @@ export default function Dashboard() {
             onClick={() => navigate("/schedule")}
             subtitle="Check your classes"
           />
+        </div>
+
+        {/* Test Notification Button (Remove this after testing) */}
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">🧪 Test Notification System</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Click the button to create a test notification and see it in the bell icon
+              </p>
+            </div>
+            <Button onClick={handleTestNotification} variant="outline" size="sm" className="gap-2">
+              <Bell className="size-4" />
+              Create Test Notification
+            </Button>
+          </div>
         </div>
 
         {/* Quick Actions Info */}
