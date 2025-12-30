@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -8,10 +8,9 @@ interface Message {
     sender_id: string;
     receiver_id: string;
     content: string;
-    attachment_name?: string;
-    attachment_url?: string;
-    attachment_size?: string;
-    attachment_type?: string;
+    attachment_name: string | null;
+    attachment_url: string | null;
+    attachment_type: string | null;
     is_read: boolean;
     created_at: string;
     sender_name?: string;
@@ -32,7 +31,6 @@ interface Conversation {
 interface Attachment {
     name?: string;
     url?: string;
-    size?: string;
     type?: string;
 }
 
@@ -44,62 +42,64 @@ export function useMessages() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
+    const fetchConversations = useCallback(async () => {
+        if (!user) return;
+
+        try {
+            const { data, error: fetchError } = await supabase
+                .from('conversations')
+                .select('*')
+                .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+                .order('last_message_at', { ascending: false });
+
+            if (fetchError) {
+                console.warn('Error fetching conversations:', fetchError);
+                setConversations([]);
+            } else {
+                // Fetch other user details for each conversation
+                const conversationsWithUsers = await Promise.all(
+                    (data || []).map(async (conv) => {
+                        const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+
+                        const { data: profileData } = await supabase
+                            .from('profiles')
+                            .select('full_name, avatar_url')
+                            .eq('user_id', otherUserId)
+                            .single();
+
+                        const { data: roleData } = await supabase
+                            .from('user_roles')
+                            .select('role')
+                            .eq('user_id', otherUserId)
+                            .single();
+
+                        return {
+                            ...conv,
+                            other_user_name: profileData?.full_name || 'Unknown User',
+                            other_user_avatar: profileData?.avatar_url,
+                            other_user_role: roleData?.role,
+                        };
+                    })
+                );
+
+                setConversations(conversationsWithUsers);
+            }
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching conversations:', err);
+            setConversations([]);
+            setError(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
+
     // Fetch conversations
     useEffect(() => {
         if (!user) {
             setLoading(false);
             return;
         }
-
-        const fetchConversations = async () => {
-            try {
-                const { data, error: fetchError } = await supabase
-                    .from('conversations')
-                    .select('*')
-                    .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-                    .order('last_message_at', { ascending: false });
-
-                if (fetchError) {
-                    console.warn('Error fetching conversations:', fetchError);
-                    setConversations([]);
-                } else {
-                    // Fetch other user details for each conversation
-                    const conversationsWithUsers = await Promise.all(
-                        (data || []).map(async (conv) => {
-                            const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
-
-                            const { data: profileData } = await supabase
-                                .from('profiles')
-                                .select('full_name, avatar_url')
-                                .eq('user_id', otherUserId)
-                                .single();
-
-                            const { data: roleData } = await supabase
-                                .from('user_roles')
-                                .select('role')
-                                .eq('user_id', otherUserId)
-                                .single();
-
-                            return {
-                                ...conv,
-                                other_user_name: profileData?.full_name || 'Unknown User',
-                                other_user_avatar: profileData?.avatar_url,
-                                other_user_role: roleData?.role,
-                            };
-                        })
-                    );
-
-                    setConversations(conversationsWithUsers);
-                }
-                setError(null);
-            } catch (err) {
-                console.error('Error fetching conversations:', err);
-                setConversations([]);
-                setError(null);
-            } finally {
-                setLoading(false);
-            }
-        };
 
         fetchConversations();
 
@@ -122,7 +122,7 @@ export function useMessages() {
         return () => {
             subscription.unsubscribe();
         };
-    }, [user]);
+    }, [user, fetchConversations]);
 
     // Fetch messages for selected conversation
     useEffect(() => {
@@ -140,7 +140,7 @@ export function useMessages() {
                     console.warn('Error fetching messages:', fetchError);
                     setMessages([]);
                 } else {
-                    setMessages(data || []);
+                    setMessages((data || []) as Message[]);
                 }
             } catch (err) {
                 console.error('Error fetching messages:', err);
@@ -214,10 +214,9 @@ export function useMessages() {
                     sender_id: user.id,
                     receiver_id: receiverId,
                     content,
-                    attachment_name: attachment?.name,
-                    attachment_url: attachment?.url,
-                    attachment_size: attachment?.size,
-                    attachment_type: attachment?.type,
+                    attachment_name: attachment?.name || null,
+                    attachment_url: attachment?.url || null,
+                    attachment_type: attachment?.type || null,
                 });
 
             if (messageError) throw messageError;
@@ -237,6 +236,44 @@ export function useMessages() {
         }
     };
 
+    // Start new conversation
+    const startConversation = async (otherUserId: string) => {
+        if (!user) return null;
+
+        try {
+            // Check if conversation exists
+            const { data: existingConv } = await supabase
+                .from('conversations')
+                .select('id')
+                .or(`and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`)
+                .single();
+
+            if (existingConv) {
+                setSelectedConversationId(existingConv.id);
+                return existingConv.id;
+            }
+
+            // Create new conversation
+            const { data: newConv, error } = await supabase
+                .from('conversations')
+                .insert({
+                    participant_1: user.id,
+                    participant_2: otherUserId,
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            await fetchConversations();
+            setSelectedConversationId(newConv.id);
+            return newConv.id;
+        } catch (err) {
+            console.error('Error starting conversation:', err);
+            return null;
+        }
+    };
+
     // Delete message
     const deleteMessage = async (messageId: string) => {
         if (!user) return;
@@ -246,15 +283,30 @@ export function useMessages() {
                 .from('messages')
                 .delete()
                 .eq('id', messageId)
-                .eq('sender_id', user.id); // Only allow deleting own messages
+                .eq('sender_id', user.id);
 
             if (error) throw error;
 
-            // Update local state
             setMessages(prev => prev.filter(m => m.id !== messageId));
         } catch (err) {
             console.error('Error deleting message:', err);
             throw err;
+        }
+    };
+
+    // Mark messages as read
+    const markMessagesAsRead = async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            await supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('conversation_id', conversationId)
+                .eq('receiver_id', user.id)
+                .eq('is_read', false);
+        } catch (err) {
+            console.error('Error marking messages as read:', err);
         }
     };
 
@@ -264,8 +316,11 @@ export function useMessages() {
         selectedConversationId,
         setSelectedConversationId,
         sendMessage,
+        startConversation,
         deleteMessage,
+        markMessagesAsRead,
         loading,
         error,
+        refreshConversations: fetchConversations,
     };
 }
