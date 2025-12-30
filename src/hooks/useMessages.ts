@@ -29,6 +29,13 @@ interface Conversation {
     online?: boolean;
 }
 
+interface Attachment {
+    name?: string;
+    url?: string;
+    size?: string;
+    type?: string;
+}
+
 export function useMessages() {
     const { user } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -166,7 +173,7 @@ export function useMessages() {
     }, [selectedConversationId, user]);
 
     // Send message
-    const sendMessage = async (receiverId: string, content: string, attachment?: any) => {
+    const sendMessage = async (receiverId: string, content: string, attachment?: Attachment) => {
         if (!user || !content.trim()) return;
 
         try {

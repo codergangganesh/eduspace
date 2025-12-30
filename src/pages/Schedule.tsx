@@ -48,7 +48,17 @@ interface CalendarEvent {
 }
 
 // Convert Supabase schedule to ClassEvent format
-const convertToClassEvent = (schedule: any): ClassEvent => ({
+const convertToClassEvent = (schedule: {
+  id: string;
+  title: string;
+  type: 'lecture' | 'lab' | 'tutorial' | 'exam';
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  instructor: string | null;
+  color: string | null;
+  day_of_week: number;
+}): ClassEvent => ({
   id: schedule.id,
   title: schedule.title,
   type: schedule.type,
