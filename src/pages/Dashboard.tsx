@@ -31,7 +31,7 @@ export default function Dashboard() {
 
   // Process upcoming assignments
   const upcomingTasks = assignments
-    .filter(a => a.status === 'pending' && a.due_date)
+    .filter(a => a.status === 'published' && a.due_date)
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
     .slice(0, 3) // Limit to 3 to save space
     .map(a => {
@@ -41,7 +41,7 @@ export default function Dashboard() {
       return {
         id: a.id,
         title: a.title,
-        course: a.course_name || "General Course",
+        course: a.course_title || "General Course",
         dueDate: format(dateDate, "MMM d"),
         dueTime: format(dateDate, "h:mm a"),
         type: "assignment" as const,

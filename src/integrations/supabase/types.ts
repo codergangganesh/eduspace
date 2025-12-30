@@ -14,6 +14,302 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          attachment_name: string | null
+          attachment_url: string | null
+          feedback: string | null
+          grade: number | null
+          graded_at: string | null
+          id: string
+          status: string | null
+          student_id: string
+          submission_text: string | null
+          submitted_at: string
+        }
+        Insert: {
+          assignment_id: string
+          attachment_name?: string | null
+          attachment_url?: string | null
+          feedback?: string | null
+          grade?: number | null
+          graded_at?: string | null
+          id?: string
+          status?: string | null
+          student_id: string
+          submission_text?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          attachment_name?: string | null
+          attachment_url?: string | null
+          feedback?: string | null
+          grade?: number | null
+          graded_at?: string | null
+          id?: string
+          status?: string | null
+          student_id?: string
+          submission_text?: string | null
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          attachment_name: string | null
+          attachment_url: string | null
+          course_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          instructions: string | null
+          lecturer_id: string
+          max_points: number | null
+          status: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          course_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          lecturer_id: string
+          max_points?: number | null
+          status?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          lecturer_id?: string
+          max_points?: number | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message: string | null
+          last_message_at: string | null
+          participant_1: string
+          participant_2: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          participant_1: string
+          participant_2: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          participant_1?: string
+          participant_2?: string
+        }
+        Relationships: []
+      }
+      course_enrollments: {
+        Row: {
+          course_id: string
+          enrolled_at: string
+          grade: string | null
+          id: string
+          status: string | null
+          student_id: string
+        }
+        Insert: {
+          course_id: string
+          enrolled_at?: string
+          grade?: string | null
+          id?: string
+          status?: string | null
+          student_id: string
+        }
+        Update: {
+          course_id?: string
+          enrolled_at?: string
+          grade?: string | null
+          id?: string
+          status?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          course_code: string
+          created_at: string
+          credits: number | null
+          department: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          lecturer_id: string
+          max_students: number | null
+          schedule_info: string | null
+          semester: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_code: string
+          created_at?: string
+          credits?: number | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          lecturer_id: string
+          max_students?: number | null
+          schedule_info?: string | null
+          semester?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_code?: string
+          created_at?: string
+          credits?: number | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          lecturer_id?: string
+          max_students?: number | null
+          schedule_info?: string | null
+          semester?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          related_id: string | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          related_id?: string | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          related_id?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           advisor: string | null
@@ -131,197 +427,67 @@ export type Database = {
         }
         Relationships: []
       }
-      assignments: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          course_name: string | null
-          due_date: string | null
-          status: 'pending' | 'completed' | 'submitted'
-          student_id: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          course_name?: string | null
-          due_date?: string | null
-          status?: 'pending' | 'completed' | 'submitted'
-          student_id: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          course_name?: string | null
-          due_date?: string | null
-          status?: 'pending' | 'completed' | 'submitted'
-          student_id?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      messages: {
-        Row: {
-          id: string
-          conversation_id: string
-          sender_id: string
-          receiver_id: string
-          content: string
-          attachment_name: string | null
-          attachment_url: string | null
-          attachment_size: string | null
-          attachment_type: string | null
-          is_read: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          conversation_id: string
-          sender_id: string
-          receiver_id: string
-          content: string
-          attachment_name?: string | null
-          attachment_url?: string | null
-          attachment_size?: string | null
-          attachment_type?: string | null
-          is_read?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          conversation_id?: string
-          sender_id?: string
-          receiver_id?: string
-          content?: string
-          attachment_name?: string | null
-          attachment_url?: string | null
-          attachment_size?: string | null
-          attachment_type?: string | null
-          is_read?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      conversations: {
-        Row: {
-          id: string
-          participant_1: string
-          participant_2: string
-          last_message: string | null
-          last_message_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          participant_1: string
-          participant_2: string
-          last_message?: string | null
-          last_message_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          participant_1?: string
-          participant_2?: string
-          last_message?: string | null
-          last_message_at?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          message: string
-          type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement'
-          related_id: string | null
-          is_read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          title: string
-          message: string
-          type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement'
-          related_id?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          message?: string
-          type?: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement'
-          related_id?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
       schedules: {
         Row: {
-          id: string
-          title: string
-          course_code: string | null
-          type: 'lecture' | 'lab' | 'tutorial' | 'exam'
-          start_time: string
-          end_time: string
-          day_of_week: number
-          location: string | null
-          instructor: string | null
           color: string | null
-          student_id: string
-          created_by: string | null
+          course_id: string | null
           created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_recurring: boolean | null
+          lecturer_id: string
+          location: string | null
+          notes: string | null
+          specific_date: string | null
+          start_time: string
+          title: string
+          type: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          title: string
-          course_code?: string | null
-          type: 'lecture' | 'lab' | 'tutorial' | 'exam'
-          start_time: string
-          end_time: string
-          day_of_week: number
-          location?: string | null
-          instructor?: string | null
           color?: string | null
-          student_id: string
-          created_by?: string | null
+          course_id?: string | null
           created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_recurring?: boolean | null
+          lecturer_id: string
+          location?: string | null
+          notes?: string | null
+          specific_date?: string | null
+          start_time: string
+          title: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          title?: string
-          course_code?: string | null
-          type?: 'lecture' | 'lab' | 'tutorial' | 'exam'
-          start_time?: string
-          end_time?: string
-          day_of_week?: number
-          location?: string | null
-          instructor?: string | null
           color?: string | null
-          student_id?: string
-          created_by?: string | null
+          course_id?: string | null
           created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_recurring?: boolean | null
+          lecturer_id?: string
+          location?: string | null
+          notes?: string | null
+          specific_date?: string | null
+          start_time?: string
+          title?: string
+          type?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schedules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -369,116 +535,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-  : never = never,
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-  ? R
-  : never
+    ? R
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-      Row: infer R
-    }
-  ? R
-  : never
-  : never
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-    Insert: infer I
-  }
-  ? I
-  : never
+      Insert: infer I
+    }
+    ? I
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-    Insert: infer I
-  }
-  ? I
-  : never
-  : never
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-    Update: infer U
-  }
-  ? U
-  : never
+      Update: infer U
+    }
+    ? U
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-    Update: infer U
-  }
-  ? U
-  : never
-  : never
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-  | keyof DefaultSchema["Enums"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-  : never
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-  | keyof DefaultSchema["CompositeTypes"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
