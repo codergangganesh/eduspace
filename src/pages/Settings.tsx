@@ -421,33 +421,30 @@ export default function Settings() {
                 <div className="grid grid-cols-3 gap-4">
                   <button
                     onClick={() => setAppearanceSettings({ ...appearanceSettings, theme: "light" })}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${
-                      appearanceSettings.theme === "light"
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${appearanceSettings.theme === "light"
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
-                    }`}
+                      }`}
                   >
                     <Sun className="size-6" />
                     <span className="text-sm font-medium">Light</span>
                   </button>
                   <button
                     onClick={() => setAppearanceSettings({ ...appearanceSettings, theme: "dark" })}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${
-                      appearanceSettings.theme === "dark"
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${appearanceSettings.theme === "dark"
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
-                    }`}
+                      }`}
                   >
                     <Moon className="size-6" />
                     <span className="text-sm font-medium">Dark</span>
                   </button>
                   <button
                     onClick={() => setAppearanceSettings({ ...appearanceSettings, theme: "system" })}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${
-                      appearanceSettings.theme === "system"
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all ${appearanceSettings.theme === "system"
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
-                    }`}
+                      }`}
                   >
                     <Monitor className="size-6" />
                     <span className="text-sm font-medium">System</span>
@@ -652,7 +649,7 @@ export default function Settings() {
             ) : (
               <>
                 <Save className="size-4 mr-2" />
-                Save Changes
+                Save
               </>
             )}
           </Button>
