@@ -74,28 +74,15 @@ export async function createBulkNotifications(
  * Only sends notifications to students who have assignment_reminders enabled
  */
 export async function notifyNewAssignment(
-    courseId: string,
+    studentIds: string[],
     assignmentTitle: string,
     assignmentId: string,
     dueDate?: string
 ) {
     try {
-        // Get all students enrolled in the course
-        const { data: enrollments, error: enrollError } = await supabase
-            .from("course_enrollments")
-            .select("student_id")
-            .eq("course_id", courseId);
-
-        if (enrollError) {
-            console.error("Error fetching enrollments:", enrollError);
-            return { success: false, error: enrollError };
+        if (!studentIds || studentIds.length === 0) {
+            return { success: true, message: "No students to notify" };
         }
-
-        if (!enrollments || enrollments.length === 0) {
-            return { success: true, message: "No students enrolled" };
-        }
-
-        const studentIds = enrollments.map(e => e.student_id);
 
         // Get students who have assignment_reminders enabled
         const { data: profiles, error: profileError } = await supabase
@@ -164,28 +151,15 @@ export async function notifyGradePosted(
  * Only sends notifications to students who have assignment_reminders enabled
  */
 export async function notifyAssignmentUpdated(
-    courseId: string,
+    studentIds: string[],
     assignmentTitle: string,
     assignmentId: string,
     updateDetails: string
 ) {
     try {
-        // Get all students enrolled in the course
-        const { data: enrollments, error: enrollError } = await supabase
-            .from("course_enrollments")
-            .select("student_id")
-            .eq("course_id", courseId);
-
-        if (enrollError) {
-            console.error("Error fetching enrollments:", enrollError);
-            return { success: false, error: enrollError };
+        if (!studentIds || studentIds.length === 0) {
+            return { success: true, message: "No students to notify" };
         }
-
-        if (!enrollments || enrollments.length === 0) {
-            return { success: true, message: "No students enrolled" };
-        }
-
-        const studentIds = enrollments.map(e => e.student_id);
 
         // Get students who have assignment_reminders enabled
         const { data: profiles, error: profileError } = await supabase
@@ -219,16 +193,54 @@ export async function notifyAssignmentUpdated(
 }
 
 /**
- * Notify students about a course announcement
- * Note: This function requires an 'enrollments' table to be created
- * For now, it's a placeholder
+ * Notify a user about a new message
  */
-export async function notifyCourseAnnouncement(
-    courseId: string,
-    announcementTitle: string,
-    announcementId: string
+export async function notifyNewMessage(
+    recipientId: string,
+    senderName: string,
+    messagePreview: string,
+    conversationId: string
 ) {
-    // TODO: Implement when enrollments table is created
-    console.log("notifyCourseAnnouncement called:", { courseId, announcementTitle, announcementId });
-    return { success: true };
+    // Check if recipient has push_notifications enabled
+    const { data } = await supabase
+        .from("profiles")
+        .select("push_notifications")
+        .eq("user_id", recipientId)
+        .single();
+
+    if (!data?.push_notifications) return { success: true };
+
+    return createNotification({
+        userId: recipientId,
+        title: `New message from ${senderName}`,
+        message: messagePreview.length > 100 ? messagePreview.substring(0, 100) + "..." : messagePreview,
+        type: "message",
+        relatedId: conversationId,
+    });
+}
+
+/**
+ * Notify students about a schedule change
+ */
+export async function notifyScheduleChange(
+    studentIds: string[],
+    scheduleTitle: string,
+    changeDetails: string,
+    scheduleId: string
+) {
+    try {
+        if (!studentIds || studentIds.length === 0) {
+            return { success: true, message: "No students to notify" };
+        }
+
+        return await createBulkNotifications(studentIds, {
+            title: "Schedule Updated",
+            message: `${scheduleTitle}: ${changeDetails}`,
+            type: "schedule",
+            relatedId: scheduleId,
+        });
+    } catch (err) {
+        console.error("Error in notifyScheduleChange:", err);
+        return { success: false, error: err };
+    }
 }
