@@ -468,7 +468,9 @@ export default function Schedule() {
                         Classes This Week
                       </span>
                     </div>
-                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">8</span>
+                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {weeklySchedule.length}
+                    </span>
                   </div>
 
                   {/* Assignments Due */}
@@ -481,7 +483,9 @@ export default function Schedule() {
                         Assignments Due
                       </span>
                     </div>
-                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">3</span>
+                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                      {upcomingEvents.filter(e => e.type === 'assignment').length}
+                    </span>
                   </div>
                 </div>
               </CardContent>
