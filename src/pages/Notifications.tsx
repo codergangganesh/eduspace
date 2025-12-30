@@ -37,12 +37,14 @@ import {
 import { useNotifications } from "@/hooks/useNotifications";
 import { toast } from "sonner";
 
-interface Notification {
+type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement' | 'general';
+
+interface NotificationData {
   id: string;
   user_id: string;
   title: string;
   message: string;
-  type: 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement';
+  type: NotificationType;
   related_id: string | null;
   is_read: boolean;
   created_at: string;

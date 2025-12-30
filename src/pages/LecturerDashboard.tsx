@@ -1,77 +1,14 @@
-import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar } from "lucide-react";
+// Imports
+import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-
-const recentSubmissions = [
-  {
-    id: 1,
-    student: "Alice Johnson",
-    assignment: "Algorithm Analysis Report",
-    course: "CS201",
-    submittedAt: "2 hours ago",
-    status: "pending",
-  },
-  {
-    id: 2,
-    student: "Bob Smith",
-    assignment: "Database Design Project",
-    course: "CS301",
-    submittedAt: "5 hours ago",
-    status: "pending",
-  },
-  {
-    id: 3,
-    student: "Carol Williams",
-    assignment: "Programming Assignment 3",
-    course: "CS101",
-    submittedAt: "Yesterday",
-    status: "graded",
-    grade: "A-",
-  },
-  {
-    id: 4,
-    student: "David Brown",
-    assignment: "Quiz 4 Submission",
-    course: "CS101",
-    submittedAt: "Yesterday",
-    status: "graded",
-    grade: "B+",
-  },
-];
-
-const upcomingClasses = [
-  {
-    id: 1,
-    course: "Introduction to Computer Science",
-    code: "CS101",
-    time: "2:00 PM - 3:30 PM",
-    room: "Room 204",
-    isToday: true,
-  },
-  {
-    id: 2,
-    course: "Data Structures & Algorithms",
-    code: "CS201",
-    time: "10:00 AM - 11:30 AM",
-    room: "Room 301",
-    isToday: false,
-    day: "Tomorrow",
-  },
-  {
-    id: 3,
-    course: "Database Management Systems",
-    code: "CS301",
-    time: "3:00 PM - 4:30 PM",
-    room: "Lab 102",
-    isToday: false,
-    day: "Wednesday",
-  },
-];
+import { useLecturerData } from "@/hooks/useLecturerData";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
+  const { stats: dataStats, recentSubmissions, upcomingClasses, loading } = useLecturerData();
 
   // Get display name for greeting
   const displayName = profile?.full_name || "Professor";
@@ -80,10 +17,20 @@ export default function LecturerDashboard() {
     : `Dr. ${displayName.split(" ").pop()}`;
 
   const stats = [
-    { title: "Total Students", value: 342, subtitle: "Across all courses", icon: Users },
-    { title: "Pending Reviews", value: 28, subtitle: "Assignments", icon: FileText },
-    { title: "Avg. Performance", value: "78%", subtitle: "Class average", icon: TrendingUp },
+    { title: "Total Students", value: dataStats.totalStudents, subtitle: "Across all courses", icon: Users },
+    { title: "Pending Reviews", value: dataStats.pendingReviews, subtitle: "Assignments", icon: FileText },
+    { title: "Avg. Performance", value: dataStats.avgPerformance, subtitle: "Class average", icon: TrendingUp },
   ];
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -116,52 +63,58 @@ export default function LecturerDashboard() {
               </a>
             </div>
             <div className="bg-surface rounded-xl border border-border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-secondary/30">
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Student</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Assignment</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Course</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Submitted</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentSubmissions.map((submission) => (
-                      <tr key={submission.id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
-                        <td className="px-4 py-3">
-                          <span className="font-medium text-foreground">{submission.student}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-foreground">{submission.assignment}</span>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
-                            {submission.course}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <span className="text-sm text-muted-foreground">{submission.submittedAt}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {submission.status === "pending" ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-md">
-                              <AlertCircle className="size-3" />
-                              Pending
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-md">
-                              <CheckCircle className="size-3" />
-                              {submission.grade}
-                            </span>
-                          )}
-                        </td>
+              {recentSubmissions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/30">
+                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Student</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Assignment</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Course</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Submitted</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {recentSubmissions.map((submission) => (
+                        <tr key={submission.id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-foreground">{submission.studentName}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-foreground">{submission.assignmentTitle}</span>
+                          </td>
+                          <td className="px-4 py-3 hidden sm:table-cell">
+                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
+                              {submission.courseCode}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            <span className="text-sm text-muted-foreground">{submission.submittedAt}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {submission.status === "pending" ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-md">
+                                <AlertCircle className="size-3" />
+                                Pending
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-md">
+                                <CheckCircle className="size-3" />
+                                {submission.grade}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground text-sm">
+                  No recent submissions found.
+                </div>
+              )}
             </div>
           </div>
 
@@ -176,46 +129,54 @@ export default function LecturerDashboard() {
                 </a>
               </div>
               <div className="flex flex-col gap-3">
-                {upcomingClasses.map((classItem) => (
-                  <div
-                    key={classItem.id}
-                    className={cn(
-                      "p-4 rounded-lg border transition-all",
-                      classItem.isToday
-                        ? "border-primary/50 bg-primary/5"
-                        : "border-border bg-surface"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "size-10 rounded-lg flex items-center justify-center shrink-0",
-                        classItem.isToday ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                      )}>
-                        <Calendar className="size-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-primary">{classItem.code}</span>
-                          {classItem.isToday && (
-                            <span className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                              Today
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="font-medium text-foreground text-sm mt-1 line-clamp-1">
-                          {classItem.course}
-                        </h4>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="size-3.5" />
-                            <span>{classItem.time}</span>
+                <div className="flex flex-col gap-3">
+                  {upcomingClasses.length > 0 ? (
+                    upcomingClasses.map((classItem) => (
+                      <div
+                        key={classItem.id}
+                        className={cn(
+                          "p-4 rounded-lg border transition-all",
+                          classItem.isToday
+                            ? "border-primary/50 bg-primary/5"
+                            : "border-border bg-surface"
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={cn(
+                            "size-10 rounded-lg flex items-center justify-center shrink-0",
+                            classItem.isToday ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                          )}>
+                            <Calendar className="size-5" />
                           </div>
-                          <span>{classItem.room}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-primary">{classItem.courseCode}</span>
+                              {classItem.isToday && (
+                                <span className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                  Today
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-medium text-foreground text-sm mt-1 line-clamp-1">
+                              {classItem.title}
+                            </h4>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock className="size-3.5" />
+                                <span>{classItem.time}</span>
+                              </div>
+                              <span>{classItem.room}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center p-4 text-sm text-muted-foreground">
+                      No upcoming classes.
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             </div>
 
