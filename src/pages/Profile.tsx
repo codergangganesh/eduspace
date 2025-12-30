@@ -839,87 +839,16 @@ export default function Profile() {
               <h2 className="text-lg font-semibold text-foreground mb-6">Notification Preferences</h2>
 
               <div className="space-y-6">
-                {/* Notification Channels */}
-                <div>
-                  <h3 className="text-sm font-medium text-foreground mb-4">Notification Channels</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Email Notifications</p>
-                        <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                      </div>
-                      <Switch
-                        checked={formData.email_notifications}
-                        onCheckedChange={(checked) => handleInputChange("email_notifications", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Push Notifications</p>
-                        <p className="text-sm text-muted-foreground">Receive browser push notifications</p>
-                      </div>
-                      <Switch
-                        checked={formData.push_notifications}
-                        onCheckedChange={(checked) => handleInputChange("push_notifications", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">SMS Notifications</p>
-                        <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
-                      </div>
-                      <Switch
-                        checked={formData.sms_notifications}
-                        onCheckedChange={(checked) => handleInputChange("sms_notifications", checked)}
-                      />
-                    </div>
+                {/* Assignment Reminders */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Assignment Reminders</p>
+                    <p className="text-sm text-muted-foreground">Get reminded about upcoming deadlines</p>
                   </div>
-                </div>
-
-                <div className="border-t border-border pt-6">
-                  <h3 className="text-sm font-medium text-foreground mb-4">Notification Types</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Assignment Reminders</p>
-                        <p className="text-sm text-muted-foreground">Get reminded about upcoming deadlines</p>
-                      </div>
-                      <Switch
-                        checked={formData.assignment_reminders}
-                        onCheckedChange={(checked) => handleInputChange("assignment_reminders", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Grade Updates</p>
-                        <p className="text-sm text-muted-foreground">Be notified when grades are posted</p>
-                      </div>
-                      <Switch
-                        checked={formData.grade_updates}
-                        onCheckedChange={(checked) => handleInputChange("grade_updates", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Course Announcements</p>
-                        <p className="text-sm text-muted-foreground">Receive course updates from instructors</p>
-                      </div>
-                      <Switch
-                        checked={formData.course_announcements}
-                        onCheckedChange={(checked) => handleInputChange("course_announcements", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Weekly Digest</p>
-                        <p className="text-sm text-muted-foreground">Get a weekly summary of your activities</p>
-                      </div>
-                      <Switch
-                        checked={formData.weekly_digest}
-                        onCheckedChange={(checked) => handleInputChange("weekly_digest", checked)}
-                      />
-                    </div>
-                  </div>
+                  <Switch
+                    checked={formData.assignment_reminders}
+                    onCheckedChange={(checked) => handleInputChange("assignment_reminders", checked)}
+                  />
                 </div>
               </div>
             </div>
