@@ -802,17 +802,6 @@ export default function Profile() {
                   </Button>
                 </div>
               </div>
-
-              <div className="bg-surface border border-border rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-6">Two-Factor Authentication</h2>
-                <p className="text-muted-foreground mb-4">
-                  Add an extra layer of security to your account by enabling two-factor authentication.
-                </p>
-                <Button variant="outline">
-                  <Smartphone className="size-4 mr-2" />
-                  Enable 2FA
-                </Button>
-              </div>
             </>
           )}
 
