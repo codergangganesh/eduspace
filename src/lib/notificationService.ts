@@ -71,8 +71,7 @@ export async function createBulkNotifications(
 
 /**
  * Notify students about a new assignment
- * Note: This function requires an 'enrollments' table to be created
- * For now, it's a placeholder that you can implement when you build the enrollment system
+ * Only sends notifications to students who have assignment_reminders enabled
  */
 export async function notifyNewAssignment(
     courseId: string,
@@ -80,10 +79,57 @@ export async function notifyNewAssignment(
     assignmentId: string,
     dueDate?: string
 ) {
-    // TODO: Implement when enrollments table is created
-    // For now, this is a placeholder
-    console.log("notifyNewAssignment called:", { courseId, assignmentTitle, assignmentId, dueDate });
-    return { success: true };
+    try {
+        // Get all students enrolled in the course
+        const { data: enrollments, error: enrollError } = await supabase
+            .from("course_enrollments")
+            .select("student_id")
+            .eq("course_id", courseId);
+
+        if (enrollError) {
+            console.error("Error fetching enrollments:", enrollError);
+            return { success: false, error: enrollError };
+        }
+
+        if (!enrollments || enrollments.length === 0) {
+            return { success: true, message: "No students enrolled" };
+        }
+
+        const studentIds = enrollments.map(e => e.student_id);
+
+        // Get students who have assignment_reminders enabled
+        const { data: profiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .in("user_id", studentIds)
+            .eq("assignment_reminders", true);
+
+        if (profileError) {
+            console.error("Error fetching profiles:", profileError);
+            return { success: false, error: profileError };
+        }
+
+        if (!profiles || profiles.length === 0) {
+            return { success: true, message: "No students with reminders enabled" };
+        }
+
+        const notifyUserIds = profiles.map(p => p.user_id);
+
+        // Create notification message
+        const dueDateText = dueDate ? ` - Due ${new Date(dueDate).toLocaleDateString()}` : "";
+        const message = `New assignment: "${assignmentTitle}"${dueDateText}`;
+
+        // Send notifications to students with reminders enabled
+        return await createBulkNotifications(notifyUserIds, {
+            title: "New Assignment Posted",
+            message,
+            type: "assignment",
+            relatedId: assignmentId,
+        });
+    } catch (err) {
+        console.error("Error in notifyNewAssignment:", err);
+        return { success: false, error: err };
+    }
 }
 
 /**
@@ -111,6 +157,65 @@ export async function notifyGradePosted(
         type: "grade",
         relatedId: assignmentId,
     });
+}
+
+/**
+ * Notify students about an assignment update
+ * Only sends notifications to students who have assignment_reminders enabled
+ */
+export async function notifyAssignmentUpdated(
+    courseId: string,
+    assignmentTitle: string,
+    assignmentId: string,
+    updateDetails: string
+) {
+    try {
+        // Get all students enrolled in the course
+        const { data: enrollments, error: enrollError } = await supabase
+            .from("course_enrollments")
+            .select("student_id")
+            .eq("course_id", courseId);
+
+        if (enrollError) {
+            console.error("Error fetching enrollments:", enrollError);
+            return { success: false, error: enrollError };
+        }
+
+        if (!enrollments || enrollments.length === 0) {
+            return { success: true, message: "No students enrolled" };
+        }
+
+        const studentIds = enrollments.map(e => e.student_id);
+
+        // Get students who have assignment_reminders enabled
+        const { data: profiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .in("user_id", studentIds)
+            .eq("assignment_reminders", true);
+
+        if (profileError) {
+            console.error("Error fetching profiles:", profileError);
+            return { success: false, error: profileError };
+        }
+
+        if (!profiles || profiles.length === 0) {
+            return { success: true, message: "No students with reminders enabled" };
+        }
+
+        const notifyUserIds = profiles.map(p => p.user_id);
+
+        // Send notifications to students with reminders enabled
+        return await createBulkNotifications(notifyUserIds, {
+            title: "Assignment Updated",
+            message: `"${assignmentTitle}" has been updated: ${updateDetails}`,
+            type: "assignment",
+            relatedId: assignmentId,
+        });
+    } catch (err) {
+        console.error("Error in notifyAssignmentUpdated:", err);
+        return { success: false, error: err };
+    }
 }
 
 /**

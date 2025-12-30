@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAssignments } from "@/hooks/useAssignments";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { createTestNotification, createTestAssignmentNotification, createTestGradeNotification } from "@/lib/testNotifications";
+import { createTestAssignmentNotificationWithPreference, testAssignmentReminderToggle } from "@/lib/testNotifications";
 import { toast } from "sonner";
 
 export default function Dashboard() {
@@ -17,9 +17,29 @@ export default function Dashboard() {
   const firstName = profile?.full_name?.split(" ")[0] || "Student";
 
   const handleTestNotification = async () => {
-    const result = await createTestNotification();
+    // First check current setting
+    const statusCheck = await testAssignmentReminderToggle();
+
+    if (!statusCheck.success) {
+      toast.error("Failed to check notification settings");
+      return;
+    }
+
+    // Show current status
+    if (!statusCheck.willReceiveNotifications) {
+      toast.warning("Assignment reminders are OFF. Enable them in Profile → Notifications to receive notifications.");
+      return;
+    }
+
+    // Try to create notification
+    const result = await createTestAssignmentNotificationWithPreference();
+
     if (result.success) {
-      toast.success("Test notification created! Check the bell icon.");
+      if (result.reminderStatus) {
+        toast.success("✅ Test notification sent! Check the bell icon.");
+      } else {
+        toast.info("ℹ️ Notification not sent - assignment reminders are disabled in your profile.");
+      }
     } else {
       toast.error("Failed to create notification");
     }
@@ -85,18 +105,17 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Test Notification Button (Remove this after testing) */}
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">🧪 Test Notification System</p>
+              <p className="text-sm font-medium text-foreground">🧪 Test Assignment Notification (Preference-Based)</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Click the button to create a test notification and see it in the bell icon
+                Test the notification system. Notifications will only be sent if "Assignment Reminders" is enabled in Profile → Notifications.
               </p>
             </div>
             <Button onClick={handleTestNotification} variant="outline" size="sm" className="gap-2">
               <Bell className="size-4" />
-              Create Test Notification
+              Test Notification
             </Button>
           </div>
         </div>
