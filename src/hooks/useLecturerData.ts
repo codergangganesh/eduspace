@@ -4,9 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, isToday, parseISO } from "date-fns";
 
 export interface DashboardStats {
-    totalStudents: number;
-    pendingReviews: number;
-    avgPerformance: string;
+    enrolledStudents: number;
+    submissionsReceived: number;
+    pendingSubmissions: number;
 }
 
 export interface RecentSubmission {
@@ -32,9 +32,9 @@ export interface UpcomingClass {
 export function useLecturerData() {
     const { user } = useAuth();
     const [stats, setStats] = useState<DashboardStats>({
-        totalStudents: 0,
-        pendingReviews: 0,
-        avgPerformance: "0%",
+        enrolledStudents: 0,
+        submissionsReceived: 0,
+        pendingSubmissions: 0,
     });
     const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
     const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
@@ -48,15 +48,6 @@ export function useLecturerData() {
                 setLoading(true);
 
                 // 1. Fetch Stats
-                // A. Total Students: Count enrollments in courses taught by this lecturer
-                const { count: studentCount, error: studentError } = await supabase
-                    .from("course_enrollments")
-                    .select("student_id", { count: "exact", head: true })
-                    .eq("courses.lecturer_id", user.id) // This requires a join or separate fetch if FK not straightforward
-                    // The issue is course_enrollments relates to courses to lecturer.
-                    // Let's optimize: fetch courses first.
-                    ;
-
                 // Fetch Lecturer's Courses
                 const { data: courses, error: coursesError } = await supabase
                     .from("courses")
@@ -66,57 +57,58 @@ export function useLecturerData() {
                 if (coursesError) throw coursesError;
                 const courseIds = courses.map(c => c.id);
 
-                let totalStudents = 0;
+                let enrolledStudents = 0;
+                let submissionsReceived = 0;
+                let pendingSubmissions = 0;
+
                 if (courseIds.length > 0) {
-                    const { count } = await supabase
+                    // A. Enrolled Students: Count distinct students enrolled in lecturer's courses
+                    const { data: enrollments } = await supabase
                         .from("course_enrollments")
-                        .select("student_id", { count: "exact", head: true })
-                        .in("course_id", courseIds);
-                    totalStudents = count || 0;
-                }
+                        .select("student_id")
+                        .in("course_id", courseIds)
+                        .eq("status", "active");
 
-                // B. Pending Reviews: Check submissions for assignments in these courses
-                let pendingReviews = 0;
-                let avgPerformance = "0%";
+                    enrolledStudents = enrollments?.length || 0;
 
-                // Get assignments for these courses
-                const { data: assignments, error: assignmentsError } = await supabase
-                    .from("assignments")
-                    .select("id")
-                    .in("course_id", courseIds);
+                    // Get published assignments for these courses
+                    const { data: assignments, error: assignmentsError } = await supabase
+                        .from("assignments")
+                        .select("id")
+                        .in("course_id", courseIds)
+                        .eq("status", "published");
 
-                if (!assignmentsError && assignments && assignments.length > 0) {
-                    const assignmentIds = assignments.map(a => a.id);
+                    if (!assignmentsError && assignments && assignments.length > 0) {
+                        const assignmentIds = assignments.map(a => a.id);
 
-                    // Count pending
-                    const { count: pendingCount } = await supabase
-                        .from("assignment_submissions")
-                        .select("id", { count: "exact", head: true })
-                        .in("assignment_id", assignmentIds)
-                        .eq("status", "pending");
-                    pendingReviews = pendingCount || 0;
+                        // B. Submissions Received: Count distinct students who have submitted
+                        const { data: submissions } = await supabase
+                            .from("assignment_submissions")
+                            .select("student_id, assignment_id")
+                            .in("assignment_id", assignmentIds);
 
-                    // Avg Performance (from graded submissions)
-                    const { data: grades } = await supabase
-                        .from("assignment_submissions")
-                        .select("grade")
-                        .in("assignment_id", assignmentIds)
-                        .not("grade", "is", null);
+                        submissionsReceived = submissions?.length || 0;
 
-                    if (grades && grades.length > 0) {
-                        const total = grades.reduce((acc, curr) => acc + (curr.grade || 0), 0);
-                        avgPerformance = Math.round(total / grades.length) + "%";
+                        // C. Pending Submissions: (Total Students × Published Assignments) - Submissions Received
+                        const totalExpectedSubmissions = enrolledStudents * assignments.length;
+                        pendingSubmissions = totalExpectedSubmissions - submissionsReceived;
                     }
                 }
 
                 setStats({
-                    totalStudents,
-                    pendingReviews,
-                    avgPerformance
-                });
+                    enrolledStudents,
+                    submissionsReceived,
+                    pendingSubmissions
+                })
 
                 // 2. Fetch Recent Submissions
                 if (courses.length > 0) {
+                    // Fetch all assignments for recent submissions display
+                    const { data: allAssignments } = await supabase
+                        .from("assignments")
+                        .select("id")
+                        .in("course_id", courseIds);
+
                     const { data: submissions, error: submissionsError } = await supabase
                         .from("assignment_submissions")
                         .select(`
@@ -127,9 +119,7 @@ export function useLecturerData() {
                     student:profiles!student_id(full_name),
                     assignment:assignments!assignment_id(title, course_id)
                 `)
-                        // Filter indirectly by joining? Supabase filtering on deep relation is tricky. 
-                        // Easier to filter by assignment IDs we already fetched.
-                        .in("assignment_id", assignments?.map(a => a.id) || [])
+                        .in("assignment_id", allAssignments?.map(a => a.id) || [])
                         .order("submitted_at", { ascending: false })
                         .limit(5);
 
@@ -196,6 +186,28 @@ export function useLecturerData() {
         };
 
         fetchData();
+
+        // Set up real-time subscription for assignment submissions
+        const submissionsChannel = supabase
+            .channel('assignment_submissions_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'assignment_submissions'
+                },
+                () => {
+                    // Refetch data when submissions change
+                    fetchData();
+                }
+            )
+            .subscribe();
+
+        // Cleanup subscription on unmount
+        return () => {
+            supabase.removeChannel(submissionsChannel);
+        };
     }, [user]);
 
     return { stats, recentSubmissions, upcomingClasses, loading };
