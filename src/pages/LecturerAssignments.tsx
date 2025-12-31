@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function LecturerAssignments() {
-    const { assignments, courses, loading, createAssignment, deleteAssignment } = useLecturerAssignments();
+    const { assignments, courses, loading, createAssignment, deleteAssignment, fetchSubjects } = useLecturerAssignments();
 
     return (
         <DashboardLayout>
@@ -41,7 +41,7 @@ export default function LecturerAssignments() {
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Assignment Management</h1>
                         <p className="text-muted-foreground mt-1">Create and manage course assignments</p>
                     </div>
-                    <CreateAssignmentDialog courses={courses} onCreate={createAssignment} />
+                    <CreateAssignmentDialog courses={courses} onCreate={createAssignment} fetchSubjects={fetchSubjects} />
                 </div>
 
                 {/* Stats Row */}

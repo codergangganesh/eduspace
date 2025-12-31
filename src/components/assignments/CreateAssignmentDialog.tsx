@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -16,31 +16,51 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Upload, X, Plus } from "lucide-react";
+import { CalendarIcon, Loader2, Upload, X, Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import { CreateAssignmentDTO } from "@/hooks/useLecturerAssignments";
+import { CreateAssignmentDTO, Subject } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Props {
     courses: { id: string; title: string; course_code: string }[];
     onCreate: (data: CreateAssignmentDTO) => Promise<{ success: boolean; error?: string }>;
+    fetchSubjects: (courseId: string) => Promise<Subject[]>;
 }
 
-export function CreateAssignmentDialog({ courses, onCreate }: Props) {
+export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Props) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [date, setDate] = useState<Date>();
     const [file, setFile] = useState<File | null>(null);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
         description: "",
         courseId: "",
-        maxPoints: "100",
+        subjectId: "",
     });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch subjects when course changes
+    useEffect(() => {
+        if (formData.courseId) {
+            setLoadingSubjects(true);
+            fetchSubjects(formData.courseId).then((data) => {
+                setSubjects(data);
+                setLoadingSubjects(false);
+                // Reset subject selection when course changes
+                setFormData(prev => ({ ...prev, subjectId: "" }));
+            });
+        } else {
+            setSubjects([]);
+            setFormData(prev => ({ ...prev, subjectId: "" }));
+        }
+    }, [formData.courseId, fetchSubjects]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -50,31 +70,31 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.title || !formData.courseId || !date) {
-            toast.error("Please fill in all required fields (Title, Course, Due Date)");
+
+        // Validation
+        if (!formData.title || !formData.courseId || !formData.subjectId || !date) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        if (!file) {
+            toast.error("Attachment is required. Please upload a file.");
             return;
         }
 
         setLoading(true);
         try {
-            let attachmentUrl = undefined;
-            let attachmentName = undefined;
-
-            // Upload file to Cloudinary if selected
-            if (file) {
-                const uploadResult = await uploadToCloudinary(file);
-                attachmentUrl = uploadResult.secure_url;
-                attachmentName = file.name;
-            }
+            // Upload file to Cloudinary (mandatory)
+            const uploadResult = await uploadToCloudinary(file);
 
             const assignmentData: CreateAssignmentDTO = {
                 title: formData.title,
                 description: formData.description,
                 course_id: formData.courseId,
+                subject_id: formData.subjectId,
                 due_date: date,
-                max_points: parseInt(formData.maxPoints) || 100,
-                attachment_url: attachmentUrl,
-                attachment_name: attachmentName,
+                attachment_url: uploadResult.url,
+                attachment_name: file.name,
             };
 
             const result = await onCreate(assignmentData);
@@ -82,15 +102,16 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
             if (result.success) {
                 setOpen(false);
                 // Reset form
-                setFormData({ title: "", description: "", courseId: "", maxPoints: "100" });
+                setFormData({ title: "", description: "", courseId: "", subjectId: "" });
                 setDate(undefined);
                 setFile(null);
+                setSubjects([]);
             } else {
                 toast.error(result.error || "Failed to create assignment");
             }
         } catch (error) {
             console.error(error);
-            toast.error("An unexpected error occurred");
+            toast.error("Failed to upload attachment or create assignment");
         } finally {
             setLoading(false);
         }
@@ -108,7 +129,7 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
                 <DialogHeader>
                     <DialogTitle>Create New Assignment</DialogTitle>
                     <DialogDescription>
-                        Post a new assignment for your students.
+                        Post a new assignment for your students. All fields marked with * are required.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -120,38 +141,51 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
                             placeholder="e.g. Data Structures Project 1"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            required
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="course">Course Name *</Label>
+                        <Input
+                            id="course"
+                            placeholder="e.g. Computer Science Engineering"
+                            value={formData.courseId}
+                            onChange={(e) => setFormData({ ...formData, courseId: e.target.value })}
+                            required
+                        />
+                    </div>
+
+                    {formData.courseId && (
                         <div className="space-y-2">
-                            <Label>Course *</Label>
+                            <Label>Subject *</Label>
                             <Select
-                                value={formData.courseId}
-                                onValueChange={(val) => setFormData({ ...formData, courseId: val })}
+                                value={formData.subjectId}
+                                onValueChange={(val) => setFormData({ ...formData, subjectId: val })}
+                                disabled={loadingSubjects || subjects.length === 0}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select Course" />
+                                    <SelectValue placeholder={
+                                        loadingSubjects ? "Loading subjects..." :
+                                            subjects.length === 0 ? "No subjects available" :
+                                                "Select Subject"
+                                    } />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {courses.map((course) => (
-                                        <SelectItem key={course.id} value={course.id}>
-                                            {course.course_code} - {course.title}
+                                    {subjects.map((subject) => (
+                                        <SelectItem key={subject.id} value={subject.id}>
+                                            {subject.code ? `${subject.code} - ` : ""}{subject.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {subjects.length === 0 && !loadingSubjects && (
+                                <p className="text-xs text-muted-foreground">
+                                    No subjects found for this course. Please add subjects first.
+                                </p>
+                            )}
                         </div>
-
-                        <div className="space-y-2">
-                            <Label>Max Points</Label>
-                            <Input
-                                type="number"
-                                value={formData.maxPoints}
-                                onChange={(e) => setFormData({ ...formData, maxPoints: e.target.value })}
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label>Due Date *</Label>
@@ -192,7 +226,13 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Attachment (Optional)</Label>
+                        <Label>Attachment *</Label>
+                        <Alert variant={file ? "default" : "destructive"} className="mb-2">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                                {file ? "File selected successfully" : "Attachment is mandatory. Please upload a file."}
+                            </AlertDescription>
+                        </Alert>
                         <div className="flex items-center gap-4">
                             <Button
                                 type="button"
@@ -200,13 +240,14 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 <Upload className="size-4 mr-2" />
-                                Select File
+                                {file ? "Change File" : "Select File"}
                             </Button>
                             <input
                                 type="file"
                                 className="hidden"
                                 ref={fileInputRef}
                                 onChange={handleFileSelect}
+                                accept=".pdf,.doc,.docx,.txt,.zip,.rar"
                             />
                             {file && (
                                 <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-1 rounded-full">
@@ -227,7 +268,7 @@ export function CreateAssignmentDialog({ courses, onCreate }: Props) {
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={loading}>
+                        <Button type="submit" disabled={loading || !file}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Create Assignment
                         </Button>
