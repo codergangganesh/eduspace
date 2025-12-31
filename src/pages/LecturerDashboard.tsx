@@ -5,10 +5,12 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLecturerData } from "@/hooks/useLecturerData";
+import { useNavigate } from "react-router-dom";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
   const { stats: dataStats, recentSubmissions, upcomingClasses, loading } = useLecturerData();
+  const navigate = useNavigate();
 
   // Get display name for greeting
   const displayName = profile?.full_name || "Professor";
@@ -183,22 +185,27 @@ export default function LecturerDashboard() {
             {/* Quick Actions */}
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <button className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 transition-all">
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => navigate('/assignments')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
+                >
                   <FileText className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground">Create Assignment</span>
+                  <span className="text-xs font-medium text-foreground text-center">Create Assignment</span>
                 </button>
-                <button className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 transition-all">
+                <button
+                  onClick={() => navigate('/schedule')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
+                >
                   <Calendar className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground">Schedule Class</span>
+                  <span className="text-xs font-medium text-foreground text-center">Schedule Class</span>
                 </button>
-                <button className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 transition-all">
+                <button
+                  onClick={() => navigate('/students')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
+                >
                   <Users className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground">View Students</span>
-                </button>
-                <button className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 transition-all">
-                  <TrendingUp className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground">Analytics</span>
+                  <span className="text-xs font-medium text-foreground text-center">View Students</span>
                 </button>
               </div>
             </div>
