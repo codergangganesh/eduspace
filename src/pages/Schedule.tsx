@@ -248,25 +248,60 @@ export default function Schedule() {
     setEditingEventId(null);
   };
 
+  // valid start times from 08:30 to 16:00 (every 45 mins)
+  const validStartTimes = [
+    "08:30", "09:15", "10:00", "10:45", "11:30", "12:15",
+    "13:00", "13:45", "14:30", "15:15", "16:00"
+  ];
+
+  // Helper to get valid end times based on start time (up to 16:45)
+  // End times should align with the 45 min structure
+  const validEndTimesList = [
+    "09:15", "10:00", "10:45", "11:30", "12:15",
+    "13:00", "13:45", "14:30", "15:15", "16:00", "16:45"
+  ];
+
+  const getValidEndTimes = (startTime: string) => {
+    return validEndTimesList.filter(t => t > startTime);
+  };
+
+  const EVENT_COLORS = [
+    "bg-red-500", "bg-orange-500", "bg-amber-500", "bg-yellow-500", "bg-lime-500",
+    "bg-green-500", "bg-emerald-500", "bg-teal-500", "bg-cyan-500", "bg-sky-500",
+    "bg-blue-500", "bg-indigo-500", "bg-violet-500", "bg-purple-500", "bg-fuchsia-500",
+    "bg-pink-500", "bg-rose-500"
+  ];
+
+  const getEventColor = (day: number, time: string) => {
+    // deterministic hash
+    const timeVal = parseInt(time.replace(":", ""));
+    const hash = (day * 37 + timeVal) % EVENT_COLORS.length;
+    return EVENT_COLORS[hash];
+  };
+
   const handleCreateEvent = async () => {
-    if (!formData.title || !formData.date || !formData.startTime || !formData.endTime || !formData.lecturerName || !formData.subjectName) {
-      toast.error("Please fill in all required fields");
+    const { title, date, startTime, endTime, lecturerName, subjectName, location, notes } = formData;
+
+    if (!title || !date || !startTime || !endTime || !lecturerName || !subjectName || !location || !notes) {
+      toast.error("Please fill in all required fields (including Classroom and Notes)");
       return;
     }
 
-    const dayOfWeek = new Date(formData.date).getDay();
+    const dayOfWeek = new Date(date).getDay();
+    const color = getEventColor(dayOfWeek, startTime);
 
     const result = await createSchedule({
-      title: formData.title,
-      subject_name: formData.subjectName,
-      lecturer_name: formData.lecturerName,
+      title,
+      subject_name: subjectName,
+      lecturer_name: lecturerName,
       type: formData.type as any,
-      specific_date: formData.date,
+      specific_date: date,
       day_of_week: dayOfWeek,
-      start_time: formData.startTime,
-      end_time: formData.endTime,
-      location: formData.location,
-      notes: formData.notes,
+      start_time: startTime,
+      end_time: endTime,
+      location, // Now mapped to Classroom label
+      notes,
+      color, // Auto-assigned color
       is_recurring: true
     });
 
@@ -298,19 +333,28 @@ export default function Schedule() {
   const handleUpdateEvent = async () => {
     if (!editingEventId) return;
 
-    const dayOfWeek = new Date(formData.date).getDay();
+    const { title, date, startTime, endTime, lecturerName, subjectName, location, notes } = formData;
+
+    if (!title || !date || !startTime || !endTime || !lecturerName || !subjectName || !location || !notes) {
+      toast.error("Please fill in all required fields (including Classroom and Notes)");
+      return;
+    }
+
+    const dayOfWeek = new Date(date).getDay();
+    const color = getEventColor(dayOfWeek, startTime);
 
     const result = await updateSchedule(editingEventId, {
-      title: formData.title,
-      subject_name: formData.subjectName,
-      lecturer_name: formData.lecturerName,
+      title,
+      subject_name: subjectName,
+      lecturer_name: lecturerName,
       type: formData.type as any,
-      specific_date: formData.date,
+      specific_date: date,
       day_of_week: dayOfWeek,
-      start_time: formData.startTime,
-      end_time: formData.endTime,
-      location: formData.location,
-      notes: formData.notes,
+      start_time: startTime,
+      end_time: endTime,
+      location,
+      notes,
+      color, // Update color based on new time
     });
 
     if (result.success) {
@@ -436,26 +480,50 @@ export default function Schedule() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="startTime">Start Time *</Label>
-                        <Input
-                          id="startTime"
-                          type="time"
+                        <Label htmlFor="startTime">Start Time (08:30 - 16:00) *</Label>
+                        <Select
                           value={formData.startTime}
-                          onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                        />
+                          onValueChange={(val) => {
+                            // Auto calculate end time (Start + 45mins)
+                            // Find index of start time, next slot is end time
+                            const startIndex = validStartTimes.indexOf(val);
+                            let newEndTime = "";
+                            if (startIndex !== -1 && startIndex < validEndTimesList.length) {
+                              newEndTime = validEndTimesList[startIndex]; // The corresponding end time for this slot
+                            }
+                            setFormData({ ...formData, startTime: val, endTime: newEndTime })
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select start time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {validStartTimes.map(t => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="endTime">End Time *</Label>
-                        <Input
-                          id="endTime"
-                          type="time"
+                        <Label htmlFor="endTime">End Time (Until 16:45) *</Label>
+                        <Select
                           value={formData.endTime}
-                          onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                        />
+                          onValueChange={(val) => setFormData({ ...formData, endTime: val })}
+                          disabled={!formData.startTime}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select end time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getValidEndTimes(formData.startTime).map(t => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
+                      <Label htmlFor="location">Classroom *</Label>
                       <Input
                         id="location"
                         placeholder="e.g. Room 301"
@@ -464,10 +532,10 @@ export default function Schedule() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="notes">Notes</Label>
+                      <Label htmlFor="notes">Notes *</Label>
                       <Textarea
                         id="notes"
-                        placeholder="Add any notes..."
+                        placeholder="Add mandatory notes..."
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       />
@@ -546,36 +614,61 @@ export default function Schedule() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-startTime">Start Time *</Label>
-                  <Input
-                    id="edit-startTime"
-                    type="time"
+                  <Label htmlFor="edit-startTime">Start Time (08:30 - 16:00) *</Label>
+                  <Select
                     value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  />
+                    onValueChange={(val) => {
+                      // Auto calculate end time (Start + 45mins)
+                      const startIndex = validStartTimes.indexOf(val);
+                      let newEndTime = "";
+                      if (startIndex !== -1 && startIndex < validEndTimesList.length) {
+                        newEndTime = validEndTimesList[startIndex];
+                      }
+                      setFormData({ ...formData, startTime: val, endTime: newEndTime })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select start time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {validStartTimes.map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-endTime">End Time *</Label>
-                  <Input
-                    id="edit-endTime"
-                    type="time"
+                  <Label htmlFor="edit-endTime">End Time (Until 16:45) *</Label>
+                  <Select
                     value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  />
+                    onValueChange={(val) => setFormData({ ...formData, endTime: val })}
+                    disabled={!formData.startTime}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select end time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getValidEndTimes(formData.startTime).map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-location">Location</Label>
+                <Label htmlFor="edit-location">Classroom *</Label>
                 <Input
                   id="edit-location"
+                  placeholder="e.g. Room 301"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes</Label>
+                <Label htmlFor="edit-notes">Notes *</Label>
                 <Textarea
                   id="edit-notes"
+                  placeholder="Add mandatory notes..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
