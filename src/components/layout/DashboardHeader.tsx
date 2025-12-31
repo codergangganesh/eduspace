@@ -1,10 +1,9 @@
-import { Menu, Sun, Moon, UserPlus } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -12,8 +11,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const { theme, setTheme } = useTheme();
-  const { profile, role } = useAuth();
-  const navigate = useNavigate();
+  const { profile } = useAuth();
 
   // "If notification icon should be enabled" logic
   // If the user disabled notifications, do we show the bell? 
@@ -22,7 +20,6 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   // Profile might strictly not have the column yet if SQL wasn't run, 
   // so we default to true (show bell) to avoid confusion during dev.
   const showNotifications = profile?.notifications_enabled !== false;
-  const isLecturer = role === "lecturer";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-surface px-4 shadow-sm lg:px-6">
@@ -31,18 +28,6 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </Button>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
-        {isLecturer && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => navigate("/invite")}
-            className="gap-2"
-          >
-            <UserPlus className="size-4" />
-            <span className="hidden sm:inline">Invite</span>
-          </Button>
-        )}
-
         {showNotifications && <NotificationsPopover />}
 
         <Button
