@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,11 +26,21 @@ import {
   Grid3X3,
   List,
   FileText,
+  Edit,
+  Trash2,
+  MoreVertical
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSchedule } from "@/hooks/useSchedule";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ClassEvent {
   id: string;
@@ -37,6 +52,10 @@ interface ClassEvent {
   instructor?: string;
   color: string;
   dayOfWeek: number;
+  lecturerName: string;
+  subjectName: string;
+  notes?: string;
+  specificDate?: string;
 }
 
 interface CalendarEvent {
@@ -52,12 +71,16 @@ const convertToClassEvent = (schedule: any): ClassEvent => ({
   id: schedule.id,
   title: schedule.title,
   type: schedule.type as ClassEvent['type'],
-  startTime: schedule.start_time,
-  endTime: schedule.end_time,
+  startTime: schedule.start_time?.slice(0, 5) || "08:00",
+  endTime: schedule.end_time?.slice(0, 5) || "09:00",
   location: schedule.location || undefined,
   instructor: schedule.course_title || undefined,
   color: schedule.color || "bg-blue-500",
   dayOfWeek: schedule.day_of_week,
+  lecturerName: schedule.lecturer_name || "Unknown Lecturer",
+  subjectName: schedule.subject_name || schedule.title || "Unknown Subject",
+  notes: schedule.notes,
+  specificDate: schedule.specific_date
 });
 
 const timeSlots = [
@@ -65,24 +88,52 @@ const timeSlots = [
   "13:00", "14:00", "15:00", "16:00", "17:00",
 ];
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Schedule() {
-  const { role } = useAuth();
-  const { schedules, loading } = useSchedule();
+  const { role, profile, user } = useAuth();
+  const { schedules, assignments, createSchedule, updateSchedule, deleteSchedule, loading } = useSchedule();
   const [currentDate, setCurrentDate] = useState(new Date());
-  // Default to week view for all users
   const [viewMode, setViewMode] = useState<"week" | "month" | "list">("week");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [isEditEventOpen, setIsEditEventOpen] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    title: "",
+    subjectName: "",
+    lecturerName: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    type: "lecture",
+    startTime: "09:00",
+    endTime: "10:00",
+    location: "",
+    notes: ""
+  });
+
+  // Pre-fill lecturer name for lecturers
+  useEffect(() => {
+    if (role === 'lecturer' && profile?.full_name) {
+      setFormData(prev => ({ ...prev, lecturerName: profile.full_name || "" }));
+    }
+  }, [role, profile]);
+
 
   const isStudent = role === "student";
 
-  // Convert Supabase schedules to ClassEvent format
   const weeklySchedule: ClassEvent[] = schedules.map(convertToClassEvent);
-  const upcomingEvents: CalendarEvent[] = []; // Can be populated from assignments/exams
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const upcomingEvents: CalendarEvent[] = (assignments || []).map((a: any) => ({
+    id: a.id,
+    title: a.title,
+    date: new Date(a.due_date),
+    type: "assignment",
+    color: "bg-orange-500"
+  }));
+
+  const displayWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // Sunday start
 
   const goToPreviousWeek = () => {
     setCurrentDate(addDays(currentDate, -7));
@@ -97,32 +148,141 @@ export default function Schedule() {
   };
 
   const getEventsForDay = (dayIndex: number) => {
-    return weeklySchedule.filter((event) => event.dayOfWeek === dayIndex + 1);
+    const columnDate = addDays(displayWeekStart, dayIndex);
+    const columnDateStr = format(columnDate, "yyyy-MM-dd");
+
+    return weeklySchedule.filter((event) => {
+      if (event.specificDate) {
+        return event.specificDate === columnDateStr;
+      }
+      return event.dayOfWeek === dayIndex; // Recurring
+    });
   };
 
   const getEventPosition = (startTime: string) => {
     const [hours, minutes] = startTime.split(":").map(Number);
     const startHour = 8;
     const position = ((hours - startHour) * 60 + minutes) / 60;
-    return position * 80; // 80px per hour
+    return Math.max(0, position * 80); // 80px per hour
   };
 
   const getEventHeight = (startTime: string, endTime: string) => {
     const [startHours, startMinutes] = startTime.split(":").map(Number);
     const [endHours, endMinutes] = endTime.split(":").map(Number);
     const duration = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
-    return (duration / 60) * 80;
+    return Math.max(40, (duration / 60) * 80); // Min height 40px
   };
 
   const getTypeLabel = (type: ClassEvent["type"]) => {
-    const labels = {
+    const labels: Record<string, string> = {
       lecture: "Lecture",
       lab: "Lab",
       tutorial: "Tutorial",
       exam: "Exam",
       event: "Event",
     };
-    return labels[type];
+    return labels[type] || type;
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      subjectName: "",
+      lecturerName: role === 'lecturer' ? profile?.full_name || "" : "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      type: "lecture",
+      startTime: "09:00",
+      endTime: "10:00",
+      location: "",
+      notes: ""
+    });
+    setEditingEventId(null);
+  };
+
+  const handleCreateEvent = async () => {
+    if (!formData.title || !formData.date || !formData.startTime || !formData.endTime || !formData.lecturerName || !formData.subjectName) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const dayOfWeek = new Date(formData.date).getDay();
+
+    const result = await createSchedule({
+      title: formData.title,
+      subject_name: formData.subjectName,
+      lecturer_name: formData.lecturerName,
+      type: formData.type as any,
+      specific_date: formData.date,
+      day_of_week: dayOfWeek,
+      start_time: formData.startTime,
+      end_time: formData.endTime,
+      location: formData.location,
+      notes: formData.notes,
+      is_recurring: true
+    });
+
+    if (result.success) {
+      toast.success("Event added successfully");
+      setIsAddEventOpen(false);
+      resetForm();
+    } else {
+      toast.error(result.error || "Failed to add event");
+    }
+  };
+
+  const handleEditClick = (event: ClassEvent) => {
+    setEditingEventId(event.id);
+    setFormData({
+      title: event.title,
+      subjectName: event.subjectName,
+      lecturerName: event.lecturerName,
+      date: event.specificDate || format(new Date(), "yyyy-MM-dd"), // Fallback if recurring
+      type: event.type,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location || "",
+      notes: event.notes || ""
+    });
+    setIsEditEventOpen(true);
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEventId) return;
+
+    const dayOfWeek = new Date(formData.date).getDay();
+
+    const result = await updateSchedule(editingEventId, {
+      title: formData.title,
+      subject_name: formData.subjectName,
+      lecturer_name: formData.lecturerName,
+      type: formData.type as any,
+      specific_date: formData.date,
+      day_of_week: dayOfWeek,
+      start_time: formData.startTime,
+      end_time: formData.endTime,
+      location: formData.location,
+      notes: formData.notes,
+    });
+
+    if (result.success) {
+      toast.success("Event updated successfully");
+      setIsEditEventOpen(false);
+      resetForm();
+    } else {
+      toast.error(result.error || "Failed to update event");
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (confirm("Are you sure you want to delete this event?")) {
+      const result = await deleteSchedule(id);
+      if (result.success) {
+        toast.success("Event deleted");
+        setIsEditEventOpen(false); // If open
+      } else {
+        toast.error(result.error || "Failed to delete event");
+      }
+    }
   };
 
   return (
@@ -135,7 +295,6 @@ export default function Schedule() {
             <p className="text-muted-foreground">Manage your class timetable and events</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* View mode toggle */}
             <div className="flex items-center rounded-lg border border-border bg-surface p-1">
               <Button
                 variant={viewMode === "week" ? "secondary" : "ghost"}
@@ -145,7 +304,6 @@ export default function Schedule() {
                 <Grid3X3 className="size-4 mr-1" />
                 Week
               </Button>
-
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="sm"
@@ -156,11 +314,10 @@ export default function Schedule() {
               </Button>
             </div>
 
-            {/* Add Event button - hidden for students */}
             {!isStudent && (
               <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={resetForm}>
                     <Plus className="size-4 mr-2" />
                     Add Event
                   </Button>
@@ -170,18 +327,51 @@ export default function Schedule() {
                     <DialogTitle>Add New Event</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
+                    {/* Add/Edit Form Fields */}
                     <div className="space-y-2">
-                      <Label htmlFor="title">Event Title</Label>
-                      <Input id="title" placeholder="Enter event title" />
+                      <Label htmlFor="title">Event Title *</Label>
+                      <Input
+                        id="title"
+                        placeholder="e.g. Lecture 1"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subjectName">Subject Name *</Label>
+                      <Input
+                        id="subjectName"
+                        placeholder="e.g. Computer Science 101"
+                        value={formData.subjectName}
+                        onChange={(e) => setFormData({ ...formData, subjectName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lecturerName">Lecturer Name *</Label>
+                      <Input
+                        id="lecturerName"
+                        placeholder="e.g. Dr. Smith"
+                        value={formData.lecturerName}
+                        onChange={(e) => setFormData({ ...formData, lecturerName: e.target.value })}
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
-                        <Input id="date" type="date" />
+                        <Label htmlFor="date">Date *</Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="type">Type</Label>
-                        <Select>
+                        <Select
+                          value={formData.type}
+                          onValueChange={(val) => setFormData({ ...formData, type: val })}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
@@ -197,24 +387,44 @@ export default function Schedule() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="startTime">Start Time</Label>
-                        <Input id="startTime" type="time" />
+                        <Label htmlFor="startTime">Start Time *</Label>
+                        <Input
+                          id="startTime"
+                          type="time"
+                          value={formData.startTime}
+                          onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="endTime">End Time</Label>
-                        <Input id="endTime" type="time" />
+                        <Label htmlFor="endTime">End Time *</Label>
+                        <Input
+                          id="endTime"
+                          type="time"
+                          value={formData.endTime}
+                          onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="location">Location</Label>
-                      <Input id="location" placeholder="Enter location" />
+                      <Input
+                        id="location"
+                        placeholder="e.g. Room 301"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="notes">Notes</Label>
-                      <Textarea id="notes" placeholder="Add any notes..." />
+                      <Textarea
+                        id="notes"
+                        placeholder="Add any notes..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      />
                     </div>
-                    <Button className="w-full" onClick={() => setIsAddEventOpen(false)}>
-                      Add Event
+                    <Button className="w-full" onClick={handleCreateEvent}>
+                      Save Event
                     </Button>
                   </div>
                 </DialogContent>
@@ -222,6 +432,117 @@ export default function Schedule() {
             )}
           </div>
         </div>
+
+        {/* Edit Event Dialog */}
+        <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Same Fields as Add */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Event Title *</Label>
+                <Input
+                  id="edit-title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-subjectName">Subject Name *</Label>
+                <Input
+                  id="edit-subjectName"
+                  value={formData.subjectName}
+                  onChange={(e) => setFormData({ ...formData, subjectName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lecturerName">Lecturer Name *</Label>
+                <Input
+                  id="edit-lecturerName"
+                  value={formData.lecturerName}
+                  onChange={(e) => setFormData({ ...formData, lecturerName: e.target.value })}
+                />
+              </div>
+              {/* ... (Date, Type, Time, Location, Notes) - condensed for brevity but must be present */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date *</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-type">Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(val) => setFormData({ ...formData, type: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lecture">Lecture</SelectItem>
+                      <SelectItem value="lab">Lab</SelectItem>
+                      <SelectItem value="tutorial">Tutorial</SelectItem>
+                      <SelectItem value="exam">Exam</SelectItem>
+                      <SelectItem value="event">Event</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-startTime">Start Time *</Label>
+                  <Input
+                    id="edit-startTime"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-endTime">End Time *</Label>
+                  <Input
+                    id="edit-endTime"
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-location">Location</Label>
+                <Input
+                  id="edit-location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-notes">Notes</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="destructive" onClick={() => editingEventId && handleDeleteEvent(editingEventId)}>
+                  Delete
+                </Button>
+                <Button onClick={handleUpdateEvent}>
+                  Update Event
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Calendar/Timetable */}
@@ -242,7 +563,7 @@ export default function Schedule() {
                       </Button>
                     </div>
                     <h2 className="text-lg font-semibold">
-                      {format(weekStart, "MMM d")} - {format(addDays(weekStart, 4), "MMM d, yyyy")}
+                      {format(displayWeekStart, "MMM d")} - {format(addDays(displayWeekStart, 6), "MMM d, yyyy")}
                     </h2>
                   </div>
                 </CardHeader>
@@ -250,10 +571,10 @@ export default function Schedule() {
                   <div className="overflow-x-auto">
                     <div className="min-w-[800px]">
                       {/* Day Headers */}
-                      <div className="grid grid-cols-6 border-b border-border">
+                      <div className="grid grid-cols-8 border-b border-border">
                         <div className="w-20 shrink-0" />
                         {days.map((day, index) => {
-                          const date = addDays(weekStart, index);
+                          const date = addDays(displayWeekStart, index);
                           const isToday = isSameDay(date, new Date());
                           return (
                             <div
@@ -263,7 +584,7 @@ export default function Schedule() {
                                 isToday && "bg-primary/5"
                               )}
                             >
-                              <p className="text-sm text-muted-foreground">{day}</p>
+                              <p className="text-sm text-muted-foreground">{day.slice(0, 3)}</p>
                               <p
                                 className={cn(
                                   "text-2xl font-semibold mt-1",
@@ -292,7 +613,7 @@ export default function Schedule() {
                         </div>
 
                         {/* Grid */}
-                        <div className="ml-20 grid grid-cols-5">
+                        <div className="ml-20 grid grid-cols-7">
                           {days.map((_, dayIndex) => (
                             <div
                               key={dayIndex}
@@ -310,23 +631,68 @@ export default function Schedule() {
 
                               {/* Events */}
                               {getEventsForDay(dayIndex).map((event) => (
-                                <div
-                                  key={event.id}
-                                  className={cn(
-                                    "absolute left-1 right-1 rounded-lg p-2 text-white text-xs overflow-hidden cursor-pointer hover:opacity-90 transition-opacity",
-                                    event.color
-                                  )}
-                                  style={{
-                                    top: `${getEventPosition(event.startTime)}px`,
-                                    height: `${getEventHeight(event.startTime, event.endTime)}px`,
-                                  }}
-                                >
-                                  <p className="font-medium truncate">{event.title}</p>
-                                  <p className="opacity-80">
-                                    {event.startTime} - {event.endTime}
-                                  </p>
-                                  <p className="opacity-80 truncate">{event.location}</p>
-                                </div>
+                                <HoverCard key={event.id}>
+                                  <HoverCardTrigger asChild>
+                                    <div
+                                      onClick={() => !isStudent && handleEditClick(event)}
+                                      className={cn(
+                                        "absolute left-1 right-1 rounded-lg p-2 text-white text-xs overflow-hidden cursor-pointer hover:opacity-90 transition-opacity",
+                                        event.color
+                                      )}
+                                      style={{
+                                        top: `${getEventPosition(event.startTime)}px`,
+                                        height: `${getEventHeight(event.startTime, event.endTime)}px`,
+                                      }}
+                                    >
+                                      <p className="font-medium truncate">{event.subjectName}</p>
+                                      <p className="opacity-90 truncate text-[10px]">{event.title}</p>
+                                      <p className="opacity-80">
+                                        {event.startTime} - {event.endTime}
+                                      </p>
+                                    </div>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80 p-4">
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <h4 className="font-semibold text-lg">{event.subjectName}</h4>
+                                          <p className="text-sm text-muted-foreground">{event.title}</p>
+                                        </div>
+                                        <Badge variant="outline">{getTypeLabel(event.type)}</Badge>
+                                      </div>
+
+                                      <div className="space-y-2 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-2">
+                                          <Clock className="size-4" />
+                                          <span>{event.startTime} - {event.endTime}</span>
+                                        </div>
+                                        {event.location && (
+                                          <div className="flex items-center gap-2">
+                                            <MapPin className="size-4" />
+                                            <span>{event.location}</span>
+                                          </div>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                          <Users className="size-4" />
+                                          <span>{event.lecturerName}</span>
+                                        </div>
+                                        {event.notes && (
+                                          <div className="flex items-start gap-2 pt-2 border-t border-border mt-2">
+                                            <FileText className="size-4 mt-0.5" />
+                                            <p>{event.notes}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {!isStudent && (
+                                        <div className="pt-2">
+                                          <Button size="sm" variant="outline" onClick={() => handleEditClick(event)} className="w-full">
+                                            <Edit className="size-3 mr-2" /> Edit Event
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
                               ))}
                             </div>
                           ))}
@@ -361,7 +727,7 @@ export default function Schedule() {
                     {weeklySchedule.map((event) => (
                       <div
                         key={event.id}
-                        className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                        className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors group relative"
                       >
                         <div
                           className={cn(
@@ -371,26 +737,35 @@ export default function Schedule() {
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{event.title}</h4>
+                            <h4 className="font-medium">{event.subjectName}</h4>
                             <Badge variant="secondary">{getTypeLabel(event.type)}</Badge>
                           </div>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">{event.title}</p>
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="size-4" />
-                              {days[event.dayOfWeek - 1]}, {event.startTime} - {event.endTime}
+                              {days[event.dayOfWeek]} {event.startTime} - {event.endTime}
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="size-4" />
                               {event.location}
                             </span>
-                            {event.instructor && (
-                              <span className="flex items-center gap-1">
-                                <Users className="size-4" />
-                                {event.instructor}
-                              </span>
-                            )}
+                            <span className="flex items-center gap-1">
+                              <Users className="size-4" />
+                              {event.lecturerName}
+                            </span>
                           </div>
                         </div>
+                        {!isStudent && (
+                          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => handleEditClick(event)}>
+                              <Edit className="size-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDeleteEvent(event.id)}>
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -401,6 +776,10 @@ export default function Schedule() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* ... Sidebar Content (Mini Calendar, Upcoming Events, Weekly Summary) ... */}
+            {/* Reuse existing sidebar components if possible, or leave placeholder for simplicity here, 
+                assuming they are already correct in verification step. 
+                I will include them to keep the file complete. */}
             {/* Mini Calendar */}
             <Card>
               <CardHeader className="pb-2">
@@ -423,7 +802,7 @@ export default function Schedule() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {upcomingEvents.map((event) => (
+                  {upcomingEvents.length > 0 ? upcomingEvents.slice(0, 5).map((event) => (
                     <div
                       key={event.id}
                       className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50"
@@ -436,7 +815,9 @@ export default function Schedule() {
                         </p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No upcoming events</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -474,7 +855,7 @@ export default function Schedule() {
                       </span>
                     </div>
                     <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {upcomingEvents.filter(e => e.type === 'assignment').length}
+                      {assignments.length}
                     </span>
                   </div>
                 </div>
