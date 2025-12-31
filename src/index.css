@@ -83,18 +83,47 @@
     @apply bg-background text-foreground font-display antialiased;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar - matching HTML design */
   ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
+    background: #cbd5e1;
     border-radius: 4px;
   }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: #94a3b8;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+
+  /* Material Icons support */
+  .material-icons-round {
+    font-family: 'Material Icons Round';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Selection styling */
+  ::selection {
+    background-color: #2563eb;
+    color: white;
   }
 }

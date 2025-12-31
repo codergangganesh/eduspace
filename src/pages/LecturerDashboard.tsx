@@ -201,7 +201,7 @@ export default function LecturerDashboard() {
                   <span className="text-xs font-medium text-foreground text-center">Schedule Class</span>
                 </button>
                 <button
-                  onClick={() => navigate('/students')}
+                  onClick={() => navigate('/all-students')}
                   className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
                 >
                   <Users className="size-5 text-primary" />

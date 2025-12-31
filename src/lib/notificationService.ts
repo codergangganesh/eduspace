@@ -4,7 +4,7 @@ interface CreateNotificationParams {
     userId: string;
     title: string;
     message: string;
-    type: "assignment" | "grade" | "announcement" | "message" | "schedule";
+    type: "assignment" | "grade" | "announcement" | "message" | "schedule" | "access_request" | "general";
     relatedId?: string;
 }
 
@@ -241,6 +241,159 @@ export async function notifyScheduleChange(
         });
     } catch (err) {
         console.error("Error in notifyScheduleChange:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Notify all students in a class (class-scoped notification)
+ * Respects individual student preferences
+ */
+export async function notifyClassStudents(
+    classId: string,
+    type: "assignment" | "grade" | "announcement" | "message" | "schedule",
+    title: string,
+    message: string,
+    senderId: string,
+    relatedId?: string
+) {
+    try {
+        // Get all students in the class
+        const { data: classStudents, error: studentsError } = await supabase
+            .from("class_students")
+            .select("student_id")
+            .eq("class_id", classId);
+
+        if (studentsError || !classStudents || classStudents.length === 0) {
+            return { success: true, message: "No students in class" };
+        }
+
+        const studentIds = classStudents.map(cs => cs.student_id);
+
+        // Check preferences based on notification type
+        let preferenceField = "email_notifications";
+        if (type === "assignment") preferenceField = "assignment_reminders";
+        else if (type === "grade") preferenceField = "grade_updates";
+
+        // Get students with the relevant preference enabled
+        const { data: profiles, error: profileError } = await supabase
+            .from("student_profiles")
+            .select("user_id")
+            .in("user_id", studentIds)
+            .eq(preferenceField, true);
+
+        if (profileError || !profiles || profiles.length === 0) {
+            return { success: true, message: "No students with notifications enabled" };
+        }
+
+        const notifyUserIds = profiles.map(p => p.user_id);
+
+        // Create notifications with class_id and sender_id
+        const notifications = notifyUserIds.map((userId) => ({
+            user_id: userId,
+            title,
+            message,
+            type,
+            related_id: relatedId || null,
+            is_read: false,
+        }));
+
+        const { error } = await supabase.from("notifications").insert(notifications);
+
+        if (error) {
+            console.error("Error creating class notifications:", error);
+            return { success: false, error };
+        }
+
+        return { success: true, count: notifications.length };
+    } catch (err) {
+        console.error("Error in notifyClassStudents:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Notify lecturer about student action (e.g., submission)
+ * Respects lecturer preferences
+ */
+export async function notifyLecturer(
+    lecturerId: string,
+    type: "assignment" | "message" | "access_request",
+    title: string,
+    message: string,
+    classId?: string,
+    senderId?: string,
+    relatedId?: string
+) {
+    try {
+        // Check lecturer preferences
+        let preferenceField = "email_notifications";
+        if (type === "assignment") preferenceField = "submission_notifications";
+        else if (type === "message") preferenceField = "message_notifications";
+
+        const { data: lecturerProfile } = await supabase
+            .from("lecturer_profiles")
+            .select(preferenceField)
+            .eq("user_id", lecturerId)
+            .single();
+
+        if (!lecturerProfile || !lecturerProfile[preferenceField]) {
+            return { success: true, message: "Notifications disabled" };
+        }
+
+        // Create notification
+        const { error } = await supabase.from("notifications").insert({
+            user_id: lecturerId,
+            title,
+            message,
+            type,
+            related_id: relatedId || null,
+            is_read: false,
+        });
+
+        if (error) {
+            console.error("Error creating lecturer notification:", error);
+            return { success: false, error };
+        }
+
+        return { success: true };
+    } catch (err) {
+        console.error("Error in notifyLecturer:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Send access request notification to student
+ */
+export async function notifyAccessRequest(
+    studentId: string,
+    lecturerName: string,
+    courseCode: string,
+    classId: string,
+    requestId: string
+) {
+    try {
+        // Check if student has notifications enabled
+        const { data: studentProfile } = await supabase
+            .from("student_profiles")
+            .select("email_notifications")
+            .eq("user_id", studentId)
+            .single();
+
+        if (!studentProfile?.email_notifications) {
+            return { success: true, message: "Notifications disabled" };
+        }
+
+        return createNotification({
+            userId: studentId,
+            title: "Class Access Request",
+            message: `${lecturerName} has invited you to join ${courseCode}`,
+            type: "access_request",
+            relatedId: requestId,
+        });
+    } catch (err) {
+        console.error("Error in notifyAccessRequest:", err);
         return { success: false, error: err };
     }
 }

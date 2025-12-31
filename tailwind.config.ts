@@ -53,10 +53,18 @@ export default {
           DEFAULT: "hsl(var(--surface))",
           foreground: "hsl(var(--surface-foreground))",
         },
+        // Custom colors from HTML design
+        "primary-hover": "#1d4ed8",
+        "background-light": "#f3f4f6",
+        "background-dark": "#0f172a",
+        "surface-light": "#ffffff",
+        "surface-dark": "#1e293b",
+        "border-light": "#e5e7eb",
+        "border-dark": "#334155",
       },
       fontFamily: {
-        display: ["Lexend", "Noto Sans", "sans-serif"],
-        body: ["Noto Sans", "sans-serif"],
+        display: ["Inter", "Lexend", "Noto Sans", "sans-serif"],
+        sans: ["Inter", "Noto Sans", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -23,6 +23,7 @@ import Messages from "./pages/Messages";
 import Schedule from "./pages/Schedule";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
+import AllStudents from "./pages/AllStudents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,11 +64,12 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                { }
                 <Route
-                  path="/students"
+                  path="/all-students"
                   element={
                     <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <LecturerStudents />
+                      <AllStudents />
                     </ProtectedRoute>
                   }
                 />
