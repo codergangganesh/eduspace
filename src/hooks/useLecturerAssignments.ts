@@ -163,6 +163,40 @@ export function useLecturerAssignments() {
         }
     };
 
+    const updateAssignment = async (id: string, data: Partial<CreateAssignmentDTO>) => {
+        if (!user) return { success: false, error: "Not authenticated" };
+
+        try {
+            const updates: any = {
+                title: data.title,
+                description: data.description,
+                subject_name: data.subject_id, // Using subject_id field as subject_name text
+                due_date: data.due_date?.toISOString(),
+                attachment_url: data.attachment_url,
+                attachment_name: data.attachment_name,
+            };
+
+            // Remove undefined keys
+            Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
+
+            const { error } = await supabase
+                .from("assignments")
+                .update(updates)
+                .eq("id", id)
+                .eq("lecturer_id", user.id);
+
+            if (error) throw error;
+
+            toast.success("Assignment updated successfully!");
+            fetchAssignments();
+            return { success: true };
+        } catch (error: any) {
+            console.error("Error updating assignment:", error);
+            toast.error(error.message || "Failed to update assignment");
+            return { success: false, error: error.message };
+        }
+    };
+
     const deleteAssignment = async (id: string) => {
         try {
             const { error } = await supabase
