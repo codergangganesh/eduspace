@@ -34,8 +34,6 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Pro
     const [loading, setLoading] = useState(false);
     const [date, setDate] = useState<Date>();
     const [file, setFile] = useState<File | null>(null);
-    const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [loadingSubjects, setLoadingSubjects] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -45,22 +43,6 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Pro
     });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Fetch subjects when course changes
-    useEffect(() => {
-        if (formData.courseId) {
-            setLoadingSubjects(true);
-            fetchSubjects(formData.courseId).then((data) => {
-                setSubjects(data);
-                setLoadingSubjects(false);
-                // Reset subject selection when course changes
-                setFormData(prev => ({ ...prev, subjectId: "" }));
-            });
-        } else {
-            setSubjects([]);
-            setFormData(prev => ({ ...prev, subjectId: "" }));
-        }
-    }, [formData.courseId, fetchSubjects]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -105,7 +87,6 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Pro
                 setFormData({ title: "", description: "", courseId: "", subjectId: "" });
                 setDate(undefined);
                 setFile(null);
-                setSubjects([]);
             } else {
                 toast.error(result.error || "Failed to create assignment");
             }
@@ -156,36 +137,16 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Pro
                         />
                     </div>
 
-                    {formData.courseId && (
-                        <div className="space-y-2">
-                            <Label>Subject *</Label>
-                            <Select
-                                value={formData.subjectId}
-                                onValueChange={(val) => setFormData({ ...formData, subjectId: val })}
-                                disabled={loadingSubjects || subjects.length === 0}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder={
-                                        loadingSubjects ? "Loading subjects..." :
-                                            subjects.length === 0 ? "No subjects available" :
-                                                "Select Subject"
-                                    } />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {subjects.map((subject) => (
-                                        <SelectItem key={subject.id} value={subject.id}>
-                                            {subject.code ? `${subject.code} - ` : ""}{subject.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {subjects.length === 0 && !loadingSubjects && (
-                                <p className="text-xs text-muted-foreground">
-                                    No subjects found for this course. Please add subjects first.
-                                </p>
-                            )}
-                        </div>
-                    )}
+                    <div className="space-y-2">
+                        <Label htmlFor="subject">Subject *</Label>
+                        <Input
+                            id="subject"
+                            placeholder="e.g. Data Structures, DBMS, etc."
+                            value={formData.subjectId}
+                            onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
+                            required
+                        />
+                    </div>
 
                     <div className="space-y-2">
                         <Label>Due Date *</Label>
