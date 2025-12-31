@@ -66,7 +66,7 @@ export default function Register() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     const result = await signInWithGoogle(role);
-    
+
     if (!result.success) {
       toast.error(result.error || "Google sign in failed");
       setIsGoogleLoading(false);
