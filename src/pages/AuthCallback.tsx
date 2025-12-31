@@ -11,6 +11,17 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Check if this is a password recovery callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type');
+
+        if (type === 'recovery') {
+          // For password recovery, redirect to a password update page
+          // The session will be available for password update
+          navigate('/update-password', { replace: true });
+          return;
+        }
+
         // Get the session from the URL
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
