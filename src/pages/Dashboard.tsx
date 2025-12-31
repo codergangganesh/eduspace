@@ -31,7 +31,11 @@ export default function Dashboard() {
 
   // Process upcoming assignments
   const upcomingTasks = assignments
-    .filter(a => a.status === 'published' && a.due_date)
+    .filter(a => {
+      const isPublished = a.status === 'published';
+      const isNotSubmitted = a.studentStatus ? (a.studentStatus === 'pending' || a.studentStatus === 'overdue') : true;
+      return isPublished && isNotSubmitted && a.due_date;
+    })
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
     .slice(0, 3) // Limit to 3 to save space
     .map(a => {

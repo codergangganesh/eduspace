@@ -18,6 +18,11 @@ interface Assignment {
     updated_at: string;
     course_title?: string;
     course_code?: string;
+    lecturer_name?: string;
+    studentStatus?: 'pending' | 'submitted' | 'graded' | 'overdue';
+    submission?: AssignmentSubmission;
+    grade?: number;
+    earnedPoints?: number;
 }
 
 interface AssignmentSubmission {
@@ -52,11 +57,12 @@ export function useAssignments() {
         if (!user) return;
 
         try {
-            let query;
-            
+            let data: any[] = [];
+            let mySubmissions: AssignmentSubmission[] = [];
+
             if (role === 'lecturer') {
                 // Lecturer sees their own assignments
-                query = supabase
+                const { data: assignmentsData, error: fetchError } = await supabase
                     .from('assignments')
                     .select(`
                         *,
@@ -64,31 +70,75 @@ export function useAssignments() {
                     `)
                     .eq('lecturer_id', user.id)
                     .order('created_at', { ascending: false });
+
+                if (fetchError) throw fetchError;
+                data = assignmentsData || [];
+
             } else {
                 // Student sees published assignments for enrolled courses
-                query = supabase
+                // 1. Fetch Assignments
+                const { data: assignmentsData, error: fetchError } = await supabase
                     .from('assignments')
                     .select(`
                         *,
-                        courses:course_id (title, course_code)
+                        courses:course_id (title, course_code),
+                        lecturer:lecturer_id (full_name) 
                     `)
                     .eq('status', 'published')
                     .order('due_date', { ascending: true });
+
+                if (fetchError) throw fetchError;
+                data = assignmentsData || [];
+
+                // 2. Fetch My Submissions to determine status
+                const { data: submissionsData, error: subError } = await supabase
+                    .from('assignment_submissions')
+                    .select('*')
+                    .eq('student_id', user.id);
+
+                if (subError) throw subError;
+                mySubmissions = (submissionsData || []) as any[];
             }
 
-            const { data, error: fetchError } = await query;
-
-            if (fetchError) {
-                console.warn('Error fetching assignments:', fetchError);
-                setAssignments([]);
-            } else {
-                const formattedAssignments = (data || []).map((a: any) => ({
+            const formattedAssignments = data.map((a: any) => {
+                const base = {
                     ...a,
                     course_title: a.courses?.title,
                     course_code: a.courses?.course_code,
-                }));
-                setAssignments(formattedAssignments);
-            }
+                    lecturer_name: a.lecturer?.full_name,
+                };
+
+                if (role === 'student') {
+                    // Compute status for student
+                    const submission = mySubmissions.find(s => s.assignment_id === a.id);
+                    let studentStatus = 'pending';
+                    let grade = undefined;
+                    let earnedPoints = undefined;
+
+                    if (submission) {
+                        studentStatus = submission.status === 'graded' ? 'graded' : 'submitted';
+                        if (submission.grade !== null) {
+                            grade = submission.grade;
+                            earnedPoints = submission.grade;
+                        }
+                    } else if (a.due_date && new Date(a.due_date) < new Date()) {
+                        studentStatus = 'overdue';
+                    }
+
+                    return {
+                        ...base,
+                        studentStatus, // pending, submitted, graded, overdue
+                        submission, // Include full submission details
+                        grade,
+                        earnedPoints
+                    };
+                }
+
+                return base;
+            });
+
+            setAssignments(formattedAssignments);
+            // setSubmissions is for lecturer view of single assignment, leavng empty here or specific fetch
             setError(null);
         } catch (err) {
             console.error('Error fetching assignments:', err);
@@ -296,8 +346,12 @@ export function useAssignments() {
 
     const stats: AssignmentStats = {
         total: assignments.length,
-        completed: assignments.filter((a) => a.status === 'closed').length,
-        pending: assignments.filter((a) => a.status === 'published').length,
+        completed: role === 'student'
+            ? assignments.filter((a) => a.studentStatus === 'submitted' || a.studentStatus === 'graded').length
+            : assignments.filter((a) => a.status === 'closed').length,
+        pending: role === 'student'
+            ? assignments.filter((a) => a.studentStatus === 'pending' || a.studentStatus === 'overdue').length
+            : assignments.filter((a) => a.status === 'published').length,
     };
 
     return {
