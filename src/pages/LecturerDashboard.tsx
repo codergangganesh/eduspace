@@ -19,9 +19,9 @@ export default function LecturerDashboard() {
     : `Dr. ${displayName.split(" ").pop()}`;
 
   const stats = [
-    { title: "Total Students", value: dataStats.totalStudents, subtitle: "Across all courses", icon: Users },
-    { title: "Pending Reviews", value: dataStats.pendingReviews, subtitle: "Assignments", icon: FileText },
-    { title: "Avg. Performance", value: dataStats.avgPerformance, subtitle: "Class average", icon: TrendingUp },
+    { title: "Enrolled Students", value: dataStats.enrolledStudents, subtitle: "Total students in your courses", icon: Users },
+    { title: "Submissions Received", value: dataStats.submissionsReceived, subtitle: "Students who submitted", icon: CheckCircle },
+    { title: "Pending Submissions", value: dataStats.pendingSubmissions, subtitle: "Awaiting submission", icon: Clock },
   ];
 
   if (loading) {

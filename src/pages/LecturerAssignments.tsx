@@ -73,7 +73,7 @@ export default function LecturerAssignments() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Title</TableHead>
-                                    <TableHead>Course</TableHead>
+                                    <TableHead>Subject</TableHead>
                                     <TableHead>Due Date</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -99,10 +99,9 @@ export default function LecturerAssignments() {
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-sm">{assignment.course_code}</span>
-                                                    <span className="text-xs text-muted-foreground">{assignment.subject_name || assignment.course_title}</span>
-                                                </div>
+                                                <span className="font-medium text-sm text-foreground">
+                                                    {assignment.subject_name || "General"}
+                                                </span>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2 text-muted-foreground">
