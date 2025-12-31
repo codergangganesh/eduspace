@@ -28,7 +28,7 @@ const studentNavItems = [
 
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
-  { icon: Users, label: "All Students", path: "/students" },
+  { icon: Users, label: "All Students", path: "/all-students" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
@@ -137,7 +137,7 @@ export function Sidebar() {
                       </Link>
                     ))}
                     {students.length > 5 && (
-                      <Link to="/students" className="px-3 py-1 text-xs text-primary hover:underline ml-2">
+                      <Link to="/all-students" className="px-3 py-1 text-xs text-primary hover:underline ml-2">
                         + {students.length - 5} more
                       </Link>
                     )}
