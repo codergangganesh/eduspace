@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,19 +28,12 @@ import {
   FileText,
   Edit,
   Trash2,
-  MoreVertical
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSchedule } from "@/hooks/useSchedule";
+import { useSchedule, Schedule as ScheduleType } from "@/hooks/useSchedule";
 import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface ClassEvent {
   id: string;
@@ -62,8 +55,9 @@ interface CalendarEvent {
   id: string;
   title: string;
   date: Date;
-  type: "assignment" | "exam" | "holiday";
+  type: "assignment" | "exam" | "class";
   color: string;
+  details?: string;
 }
 
 // Convert Supabase schedule to ClassEvent format
@@ -120,20 +114,75 @@ export default function Schedule() {
     }
   }, [role, profile]);
 
-
   const isStudent = role === "student";
 
   const weeklySchedule: ClassEvent[] = schedules.map(convertToClassEvent);
 
-  const upcomingEvents: CalendarEvent[] = (assignments || []).map((a: any) => ({
-    id: a.id,
-    title: a.title,
-    date: new Date(a.due_date),
-    type: "assignment",
-    color: "bg-orange-500"
-  }));
+  // Helper to get next occurrence of a schedule for Mixed Upcoming Events
+  const getNextOccurrence = (schedule: ScheduleType) => {
+    // If specific date, use it
+    if (schedule.specific_date) return new Date(schedule.specific_date);
+
+    // If recurring, find next date matching day_of_week
+    const today = new Date();
+    const currentDay = today.getDay(); // 0=Sun
+    const scheduleDay = schedule.day_of_week;
+
+    let daysUntil = scheduleDay - currentDay;
+    // If schedule day is past in this week, or today but time passed (simplified Check), jump to next week
+    // For simplicity, just check day. Precise time check would need parsing HH:MM
+    if (daysUntil < 0) {
+      daysUntil += 7;
+    } else if (daysUntil === 0) {
+      // Check if time passed? Let's assume if it's today we include it for now, 
+      // to be safe we can check current time but typically "upcoming" includes today's remaining.
+      // For strict "upcoming", we might check time.
+      const now = format(new Date(), "HH:mm");
+      if (schedule.start_time < now) {
+        daysUntil += 7;
+      }
+    }
+
+    return addDays(today, daysUntil);
+  };
+
+  const mixedUpcomingEvents: CalendarEvent[] = [
+    // Schedules converted to generic events
+    ...schedules.map(p => ({
+      id: p.id,
+      title: p.subject_name || p.title,
+      date: getNextOccurrence(p),
+      type: "class" as const,
+      color: p.color || "bg-blue-500",
+      details: `${p.start_time?.slice(0, 5)} - ${p.end_time?.slice(0, 5)}`
+    })),
+    // Assignments
+    ...(assignments || []).map((a: any) => ({
+      id: a.id,
+      title: a.title,
+      date: new Date(a.due_date),
+      type: "assignment" as const,
+      color: "bg-orange-500",
+      details: "Due"
+    }))
+  ]
+    .filter(e => {
+      // Filter out past events (allow today)
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      return e.date >= todayStart;
+    })
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(0, 5); // Top 5
 
   const displayWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // Sunday start
+  const displayWeekEnd = addDays(displayWeekStart, 6);
+
+  // Filter assignments for the current view week for Summary
+  const assignmentsThisWeek = (assignments || []).filter((a: any) => {
+    const d = new Date(a.due_date);
+    return d >= displayWeekStart && d <= displayWeekEnd;
+  });
 
   const goToPreviousWeek = () => {
     setCurrentDate(addDays(currentDate, -7));
@@ -776,10 +825,6 @@ export default function Schedule() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* ... Sidebar Content (Mini Calendar, Upcoming Events, Weekly Summary) ... */}
-            {/* Reuse existing sidebar components if possible, or leave placeholder for simplicity here, 
-                assuming they are already correct in verification step. 
-                I will include them to keep the file complete. */}
             {/* Mini Calendar */}
             <Card>
               <CardHeader className="pb-2">
@@ -795,24 +840,27 @@ export default function Schedule() {
               </CardContent>
             </Card>
 
-            {/* Upcoming Events */}
+            {/* Upcoming Events (Mixed) */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Upcoming Events</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {upcomingEvents.length > 0 ? upcomingEvents.slice(0, 5).map((event) => (
+                  {mixedUpcomingEvents.length > 0 ? mixedUpcomingEvents.map((event) => (
                     <div
-                      key={event.id}
+                      key={event.id + event.type}
                       className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50"
                     >
                       <div className={cn("size-2 rounded-full mt-2", event.color)} />
                       <div>
                         <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(event.date, "MMM d, yyyy")}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{format(event.date, "MMM d")}</span>
+                          <span>•</span>
+                          <span className="capitalize">{event.type}</span>
+                          {event.details && <span>({event.details})</span>}
+                        </div>
                       </div>
                     </div>
                   )) : (
@@ -822,10 +870,10 @@ export default function Schedule() {
               </CardContent>
             </Card>
 
-            {/* Weekly Summary */}
+            {/* Weekly Academic Summary */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Weekly Summary</CardTitle>
+                <CardTitle className="text-base">Weekly Academic Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -855,7 +903,7 @@ export default function Schedule() {
                       </span>
                     </div>
                     <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {assignments.length}
+                      {assignmentsThisWeek.length}
                     </span>
                   </div>
                 </div>
