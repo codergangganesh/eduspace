@@ -1,64 +1,42 @@
-import { Bell, Search, Menu } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Input } from "@/components/ui/input";
+import { Menu, Sun, Moon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
-import { useNotifications } from "@/hooks/useNotifications";
 
 interface DashboardHeaderProps {
-  onMenuClick?: () => void;
+  onMenuClick: () => void;
 }
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+  const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
-  const { unreadCount } = useNotifications();
+
+  // "If notification icon should be enabled" logic
+  // If the user disabled notifications, do we show the bell? 
+  // User said: "if it was disabled quite opposite". 
+  // Usually this means the FEATURE is disabled. So we hide the bell.
+  // Profile might strictly not have the column yet if SQL wasn't run, 
+  // so we default to true (show bell) to avoid confusion during dev.
+  const showNotifications = profile?.notifications_enabled !== false;
 
   return (
-    <header className="h-16 border-b border-border bg-surface px-4 lg:px-6 flex items-center justify-between gap-4 sticky top-0 z-10">
-      {/* Mobile Menu Button */}
-      <button
-        onClick={onMenuClick}
-        className="lg:hidden size-10 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground"
-      >
+    <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-surface px-4 shadow-sm lg:px-6">
+      <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={onMenuClick}>
         <Menu className="size-5" />
-      </button>
+      </Button>
 
-      {/* Search */}
-      <div className="flex-1 max-w-md hidden sm:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search courses, assignments..."
-            className="pl-10 h-10 bg-secondary/50 border-0 focus-visible:ring-1"
-          />
-        </div>
-      </div>
+      <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        {showNotifications && <NotificationsPopover />}
 
-      {/* Right Section */}
-      <div className="flex items-center gap-3">
-        {/* Theme Toggle */}
-        <ThemeToggle />
-
-        {/* Notifications */}
-        <Link
-          to="/notifications"
-          className="size-10 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative"
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
         >
-          <Bell className="size-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 size-5 flex items-center justify-center p-0 text-xs"
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
-          )}
-        </Link>
-
-        {/* User Dropdown */}
+          {theme === "light" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+        </Button>
         <UserDropdown />
       </div>
     </header>
