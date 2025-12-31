@@ -156,15 +156,7 @@ export default function Schedule() {
       color: p.color || "bg-blue-500",
       details: `${p.start_time?.slice(0, 5)} - ${p.end_time?.slice(0, 5)}`
     })),
-    // Assignments
-    ...(assignments || []).map((a: any) => ({
-      id: a.id,
-      title: a.title,
-      date: new Date(a.due_date),
-      type: "assignment" as const,
-      color: "bg-orange-500",
-      details: "Due"
-    }))
+    // Assignments removed as per request
   ]
     .filter(e => {
       // Filter out past events (allow today)
@@ -985,20 +977,7 @@ export default function Schedule() {
                     </span>
                   </div>
 
-                  {/* Assignments Due */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/40">
-                        <FileText className="size-5 text-orange-600 dark:text-orange-400" />
-                      </div>
-                      <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                        Assignments Due
-                      </span>
-                    </div>
-                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {assignmentsThisWeek.length}
-                    </span>
-                  </div>
+                  {/* Assignments Due removed as per request */}
                 </div>
               </CardContent>
             </Card>

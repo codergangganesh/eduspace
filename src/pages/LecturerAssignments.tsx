@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useLecturerAssignments } from "@/hooks/useLecturerAssignments";
+import { useLecturerAssignments, Assignment } from "@/hooks/useLecturerAssignments";
 import { CreateAssignmentDialog } from "@/components/assignments/CreateAssignmentDialog";
+import { EditAssignmentDialog } from "@/components/assignments/EditAssignmentDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     Table,
     TableBody,
@@ -14,12 +15,11 @@ import {
 } from "@/components/ui/table";
 import {
     FileText,
-    Search,
     MoreVertical,
     Calendar,
     Trash2,
     ExternalLink,
-    Users
+    Edit
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -30,7 +30,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function LecturerAssignments() {
-    const { assignments, courses, loading, createAssignment, deleteAssignment, fetchSubjects } = useLecturerAssignments();
+    const { assignments, courses, loading, createAssignment, updateAssignment, deleteAssignment, fetchSubjects } = useLecturerAssignments();
+    const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+
+    const handleEditClick = (assignment: Assignment) => {
+        setEditingAssignment(assignment);
+        setIsEditOpen(true);
+    };
 
     return (
         <DashboardLayout>
@@ -57,7 +64,6 @@ export default function LecturerAssignments() {
                             </div>
                         </CardContent>
                     </Card>
-                    {/* Add more stats as needed */}
                 </div>
 
                 {/* Assignments Table */}
@@ -93,9 +99,10 @@ export default function LecturerAssignments() {
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-secondary text-xs font-medium">
-                                                    {assignment.course_code}
-                                                </span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-sm">{assignment.course_code}</span>
+                                                    <span className="text-xs text-muted-foreground">{assignment.subject_name || assignment.course_title}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -118,6 +125,10 @@ export default function LecturerAssignments() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleEditClick(assignment)}>
+                                                            <Edit className="size-4 mr-2" />
+                                                            Edit
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteAssignment(assignment.id)}>
                                                             <Trash2 className="size-4 mr-2" />
                                                             Delete
@@ -132,6 +143,13 @@ export default function LecturerAssignments() {
                         </Table>
                     </CardContent>
                 </Card>
+
+                <EditAssignmentDialog
+                    open={isEditOpen}
+                    onOpenChange={setIsEditOpen}
+                    assignment={editingAssignment}
+                    onUpdate={updateAssignment}
+                />
             </div>
         </DashboardLayout>
     );
