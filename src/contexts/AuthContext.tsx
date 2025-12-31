@@ -36,6 +36,7 @@ export interface Profile {
   grade_updates: boolean | null;
   course_announcements: boolean | null;
   weekly_digest: boolean | null;
+  notifications_enabled: boolean | null; // Added
   language: string | null;
   timezone: string | null;
   theme: string | null;
