@@ -1,73 +1,123 @@
-# Welcome to your Lovable project
+# EduSpace - Educational Management Platform
 
-## Project info
+EduSpace is a comprehensive Learning Management System (LMS) designed for students, lecturers, and administrators. It features a modern, responsive UI built with React/Vite and powered by Supabase for backend services (Auth, Database, Realtime).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Quick Start
 
-## How can I edit this code?
+### Prerequisites
+- Node.js (v18+)
+- npm
+- Supabase Account
 
-There are several ways of editing your application.
+### Installation
 
-**Use Lovable**
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd eduspace
+    ```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-Changes made via Lovable will be committed automatically to this repo.
+3.  **Configure Environment Variables:**
+    Create a `.env` file in the root directory:
+    ```env
+    VITE_SUPABASE_URL=your_supabase_url
+    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    VITE_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+    # Optional: For email features if implemented via Edge Functions
+    GMAIL_USER=your_email
+    GMAIL_APP_PASSWORD=your_app_password
+    ```
 
-**Use your preferred IDE**
+4.  **Start Development Server:**
+    ```bash
+    npm run dev
+    ```
+    Access the app at `http://localhost:8082/`
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🛠 Tech Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+-   **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui
+-   **Backend:** Supabase (PostgreSQL, Auth, Realtime, Storage/Edge Functions)
+-   **State Management:** React Context (AuthContext), TanStack Query (optional)
+-   **Routing:** React Router DOM
 
-Follow these steps:
+## 🗄️ Database Setup (Supabase)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+The project relies on a specific database schema. Migrations are located in `supabase/migrations/`.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Applying Migrations
 
-# Step 3: Install the necessary dependencies.
-npm i
+You can apply migrations using the Supabase Dashboard's SQL Editor or the CLI.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+**Notable Migration Files:**
+*   `20251227_create_profiles_and_roles_system.sql`: Sets up `profiles` and `user_roles`.
+*   `20251230_create_lms_core_system.sql`: Sets up core LMS tables (`courses`, `assignments`, `schedules`, etc.).
+*   `20250101_create_email_linking_system.sql`: (If present) Sets up student email pre-registration linking.
+
+**Recommended Setup (Dashboard):**
+1.  Go to the [Supabase Dashboard](https://supabase.com/dashboard).
+2.  Navigate to **SQL Editor**.
+3.  Copy/Paste the content of the migration files in chronological order and run them.
+
+### Google OAuth Configuration
+
+To enable "Continue with Google":
+1.  **Google Cloud Console:** Create credentials for a Web Application.
+    *   Authorized Origin: `http://localhost:8082` (and your production URL)
+    *   Redirect URI: `https://<your-project-id>.supabase.co/auth/v1/callback`
+2.  **Supabase:** Go to Authentication -> Providers -> Google.
+    *   Enable it.
+    *   Enter Client ID and Client Secret.
+
+## 🏗️ Project Structure
+
+```text
+eduspace/
+├── .env                  # Env vars (GITIGNORED)
+├── src/
+│   ├── components/       # Reusable UI components
+│   ├── contexts/         # React Contexts (Auth, etc.)
+│   ├── hooks/            # Custom React Hooks
+│   ├── integrations/     # Supabase client & types
+│   ├── pages/            # Main route pages (Dashboard, Login, etc.)
+│   └── main.tsx          # App entry point
+├── supabase/
+│   └── migrations/       # SQL migration files
+└── vite.config.ts        # Vite config
 ```
 
-**Edit a file directly in GitHub**
+## ✅ Features & Status
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+*   **Authentication:** Email/Password & Google OAuth.
+*   **Role-Based Access:** Distinct dashboards for Students (`/dashboard`) and Lecturers (`/lecturer-dashboard`).
+*   **Profile Management:** Base64 image upload, profile editing.
+*   **Academics:**
+    *   Course Enrollment & Management.
+    *   Assignment Submission & Grading.
+    *   Schedule Management.
+*   **Communication:**
+    *   Real-time Messaging.
+    *   Notifications System.
+    *   Email Linking System (for pre-registered student access).
 
-**Use GitHub Codespaces**
+## 🧪 Development Commands
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+*   `npm run dev`: Start dev server.
+*   `npm run build`: Build for production.
+*   `npm run lint`: Run ESLint.
+*   `npx tsc --noEmit`: Run TypeScript type checking.
+*   `node verify-project.mjs`: Run a custom health check script (if available).
 
-## What technologies are used for this project?
+## 🐛 Troubleshooting
 
-This project is built with:
+*   **Blank Page/Auth Loop:** Check `.env` vars and clear browser storage.
+*   **"Bucket not found":** We use Base64 for profiles now, so storage buckets are less critical for avatars, but ensure Supabase is reachable.
+*   **Import Errors:** Ensure you are using the correct `Import Students` template if bulk uploading.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+**Happy Coding!** 🚀
