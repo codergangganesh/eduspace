@@ -14,6 +14,7 @@ export interface ClassStudent {
     year?: string;
     section?: string;
     phone?: string;
+    student_image_url?: string | null;
     import_source: string;
     added_at: string;
     profile_image?: string;
@@ -53,11 +54,13 @@ export function useClassStudents(classId?: string) {
             .subscribe();
 
         return () => {
-            supabase.removeChannel(subscription);
+            subscription.unsubscribe();
         };
     }, [user, classId]);
 
     const fetchStudents = async () => {
+        if (!classId) return;
+
         try {
             setLoading(true);
             const { data, error: fetchError } = await supabase
@@ -68,27 +71,8 @@ export function useClassStudents(classId?: string) {
 
             if (fetchError) throw fetchError;
 
-            // Fetch student profiles for additional data
-            if (data && data.length > 0) {
-                const studentIds = data.map(s => s.student_id);
-                const { data: profiles } = await supabase
-                    .from('student_profiles')
-                    .select('user_id, profile_image')
-                    .in('user_id', studentIds);
-
-                const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-
-                const enrichedStudents = data.map(student => ({
-                    ...student,
-                    profile_image: profileMap.get(student.student_id)?.profile_image,
-                    status: 'active' as const, // Default status, can be enhanced
-                    progress: Math.floor(Math.random() * 40 + 60) // Placeholder, replace with real data
-                }));
-
-                setStudents(enrichedStudents);
-            } else {
-                setStudents([]);
-            }
+            setStudents(data || []);
+            setError(null);
         } catch (err) {
             console.error('Error fetching students:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch students');
@@ -98,86 +82,89 @@ export function useClassStudents(classId?: string) {
     };
 
     const addStudent = async (studentData: Omit<ClassStudent, 'id' | 'added_at'>) => {
+        if (!user || !classId) throw new Error('Not authenticated or no class selected');
+
         try {
             const { data, error: insertError } = await supabase
                 .from('class_students')
-                .insert([studentData])
+                .insert({
+                    ...studentData,
+                    class_id: classId
+                })
                 .select()
                 .single();
 
             if (insertError) throw insertError;
 
+            await fetchStudents();
             return { success: true, data };
         } catch (err) {
             console.error('Error adding student:', err);
-            return { success: false, error: err instanceof Error ? err.message : 'Failed to add student' };
+            return {
+                success: false,
+                error: err instanceof Error ? err.message : 'Failed to add student'
+            };
         }
     };
 
     const updateStudent = async (studentId: string, updates: Partial<ClassStudent>) => {
+        if (!user || !classId) throw new Error('Not authenticated or no class selected');
+
         try {
             const { error: updateError } = await supabase
                 .from('class_students')
                 .update(updates)
-                .eq('id', studentId);
+                .eq('id', studentId)
+                .eq('class_id', classId);
 
             if (updateError) throw updateError;
 
-            return { success: true };
+            await fetchStudents();
         } catch (err) {
             console.error('Error updating student:', err);
-            return { success: false, error: err instanceof Error ? err.message : 'Failed to update student' };
+            throw err;
         }
     };
 
     const deleteStudent = async (studentId: string) => {
+        if (!user || !classId) throw new Error('Not authenticated or no class selected');
+
         try {
             const { error: deleteError } = await supabase
                 .from('class_students')
                 .delete()
-                .eq('id', studentId);
+                .eq('id', studentId)
+                .eq('class_id', classId);
 
             if (deleteError) throw deleteError;
 
-            return { success: true };
+            await fetchStudents();
         } catch (err) {
             console.error('Error deleting student:', err);
-            return { success: false, error: err instanceof Error ? err.message : 'Failed to delete student' };
+            throw err;
         }
     };
 
-    const importStudentsFromExcel = async (studentsData: any[], classId: string) => {
+    const importStudents = async (studentsData: any[]) => {
+        if (!user || !classId) throw new Error('Not authenticated or no class selected');
+
         try {
-            // Check if students exist in auth.users by email
-            const emails = studentsData.map(s => s.email);
-            const { data: existingUsers } = await supabase
-                .from('student_profiles')
-                .select('user_id, email')
-                .in('email', emails);
-
-            const userMap = new Map(existingUsers?.map(u => [u.email, u.user_id]) || []);
-
+            // Prepare students for insertion
             const studentsToInsert = studentsData.map(student => ({
                 class_id: classId,
-                student_id: userMap.get(student.email) || null,
+                student_id: '', // Will be filled when student accepts
                 register_number: student.registerNumber,
                 student_name: student.studentName,
                 email: student.email,
-                department: student.department,
-                course: student.course,
-                year: student.year,
-                section: student.section,
-                phone: student.phone,
+                department: student.department || null,
+                course: student.course || null,
+                year: student.year || null,
+                section: student.section || null,
+                phone: student.phone || null,
                 import_source: 'excel'
-            })).filter(s => s.student_id); // Only import students who have accounts
+            }));
 
-            if (studentsToInsert.length === 0) {
-                return {
-                    success: false,
-                    error: 'No students found with registered accounts. Students must have accounts before importing.'
-                };
-            }
-
+            // Insert students
             const { data, error: insertError } = await supabase
                 .from('class_students')
                 .insert(studentsToInsert)
@@ -185,17 +172,43 @@ export function useClassStudents(classId?: string) {
 
             if (insertError) throw insertError;
 
+            await fetchStudents();
+
             return {
                 success: true,
                 imported: data?.length || 0,
-                skipped: studentsData.length - studentsToInsert.length
+                skipped: studentsData.length - studentsToInsert.length,
+                failed: 0,
+                errors: []
             };
         } catch (err) {
             console.error('Error importing students:', err);
             return {
                 success: false,
-                error: err instanceof Error ? err.message : 'Failed to import students'
+                imported: 0,
+                skipped: 0,
+                failed: studentsData.length,
+                errors: [err instanceof Error ? err.message : 'Failed to import students']
             };
+        }
+    };
+
+    const updateStudentImage = async (studentId: string, imageUrl: string | null) => {
+        if (!user || !classId) throw new Error('Not authenticated or no class selected');
+
+        try {
+            const { error: updateError } = await supabase
+                .from('class_students')
+                .update({ student_image_url: imageUrl })
+                .eq('id', studentId)
+                .eq('class_id', classId);
+
+            if (updateError) throw updateError;
+
+            await fetchStudents();
+        } catch (err) {
+            console.error('Error updating student image:', err);
+            throw err;
         }
     };
 
@@ -206,7 +219,8 @@ export function useClassStudents(classId?: string) {
         addStudent,
         updateStudent,
         deleteStudent,
-        importStudentsFromExcel,
+        importStudents,
+        updateStudentImage,
         refetch: fetchStudents
     };
 }
