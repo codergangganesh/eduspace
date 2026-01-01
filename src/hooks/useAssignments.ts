@@ -64,10 +64,7 @@ export function useAssignments() {
                 // Lecturer sees their own assignments
                 const { data: assignmentsData, error: fetchError } = await supabase
                     .from('assignments')
-                    .select(`
-                        *,
-                        courses:course_id (title, course_code)
-                    `)
+                    .select('*')
                     .eq('lecturer_id', user.id)
                     .order('created_at', { ascending: false });
 
@@ -75,22 +72,17 @@ export function useAssignments() {
                 data = assignmentsData || [];
 
             } else {
-                // Student sees published assignments for enrolled courses
-                // 1. Fetch Assignments
+                // Student sees published assignments
                 const { data: assignmentsData, error: fetchError } = await supabase
                     .from('assignments')
-                    .select(`
-                        *,
-                        courses:course_id (title, course_code),
-                        lecturer:lecturer_id (full_name) 
-                    `)
+                    .select('*')
                     .eq('status', 'published')
                     .order('due_date', { ascending: true });
 
                 if (fetchError) throw fetchError;
                 data = assignmentsData || [];
 
-                // 2. Fetch My Submissions to determine status
+                // Fetch My Submissions to determine status
                 const { data: submissionsData, error: subError } = await supabase
                     .from('assignment_submissions')
                     .select('*')
@@ -127,8 +119,8 @@ export function useAssignments() {
 
                     return {
                         ...base,
-                        studentStatus, // pending, submitted, graded, overdue
-                        submission, // Include full submission details
+                        studentStatus,
+                        submission,
                         grade,
                         earnedPoints
                     };
@@ -138,12 +130,11 @@ export function useAssignments() {
             });
 
             setAssignments(formattedAssignments);
-            // setSubmissions is for lecturer view of single assignment, leavng empty here or specific fetch
             setError(null);
         } catch (err) {
             console.error('Error fetching assignments:', err);
             setAssignments([]);
-            setError(null);
+            setError(null); // Don't show error to user, just log it
         } finally {
             setLoading(false);
         }

@@ -152,7 +152,7 @@ export function useClassStudents(classId?: string) {
             // Prepare students for insertion
             const studentsToInsert = studentsData.map(student => ({
                 class_id: classId,
-                student_id: '', // Will be filled when student accepts
+                student_id: null, // Will be filled when student accepts
                 register_number: student.registerNumber,
                 student_name: student.studentName,
                 email: student.email,

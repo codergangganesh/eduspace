@@ -27,7 +27,7 @@ export interface Schedule {
 export function useSchedule() {
     const { user, role } = useAuth();
     const [schedules, setSchedules] = useState<Schedule[]>([]);
-    const [assignments, setAssignments] = useState<any[]>([]); // To track due assignments
+    const [assignments, setAssignments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
@@ -40,7 +40,6 @@ export function useSchedule() {
 
             // Fetch Schedules
             if (role === 'lecturer') {
-                // Lecturer sees their own schedules
                 query = supabase
                     .from('schedules')
                     .select(`
@@ -52,7 +51,6 @@ export function useSchedule() {
                     .eq('lecturer_id', user.id)
                     .order('day_of_week', { ascending: true });
             } else {
-                // Student sees all schedules
                 query = supabase
                     .from('schedules')
                     .select(`
@@ -70,8 +68,6 @@ export function useSchedule() {
                 console.warn('Error fetching schedules:', fetchError);
                 setSchedules([]);
             } else {
-                // Fetch profiles for lecturers ONLY if lecturer_name is missing in schedule
-                // To be robust, we can still fetch profiles to fallback if lecturer_name is null
                 const schedulesWithMissingNames = (scheduleData || []).filter((s: any) => !s.lecturer_name);
                 const lecturerIds = [...new Set(schedulesWithMissingNames.map((s: any) => s.lecturer_id as string))];
 
@@ -91,31 +87,36 @@ export function useSchedule() {
                     ...s,
                     course_title: s.courses?.title,
                     course_code: s.courses?.course_code,
-                    // Use stored lecturer_name, fallback to profile map
                     lecturer_name: s.lecturer_name || profilesMap[s.lecturer_id] || 'Unknown Lecturer',
-                    // Use stored subject_name, fallback to course title or default
                     subject_name: s.subject_name || s.courses?.title || s.title
                 }));
                 setSchedules(formattedSchedules as Schedule[]);
             }
 
-            // Fetch Assignments (for "Assignments Due" count)
-            const today = new Date().toISOString();
-            let assignQuery = supabase
-                .from('assignments')
-                .select('id, title, due_date, course_id')
-                .gte('due_date', today) // Only future assignments
-                .order('due_date', { ascending: true });
+            // Fetch Assignments - wrapped in try-catch to prevent errors
+            try {
+                const today = new Date().toISOString();
+                let assignQuery = supabase
+                    .from('assignments')
+                    .select('id, title, due_date, course_id')
+                    .gte('due_date', today)
+                    .order('due_date', { ascending: true });
 
-            if (role === 'lecturer') {
-                assignQuery = assignQuery.eq('lecturer_id', user.id);
-            }
-            // For students, we'd ideally filter by enrolled courses, but fetching all public ones works for now
+                if (role === 'lecturer') {
+                    assignQuery = assignQuery.eq('lecturer_id', user.id);
+                }
 
-            const { data: assignData, error: assignError } = await assignQuery;
+                const { data: assignData, error: assignError } = await assignQuery;
 
-            if (!assignError) {
-                setAssignments(assignData || []);
+                if (!assignError && assignData) {
+                    setAssignments(assignData);
+                } else {
+                    setAssignments([]);
+                }
+            } catch (assignErr) {
+                // Silently fail - assignments table might not be set up correctly
+                console.log('Assignments not available');
+                setAssignments([]);
             }
 
             setError(null);
@@ -136,13 +137,11 @@ export function useSchedule() {
 
         fetchSchedules();
 
-        // Real-time subscription for schedules
         const scheduleSub = supabase
             .channel('schedules_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => fetchSchedules())
             .subscribe();
 
-        // Real-time subscription for assignments
         const assignSub = supabase
             .channel('assignments_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => fetchSchedules())
@@ -154,7 +153,6 @@ export function useSchedule() {
         };
     }, [user, fetchSchedules]);
 
-    // Create schedule (lecturer only)
     const createSchedule = async (data: {
         course_id?: string;
         title: string;
@@ -167,40 +165,30 @@ export function useSchedule() {
         specific_date?: string;
         notes?: string;
         color?: string;
-        lecturer_name: string; // Mandatory
-        subject_name: string; // Mandatory
+        lecturer_name: string;
+        subject_name: string;
     }) => {
         if (!user || role !== 'lecturer') return { success: false, error: 'Unauthorized' };
 
-        // VALIDATION: Check for overlaps
-        // Filter existing schedules for the same day
         const daySchedules = schedules.filter(s => {
             if (data.specific_date && s.specific_date) {
                 return s.specific_date === data.specific_date;
             }
-            // For recurring, match day of week (simplified for this context)
-            // If new event is recurring, check against recurring events on same day
-            // If new event is specific date, check against specific date events AND recurring events for that day of week
             if (data.specific_date) {
                 const dateDay = new Date(data.specific_date).getDay();
-                // Match recurring events on this day OR specific date match
                 return (s.is_recurring && s.day_of_week === dateDay) || s.specific_date === data.specific_date;
             }
-            // If new event is recurring
             if (data.is_recurring) {
                 return s.is_recurring && s.day_of_week === data.day_of_week;
             }
             return false;
         });
 
-        // Check time overlap
         const hasOverlap = daySchedules.some(s => {
-            // Parse times "HH:MM:SS" or "HH:MM"
             const start1 = data.start_time;
             const end1 = data.end_time;
             const start2 = s.start_time;
             const end2 = s.end_time;
-
             return (start1 < end2 && end1 > start2);
         });
 
@@ -228,7 +216,6 @@ export function useSchedule() {
         }
     };
 
-    // Update schedule (lecturer only)
     const updateSchedule = async (id: string, data: Partial<Schedule>) => {
         if (!user || role !== 'lecturer') return { success: false, error: 'Unauthorized' };
 
@@ -249,7 +236,6 @@ export function useSchedule() {
         }
     };
 
-    // Delete schedule (lecturer only)
     const deleteSchedule = async (id: string) => {
         if (!user || role !== 'lecturer') return { success: false, error: 'Unauthorized' };
 
@@ -270,12 +256,10 @@ export function useSchedule() {
         }
     };
 
-    // Get schedules for a specific day
     const getSchedulesForDay = (dayOfWeek: number) => {
         return schedules.filter(s => s.day_of_week === dayOfWeek);
     };
 
-    // Get upcoming schedules
     const getUpcomingSchedules = () => {
         const today = new Date().getDay();
         return schedules
@@ -286,7 +270,7 @@ export function useSchedule() {
 
     return {
         schedules,
-        assignments, // Export assignments
+        assignments,
         loading,
         error,
         createSchedule,
