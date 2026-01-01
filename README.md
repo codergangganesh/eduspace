@@ -1,123 +1,182 @@
-# EduSpace - Educational Management Platform
+# 🎓 EduSpace - Advanced Learning Management System (LMS)
 
-EduSpace is a comprehensive Learning Management System (LMS) designed for students, lecturers, and administrators. It features a modern, responsive UI built with React/Vite and powered by Supabase for backend services (Auth, Database, Realtime).
+EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
-## 🚀 Quick Start
+![Project Status](https://img.shields.io/badge/Status-Active-success)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![Tech Stack](https://img.shields.io/badge/Stack-MERN%20Hyper-blueviolet)
 
-### Prerequisites
-- Node.js (v18+)
-- npm
-- Supabase Account
+---
 
-### Installation
+## 🌟 Key Features
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd eduspace
-    ```
+### 🔐 Authentication & Security
+*   **Role-Based Access Control (RBAC):** Distinct environments for **Students**, **Lecturers**, and **Admins**.
+*   **Secure Authentication:** Powered by Supabase Auth (Email/Password & Google OAuth).
+*   **Row Level Security (RLS):** Database-level security policies ensuring users can only access data they are permitted to see.
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+### 👨‍🏫 Lecturer Hub
+*   **Class Management:** Create, update, and manage multiple sub-courses/subjects.
+*   **Student Management:**
+    *   **Bulk Import:** Upload student lists via Excel/CSV.
+    *   **Email Linking System:** Pre-register students by email before they sign up. The system automatically links their account upon registration.
+    *   **Access Requests:** Manage requests from students to join classes.
+*   **Curriculum Planning:** Schedule classes, labs, and exams with a built-in calendar.
+*   **Assignments & Grading:** Create assignments, upload resource materials, view submissions, and grade student work.
 
-3.  **Configure Environment Variables:**
-    Create a `.env` file in the root directory:
-    ```env
-    VITE_SUPABASE_URL=your_supabase_url
-    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-    VITE_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-    # Optional: For email features if implemented via Edge Functions
-    GMAIL_USER=your_email
-    GMAIL_APP_PASSWORD=your_app_password
-    ```
+### 👨‍🎓 Student Portal
+*   **Interactive Dashboard:** A centralized hub for upcoming classes, pending assignments, and recent notifications.
+*   **Course Enrollment:** Browse active courses and request access.
+*   **Assignment Submission:** Submit work directly through the portal (text or file attachments).
+*   **Academic Progress:** Track grades, attendance, and credits completed.
+*   **Profile Management:** customizable profile with avatar upload (Base64 optimized).
 
-4.  **Start Development Server:**
-    ```bash
-    npm run dev
-    ```
-    Access the app at `http://localhost:8082/`
+### 💬 Communication & Collaboration
+*   **Real-time Messaging:** Direct messaging system between students and lecturers.
+*   **Notifications:** Real-time alerts for new assignments, grades, and class updates.
+*   **Class Feeds:** Stay updated with course-specific announcements.
 
-## 🛠 Tech Stack
+---
 
--   **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui
--   **Backend:** Supabase (PostgreSQL, Auth, Realtime, Storage/Edge Functions)
--   **State Management:** React Context (AuthContext), TanStack Query (optional)
--   **Routing:** React Router DOM
+## 🛠️ Technology Stack
 
-## 🗄️ Database Setup (Supabase)
+### Frontend
+*   **Framework:** [React](https://reactjs.org/) (v18) with [Vite](https://vitejs.dev/) for lightning-fast build tooling.
+*   **Language:** [TypeScript](https://www.typescriptlang.org/) for robust type safety.
+*   **Styling:** [Tailwind CSS](https://tailwindcss.com/) for utility-first styling.
+*   **UI Library:** [shadcn/ui](https://ui.shadcn.com/) for accessible, reusable components.
+*   **Icons:** [Lucide React](https://lucide.dev/).
+*   **State Management:** React Context API & [TanStack Query](https://tanstack.com/query/latest) for server state.
+*   **Forms:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) validation.
 
-The project relies on a specific database schema. Migrations are located in `supabase/migrations/`.
+### Backend & Database (Serverless)
+*   **Platform:** [Supabase](https://supabase.com/).
+*   **Database:** PostgreSQL.
+*   **Authentication:** Supabase Auth (JWT).
+*   **Realtime:** Supabase Realtime (WebSockets) for instant updates.
+*   **Storage:** Supabase Storage (optionally used alongside Base64 optimization).
 
-### Applying Migrations
+---
 
-You can apply migrations using the Supabase Dashboard's SQL Editor or the CLI.
-
-**Notable Migration Files:**
-*   `20251227_create_profiles_and_roles_system.sql`: Sets up `profiles` and `user_roles`.
-*   `20251230_create_lms_core_system.sql`: Sets up core LMS tables (`courses`, `assignments`, `schedules`, etc.).
-*   `20250101_create_email_linking_system.sql`: (If present) Sets up student email pre-registration linking.
-
-**Recommended Setup (Dashboard):**
-1.  Go to the [Supabase Dashboard](https://supabase.com/dashboard).
-2.  Navigate to **SQL Editor**.
-3.  Copy/Paste the content of the migration files in chronological order and run them.
-
-### Google OAuth Configuration
-
-To enable "Continue with Google":
-1.  **Google Cloud Console:** Create credentials for a Web Application.
-    *   Authorized Origin: `http://localhost:8082` (and your production URL)
-    *   Redirect URI: `https://<your-project-id>.supabase.co/auth/v1/callback`
-2.  **Supabase:** Go to Authentication -> Providers -> Google.
-    *   Enable it.
-    *   Enter Client ID and Client Secret.
-
-## 🏗️ Project Structure
+## 📂 Project Structure
 
 ```text
 eduspace/
-├── .env                  # Env vars (GITIGNORED)
+├── .env                    # Environment variables configuration
 ├── src/
-│   ├── components/       # Reusable UI components
-│   ├── contexts/         # React Contexts (Auth, etc.)
-│   ├── hooks/            # Custom React Hooks
-│   ├── integrations/     # Supabase client & types
-│   ├── pages/            # Main route pages (Dashboard, Login, etc.)
-│   └── main.tsx          # App entry point
+│   ├── components/         # Reusable UI components
+│   │   ├── admin/          # Admin-specific components
+│   │   ├── common/         # Shared components (loaders, errors)
+│   │   ├── layout/         # Layout wrappers (Sidebar, Topbar)
+│   │   ├── lecturer/       # Lecturer-specific components
+│   │   ├── student/        # Student-specific components
+│   │   └── ui/             # shadcn/ui primitive components
+│   ├── contexts/           # Global sets (AuthContext, ThemeContext)
+│   ├── hooks/              # Custom React Hooks (data fetching, logic)
+│   ├── integrations/       # Third-party integrations (Supabase types)
+│   ├── lib/                # Utility functions and helpers
+│   ├── pages/              # Application Routes/Screens
+│   │   ├── Dashboard.tsx   # Student Dashboard
+│   │   ├── Lecturer.tsx    # Lecturer Dashboard
+│   │   └── ...
+│   └── App.tsx             # Main Application Entry Component
 ├── supabase/
-│   └── migrations/       # SQL migration files
-└── vite.config.ts        # Vite config
+│   └── migrations/         # SQL migration files for database schema
+└── vite.config.ts          # Vite configuration
 ```
 
-## ✅ Features & Status
+---
 
-*   **Authentication:** Email/Password & Google OAuth.
-*   **Role-Based Access:** Distinct dashboards for Students (`/dashboard`) and Lecturers (`/lecturer-dashboard`).
-*   **Profile Management:** Base64 image upload, profile editing.
-*   **Academics:**
-    *   Course Enrollment & Management.
-    *   Assignment Submission & Grading.
-    *   Schedule Management.
-*   **Communication:**
-    *   Real-time Messaging.
-    *   Notifications System.
-    *   Email Linking System (for pre-registered student access).
+## 🚀 Getting Started
 
-## 🧪 Development Commands
+Follow these steps to set up the project locally.
 
-*   `npm run dev`: Start dev server.
-*   `npm run build`: Build for production.
-*   `npm run lint`: Run ESLint.
-*   `npx tsc --noEmit`: Run TypeScript type checking.
-*   `node verify-project.mjs`: Run a custom health check script (if available).
+### Prerequisites
+*   **Node.js** (v18 or higher)
+*   **npm** or **yarn**
+*   A **Supabase** account (Free tier is sufficient)
 
-## 🐛 Troubleshooting
+### Installation
 
-*   **Blank Page/Auth Loop:** Check `.env` vars and clear browser storage.
-*   **"Bucket not found":** We use Base64 for profiles now, so storage buckets are less critical for avatars, but ensure Supabase is reachable.
-*   **Import Errors:** Ensure you are using the correct `Import Students` template if bulk uploading.
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/codergangganesh/eduspace.git
+    cd eduspace
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
+
+3.  **Environment Configuration**
+    Create a `.env` file in the root directory by copying the example:
+    ```bash
+    cp .env.example .env
+    ```
+    Populate the following variables with your Supabase credentials:
+    ```env
+    VITE_SUPABASE_URL=https://your-project-id.supabase.co
+    VITE_SUPABASE_ANON_KEY=your-anon-key
+    VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # (Optional, use with caution)
+    ```
+
+4.  **Database Setup**
+    Navigate to the `supabase/migrations` folder and apply the SQL files to your Supabase project's **SQL Editor** in the following order:
+    1.  `20251227_create_profiles_and_roles_system.sql` (Core Users & Roles)
+    2.  `20251230_create_lms_core_system.sql` (Courses, Assignments, Schedule)
+    3.  `20250101_create_email_linking_system.sql` (Student Pre-registration system)
+    4.  *(Run any other migration files present)*
+
+5.  **Run the Application**
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:8082](http://localhost:8082) to view it in the browser.
 
 ---
-**Happy Coding!** 🚀
+
+## 🏗️ Database Architecture
+
+The system uses a relational PostgreSQL database schema.
+
+### Core Tables
+*   **`profiles`**: Extends the default Supabase `auth.users` with application-specific data (bio, avatar, address, academic details).
+*   **`user_roles`**: Maps users to roles (`admin`, `lecturer`, `student`).
+
+### LMS Tables
+*   **`courses`**: Main subjects created by lecturers.
+*   **`classes`**: Specific instances of a course (e.g., "Mathematics 101 - Fall 2025").
+*   **`course_enrollments` / `class_students`**: Junction table linking students to classes.
+*   **`assignments`**: Assessment tasks linked to courses.
+*   **`assignment_submissions`**: Student work submitted for assignments.
+*   **`schedules`**: Timetable events for classes.
+
+### Communication & System
+*   **`conversations` & `messages`**: Chat system data.
+*   **`notifications`**: Activity alerts.
+*   **`student_emails`**: Staging table for invited students who haven't registered yet.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
+
+---
+
+## 📞 Support & Contact
+
+If you encounter any issues or have questions, please file an issue on the [GitHub Issues](https://github.com/codergangganesh/eduspace/issues) page.
+
+---
+
+**Developed with ❤️ by the EduSpace Team**
