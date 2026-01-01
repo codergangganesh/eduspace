@@ -1,5 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useLecturerStudents } from "@/hooks/useLecturerStudents";
+import { useClassStudents } from "@/hooks/useClassStudents";
+import { useAccessRequests } from "@/hooks/useAccessRequests";
+import { useClasses } from "@/hooks/useClasses";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,65 +15,296 @@ import {
 import {
     Users,
     Search,
-    Eye,
-    Mail,
+    Upload,
+    UserPlus,
+    Send,
+    Edit,
     Trash2,
-    BookOpen,
-    TrendingUp,
-    TrendingDown,
-    BarChart3,
-    Plus,
+    ChevronLeft,
+    FileSpreadsheet,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { ImportStudentsModal } from "@/components/lecturer/ImportStudentsModal";
+import { EditStudentModal } from "@/components/lecturer/EditStudentModal";
+import { ImageUploadButton } from "@/components/common/ImageUploadButton";
+import { getOptimizedImageUrl } from "@/utils/cloudinaryUpload";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 export default function AllStudents() {
-    const { students, loading } = useLecturerStudents();
+    const { classId } = useParams<{ classId: string }>();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+
+    const { classes } = useClasses();
+    const currentClass = classes.find(c => c.id === classId);
+
+    const {
+        students,
+        loading,
+        addStudent,
+        importStudents,
+        updateStudent,
+        deleteStudent,
+        updateStudentImage,
+    } = useClassStudents(classId || "");
+
+    const {
+        sendAccessRequestToAll,
+        sendAccessRequest,
+        getAccessRequests,
+    } = useAccessRequests();
+
     const [searchQuery, setSearchQuery] = useState("");
-    const [courseFilter, setCourseFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 4;
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [studentToDelete, setStudentToDelete] = useState<any>(null);
+    const [sendingRequests, setSendingRequests] = useState(false);
+    const [accessRequests, setAccessRequests] = useState<any[]>([]);
 
-    // Mock data for demonstration - in real app, this would come from API
-    const enhancedStudents = students.map((student, index) => ({
-        ...student,
-        id: `2024${(901 + index).toString()}`,
-        status: index % 3 === 0 ? "active" : index % 3 === 1 ? "probation" : "active",
-        progress: Math.floor(Math.random() * 40) + 55, // 55-95%
-    }));
+    // Fetch access requests
+    useEffect(() => {
+        if (classId) {
+            loadAccessRequests();
+        }
+    }, [classId]);
 
-    const filteredStudents = enhancedStudents.filter(student => {
-        const matchesSearch = student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.email?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCourse = courseFilter === "all" || student.courses.includes(courseFilter);
-        const matchesStatus = statusFilter === "all" || student.status === statusFilter;
-        return matchesSearch && matchesCourse && matchesStatus;
+    const loadAccessRequests = async () => {
+        if (!classId) return;
+        try {
+            const requests = await getAccessRequests(classId);
+            setAccessRequests(requests);
+        } catch (error) {
+            console.error("Error loading access requests:", error);
+        }
+    };
+
+    // Filter students
+    const filteredStudents = students.filter(student => {
+        const matchesSearch =
+            student.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.register_number.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (statusFilter === "all") return matchesSearch;
+
+        const request = accessRequests.find(r => r.student_id === student.student_id);
+        const status = request?.status || "not_sent";
+
+        return matchesSearch && status === statusFilter;
     });
 
-    // Pagination
-    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
-
-    // Get unique courses for filter
-    const allCourses = Array.from(new Set(students.flatMap(s => s.courses)));
-
     // Calculate stats
-    const totalEnrolled = students.length;
-    const activeCourses = allCourses.length;
-    const avgAttendance = 88;
+    const totalStudents = students.length;
+    const pendingRequests = accessRequests.filter(r => r.status === "pending").length;
+    const acceptedStudents = accessRequests.filter(r => r.status === "accepted").length;
+
+    const handleSendAllRequests = async () => {
+        if (!classId) return;
+
+        try {
+            setSendingRequests(true);
+            await sendAccessRequestToAll(classId);
+            await loadAccessRequests();
+            toast({
+                title: "Requests Sent",
+                description: `Access requests sent to ${students.length} students`,
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to send access requests",
+                variant: "destructive",
+            });
+        } finally {
+            setSendingRequests(false);
+        }
+    };
+
+    const handleSendIndividualRequest = async (studentId: string, studentEmail: string) => {
+        if (!classId) return;
+
+        try {
+            await sendAccessRequest(classId, studentId, studentEmail);
+            await loadAccessRequests();
+            toast({
+                title: "Request Sent",
+                description: "Access request sent to student",
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to send access request",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleImport = async (studentsData: any[]) => {
+        try {
+            const result = await importStudents(studentsData);
+            await loadAccessRequests();
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    const handleEditStudent = (student: any) => {
+        setSelectedStudent(student);
+        setShowEditModal(true);
+    };
+
+    const handleSaveStudent = async (studentId: string, data: any) => {
+        try {
+            await updateStudent(studentId, data);
+            setShowEditModal(false);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    const handleDeleteClick = (student: any) => {
+        setStudentToDelete(student);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!studentToDelete) return;
+
+        try {
+            await deleteStudent(studentToDelete.id);
+            await loadAccessRequests();
+            toast({
+                title: "Student Deleted",
+                description: "Student has been removed from the class",
+            });
+            setShowDeleteDialog(false);
+            setStudentToDelete(null);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to delete student",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleImageUpload = async (studentId: string, imageUrl: string) => {
+        try {
+            await updateStudentImage(studentId, imageUrl);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    const handleImageRemove = async (studentId: string) => {
+        try {
+            await updateStudentImage(studentId, null);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    const getAccessStatus = (studentId: string) => {
+        const request = accessRequests.find(r => r.student_id === studentId);
+        return request?.status || "not_sent";
+    };
+
+    const getStatusBadge = (status: string) => {
+        const variants: Record<string, { variant: any; label: string; className: string }> = {
+            pending: { variant: "secondary", label: "Pending", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+            accepted: { variant: "default", label: "Accepted", className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
+            rejected: { variant: "destructive", label: "Rejected", className: "bg-red-500/10 text-red-500 border-red-500/20" },
+            not_sent: { variant: "outline", label: "Not Sent", className: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
+        };
+
+        const config = variants[status] || variants.not_sent;
+        return (
+            <Badge variant={config.variant} className={config.className}>
+                {config.label}
+            </Badge>
+        );
+    };
+
+    if (!classId) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center h-96">
+                    <p className="text-muted-foreground">Class not found</p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
             <div className="flex flex-col gap-6">
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate("/all-students")}
+                        className="gap-2"
+                    >
+                        <ChevronLeft className="size-4" />
+                        Back to Classes
+                    </Button>
+                </div>
+
                 {/* Header */}
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Student Management</h1>
-                    <p className="text-sm text-muted-foreground">View and manage enrolled students across all your courses.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                            {currentClass?.course_code || "Class"} - Student Management
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            {currentClass?.class_name && `${currentClass.class_name} • `}
+                            {currentClass?.semester} {currentClass?.academic_year}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowImportModal(true)}
+                            className="gap-2"
+                        >
+                            <Upload className="size-4" />
+                            Import Excel
+                        </Button>
+                        <Button
+                            onClick={handleSendAllRequests}
+                            disabled={students.length === 0 || sendingRequests}
+                            className="gap-2"
+                        >
+                            <Send className="size-4" />
+                            {sendingRequests ? "Sending..." : "Send Requests to All"}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -80,12 +313,8 @@ export default function AllStudents() {
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Total Enrolled</p>
-                                    <p className="text-3xl font-bold text-foreground">{totalEnrolled.toLocaleString()}</p>
-                                    <div className="flex items-center gap-1 text-xs text-emerald-500 mt-1">
-                                        <TrendingUp className="size-3" />
-                                        <span>+12% from last semester</span>
-                                    </div>
+                                    <p className="text-sm text-muted-foreground font-medium">Total Students</p>
+                                    <p className="text-3xl font-bold text-foreground">{totalStudents}</p>
                                 </div>
                                 <div className="p-3 bg-blue-500/10 rounded-lg">
                                     <Users className="size-6 text-blue-500" />
@@ -98,12 +327,11 @@ export default function AllStudents() {
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Active Courses</p>
-                                    <p className="text-3xl font-bold text-foreground">{activeCourses}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Spring 2024 Semester</p>
+                                    <p className="text-sm text-muted-foreground font-medium">Accepted</p>
+                                    <p className="text-3xl font-bold text-foreground">{acceptedStudents}</p>
                                 </div>
-                                <div className="p-3 bg-purple-500/10 rounded-lg">
-                                    <BookOpen className="size-6 text-purple-500" />
+                                <div className="p-3 bg-emerald-500/10 rounded-lg">
+                                    <Users className="size-6 text-emerald-500" />
                                 </div>
                             </div>
                         </CardContent>
@@ -113,233 +341,191 @@ export default function AllStudents() {
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Avg. Attendance</p>
-                                    <p className="text-3xl font-bold text-foreground">{avgAttendance}%</p>
-                                    <div className="flex items-center gap-1 text-xs text-red-500 mt-1">
-                                        <TrendingDown className="size-3" />
-                                        <span>-2% this week</span>
-                                    </div>
+                                    <p className="text-sm text-muted-foreground font-medium">Pending Requests</p>
+                                    <p className="text-3xl font-bold text-foreground">{pendingRequests}</p>
                                 </div>
-                                <div className="p-3 bg-emerald-500/10 rounded-lg">
-                                    <BarChart3 className="size-6 text-emerald-500" />
+                                <div className="p-3 bg-yellow-500/10 rounded-lg">
+                                    <Send className="size-6 text-yellow-500" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Filters and Actions */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search students..."
-                            className="pl-9 bg-card border-border"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    <Select value={courseFilter} onValueChange={setCourseFilter}>
-                        <SelectTrigger className="w-[180px] bg-card border-border">
-                            <SelectValue placeholder="All Courses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Courses</SelectItem>
-                            {allCourses.map(course => (
-                                <SelectItem key={course} value={course}>{course}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[180px] bg-card border-border">
-                            <SelectValue placeholder="All Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="probation">Probation</SelectItem>
-                        </SelectContent>
-                    </Select>
-
-                    <Button className="bg-primary hover:bg-primary/90 gap-2 ml-auto">
-                        <Plus className="size-4" />
-                        Add New Student
-                    </Button>
-                </div>
+                {/* Filters */}
+                <Card className="bg-card border-border">
+                    <CardContent className="p-6">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search by name, email, or register number..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Filter by status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="accepted">Accepted</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="rejected">Rejected</SelectItem>
+                                    <SelectItem value="not_sent">Not Sent</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Students Table */}
                 <Card className="bg-card border-border">
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-border bg-secondary/30">
-                                        <th className="text-left text-xs font-medium text-muted-foreground px-6 py-4 uppercase tracking-wider">Student Name</th>
-                                        <th className="text-left text-xs font-medium text-muted-foreground px-6 py-4 uppercase tracking-wider">ID</th>
-                                        <th className="text-left text-xs font-medium text-muted-foreground px-6 py-4 uppercase tracking-wider">Email</th>
-                                        <th className="text-left text-xs font-medium text-muted-foreground px-6 py-4 uppercase tracking-wider">Enrolled Courses</th>
-                                        <th className="text-left text-xs font-medium text-muted-foreground px-6 py-4 uppercase tracking-wider">Overall Progress</th>
-                                        <th className="text-left text-xs font-medium text-muted-foreground px-6 py-4 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginatedStudents.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="h-32 text-center text-muted-foreground">
-                                                No students found.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        paginatedStudents.map((student) => (
-                                            <tr key={student.student_id} className="border-b border-border hover:bg-secondary/20 transition-colors">
-                                                <td className="px-6 py-4">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-96">
+                                <p className="text-muted-foreground">Loading students...</p>
+                            </div>
+                        ) : filteredStudents.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-96 gap-4">
+                                <FileSpreadsheet className="size-12 text-muted-foreground" />
+                                <div className="text-center">
+                                    <p className="text-lg font-semibold text-foreground">No Students Yet</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Import students using Excel or add them manually
+                                    </p>
+                                </div>
+                                <Button onClick={() => setShowImportModal(true)} className="gap-2">
+                                    <Upload className="size-4" />
+                                    Import Students
+                                </Button>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Student</TableHead>
+                                        <TableHead>Register #</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Department</TableHead>
+                                        <TableHead>Year</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredStudents.map((student) => {
+                                        const status = getAccessStatus(student.student_id);
+                                        const imageUrl = student.student_image_url
+                                            ? getOptimizedImageUrl(student.student_image_url, { width: 100, height: 100 })
+                                            : null;
+
+                                        return (
+                                            <TableRow key={student.id}>
+                                                <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar className="size-10">
-                                                            <AvatarImage src={student.avatar_url || undefined} />
-                                                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                                {student.full_name.slice(0, 2).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium text-foreground">{student.full_name}</span>
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className={cn(
-                                                                    "w-fit mt-1 text-xs",
-                                                                    student.status === "active"
-                                                                        ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                                                                        : "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                                                                )}
-                                                            >
-                                                                {student.status === "active" ? "Active" : "Probation"}
-                                                            </Badge>
+                                                        <div className="relative">
+                                                            <Avatar className="size-10">
+                                                                <AvatarImage src={imageUrl || undefined} />
+                                                                <AvatarFallback className="bg-primary/10 text-primary">
+                                                                    {student.student_name.slice(0, 2).toUpperCase()}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="absolute -bottom-1 -right-1">
+                                                                <ImageUploadButton
+                                                                    currentImageUrl={student.student_image_url}
+                                                                    onImageUpload={(url) => handleImageUpload(student.id, url)}
+                                                                    onImageRemove={() => handleImageRemove(student.id)}
+                                                                    size="sm"
+                                                                />
+                                                            </div>
                                                         </div>
+                                                        <span className="font-medium">{student.student_name}</span>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-muted-foreground">{student.id}</span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">{student.email || "N/A"}</span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {student.courses.slice(0, 3).map((code) => (
-                                                            <Badge
-                                                                key={code}
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm">{student.register_number}</TableCell>
+                                                <TableCell className="text-sm">{student.email}</TableCell>
+                                                <TableCell>{student.department || "-"}</TableCell>
+                                                <TableCell>{student.year || "-"}</TableCell>
+                                                <TableCell>{getStatusBadge(status)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {status === "not_sent" && (
+                                                            <Button
+                                                                size="sm"
                                                                 variant="outline"
-                                                                className="bg-primary/5 text-primary border-primary/20 text-xs font-medium"
+                                                                onClick={() => handleSendIndividualRequest(student.student_id, student.email)}
+                                                                className="gap-2"
                                                             >
-                                                                {code}
-                                                            </Badge>
-                                                        ))}
-                                                        {student.courses.length > 3 && (
-                                                            <Badge variant="outline" className="text-xs">
-                                                                +{student.courses.length - 3}
-                                                            </Badge>
+                                                                <Send className="size-3" />
+                                                                Send Request
+                                                            </Button>
                                                         )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3 min-w-[120px]">
-                                                        <span className="text-xs text-muted-foreground">Avg</span>
-                                                        <div className="flex-1">
-                                                            <Progress
-                                                                value={student.progress}
-                                                                className={cn(
-                                                                    "h-2",
-                                                                    student.progress >= 80 ? "[&>div]:bg-blue-500" :
-                                                                        student.progress >= 60 ? "[&>div]:bg-amber-500" :
-                                                                            "[&>div]:bg-red-500"
-                                                                )}
-                                                            />
-                                                        </div>
-                                                        <span className="text-xs font-medium text-foreground min-w-[35px]">
-                                                            {student.progress}%
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-2">
                                                         <Button
+                                                            size="sm"
                                                             variant="ghost"
-                                                            size="icon"
-                                                            className="size-8 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                                            onClick={() => handleEditStudent(student)}
                                                         >
-                                                            <Eye className="size-4" />
+                                                            <Edit className="size-4" />
                                                         </Button>
                                                         <Button
+                                                            size="sm"
                                                             variant="ghost"
-                                                            size="icon"
-                                                            className="size-8 text-muted-foreground hover:text-foreground hover:bg-secondary"
-                                                        >
-                                                            <Mail className="size-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleDeleteClick(student)}
+                                                            className="text-destructive hover:text-destructive"
                                                         >
                                                             <Trash2 className="size-4" />
                                                         </Button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {filteredStudents.length > 0 && (
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-                                <p className="text-sm text-muted-foreground">
-                                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredStudents.length)} of {filteredStudents.length} entries
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="bg-card border-border"
-                                    >
-                                        Previous
-                                    </Button>
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                        <Button
-                                            key={page}
-                                            variant={currentPage === page ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={() => setCurrentPage(page)}
-                                            className={cn(
-                                                "size-8 p-0",
-                                                currentPage === page
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-card border-border"
-                                            )}
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="bg-card border-border"
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
-                            </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
                         )}
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Modals */}
+            <ImportStudentsModal
+                open={showImportModal}
+                onOpenChange={setShowImportModal}
+                classId={classId}
+                onImport={handleImport}
+            />
+
+            <EditStudentModal
+                open={showEditModal}
+                onOpenChange={setShowEditModal}
+                student={selectedStudent}
+                onSave={handleSaveStudent}
+            />
+
+            {/* Delete Confirmation */}
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Student</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove <strong>{studentToDelete?.student_name}</strong> from this class?
+                            This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </DashboardLayout>
     );
 }

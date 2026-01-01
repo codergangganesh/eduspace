@@ -9,25 +9,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useClassStudents, ClassStudent } from "@/hooks/useClassStudents";
+import { ClassStudent } from "@/hooks/useClassStudents";
 import { toast } from "sonner";
 
 interface EditStudentModalProps {
     open: boolean;
-    onClose: () => void;
+    onOpenChange: (open: boolean) => void;
     student: ClassStudent | null;
-    classId: string;
-    onSaveComplete: () => void;
+    onSave: (studentId: string, data: any) => Promise<void>;
 }
 
 export function EditStudentModal({
     open,
-    onClose,
+    onOpenChange,
     student,
-    classId,
-    onSaveComplete,
+    onSave,
 }: EditStudentModalProps) {
-    const { addStudent, updateStudent } = useClassStudents(classId);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
         student_name: "",
@@ -52,17 +49,6 @@ export function EditStudentModal({
                 section: student.section || "",
                 phone: student.phone || "",
             });
-        } else {
-            setFormData({
-                student_name: "",
-                register_number: "",
-                email: "",
-                department: "",
-                course: "",
-                year: "",
-                section: "",
-                phone: "",
-            });
         }
     }, [student, open]);
 
@@ -77,29 +63,16 @@ export function EditStudentModal({
             return;
         }
 
+        if (!student) {
+            toast.error("No student selected");
+            return;
+        }
+
         setSaving(true);
         try {
-            let result;
-            if (student) {
-                // Update existing student
-                result = await updateStudent(student.id, formData);
-            } else {
-                // Add new student
-                result = await addStudent({
-                    class_id: classId,
-                    student_id: "", // Will be populated by backend if email matches
-                    import_source: "manual",
-                    ...formData,
-                } as any);
-            }
-
-            if (result.success) {
-                toast.success(student ? "Student updated successfully" : "Student added successfully");
-                onSaveComplete();
-                onClose();
-            } else {
-                toast.error(result.error || "Failed to save student");
-            }
+            await onSave(student.id, formData);
+            toast.success("Student updated successfully");
+            onOpenChange(false);
         } catch (error) {
             toast.error("An error occurred while saving");
         } finally {
@@ -108,14 +81,12 @@ export function EditStudentModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{student ? "Edit Student" : "Add New Student"}</DialogTitle>
+                    <DialogTitle>Edit Student</DialogTitle>
                     <DialogDescription>
-                        {student
-                            ? "Update student information. Changes will be saved immediately."
-                            : "Add a new student to this class. Required fields are marked with *."}
+                        Update student information. Changes will be saved immediately.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -142,6 +113,7 @@ export function EditStudentModal({
                                 value={formData.register_number}
                                 onChange={(e) => handleChange("register_number", e.target.value)}
                                 placeholder="e.g., 2024001"
+                                disabled
                             />
                         </div>
 
@@ -211,11 +183,11 @@ export function EditStudentModal({
                 </div>
 
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                    <Button variant="outline" onClick={onClose} disabled={saving}>
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                         Cancel
                     </Button>
                     <Button onClick={handleSave} disabled={saving}>
-                        {saving ? "Saving..." : student ? "Update Student" : "Add Student"}
+                        {saving ? "Saving..." : "Update Student"}
                     </Button>
                 </div>
             </DialogContent>

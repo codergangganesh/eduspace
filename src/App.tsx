@@ -25,6 +25,7 @@ import Schedule from "./pages/Schedule";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import AllStudents from "./pages/AllStudents";
+import CreateClass from "./pages/CreateClass";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,14 @@ const App = () => (
                 { }
                 <Route
                   path="/all-students"
+                  element={
+                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                      <CreateClass />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/classes/:classId/students"
                   element={
                     <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                       <AllStudents />
