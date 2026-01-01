@@ -148,7 +148,7 @@ export default function AllStudents() {
         if (!classId) return;
 
         try {
-            await sendAccessRequest(classId, studentId, studentEmail);
+            await sendAccessRequest(classId, studentEmail);
             await loadAccessRequests();
             toast({
                 title: "Request Sent",

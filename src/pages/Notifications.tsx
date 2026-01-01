@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Calendar,
   CheckCircle,
-  AlertCircle,
   Info,
   Trash2,
   Check,
@@ -26,6 +25,7 @@ import {
   MoreHorizontal,
   Loader2,
   Clock,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,9 +35,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useAccessRequests } from "@/hooks/useAccessRequests";
+import { AccessRequestCard } from "@/components/student/AccessRequestCard";
 import { toast } from "sonner";
 
-type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement' | 'general';
+type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement' | 'general' | 'access_request';
 
 interface NotificationData {
   id: string;
@@ -49,8 +51,6 @@ interface NotificationData {
   is_read: boolean;
   created_at: string;
 }
-
-// All notification data now comes from Supabase via useNotifications hook
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -66,6 +66,8 @@ const getNotificationIcon = (type: string) => {
       return CheckCircle;
     case "schedule":
       return Calendar;
+    case "access_request":
+      return GraduationCap;
     default:
       return Info;
   }
@@ -85,6 +87,8 @@ const getNotificationColor = (type: string) => {
       return "bg-emerald-500";
     case "schedule":
       return "bg-pink-500";
+    case "access_request":
+      return "bg-indigo-500";
     default:
       return "bg-gray-500";
   }
@@ -93,9 +97,28 @@ const getNotificationColor = (type: string) => {
 export default function Notifications() {
   const navigate = useNavigate();
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
+  const { getMyAccessRequests } = useAccessRequests();
   const [activeTab, setActiveTab] = useState("all");
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<NotificationData | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+
+  useEffect(() => {
+    loadAccessRequests();
+  }, []);
+
+  const loadAccessRequests = async () => {
+    try {
+      setLoadingRequests(true);
+      const requests = await getMyAccessRequests();
+      setAccessRequests(requests || []);
+    } catch (error) {
+      console.error("Error loading access requests:", error);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
 
   const handleClearAll = async () => {
     await clearAllNotifications();
@@ -106,10 +129,11 @@ export default function Notifications() {
   const filteredNotifications = notifications.filter((notification) => {
     if (activeTab === "all") return true;
     if (activeTab === "unread") return !notification.is_read;
+    if (activeTab === "access_requests") return notification.type === "access_request";
     return notification.type === activeTab;
   });
 
-  if (loading) {
+  if (loading && loadingRequests) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -163,6 +187,26 @@ export default function Notifications() {
           </div>
         </div>
 
+        {/* Access Requests Section */}
+        {accessRequests.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="size-5 text-primary" />
+              <h2 className="text-lg font-semibold">Pending Class Invitations</h2>
+              <Badge variant="secondary">{accessRequests.length}</Badge>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {accessRequests.map((request) => (
+                <AccessRequestCard
+                  key={request.id}
+                  request={request}
+                  onRespond={loadAccessRequests}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-start overflow-x-auto">
@@ -174,6 +218,7 @@ export default function Notifications() {
               Unread
               {unreadCount > 0 && <Badge className="ml-1">{unreadCount}</Badge>}
             </TabsTrigger>
+            <TabsTrigger value="access_requests">Class Invitations</TabsTrigger>
             <TabsTrigger value="assignment">Assignments</TabsTrigger>
             <TabsTrigger value="course">Courses</TabsTrigger>
             <TabsTrigger value="message">Messages</TabsTrigger>
@@ -194,7 +239,7 @@ export default function Notifications() {
                 </p>
               </div>
             ) : (
-              <ScrollArea className="h-[calc(100vh-16rem)]">
+              <ScrollArea className="h-[calc(100vh-24rem)]">
                 <div className="space-y-2">
                   {filteredNotifications.map((notification) => {
                     const Icon = getNotificationIcon(notification.type);
@@ -303,7 +348,7 @@ export default function Notifications() {
                 {/* Type Badge */}
                 <div>
                   <Badge variant="outline" className="capitalize">
-                    {selectedNotification.type}
+                    {selectedNotification.type.replace('_', ' ')}
                   </Badge>
                 </div>
 
@@ -336,7 +381,6 @@ export default function Notifications() {
                   </Button>
                   {selectedNotification.related_id && (
                     <Button onClick={() => {
-                      // TODO: Navigate to related content based on type
                       console.log('Navigate to:', selectedNotification.type, selectedNotification.related_id);
                       setSelectedNotification(null);
                     }}>
