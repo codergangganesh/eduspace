@@ -10,7 +10,7 @@ export const deleteUserAccount = async (userId: string) => {
         const { error: notificationsError } = await supabase
             .from("notifications")
             .delete()
-            .eq("user_id", userId);
+            .eq("recipient_id", userId);
 
         if (notificationsError) throw new Error(`Notifications deletion failed: ${notificationsError.message}`);
 
