@@ -54,9 +54,11 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
+  signInWithNotion: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
+  signInWithGitHub: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ success: boolean; error?: string }>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (userId?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,12 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data?.role as AppRole | null;
   };
 
-  const refreshProfile = async () => {
-    if (user) {
-      const profileData = await fetchProfile(user.id);
-      const userRole = await fetchRole(user.id);
-      setProfile(profileData);
-      setRole(userRole);
+  const refreshProfile = async (userId?: string) => {
+    const targetUserId = userId || user?.id;
+    if (targetUserId) {
+      const profileData = await fetchProfile(targetUserId);
+      const userRole = await fetchRole(targetUserId);
+
+      // Always update state when we have valid data
+      if (userRole !== null) {
+        setProfile(profileData);
+        setRole(userRole);
+      }
     }
   };
 
@@ -182,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async (selectedRole: AppRole) => {
     // Store the selected role in localStorage for use after OAuth callback
     localStorage.setItem("pendingRole", selectedRole);
+    console.log("🔐 Storing role in localStorage for OAuth:", selectedRole);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -196,9 +204,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       localStorage.removeItem("pendingRole");
+      console.error("❌ OAuth initiation failed:", error.message);
       return { success: false, error: error.message };
     }
 
+    console.log("✅ OAuth initiated successfully, redirecting to Google...");
+    return { success: true };
+  };
+
+  const signInWithNotion = async (selectedRole: AppRole) => {
+    // Store the selected role in localStorage for use after OAuth callback
+    localStorage.setItem("pendingRole", selectedRole);
+    console.log("🔐 Storing role in localStorage for Notion OAuth:", selectedRole);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "notion",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      localStorage.removeItem("pendingRole");
+      console.error("❌ Notion OAuth initiation failed:", error.message);
+      return { success: false, error: error.message };
+    }
+
+    console.log("✅ Notion OAuth initiated successfully, redirecting to Notion...");
+    return { success: true };
+  };
+
+  const signInWithGitHub = async (selectedRole: AppRole) => {
+    // Store the selected role in localStorage for use after OAuth callback
+    localStorage.setItem("pendingRole", selectedRole);
+    console.log("🔐 Storing role in localStorage for GitHub OAuth:", selectedRole);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?role=${selectedRole}`,
+        scopes: "user:email",
+      },
+    });
+
+    if (error) {
+      localStorage.removeItem("pendingRole");
+      console.error("❌ GitHub OAuth initiation failed:", error.message);
+      return { success: false, error: error.message };
+    }
+
+    console.log("✅ GitHub OAuth initiated successfully, redirecting to GitHub...");
     return { success: true };
   };
 
@@ -240,6 +295,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signUp,
         signInWithGoogle,
+        signInWithNotion,
+        signInWithGitHub,
         signOut,
         updateProfile,
         refreshProfile,

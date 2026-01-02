@@ -12,14 +12,18 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const { isAuthenticated, isLoading, role } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/login", { replace: true });
-    }
-  }, [isLoading, isAuthenticated, navigate]);
+  // Wait for both auth loading AND role to be determined
+  const isRoleLoading = isAuthenticated && role === null;
+  const isFullyLoaded = !isLoading && !isRoleLoading;
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && allowedRoles && role && !allowedRoles.includes(role)) {
+    if (isFullyLoaded && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [isFullyLoaded, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (isFullyLoaded && isAuthenticated && allowedRoles && role && !allowedRoles.includes(role)) {
       // Redirect to appropriate dashboard based on role
       if (role === "lecturer") {
         navigate("/lecturer-dashboard", { replace: true });
@@ -27,9 +31,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         navigate("/dashboard", { replace: true });
       }
     }
-  }, [isLoading, isAuthenticated, role, allowedRoles, navigate]);
+  }, [isFullyLoaded, isAuthenticated, role, allowedRoles, navigate]);
 
-  if (isLoading) {
+  // Show loading while auth is loading OR while role is being fetched
+  if (isLoading || isRoleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

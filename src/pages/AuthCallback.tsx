@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { AppRole } from "@/contexts/AuthContext";
+import { AppRole, useAuth } from "@/contexts/AuthContext";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,8 +37,6 @@ export default function AuthCallback() {
           }
         }
 
-
-
         if (!session?.user) {
           setError("No session found");
           navigate("/login");
@@ -53,20 +52,31 @@ export default function AuthCallback() {
 
         let userRole: AppRole = "student";
 
+        // Always clean up pending role from storage
+        const pendingRole = localStorage.getItem("pendingRole") as AppRole | null;
+
+        // Also check URL query parameter (more reliable across OAuth redirects)
+        const roleUrlParams = new URLSearchParams(window.location.search);
+        const urlRole = roleUrlParams.get('role') as AppRole | null;
+
+        console.log("🔍 OAuth Callback - Pending Role from localStorage:", pendingRole);
+        console.log("🔍 OAuth Callback - Role from URL:", urlRole);
+
         if (existingRole?.role) {
           // User already has a role, use it
           userRole = existingRole.role as AppRole;
+          console.log("✅ Existing user - Using existing role:", userRole);
+          localStorage.removeItem("pendingRole");
         } else {
           // New user via OAuth
-          // 1. Try localStorage (most immediate user intent)
-          const pendingRole = localStorage.getItem("pendingRole") as AppRole | null;
-
-          // 2. Fallback to metadata (passed during OAuth init - robust for mobile/cross-device)
+          // Priority: 1. URL parameter (most reliable), 2. localStorage, 3. metadata, 4. default
           const metadataRole = session.user.user_metadata?.role as AppRole | null;
 
-          // 3. Default to student
-          userRole = pendingRole || metadataRole || "student";
+          userRole = urlRole || pendingRole || metadataRole || "student";
+          console.log("🆕 New user - Selected role:", userRole, "| From:",
+            urlRole ? "URL" : pendingRole ? "localStorage" : metadataRole ? "metadata" : "default");
 
+          // Clean up localStorage AFTER we've used it
           localStorage.removeItem("pendingRole");
 
           // Create the role for the new user
@@ -79,6 +89,8 @@ export default function AuthCallback() {
 
           if (roleError && !roleError.message.includes("duplicate")) {
             console.error("Error creating role:", roleError);
+          } else {
+            console.log("✅ Role created successfully:", userRole);
           }
 
           // Check if profile exists, if not create one
@@ -99,14 +111,22 @@ export default function AuthCallback() {
 
             if (profileError) {
               console.error("Error creating profile:", profileError);
+            } else {
+              console.log("✅ Profile created successfully");
             }
           }
         }
 
+        // Force a refresh of the auth context to ensure the role is updated in the application state
+        await refreshProfile(session.user.id);
+
         // Redirect based on role
+        console.log("🚀 Redirecting user based on role:", userRole);
         if (userRole === "lecturer") {
+          console.log("→ Redirecting to /lecturer-dashboard");
           navigate("/lecturer-dashboard", { replace: true });
         } else {
+          console.log("→ Redirecting to /dashboard");
           navigate("/dashboard", { replace: true });
         }
       } catch (err) {
@@ -116,7 +136,7 @@ export default function AuthCallback() {
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [navigate, refreshProfile]);
 
   if (error) {
     return (

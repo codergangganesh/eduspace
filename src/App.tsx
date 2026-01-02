@@ -11,6 +11,10 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import StudentLogin from "./pages/StudentLogin";
+import StudentRegister from "./pages/StudentRegister";
+import LecturerLogin from "./pages/LecturerLogin";
+import LecturerRegister from "./pages/LecturerRegister";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import AuthCallback from "./pages/AuthCallback";
@@ -42,8 +46,17 @@ const App = () => (
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
+
+                {/* Role-specific Auth Routes */}
+                <Route path="/student/login" element={<StudentLogin />} />
+                <Route path="/student/register" element={<StudentRegister />} />
+                <Route path="/lecturer/login" element={<LecturerLogin />} />
+                <Route path="/lecturer/register" element={<LecturerRegister />} />
+
+                {/* Legacy Auth Routes (for backward compatibility) */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/update-password" element={<UpdatePassword />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
