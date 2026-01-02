@@ -135,7 +135,7 @@ export function useLecturerAssignments() {
 
             if (!studentsError && students && students.length > 0) {
                 const notifications = students.map(student => ({
-                    user_id: student.user_id,
+                    recipient_id: student.user_id,
                     title: "New Assignment Posted",
                     message: `${data.title} has been posted. Due date: ${data.due_date.toLocaleDateString()}`,
                     type: "assignment",

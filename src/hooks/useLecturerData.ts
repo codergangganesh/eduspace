@@ -117,7 +117,7 @@ export function useLecturerData() {
                     status,
                     grade,
                     student:profiles!student_id(full_name),
-                    assignment:assignments!assignment_id(title, course_id)
+                    assignment:assignments!assignment_id(title, course_name)
                 `)
                         .in("assignment_id", allAssignments?.map(a => a.id) || [])
                         .order("submitted_at", { ascending: false })
@@ -125,7 +125,7 @@ export function useLecturerData() {
 
                     if (!submissionsError && submissions) {
                         const formattedSubmissions: RecentSubmission[] = submissions.map((sub: any) => {
-                            const course = courses.find(c => c.id === sub.assignment.course_id);
+                            const course = courses.find(c => c.id === sub.assignment.course_name);
                             return {
                                 id: sub.id,
                                 studentName: sub.student?.full_name || "Unknown Student",
