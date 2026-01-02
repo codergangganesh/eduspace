@@ -89,12 +89,21 @@ export default {
           from: { transform: "translateX(-100%)" },
           to: { transform: "translateX(0)" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        scroll: {
+          to: { transform: "translate(calc(-50% - 1.5rem))" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.4s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
+        float: "float 3s ease-in-out infinite",
+        scroll: "scroll 40s linear infinite",
       },
       boxShadow: {
         "primary-glow": "0 4px 10px rgba(19, 91, 236, 0.2)",
