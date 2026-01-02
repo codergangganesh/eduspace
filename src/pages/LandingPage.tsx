@@ -148,7 +148,7 @@ export default function LandingPage() {
                 <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
                 {/* Navigation */}
-                <nav className="border-b border-slate-200/20 dark:border-slate-800 bg-white/10 dark:bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
+                <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl sticky top-0 z-[100] transition-all duration-300">
                     <div className="max-w-7xl mx-auto px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16">
                             {/* Logo */}
@@ -163,18 +163,18 @@ export default function LandingPage() {
 
                             {/* Navigation Links */}
                             <div className="hidden md:flex items-center gap-6">
-                                <a href="#features" className="text-sm text-slate-200 dark:text-slate-400 hover:text-white dark:hover:text-white transition-colors">
+                                <a href="#features" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors">
                                     Features
                                 </a>
-                                <a href="#students" className="text-sm text-slate-200 dark:text-slate-400 hover:text-white dark:hover:text-white transition-colors">
+                                <a href="#students" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors">
                                     For Students
                                 </a>
-                                <a href="#lecturers" className="text-sm text-slate-200 dark:text-slate-400 hover:text-white dark:hover:text-white transition-colors">
+                                <a href="#lecturers" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors">
                                     For Lecturers
                                 </a>
                                 <button
                                     onClick={() => setShowContact(true)}
-                                    className="text-sm text-slate-200 dark:text-slate-400 hover:text-white dark:hover:text-white transition-colors"
+                                    className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors"
                                 >
                                     Support
                                 </button>
@@ -255,7 +255,7 @@ export default function LandingPage() {
                             </div>
 
                             {/* Dashboard Card */}
-                            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-8 space-y-6">
+                            <div className="bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 dark:border-slate-700 p-8 space-y-6">
                                 {/* Header */}
                                 <div className="flex items-center justify-between">
                                     <div className="flex gap-2">
@@ -280,21 +280,21 @@ export default function LandingPage() {
                                             On Track
                                         </div>
                                     </div>
-                                    <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div className="h-2 bg-white/10 dark:bg-slate-700 rounded-full overflow-hidden">
                                         <div className="h-full bg-blue-600 rounded-full" style={{ width: '67%' }} />
                                     </div>
                                 </div>
 
                                 {/* Stats Grid */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+                                    <div className="bg-white/5 dark:bg-blue-900/20 p-4 rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
                                             <BarChart3 className="size-4 text-blue-600 dark:text-blue-400" />
                                         </div>
                                         <div className="text-3xl font-bold text-white dark:text-white">3.8</div>
                                         <div className="text-xs text-slate-300 dark:text-slate-400">Current GPA</div>
                                     </div>
-                                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl">
+                                    <div className="bg-white/5 dark:bg-purple-900/20 p-4 rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
                                             <TrendingUp className="size-4 text-purple-600 dark:text-purple-400" />
                                         </div>
@@ -307,7 +307,7 @@ export default function LandingPage() {
                                 <div className="space-y-3">
                                     <h4 className="text-xs text-slate-400 uppercase tracking-wider">Recent Grades</h4>
                                     <div className="space-y-2">
-                                        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                        <div className="flex items-center justify-between p-3 bg-white/5 dark:bg-slate-700/50 rounded-lg">
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="size-2 rounded-full bg-green-500" />
@@ -319,10 +319,10 @@ export default function LandingPage() {
                                                 A
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                        <div className="flex items-center justify-between p-3 bg-white/5 dark:bg-slate-700/50 rounded-lg">
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="size-2 rounded-full bg-blue-500" />
+                                                    <div className="size-2 rounded-full bg-white/50" />
                                                     <span className="text-sm font-medium text-white dark:text-white">Calculus II</span>
                                                 </div>
                                                 <span className="text-xs text-slate-300 dark:text-slate-400">Problem Set 4</span>
@@ -431,7 +431,7 @@ export default function LandingPage() {
                             </div>
                             <div className="relative">
                                 <div className="bg-gradient-to-br from-purple-100/90 to-blue-100/90 dark:from-purple-900/30 dark:to-blue-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6">
-                                    <div className="bg-white/10 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/20">
+                                    <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/10">
                                         <div className="flex items-center gap-3 mb-4">
                                             <Star className="size-6 text-yellow-500" />
                                             <div>
@@ -471,7 +471,7 @@ export default function LandingPage() {
                         <div className="grid lg:grid-cols-2 gap-16 items-center">
                             <div className="order-2 lg:order-1 relative">
                                 <div className="bg-gradient-to-br from-blue-100/90 to-indigo-100/90 dark:from-blue-900/30 dark:to-indigo-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6">
-                                    <div className="bg-white/10 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/20">
+                                    <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/10">
                                         <div className="flex items-center justify-between mb-4">
                                             <span className="text-sm font-medium text-white dark:text-white">Class Overview</span>
                                             <Users className="size-4 text-blue-600 dark:text-blue-400" />
@@ -711,7 +711,7 @@ export default function LandingPage() {
                         <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
                             {/* Left - Visual (Matched to Hero Style) */}
                             <div className="w-full lg:w-1/2 relative order-last lg:order-first">
-                                <div className="relative z-10 bg-white/10 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/10 dark:border-slate-700 p-8">
+                                <div className="relative z-10 bg-slate-900/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/10 dark:border-slate-700 p-8">
                                     {/* Stats Header */}
                                     <div className="flex items-center justify-between mb-8">
                                         <div className="space-y-1">

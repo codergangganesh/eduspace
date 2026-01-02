@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import emailjs from '@emailjs/browser';
 
 interface ContactSupportDialogProps {
     open: boolean;
@@ -36,21 +37,39 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             return;
         }
 
-        setIsSubmitting(true);
+        const serviceID = 'service_vnh7euo';
+        const templateID = 'template_uor5a0b';
+        const publicKey = 'vIG3Qba7KllCKgQfv';
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const templateParams = {
+                from_name: formData.name,
+                from_email: formData.email,
+                to_name: 'Admin', // Or whoever receives the support emails
+                message: formData.message,
+                subject: formData.subject,
+                reply_to: formData.email,
+            };
 
-        setIsSubmitting(false);
-        setIsSubmitted(true);
-        toast.success("Support request submitted successfully!");
+            await emailjs.send(serviceID, templateID, templateParams, publicKey);
 
-        // Reset form after 3 seconds
-        setTimeout(() => {
-            setIsSubmitted(false);
-            setFormData({ name: "", email: "", subject: "", message: "" });
-            onOpenChange(false);
-        }, 3000);
+            setIsSubmitting(false);
+            setIsSubmitted(true);
+            toast.success("Support request sent successfully!");
+
+            // Reset form after 3 seconds
+            setTimeout(() => {
+                setIsSubmitted(false);
+                setFormData({ name: "", email: "", subject: "", message: "" });
+                onOpenChange(false);
+            }, 3000);
+
+        } catch (error: any) {
+            console.error('FAILED...', error);
+            toast.error("Failed to send message. Please check your configuration.");
+            setIsSubmitting(false);
+        }
+
     };
 
     const handleChange = (field: string) => (
@@ -61,147 +80,177 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold">Contact Support</DialogTitle>
-                    <DialogDescription>
-                        Have a question or need assistance? We're here to help!
-                    </DialogDescription>
-                </DialogHeader>
-
-                {isSubmitted ? (
-                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                        <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/20">
-                            <CheckCircle2 className="size-12 text-green-600 dark:text-green-400" />
+            <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col md:flex-row h-full">
+                    {/* Left Panel - Contact Information */}
+                    <div className="w-full md:w-2/5 bg-slate-900 p-8 text-white flex flex-col justify-between relative overflow-hidden">
+                        {/* Background Decoration */}
+                        <div className="absolute top-0 right-0 p-12 opacity-10">
+                            <MessageSquare className="size-64 text-white transform translate-x-1/3 -translate-y-1/3" />
                         </div>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-xl font-semibold">Request Submitted!</h3>
-                            <p className="text-muted-foreground">
-                                Thank you for contacting us. Our support team will respond within 24 hours.
-                            </p>
+
+                        <div className="relative z-10 space-y-6">
+                            <div>
+                                <h3 className="text-2xl font-bold mb-2">Contact Information</h3>
+                                <p className="text-slate-300">
+                                    Fill up the form and our team will get back to you within 24 hours.
+                                </p>
+                            </div>
+
+                            <div className="space-y-6 mt-8">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-2 bg-white/10 rounded-lg shrink-0">
+                                        <Mail className="size-5 text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-blue-200 text-sm mb-1">Email</div>
+                                        <div className="text-sm">mannamganeshbabu8@gmail.com</div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="p-2 bg-white/10 rounded-lg shrink-0">
+                                        <MessageSquare className="size-5 text-purple-400" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-purple-200 text-sm mb-1">Phone</div>
+                                        <div className="text-sm">+91 7670895485</div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="p-2 bg-white/10 rounded-lg shrink-0">
+                                        <MessageSquare className="size-5 text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-indigo-200 text-sm mb-1">Address</div>
+                                        <div className="text-sm leading-relaxed text-slate-300">
+                                            1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District,<br />
+                                            Andhra Pradesh - 523225, India
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bottom Decoration */}
+                        <div className="relative z-10 mt-12 md:mt-0">
+                            <div className="flex gap-4">
+                                <div className="size-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
+                                    <MessageSquare className="size-4" />
+                                </div>
+                                <div className="size-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
+                                    <Mail className="size-4" />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Contact Methods */}
-                        <div className="grid grid-cols-1 gap-4 p-4 bg-muted/50 rounded-lg">
-                            <div className="flex items-start gap-3 text-sm">
-                                <Mail className="size-4 text-primary mt-0.5" />
-                                <div className="flex-1">
-                                    <div className="font-medium mb-1">Email</div>
-                                    <div className="text-muted-foreground">mannamganeshbabu8@gmail.com</div>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 text-sm">
-                                <MessageSquare className="size-4 text-primary mt-0.5" />
-                                <div className="flex-1">
-                                    <div className="font-medium mb-1">Phone</div>
-                                    <div className="text-muted-foreground">+91 7670895485</div>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 text-sm">
-                                <MessageSquare className="size-4 text-primary mt-0.5" />
-                                <div className="flex-1">
-                                    <div className="font-medium mb-1">Address</div>
-                                    <div className="text-muted-foreground">1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District, Andhra Pradesh - 523225, India</div>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 text-sm">
-                                <MessageSquare className="size-4 text-primary mt-0.5" />
-                                <div className="flex-1">
-                                    <div className="font-medium mb-1">Response Time</div>
-                                    <div className="text-muted-foreground">Within 24 hours</div>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Form Fields */}
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                    {/* Right Panel - Form */}
+                    <div className="w-full md:w-3/5 p-8 bg-white dark:bg-slate-950">
+                        <DialogHeader className="mb-6 text-left">
+                            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">Get in Touch</DialogTitle>
+                            <DialogDescription>
+                                We'd love to hear from you. Please fill out this form.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {isSubmitted ? (
+                            <div className="flex flex-col items-center justify-center py-12 space-y-4 h-[400px]">
+                                <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/20 animate-in zoom-in duration-300">
+                                    <CheckCircle2 className="size-12 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div className="text-center space-y-2">
+                                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Request Submitted!</h3>
+                                    <p className="text-muted-foreground max-w-xs mx-auto">
+                                        Thank you for contacting us. We'll be in touch shortly.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Name</Label>
+                                        <Input
+                                            id="name"
+                                            placeholder="John Doe"
+                                            value={formData.name}
+                                            onChange={handleChange("name")}
+                                            disabled={isSubmitting}
+                                            className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">Email</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="john@example.com"
+                                            value={formData.email}
+                                            onChange={handleChange("email")}
+                                            disabled={isSubmitting}
+                                            className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Name *</Label>
+                                    <Label htmlFor="subject">Subject</Label>
                                     <Input
-                                        id="name"
-                                        placeholder="Your name"
-                                        value={formData.name}
-                                        onChange={handleChange("name")}
+                                        id="subject"
+                                        placeholder="How can we help?"
+                                        value={formData.subject}
+                                        onChange={handleChange("subject")}
+                                        disabled={isSubmitting}
+                                        className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="message">Message</Label>
+                                    <Textarea
+                                        id="message"
+                                        placeholder="Tell us more about your inquiry..."
+                                        className="min-h-[120px] resize-none bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                        value={formData.message}
+                                        onChange={handleChange("message")}
                                         disabled={isSubmitting}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email *</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="your@email.com"
-                                        value={formData.email}
-                                        onChange={handleChange("email")}
+
+                                <div className="pt-2 flex gap-3 justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => onOpenChange(false)}
                                         disabled={isSubmitting}
-                                    />
+                                        className="text-slate-500 hover:text-slate-700"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="bg-slate-900 dark:bg-blue-600 text-white min-w-[140px]"
+                                    >
+                                        {isSubmitting ? (
+                                            <>
+                                                <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                                                Sending...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Send Message
+                                                <Send className="size-4 ml-2" />
+                                            </>
+                                        )}
+                                    </Button>
                                 </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="subject">Subject *</Label>
-                                <Input
-                                    id="subject"
-                                    placeholder="Brief description of your issue"
-                                    value={formData.subject}
-                                    onChange={handleChange("subject")}
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="message">Message *</Label>
-                                <Textarea
-                                    id="message"
-                                    placeholder="Please provide detailed information about your question or issue..."
-                                    className="min-h-[150px] resize-none"
-                                    value={formData.message}
-                                    onChange={handleChange("message")}
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Submit Button */}
-                        <div className="flex gap-3">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => onOpenChange(false)}
-                                disabled={isSubmitting}
-                                className="flex-1"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="flex-1 gap-2"
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                        Sending...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="size-4" />
-                                        Send Message
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-
-                        {/* Additional Info */}
-                        <div className="text-xs text-muted-foreground text-center">
-                            By submitting this form, you agree to our{" "}
-                            <a href="#" className="text-primary hover:underline">Privacy Policy</a>
-                        </div>
-                    </form>
-                )}
+                            </form>
+                        )}
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     );
