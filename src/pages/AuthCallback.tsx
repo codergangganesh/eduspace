@@ -15,13 +15,6 @@ export default function AuthCallback() {
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
 
-        if (type === 'recovery') {
-          // For password recovery, redirect to a password update page
-          // The session will be available for password update
-          navigate('/update-password', { replace: true });
-          return;
-        }
-
         // Get the session from the URL
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -29,6 +22,21 @@ export default function AuthCallback() {
           setError(sessionError.message);
           return;
         }
+
+        // Check if this is a password recovery callback
+        // We do this AFTER getting the session to ensure the hash is processed
+        if (type === 'recovery') {
+          if (session) {
+            navigate('/update-password', { replace: true });
+            return;
+          } else {
+            console.error("Recovery flow but no session found");
+            setError("Invalid or expired password reset link");
+            return;
+          }
+        }
+
+
 
         if (!session?.user) {
           setError("No session found");

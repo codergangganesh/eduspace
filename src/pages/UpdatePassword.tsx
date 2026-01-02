@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,21 @@ export default function UpdatePassword() {
     const [isSuccess, setIsSuccess] = useState(false);
     const navigate = useNavigate();
     const { toast } = useToast();
+
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast({
+                    title: "Session Expired",
+                    description: "Please request a new password reset link.",
+                    variant: "destructive",
+                });
+                navigate("/forgot-password");
+            }
+        };
+        checkSession();
+    }, [navigate, toast]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
