@@ -4,12 +4,14 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
+import { ReactNode } from "react";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
+  actions?: ReactNode;
 }
 
-export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) {
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
 
@@ -28,6 +30,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </Button>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        {actions}
         {showNotifications && <NotificationsPopover />}
 
         <Button
