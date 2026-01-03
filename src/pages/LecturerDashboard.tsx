@@ -9,12 +9,16 @@ import { useNavigate } from "react-router-dom";
 import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useRealtimeRejections } from "@/hooks/useRealtimeRejections";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
   const { stats: dataStats, recentSubmissions, upcomingClasses, loading } = useLecturerData();
   const navigate = useNavigate();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  // Listen for real-time rejection notifications
+  useRealtimeRejections();
 
   // Get display name for greeting
   const displayName = profile?.full_name || "Professor";

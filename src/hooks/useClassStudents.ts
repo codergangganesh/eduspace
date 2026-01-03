@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface ClassStudent {
     id: string;
     class_id: string;
-    student_id: string | null;
+    student_id: string;
     register_number: string;
     student_name: string;
     email: string;
@@ -16,9 +16,10 @@ export interface ClassStudent {
     phone?: string;
     student_image_url?: string | null;
     import_source: string;
-    enrollment_status: 'pending' | 'enrolled' | 'rejected';
     added_at: string;
-    enrolled_at?: string | null;
+    profile_image?: string;
+    status?: 'active' | 'probation' | 'inactive';
+    progress?: number;
 }
 
 export function useClassStudents(classId?: string) {
@@ -27,37 +28,15 @@ export function useClassStudents(classId?: string) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchStudents = useCallback(async () => {
+    useEffect(() => {
         if (!user || !classId) {
             setLoading(false);
             return;
         }
 
-        try {
-            setLoading(true);
-            const { data, error: fetchError } = await supabase
-                .from('class_students')
-                .select('*')
-                .eq('class_id', classId)
-                .order('added_at', { ascending: false });
-
-            if (fetchError) throw fetchError;
-
-            setStudents(data || []);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching students:', err);
-            setError(err instanceof Error ? err.message : 'Failed to fetch students');
-        } finally {
-            setLoading(false);
-        }
-    }, [user, classId]);
-
-    useEffect(() => {
         fetchStudents();
 
-        if (!classId) return;
-
+        // Set up real-time subscription
         const subscription = supabase
             .channel(`class_students_${classId}`)
             .on(
@@ -77,9 +56,32 @@ export function useClassStudents(classId?: string) {
         return () => {
             subscription.unsubscribe();
         };
-    }, [classId, fetchStudents]);
+    }, [user, classId]);
 
-    const addStudent = async (studentData: Omit<ClassStudent, 'id' | 'added_at' | 'enrollment_status'>) => {
+    const fetchStudents = async () => {
+        if (!classId) return;
+
+        try {
+            setLoading(true);
+            const { data, error: fetchError } = await supabase
+                .from('class_students')
+                .select('*')
+                .eq('class_id', classId)
+                .order('added_at', { ascending: false });
+
+            if (fetchError) throw fetchError;
+
+            setStudents(data || []);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching students:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch students');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addStudent = async (studentData: Omit<ClassStudent, 'id' | 'added_at'>) => {
         if (!user || !classId) throw new Error('Not authenticated or no class selected');
 
         try {
@@ -87,14 +89,14 @@ export function useClassStudents(classId?: string) {
                 .from('class_students')
                 .insert({
                     ...studentData,
-                    class_id: classId,
-                    enrollment_status: 'pending'
+                    class_id: classId
                 })
                 .select()
                 .single();
 
             if (insertError) throw insertError;
 
+            await fetchStudents();
             return { success: true, data };
         } catch (err) {
             console.error('Error adding student:', err);
@@ -116,6 +118,8 @@ export function useClassStudents(classId?: string) {
                 .eq('class_id', classId);
 
             if (updateError) throw updateError;
+
+            await fetchStudents();
         } catch (err) {
             console.error('Error updating student:', err);
             throw err;
@@ -133,6 +137,8 @@ export function useClassStudents(classId?: string) {
                 .eq('class_id', classId);
 
             if (deleteError) throw deleteError;
+
+            await fetchStudents();
         } catch (err) {
             console.error('Error deleting student:', err);
             throw err;
@@ -143,9 +149,10 @@ export function useClassStudents(classId?: string) {
         if (!user || !classId) throw new Error('Not authenticated or no class selected');
 
         try {
+            // Prepare students for insertion
             const studentsToInsert = studentsData.map(student => ({
                 class_id: classId,
-                student_id: null,
+                student_id: null, // Will be filled when student accepts
                 register_number: student.registerNumber,
                 student_name: student.studentName,
                 email: student.email,
@@ -154,16 +161,18 @@ export function useClassStudents(classId?: string) {
                 year: student.year || null,
                 section: student.section || null,
                 phone: student.phone || null,
-                import_source: 'excel',
-                enrollment_status: 'pending'
+                import_source: 'excel'
             }));
 
+            // Insert students
             const { data, error: insertError } = await supabase
                 .from('class_students')
                 .insert(studentsToInsert)
                 .select();
 
             if (insertError) throw insertError;
+
+            await fetchStudents();
 
             return {
                 success: true,
@@ -184,10 +193,6 @@ export function useClassStudents(classId?: string) {
         }
     };
 
-    const importStudentsFromExcel = async (studentsData: any[], targetClassId: string) => {
-        return importStudents(studentsData);
-    };
-
     const updateStudentImage = async (studentId: string, imageUrl: string | null) => {
         if (!user || !classId) throw new Error('Not authenticated or no class selected');
 
@@ -199,6 +204,8 @@ export function useClassStudents(classId?: string) {
                 .eq('class_id', classId);
 
             if (updateError) throw updateError;
+
+            await fetchStudents();
         } catch (err) {
             console.error('Error updating student image:', err);
             throw err;
@@ -213,7 +220,6 @@ export function useClassStudents(classId?: string) {
         updateStudent,
         deleteStudent,
         importStudents,
-        importStudentsFromExcel,
         updateStudentImage,
         refetch: fetchStudents
     };

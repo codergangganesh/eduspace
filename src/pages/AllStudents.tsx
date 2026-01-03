@@ -229,8 +229,8 @@ export default function AllStudents() {
         }
     };
 
-    const getAccessStatus = (studentEmail: string) => {
-        const request = accessRequests.find(r => r.student_email === studentEmail);
+    const getAccessStatus = (studentId: string) => {
+        const request = accessRequests.find(r => r.student_id === studentId);
         return request?.status || "not_sent";
     };
 
@@ -416,8 +416,8 @@ export default function AllStudents() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                        {filteredStudents.map((student) => {
-                                            const status = getAccessStatus(student.email);
+                                    {filteredStudents.map((student) => {
+                                        const status = getAccessStatus(student.student_id);
                                         const imageUrl = student.student_image_url
                                             ? getOptimizedImageUrl(student.student_image_url, { width: 100, height: 100 })
                                             : null;
