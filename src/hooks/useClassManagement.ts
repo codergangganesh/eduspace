@@ -99,11 +99,20 @@ export function useClassManagement() {
         academic_year?: string;
     }) => {
         try {
+            // Get lecturer profile data
+            const { data: lecturerProfile } = await supabase
+                .from('lecturer_profiles')
+                .select('full_name, department')
+                .eq('user_id', user?.id)
+                .single();
+
             const { data, error: insertError } = await supabase
                 .from('classes')
                 .insert([{
                     lecturer_id: user?.id,
                     ...classData,
+                    lecturer_name: lecturerProfile?.full_name,
+                    lecturer_department: lecturerProfile?.department,
                     is_active: true
                 }])
                 .select()

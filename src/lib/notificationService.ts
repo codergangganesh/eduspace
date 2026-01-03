@@ -397,3 +397,41 @@ export async function notifyAccessRequest(
         return { success: false, error: err };
     }
 }
+
+/**
+ * Notify lecturer when a student rejects their class invitation
+ */
+export async function notifyInvitationRejected(
+    lecturerId: string,
+    studentName: string,
+    courseCode: string,
+    className?: string,
+    requestId?: string
+) {
+    try {
+        // Check if lecturer has notifications enabled
+        const { data: lecturerProfile } = await supabase
+            .from("lecturer_profiles")
+            .select("email_notifications")
+            .eq("user_id", lecturerId)
+            .single();
+
+        if (!lecturerProfile?.email_notifications) {
+            return { success: true, message: "Notifications disabled" };
+        }
+
+        const classInfo = className ? ` - ${className}` : '';
+
+        return createNotification({
+            userId: lecturerId,
+            title: "Class Invitation Rejected",
+            message: `${studentName} has declined the invitation to join ${courseCode}${classInfo}`,
+            type: "access_request",
+            relatedId: requestId,
+        });
+    } catch (err) {
+        console.error("Error in notifyInvitationRejected:", err);
+        return { success: false, error: err };
+    }
+}
+

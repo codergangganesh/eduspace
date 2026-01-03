@@ -1,76 +1,60 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, GraduationCap, Calendar, User, Loader2 } from "lucide-react";
+import { Check, X, GraduationCap, Calendar, User } from "lucide-react";
 import { useState } from "react";
 import { useAccessRequests } from "@/hooks/useAccessRequests";
 import { toast } from "sonner";
 
 interface AccessRequestCardProps {
-    request: {
-        id: string;
-        class_id: string;
-        lecturer_id: string;
-        student_id: string | null;
-        student_email: string;
-        status: string;
-        sent_at: string;
-        responded_at: string | null;
-        classes?: {
-            course_code: string;
-            class_name: string | null;
-            semester: string | null;
-            academic_year: string | null;
-            lecturer_name: string | null;
-            lecturer_department: string | null;
-        };
-    };
+    request: any;
     onRespond: () => void;
 }
 
 export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps) {
     const { respondToAccessRequest, loading } = useAccessRequests();
-    const [responding, setResponding] = useState<'accept' | 'reject' | null>(null);
+    const [responding, setResponding] = useState(false);
 
     const handleAccept = async () => {
         try {
-            setResponding('accept');
+            setResponding(true);
             await respondToAccessRequest(request.id, 'accepted');
-            toast.success("Invitation accepted! You've been enrolled in the class.");
+            toast.success("Access request accepted! You've been added to the class.");
             onRespond();
         } catch (error) {
-            toast.error("Failed to accept invitation. Please try again.");
+            toast.error("Failed to accept request");
         } finally {
-            setResponding(null);
+            setResponding(false);
         }
     };
 
     const handleReject = async () => {
         try {
-            setResponding('reject');
+            setResponding(true);
             await respondToAccessRequest(request.id, 'rejected');
-            toast.success("Invitation declined.");
+            toast.success("Access request rejected");
             onRespond();
         } catch (error) {
-            toast.error("Failed to decline invitation. Please try again.");
+            toast.error("Failed to reject request");
         } finally {
-            setResponding(null);
+            setResponding(false);
         }
     };
 
     const classInfo = request.classes;
 
     return (
-        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 overflow-hidden">
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <CardContent className="p-6">
                 <div className="flex flex-col gap-4">
+                    {/* Header */}
                     <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                             <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center">
                                 <GraduationCap className="size-6 text-primary" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-lg">Class Invitation</h3>
+                                <h3 className="font-semibold text-lg">Class Access Request</h3>
                                 <p className="text-sm text-muted-foreground">
                                     You've been invited to join a class
                                 </p>
@@ -81,10 +65,11 @@ export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps
                         </Badge>
                     </div>
 
+                    {/* Class Details */}
                     <div className="bg-background/50 rounded-lg p-4 space-y-3">
                         <div className="flex items-center gap-2">
                             <GraduationCap className="size-4 text-muted-foreground" />
-                            <span className="font-medium">{classInfo?.course_code || 'Course'}</span>
+                            <span className="font-medium">{classInfo?.course_code || 'Unknown Course'}</span>
                             {classInfo?.class_name && (
                                 <>
                                     <span className="text-muted-foreground">•</span>
@@ -93,12 +78,10 @@ export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps
                             )}
                         </div>
 
-                        {(classInfo?.semester || classInfo?.academic_year) && (
+                        {classInfo?.semester && classInfo?.academic_year && (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="size-4" />
-                                <span>
-                                    {[classInfo?.semester, classInfo?.academic_year].filter(Boolean).join(' • ')}
-                                </span>
+                                <span>{classInfo.semester} • {classInfo.academic_year}</span>
                             </div>
                         )}
 
@@ -116,43 +99,38 @@ export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps
                         )}
                     </div>
 
+                    {/* Message */}
                     <div className="bg-background/50 rounded-lg p-4">
                         <p className="text-sm text-muted-foreground">
                             <strong>{classInfo?.lecturer_name || 'A lecturer'}</strong> has invited you to join this class.
-                            By accepting, you'll get access to assignments, schedules, and class materials.
+                            By accepting, you'll get access to assignments, schedules, and can communicate with your lecturer.
                         </p>
                     </div>
 
+                    {/* Actions */}
                     <div className="flex items-center gap-3 pt-2">
                         <Button
                             onClick={handleAccept}
-                            disabled={responding !== null || loading}
+                            disabled={responding || loading}
                             className="flex-1 gap-2"
                         >
-                            {responding === 'accept' ? (
-                                <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                                <Check className="size-4" />
-                            )}
-                            {responding === 'accept' ? "Accepting..." : "Accept"}
+                            <Check className="size-4" />
+                            {responding ? "Accepting..." : "Accept"}
                         </Button>
                         <Button
                             onClick={handleReject}
-                            disabled={responding !== null || loading}
+                            disabled={responding || loading}
                             variant="outline"
                             className="flex-1 gap-2 text-destructive hover:text-destructive"
                         >
-                            {responding === 'reject' ? (
-                                <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                                <X className="size-4" />
-                            )}
-                            {responding === 'reject' ? "Declining..." : "Decline"}
+                            <X className="size-4" />
+                            {responding ? "Rejecting..." : "Reject"}
                         </Button>
                     </div>
 
+                    {/* Timestamp */}
                     <p className="text-xs text-muted-foreground text-center">
-                        Received {new Date(request.sent_at).toLocaleDateString('en-US', {
+                        Sent {new Date(request.sent_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
