@@ -45,6 +45,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 import AnoAI from "@/components/ui/animated-shader-background";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { renderCanvas } from "@/components/ui/canvas";
 
 export default function LandingPage() {
     const navigate = useNavigate();
@@ -55,6 +56,10 @@ export default function LandingPage() {
     const [showContact, setShowContact] = useState(false);
 
 
+
+    useEffect(() => {
+        renderCanvas();
+    }, []);
 
     const features = [
         {
@@ -138,6 +143,11 @@ export default function LandingPage() {
     return (
         <div className="min-h-screen bg-transparent dark:bg-slate-950 font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
             <AnoAI />
+            <canvas
+                className="pointer-events-none absolute inset-0 mx-auto z-[1]"
+                id="canvas"
+            />
+
 
             <div className="relative z-10 backdrop-blur-[2px]">
                 {/* Modals */}
