@@ -1,16 +1,20 @@
 // Imports
-import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2 } from "lucide-react";
+import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLecturerData } from "@/hooks/useLecturerData";
 import { useNavigate } from "react-router-dom";
+import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
   const { stats: dataStats, recentSubmissions, upcomingClasses, loading } = useLecturerData();
   const navigate = useNavigate();
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Get display name for greeting
   const displayName = profile?.full_name || "Professor";
@@ -35,7 +39,19 @@ export default function LecturerDashboard() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      actions={
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setInviteDialogOpen(true)}
+          className="gap-2"
+        >
+          <UserPlus className="size-4" />
+          <span className="hidden sm:inline">Invite User</span>
+        </Button>
+      }
+    >
       <div className="flex flex-col gap-6">
         {/* Welcome Section */}
         <div className="flex flex-col gap-1">
@@ -185,7 +201,7 @@ export default function LecturerDashboard() {
             {/* Quick Actions */}
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button
                   onClick={() => navigate('/assignments')}
                   className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
@@ -207,11 +223,26 @@ export default function LecturerDashboard() {
                   <Users className="size-5 text-primary" />
                   <span className="text-xs font-medium text-foreground text-center">View Students</span>
                 </button>
+                <button
+                  onClick={() => setInviteDialogOpen(true)}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
+                >
+                  <UserPlus className="size-5 text-primary" />
+                  <span className="text-xs font-medium text-foreground text-center">Invite User</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Invite User Dialog */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        lecturerName={profile?.full_name || "Lecturer"}
+        lecturerEmail={profile?.email || ""}
+      />
     </DashboardLayout >
   );
 }
