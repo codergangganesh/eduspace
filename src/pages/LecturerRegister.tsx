@@ -7,11 +7,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
 
+import { TermsDialog } from "@/components/legal/TermsDialog";
+import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
+
 export default function LecturerRegister() {
     const navigate = useNavigate();
     const { signUp, isAuthenticated, role } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
+    const [showPrivacy, setShowPrivacy] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [formData, setFormData] = useState({
@@ -164,20 +169,52 @@ export default function LecturerRegister() {
 
                     {/* Terms Agreement */}
                     <div className="flex items-start gap-3">
-                        <input
-                            type="checkbox"
-                            id="terms"
-                            checked={agreedToTerms}
-                            onChange={(e) => setAgreedToTerms(e.target.checked)}
-                            className="mt-1 size-4 rounded border-border text-primary focus:ring-primary/20"
-                            disabled={isLoading}
+                        <TermsDialog
+                            open={showTerms}
+                            onOpenChange={setShowTerms}
+                            showAgreeButton={true}
+                            onAgree={() => setAgreedToTerms(true)}
                         />
-                        <label htmlFor="terms" className="text-sm text-muted-foreground">
-                            I agree to the{" "}
-                            <a href="#" className="text-primary hover:underline">Terms of Service</a>
-                            {" "}and{" "}
-                            <a href="#" className="text-primary hover:underline">Privacy Policy</a>
-                        </label>
+                        <PrivacyPolicyDialog
+                            open={showPrivacy}
+                            onOpenChange={setShowPrivacy}
+                            showAgreeButton={false}
+                        />
+
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="terms"
+                                checked={agreedToTerms}
+                                onChange={(e) => {
+                                    if (!agreedToTerms) {
+                                        setShowTerms(true);
+                                    } else {
+                                        setAgreedToTerms(false);
+                                    }
+                                }}
+                                className="mt-1 size-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                                disabled={isLoading}
+                            />
+                            <label htmlFor="terms" className="text-sm text-muted-foreground select-none">
+                                I agree to the{" "}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTerms(true)}
+                                    className="text-primary hover:underline font-medium focus:outline-none"
+                                >
+                                    Terms of Service
+                                </button>
+                                {" "}and{" "}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPrivacy(true)}
+                                    className="text-primary hover:underline font-medium focus:outline-none"
+                                >
+                                    Privacy Policy
+                                </button>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Submit Button */}

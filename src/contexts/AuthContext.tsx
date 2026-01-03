@@ -183,6 +183,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: error.message };
     }
 
+    // Trigger Welcome Email (Fire and forget, don't block registration)
+    try {
+      console.log("📧 Triggering welcome email...");
+
+      supabase.functions.invoke("send-welcome-email", {
+        body: {
+          email,
+          fullName,
+          role: selectedRole,
+        },
+      }).then(({ data, error }) => {
+        if (error) console.error("❌ Failed to send welcome email:", error);
+        else console.log("✅ Welcome email request sent:", data);
+      });
+    } catch (err) {
+      console.error("Error triggering email function:", err);
+    }
+
     return { success: true };
   };
 

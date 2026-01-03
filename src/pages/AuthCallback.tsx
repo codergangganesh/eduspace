@@ -113,6 +113,23 @@ export default function AuthCallback() {
               console.error("Error creating profile:", profileError);
             } else {
               console.log("✅ Profile created successfully");
+
+              // Trigger Welcome Email for new OAuth user
+              try {
+                console.log("📧 Triggering welcome email for OAuth user...");
+                supabase.functions.invoke("send-welcome-email", {
+                  body: {
+                    email: session.user.email,
+                    fullName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || "User",
+                    role: userRole,
+                  },
+                }).then(({ data, error }) => {
+                  if (error) console.error("❌ Failed to send welcome email:", error);
+                  else console.log("✅ Welcome email request sent:", data);
+                });
+              } catch (err) {
+                console.error("Error triggering email function:", err);
+              }
             }
           }
         }

@@ -5,6 +5,7 @@ import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { HelpCenterDialog } from "@/components/support/HelpCenterDialog";
 import { ContactSupportDialog } from "@/components/support/ContactSupportDialog";
+import { BackgroundGradientAnimation } from "@/components/ui/background-gradient-animation";
 
 interface AuthLayoutProps {
     children: ReactNode;
@@ -19,125 +20,72 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
     const [showContact, setShowContact] = useState(false);
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row">
-            {/* Modals */}
-            <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
-            <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
-            <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
-            <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
+        <BackgroundGradientAnimation>
+            <div className="absolute inset-0 z-10 overflow-auto">
+                <div className="min-h-screen flex items-center justify-center p-4 lg:p-8">
+                    <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 my-8">
 
-            {/* Header - Mobile Only */}
-            <div className="lg:hidden w-full bg-background border-b border-border px-6 py-4 flex items-center justify-between">
-                <Link to="/" className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                        <GraduationCap className="size-6 text-primary" />
-                    </div>
-                    <span className="text-xl font-bold text-foreground">EduSpace</span>
-                </Link>
-                <div className="flex items-center gap-4 text-sm">
-                    <button
-                        onClick={() => setShowHelp(true)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        Help Center
-                    </button>
-                    <button
-                        onClick={() => setShowContact(true)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        Contact Support
-                    </button>
-                </div>
-            </div>
+                        {/* Modals */}
+                        <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
+                        <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
+                        <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
+                        <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
-            {/* Left Panel - Branding */}
-            <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-12 flex-col justify-between">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-primary/10">
-                            <GraduationCap className="size-8 text-primary" />
+                        {/* Branding Panel */}
+                        <div className="lg:w-5/12 p-8 lg:p-12 flex flex-col justify-between bg-black/5 dark:bg-black/40 text-white relative lg:min-h-[700px]">
+                            {/* Decorative background overlay */}
+                            <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 mix-blend-overlay pointer-events-none" />
+
+                            <div className="relative z-10">
+                                <Link to="/" className="flex items-center gap-3 w-fit">
+                                    <div className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
+                                        <GraduationCap className="size-8 text-white" />
+                                    </div>
+                                    <span className="text-2xl font-bold text-white tracking-tight">EduSpace</span>
+                                </Link>
+                            </div>
+
+                            <div className="relative z-10 py-12 lg:py-0">
+                                <h1 className="text-4xl lg:text-5xl font-black mb-6 leading-tight tracking-tight">
+                                    Welcome to <br />
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">EduSpace</span>
+                                </h1>
+                                <p className="text-lg text-white/80 leading-relaxed font-medium">
+                                    Your comprehensive academic platform. Connect with your courses, manage assignments, and collaborate effortlessly.
+                                </p>
+                            </div>
+
+                            <div className="relative z-10 hidden lg:block text-xs text-white/50">
+                                Protected by EduSpace Security
+                            </div>
                         </div>
-                        <span className="text-2xl font-bold text-foreground">EduSpace</span>
-                    </Link>
-                    <div className="flex items-center gap-6 text-sm">
-                        <button
-                            onClick={() => setShowHelp(true)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            Help Center
-                        </button>
-                        <button
-                            onClick={() => setShowContact(true)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            Contact Support
-                        </button>
-                    </div>
-                </div>
 
-                {/* Welcome Content */}
-                <div className="space-y-6">
-                    <div className="inline-flex p-3 rounded-2xl bg-primary/10">
-                        <GraduationCap className="size-16 text-primary" />
-                    </div>
-                    <div className="space-y-4">
-                        <h1 className="text-4xl font-black text-foreground leading-tight">
-                            Welcome to EduSpace
-                        </h1>
-                        <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
-                            Your comprehensive academic platform. Connect with your courses, manage assignments, and collaborate effortlessly.
-                        </p>
-                    </div>
-                </div>
+                        {/* Content Panel */}
+                        <div className="flex-1 p-8 lg:p-12 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex flex-col justify-center relative">
+                            <div className="flex justify-end gap-4 text-sm font-medium mb-8">
+                                <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors">Help</button>
+                                <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors">Support</button>
+                            </div>
 
-                {/* Footer */}
-                <div className="text-xs text-muted-foreground/70">
-                    Protected by reCAPTCHA and subject to the{" "}
-                    <button
-                        onClick={() => setShowPrivacy(true)}
-                        className="underline hover:text-muted-foreground"
-                    >
-                        Privacy Policy
-                    </button>
-                    {" "}and{" "}
-                    <button
-                        onClick={() => setShowTerms(true)}
-                        className="underline hover:text-muted-foreground"
-                    >
-                        Terms of Service
-                    </button>.
-                </div>
-            </div>
+                            <div className="w-full max-w-md mx-auto">
+                                <div className="mb-8">
+                                    <h2 className="text-3xl font-bold text-foreground tracking-tight mb-2">{title}</h2>
+                                    <p className="text-muted-foreground">{subtitle}</p>
+                                </div>
 
-            {/* Right Panel - Form */}
-            <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-background">
-                <div className="w-full max-w-[480px]">
-                    <div className="mb-8 text-center lg:text-left">
-                        <h2 className="text-3xl font-bold text-foreground mb-2">{title}</h2>
-                        <p className="text-muted-foreground">{subtitle}</p>
-                    </div>
-                    {children}
+                                {children}
 
-                    {/* Mobile Footer */}
-                    <div className="lg:hidden mt-8 text-xs text-center text-muted-foreground/70">
-                        Protected by reCAPTCHA and subject to the{" "}
-                        <button
-                            onClick={() => setShowPrivacy(true)}
-                            className="underline hover:text-muted-foreground"
-                        >
-                            Privacy Policy
-                        </button>
-                        {" "}and{" "}
-                        <button
-                            onClick={() => setShowTerms(true)}
-                            className="underline hover:text-muted-foreground"
-                        >
-                            Terms of Service
-                        </button>.
+                                <div className="mt-8 text-center text-xs text-muted-foreground">
+                                    By continuing, you agree to our{" "}
+                                    <button onClick={() => setShowTerms(true)} className="underline hover:text-primary">Terms of Service</button>
+                                    {" "}and{" "}
+                                    <button onClick={() => setShowPrivacy(true)} className="underline hover:text-primary">Privacy Policy</button>.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </BackgroundGradientAnimation>
     );
 }
