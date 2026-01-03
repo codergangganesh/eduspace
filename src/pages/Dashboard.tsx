@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -9,6 +9,9 @@ import { useNavigate } from "react-router-dom";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -16,6 +19,8 @@ export default function Dashboard() {
   const { assignments, stats, loading: assignmentsLoading } = useAssignments();
   const { schedules, loading: scheduleLoading } = useSchedule();
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   const loading = assignmentsLoading || scheduleLoading;
 
@@ -73,7 +78,19 @@ export default function Dashboard() {
     }));
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      actions={
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setInviteDialogOpen(true)}
+          className="gap-2"
+        >
+          <UserPlus className="size-4" />
+          <span className="hidden sm:inline">Invite User</span>
+        </Button>
+      }
+    >
       <div className="space-y-8">
         {/* Hero Section */}
         <DashboardHero />
@@ -199,6 +216,14 @@ export default function Dashboard() {
 
         </div>
       </div>
+
+      {/* Invite User Dialog */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        lecturerName={profile?.full_name || "Student"}
+        lecturerEmail={profile?.email || ""}
+      />
     </DashboardLayout>
   );
 }
