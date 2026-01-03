@@ -61,7 +61,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                         </div>
 
                         {/* Content Panel */}
-                        <div className="flex-1 p-8 lg:p-12 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex flex-col justify-center relative">
+                        <div className="flex-1 p-8 lg:p-12 bg-background/80 backdrop-blur-md flex flex-col justify-center relative">
                             <div className="flex justify-end gap-4 text-sm font-medium mb-8">
                                 <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors">Help</button>
                                 <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors">Support</button>
