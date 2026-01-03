@@ -26,9 +26,22 @@ export function useRealtimeAccessRequests() {
     const { user } = useAuth();
     const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [userEmail, setUserEmail] = useState<string | null>(null);
+
+    useEffect(() => {
+        const getUserEmail = async () => {
+            if (!user) {
+                setUserEmail(null);
+                return;
+            }
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            setUserEmail(authUser?.email || null);
+        };
+        getUserEmail();
+    }, [user]);
 
     const fetchPendingRequests = useCallback(async () => {
-        if (!user?.email) {
+        if (!userEmail) {
             setLoading(false);
             return;
         }
@@ -47,7 +60,7 @@ export function useRealtimeAccessRequests() {
                         lecturer_department
                     )
                 `)
-                .eq('student_email', user.email)
+                .eq('student_email', userEmail)
                 .eq('status', 'pending')
                 .order('sent_at', { ascending: false });
 
@@ -59,12 +72,12 @@ export function useRealtimeAccessRequests() {
         } finally {
             setLoading(false);
         }
-    }, [user?.email]);
+    }, [userEmail]);
 
     useEffect(() => {
         fetchPendingRequests();
 
-        if (!user?.email) return;
+        if (!userEmail || !user) return;
 
         const subscription = supabase
             .channel(`access_requests_${user.id}`)
@@ -74,7 +87,7 @@ export function useRealtimeAccessRequests() {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'access_requests',
-                    filter: `student_email=eq.${user.email}`,
+                    filter: `student_email=eq.${userEmail}`,
                 },
                 async (payload) => {
                     const newRequest = payload.new as any;
@@ -112,7 +125,7 @@ export function useRealtimeAccessRequests() {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'access_requests',
-                    filter: `student_email=eq.${user.email}`,
+                    filter: `student_email=eq.${userEmail}`,
                 },
                 (payload) => {
                     const updatedRequest = payload.new as any;
@@ -130,7 +143,7 @@ export function useRealtimeAccessRequests() {
                     event: 'DELETE',
                     schema: 'public',
                     table: 'access_requests',
-                    filter: `student_email=eq.${user.email}`,
+                    filter: `student_email=eq.${userEmail}`,
                 },
                 (payload) => {
                     const deletedRequest = payload.old as any;
@@ -144,7 +157,7 @@ export function useRealtimeAccessRequests() {
         return () => {
             supabase.removeChannel(subscription);
         };
-    }, [user?.id, user?.email, fetchPendingRequests]);
+    }, [user?.id, userEmail, fetchPendingRequests]);
 
     return {
         pendingRequests,
