@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -11,6 +11,14 @@ export interface AccessRequest {
     status: 'pending' | 'accepted' | 'rejected';
     sent_at: string;
     responded_at: string | null;
+    classes?: {
+        course_code: string;
+        class_name: string | null;
+        semester: string | null;
+        academic_year: string | null;
+        lecturer_name: string | null;
+        lecturer_department: string | null;
+    };
 }
 
 export function useAccessRequests() {
@@ -24,7 +32,6 @@ export function useAccessRequests() {
         try {
             setLoading(true);
 
-            // Get all students in the class
             const { data: students, error: studentsError } = await supabase
                 .from('class_students')
                 .select('id, student_id, email, student_name')
@@ -41,7 +48,6 @@ export function useAccessRequests() {
                 };
             }
 
-            // Get class details for notification
             const { data: classData } = await supabase
                 .from('classes')
                 .select('course_code, class_name, lecturer_name')
@@ -52,7 +58,6 @@ export function useAccessRequests() {
             let skipped = 0;
 
             for (const student of students) {
-                // Check if access request already exists for this email
                 const { data: existing } = await supabase
                     .from('access_requests')
                     .select('id')
@@ -65,13 +70,12 @@ export function useAccessRequests() {
                     continue;
                 }
 
-                // Create access request
                 const { data: newRequest, error: requestError } = await supabase
                     .from('access_requests')
                     .insert({
                         class_id: classId,
                         lecturer_id: user.id,
-                        student_id: student.student_id, // Can be null
+                        student_id: student.student_id,
                         student_email: student.email,
                         status: 'pending',
                     })
@@ -84,14 +88,15 @@ export function useAccessRequests() {
                     continue;
                 }
 
-                // Create notification - if student_id exists, send to them
                 if (student.student_id) {
                     await supabase.from('notifications').insert({
-                        user_id: student.student_id,
-                        title: 'Class Access Request',
+                        recipient_id: student.student_id,
+                        sender_id: user.id,
+                        title: 'Class Invitation',
                         message: `${classData?.lecturer_name || 'A lecturer'} has invited you to join ${classData?.course_code || 'a class'}${classData?.class_name ? ` - ${classData.class_name}` : ''}`,
                         type: 'access_request',
                         related_id: newRequest.id,
+                        class_id: classId,
                         is_read: false,
                     });
                 }
@@ -120,7 +125,6 @@ export function useAccessRequests() {
         try {
             setLoading(true);
 
-            // Get student from class_students by email
             const { data: student } = await supabase
                 .from('class_students')
                 .select('id, student_id, email, student_name')
@@ -132,7 +136,6 @@ export function useAccessRequests() {
                 throw new Error('Student not found in this class');
             }
 
-            // Check if access request already exists
             const { data: existing } = await supabase
                 .from('access_requests')
                 .select('id')
@@ -144,20 +147,18 @@ export function useAccessRequests() {
                 throw new Error('Access request already sent to this student');
             }
 
-            // Get class details
             const { data: classData } = await supabase
                 .from('classes')
                 .select('course_code, class_name, lecturer_name')
                 .eq('id', classId)
                 .single();
 
-            // Create access request
             const { data: newRequest, error: requestError } = await supabase
                 .from('access_requests')
                 .insert({
                     class_id: classId,
                     lecturer_id: user.id,
-                    student_id: student.student_id, // Can be null
+                    student_id: student.student_id,
                     student_email: studentEmail,
                     status: 'pending',
                 })
@@ -166,14 +167,15 @@ export function useAccessRequests() {
 
             if (requestError) throw requestError;
 
-            // Create notification if student has registered
             if (student.student_id) {
                 await supabase.from('notifications').insert({
-                    user_id: student.student_id,
-                    title: 'Class Access Request',
+                    recipient_id: student.student_id,
+                    sender_id: user.id,
+                    title: 'Class Invitation',
                     message: `${classData?.lecturer_name || 'A lecturer'} has invited you to join ${classData?.course_code || 'a class'}${classData?.class_name ? ` - ${classData.class_name}` : ''}`,
                     type: 'access_request',
                     related_id: newRequest.id,
+                    class_id: classId,
                     is_read: false,
                 });
             }
@@ -212,7 +214,6 @@ export function useAccessRequests() {
         if (!user) throw new Error('User not authenticated');
 
         try {
-            // Get user's email from auth
             const { data: { user: authUser } } = await supabase.auth.getUser();
             const userEmail = authUser?.email;
 
@@ -221,9 +222,6 @@ export function useAccessRequests() {
                 return [];
             }
 
-            console.log('Fetching access requests for email:', userEmail);
-
-            // Get requests by email - this will match students imported via Excel
             const { data, error: fetchError } = await supabase
                 .from('access_requests')
                 .select(`
@@ -246,7 +244,6 @@ export function useAccessRequests() {
                 throw fetchError;
             }
 
-            console.log('Found access requests:', data?.length || 0);
             return data || [];
         } catch (err) {
             console.error('Error in getMyAccessRequests:', err);
@@ -261,56 +258,83 @@ export function useAccessRequests() {
         try {
             setLoading(true);
 
-            // Get the request details first
             const { data: request, error: requestFetchError } = await supabase
                 .from('access_requests')
-                .select('*')
+                .select('*, classes(course_code, class_name, lecturer_id, lecturer_name)')
                 .eq('id', requestId)
                 .single();
 
             if (requestFetchError) throw requestFetchError;
             if (!request) throw new Error('Access request not found');
 
-            console.log('Responding to request:', request);
-
-            // Update access request
             const { error: updateError } = await supabase
                 .from('access_requests')
                 .update({
                     status,
-                    student_id: user.id, // Link the student
+                    student_id: user.id,
                     responded_at: new Date().toISOString(),
                 })
                 .eq('id', requestId);
 
-            if (updateError) {
-                console.error('Error updating access request:', updateError);
-                throw updateError;
-            }
+            if (updateError) throw updateError;
 
-            // If accepted, update class_students to link the student
             if (status === 'accepted') {
-                const { error: linkError } = await supabase
+                const { error: enrollError } = await supabase
                     .from('class_students')
-                    .update({ student_id: user.id })
+                    .update({ 
+                        student_id: user.id,
+                        enrollment_status: 'enrolled',
+                        enrolled_at: new Date().toISOString()
+                    })
                     .eq('class_id', request.class_id)
                     .eq('email', request.student_email);
 
-                if (linkError) {
-                    console.error('Error linking student:', linkError);
-                    // Don't throw - the request was still accepted
+                if (enrollError) {
+                    console.error('Error enrolling student:', enrollError);
                 }
+
+                await supabase.from('notifications').insert({
+                    recipient_id: request.lecturer_id,
+                    sender_id: user.id,
+                    title: 'Invitation Accepted',
+                    message: `A student has accepted your invitation to join ${request.classes?.course_code || 'your class'}`,
+                    type: 'access_request',
+                    related_id: requestId,
+                    class_id: request.class_id,
+                    is_read: false,
+                });
+            } else {
+                const { error: rejectError } = await supabase
+                    .from('class_students')
+                    .update({ 
+                        enrollment_status: 'rejected'
+                    })
+                    .eq('class_id', request.class_id)
+                    .eq('email', request.student_email);
+
+                if (rejectError) {
+                    console.error('Error updating rejection status:', rejectError);
+                }
+
+                await supabase.from('notifications').insert({
+                    recipient_id: request.lecturer_id,
+                    sender_id: user.id,
+                    title: 'Invitation Declined',
+                    message: `A student has declined your invitation to join ${request.classes?.course_code || 'your class'}`,
+                    type: 'access_request',
+                    related_id: requestId,
+                    class_id: request.class_id,
+                    is_read: false,
+                });
             }
 
-            // Mark notification as read if it exists
             await supabase
                 .from('notifications')
                 .update({ is_read: true })
-                .eq('user_id', user.id)
+                .eq('recipient_id', user.id)
                 .eq('related_id', requestId)
                 .eq('type', 'access_request');
 
-            console.log('Successfully responded to request');
             return { success: true };
         } catch (err) {
             console.error('Error responding to access request:', err);
