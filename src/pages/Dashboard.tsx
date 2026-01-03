@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, GraduationCap, Bell } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -9,9 +9,12 @@ import { useNavigate } from "react-router-dom";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeAccessRequests } from "@/hooks/useRealtimeAccessRequests";
+import { useEnrolledClasses } from "@/hooks/useEnrolledClasses";
+import { AccessRequestCard } from "@/components/student/AccessRequestCard";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -20,9 +23,10 @@ export default function Dashboard() {
   const { schedules, loading: scheduleLoading } = useSchedule();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const { pendingRequests, loading: requestsLoading, refetch: refetchRequests } = useRealtimeAccessRequests();
+  const { enrolledClasses, loading: classesLoading } = useEnrolledClasses();
 
-  const loading = assignmentsLoading || scheduleLoading;
+  const loading = assignmentsLoading || scheduleLoading || requestsLoading || classesLoading;
 
   if (loading) {
     return (
@@ -34,7 +38,6 @@ export default function Dashboard() {
     );
   }
 
-  // Process upcoming assignments
   const upcomingTasks = assignments
     .filter(a => {
       const isPublished = a.status === 'published';
@@ -42,7 +45,7 @@ export default function Dashboard() {
       return isPublished && isNotSubmitted && a.due_date;
     })
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
-    .slice(0, 3) // Limit to 3 to save space
+    .slice(0, 3)
     .map(a => {
       const dateDate = parseISO(a.due_date!);
       const isUrgent = isBefore(dateDate, addDays(new Date(), 2)) && isAfter(dateDate, new Date());
@@ -58,47 +61,96 @@ export default function Dashboard() {
       };
     });
 
-  // Process upcoming classes
-  const todayIndex = new Date().getDay(); // 0 is Sunday
+  const todayIndex = new Date().getDay();
   const upcomingClasses = schedules
-    .filter(s => s.day_of_week >= todayIndex) // Today onwards
+    .filter(s => s.day_of_week >= todayIndex)
     .sort((a, b) => {
       if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
       return a.start_time.localeCompare(b.start_time);
     })
-    .slice(0, 4) // Limit to 4
+    .slice(0, 4)
     .map(s => ({
       id: s.id,
       title: s.title,
-      course: s.location || "Room TBD", // Using location as subtitle context
+      course: s.location || "Room TBD",
       dueDate: s.day_of_week === todayIndex ? "Today" : days[s.day_of_week],
       dueTime: s.start_time.slice(0, 5),
-      type: s.type as any, // 'lecture' | 'lab' etc
-      isUrgent: s.day_of_week === todayIndex // Highlight today's classes
+      type: s.type as any,
+      isUrgent: s.day_of_week === todayIndex
     }));
 
   return (
-    <DashboardLayout
-      actions={
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setInviteDialogOpen(true)}
-          className="gap-2"
-        >
-          <UserPlus className="size-4" />
-          <span className="hidden sm:inline">Invite User</span>
-        </Button>
-      }
-    >
+    <DashboardLayout>
       <div className="space-y-8">
-        {/* Hero Section */}
         <DashboardHero />
 
-        {/* Stats Grid */}
+        {pendingRequests.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Bell className="size-5 text-primary animate-pulse" />
+              <h2 className="text-xl font-bold text-foreground">Pending Class Invitations</h2>
+              <Badge variant="default" className="ml-2">{pendingRequests.length} new</Badge>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {pendingRequests.map((request) => (
+                <AccessRequestCard
+                  key={request.id}
+                  request={request}
+                  onRespond={refetchRequests}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {enrolledClasses.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="size-5 text-primary" />
+                <h2 className="text-xl font-bold text-foreground">My Classes</h2>
+                <Badge variant="secondary">{enrolledClasses.length}</Badge>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {enrolledClasses.slice(0, 3).map((enrollment) => (
+                <Card key={enrollment.id} className="bg-card border-border hover:border-primary/50 transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <GraduationCap className="size-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">
+                          {enrollment.classes.course_code}
+                        </h3>
+                        {enrollment.classes.class_name && (
+                          <p className="text-sm text-muted-foreground truncate">
+                            {enrollment.classes.class_name}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {enrollment.classes.lecturer_name || 'Lecturer'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
-            title="Assigned"
+            title="Enrolled Classes"
+            value={enrolledClasses.length}
+            icon={GraduationCap}
+            subtitle="Active enrollments"
+            className="border-l-4 border-l-indigo-500"
+          />
+          <StatsCard
+            title="Assignments"
             value={stats.total}
             icon={FileText}
             subtitle="Total active tasks"
@@ -119,20 +171,9 @@ export default function Dashboard() {
             subtitle="Require attention"
             className="border-l-4 border-l-orange-500"
           />
-          <StatsCard
-            title="Schedule"
-            value="View"
-            icon={Calendar}
-            subtitle="Upcoming classes"
-            className="border-l-4 border-l-purple-500 hover:border-l-purple-600 dark:border-l-purple-600"
-            onClick={() => navigate("/schedule")}
-          />
         </div>
 
-        {/* Main Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* Left Column (Main Content) */}
           <div className="lg:col-span-2 space-y-8">
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -166,10 +207,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Right Column (Sidebar) */}
           <div className="space-y-6">
-
-            {/* Upcoming Classes Widget (Replacing Activity Feed position) */}
             <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Clock className="size-4 text-purple-500" />
@@ -195,7 +233,6 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            {/* Upcoming Assignments Widget */}
             <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Calendar className="size-4 text-primary" />
@@ -211,19 +248,9 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-
           </div>
-
         </div>
       </div>
-
-      {/* Invite User Dialog */}
-      <InviteUserDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        lecturerName={profile?.full_name || "Student"}
-        lecturerEmail={profile?.email || ""}
-      />
     </DashboardLayout>
   );
 }

@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useAccessRequests } from "@/hooks/useAccessRequests";
+import { useRealtimeAccessRequests } from "@/hooks/useRealtimeAccessRequests";
 import { AccessRequestCard } from "@/components/student/AccessRequestCard";
 import { toast } from "sonner";
 
@@ -43,7 +43,7 @@ type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'annou
 
 interface NotificationData {
   id: string;
-  user_id: string;
+  recipient_id: string;
   title: string;
   message: string;
   type: NotificationType;
@@ -97,28 +97,10 @@ const getNotificationColor = (type: string) => {
 export default function Notifications() {
   const navigate = useNavigate();
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
-  const { getMyAccessRequests } = useAccessRequests();
+  const { pendingRequests, loading: requestsLoading, refetch: refetchRequests } = useRealtimeAccessRequests();
   const [activeTab, setActiveTab] = useState("all");
   const [selectedNotification, setSelectedNotification] = useState<NotificationData | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [accessRequests, setAccessRequests] = useState<any[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
-
-  useEffect(() => {
-    loadAccessRequests();
-  }, []);
-
-  const loadAccessRequests = async () => {
-    try {
-      setLoadingRequests(true);
-      const requests = await getMyAccessRequests();
-      setAccessRequests(requests || []);
-    } catch (error) {
-      console.error("Error loading access requests:", error);
-    } finally {
-      setLoadingRequests(false);
-    }
-  };
 
   const handleClearAll = async () => {
     await clearAllNotifications();
@@ -133,7 +115,7 @@ export default function Notifications() {
     return notification.type === activeTab;
   });
 
-  if (loading && loadingRequests) {
+  if (loading && requestsLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -146,7 +128,6 @@ export default function Notifications() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -187,27 +168,25 @@ export default function Notifications() {
           </div>
         </div>
 
-        {/* Access Requests Section */}
-        {accessRequests.length > 0 && (
+        {pendingRequests.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <GraduationCap className="size-5 text-primary" />
               <h2 className="text-lg font-semibold">Pending Class Invitations</h2>
-              <Badge variant="secondary">{accessRequests.length}</Badge>
+              <Badge variant="secondary">{pendingRequests.length}</Badge>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {accessRequests.map((request) => (
+              {pendingRequests.map((request) => (
                 <AccessRequestCard
                   key={request.id}
                   request={request}
-                  onRespond={loadAccessRequests}
+                  onRespond={refetchRequests}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="all" className="gap-2">
@@ -220,7 +199,6 @@ export default function Notifications() {
             </TabsTrigger>
             <TabsTrigger value="access_requests">Class Invitations</TabsTrigger>
             <TabsTrigger value="assignment">Assignments</TabsTrigger>
-            <TabsTrigger value="course">Courses</TabsTrigger>
             <TabsTrigger value="message">Messages</TabsTrigger>
             <TabsTrigger value="announcement">Announcements</TabsTrigger>
           </TabsList>
@@ -259,7 +237,6 @@ export default function Notifications() {
                           }
                         }}
                       >
-                        {/* Icon */}
                         <div
                           className={cn(
                             "size-10 rounded-full flex items-center justify-center shrink-0 text-white",
@@ -269,7 +246,6 @@ export default function Notifications() {
                           <Icon className="size-5" />
                         </div>
 
-                        {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -296,7 +272,6 @@ export default function Notifications() {
                           </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {!notification.is_read && (
                             <Button
@@ -321,7 +296,6 @@ export default function Notifications() {
           </TabsContent>
         </Tabs>
 
-        {/* Notification Detail Modal */}
         <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && setSelectedNotification(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -345,21 +319,18 @@ export default function Notifications() {
 
             {selectedNotification && (
               <div className="space-y-4">
-                {/* Type Badge */}
                 <div>
                   <Badge variant="outline" className="capitalize">
                     {selectedNotification.type.replace('_', ' ')}
                   </Badge>
                 </div>
 
-                {/* Full Message */}
                 <div className="bg-muted/50 rounded-lg p-4">
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
                     {selectedNotification.message}
                   </p>
                 </div>
 
-                {/* Timestamp */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="size-4" />
                   <span>
@@ -374,26 +345,16 @@ export default function Notifications() {
                   </span>
                 </div>
 
-                {/* Actions */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button variant="outline" onClick={() => setSelectedNotification(null)}>
                     Close
                   </Button>
-                  {selectedNotification.related_id && (
-                    <Button onClick={() => {
-                      console.log('Navigate to:', selectedNotification.type, selectedNotification.related_id);
-                      setSelectedNotification(null);
-                    }}>
-                      View Details
-                    </Button>
-                  )}
                 </div>
               </div>
             )}
           </DialogContent>
         </Dialog>
 
-        {/* Clear All Confirmation Dialog */}
         <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
           <DialogContent>
             <DialogHeader>
