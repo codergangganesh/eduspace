@@ -158,7 +158,7 @@ export default function LandingPage() {
                 <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
                 {/* Navigation */}
-                <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl sticky top-0 z-[100] transition-all duration-300">
+                <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl fixed top-0 w-full z-[100] transition-all duration-300">
                     <div className="max-w-7xl mx-auto px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16">
                             {/* Logo */}
@@ -201,7 +201,7 @@ export default function LandingPage() {
                 </nav>
 
                 {/* Hero Section */}
-                <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-32">
+                <section className="max-w-7xl mx-auto px-6 lg:px-8 pt-36 pb-20 lg:pt-48 lg:pb-32">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         {/* Left Content */}
                         <div className="space-y-8">
