@@ -80,7 +80,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+            <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden bg-background border-border">
                 <div className="flex flex-col md:flex-row h-full">
                     {/* Left Panel - Contact Information */}
                     <div className="w-full md:w-2/5 bg-slate-900 p-8 text-white flex flex-col justify-between relative overflow-hidden">
@@ -147,9 +147,9 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                     </div>
 
                     {/* Right Panel - Form */}
-                    <div className="w-full md:w-3/5 p-8 bg-white dark:bg-slate-950">
+                    <div className="w-full md:w-3/5 p-8 bg-background">
                         <DialogHeader className="mb-6 text-left">
-                            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">Get in Touch</DialogTitle>
+                            <DialogTitle className="text-2xl font-bold text-foreground">Get in Touch</DialogTitle>
                             <DialogDescription>
                                 We'd love to hear from you. Please fill out this form.
                             </DialogDescription>
@@ -161,7 +161,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                     <CheckCircle2 className="size-12 text-green-600 dark:text-green-400" />
                                 </div>
                                 <div className="text-center space-y-2">
-                                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Request Submitted!</h3>
+                                    <h3 className="text-xl font-semibold text-foreground">Request Submitted!</h3>
                                     <p className="text-muted-foreground max-w-xs mx-auto">
                                         Thank you for contacting us. We'll be in touch shortly.
                                     </p>
@@ -178,7 +178,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                             value={formData.name}
                                             onChange={handleChange("name")}
                                             disabled={isSubmitting}
-                                            className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                            className="bg-background border-border focus:ring-blue-500"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -190,7 +190,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                             value={formData.email}
                                             onChange={handleChange("email")}
                                             disabled={isSubmitting}
-                                            className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                            className="bg-background border-border focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -203,7 +203,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                         value={formData.subject}
                                         onChange={handleChange("subject")}
                                         disabled={isSubmitting}
-                                        className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                        className="bg-background border-border focus:ring-blue-500"
                                     />
                                 </div>
 
@@ -212,7 +212,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                     <Textarea
                                         id="message"
                                         placeholder="Tell us more about your inquiry..."
-                                        className="min-h-[120px] resize-none bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500"
+                                        className="min-h-[120px] resize-none bg-background border-border focus:ring-blue-500"
                                         value={formData.message}
                                         onChange={handleChange("message")}
                                         disabled={isSubmitting}
@@ -225,14 +225,14 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                         variant="ghost"
                                         onClick={() => onOpenChange(false)}
                                         disabled={isSubmitting}
-                                        className="text-slate-500 hover:text-slate-700"
+                                        className="text-muted-foreground hover:text-foreground"
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="bg-slate-900 dark:bg-blue-600 text-white min-w-[140px]"
+                                        className="min-w-[140px]"
                                     >
                                         {isSubmitting ? (
                                             <>

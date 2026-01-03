@@ -141,7 +141,7 @@ export default function LandingPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-transparent dark:bg-slate-950 font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
+        <div className="min-h-screen bg-transparent dark:bg-background font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
             <AnoAI />
             <canvas
                 className="pointer-events-none absolute inset-0 mx-auto z-[1]"
