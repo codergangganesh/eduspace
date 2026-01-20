@@ -51,6 +51,37 @@ export function useSchedule() {
                     .eq('lecturer_id', user.id)
                     .order('day_of_week', { ascending: true });
             } else {
+                // For students, only fetch schedules for classes they're enrolled in
+                // First, get the student's enrolled classes
+                const { data: enrolledClasses } = await supabase
+                    .from('class_students')
+                    .select('class_id, classes!inner(course_code)')
+                    .eq('student_id', user.id);
+
+                if (!enrolledClasses || enrolledClasses.length === 0) {
+                    // Student not enrolled in any classes, show no schedules
+                    setSchedules([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // Get course_ids that match the enrolled class course_codes
+                const enrolledCourseCodes = enrolledClasses.map((ec: any) => ec.classes.course_code);
+
+                const { data: enrolledCourses } = await supabase
+                    .from('courses')
+                    .select('id')
+                    .in('course_code', enrolledCourseCodes);
+
+                const enrolledCourseIds = enrolledCourses?.map(c => c.id) || [];
+
+                if (enrolledCourseIds.length === 0) {
+                    setSchedules([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // Fetch schedules only for enrolled courses
                 query = supabase
                     .from('schedules')
                     .select(`
@@ -59,6 +90,7 @@ export function useSchedule() {
                         subject_name,
                         courses:course_id (title, course_code)
                     `)
+                    .in('course_id', enrolledCourseIds)
                     .order('day_of_week', { ascending: true });
             }
 

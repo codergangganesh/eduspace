@@ -6,6 +6,7 @@ interface CreateNotificationParams {
     message: string;
     type: "assignment" | "grade" | "announcement" | "message" | "schedule" | "access_request" | "general";
     relatedId?: string;
+    classId?: string; // Class ID for filtering
 }
 
 /**
@@ -16,11 +17,12 @@ export async function createNotification(params: CreateNotificationParams) {
 
     try {
         const { error } = await supabase.from("notifications").insert({
-            user_id: userId,
+            recipient_id: userId,
             title,
             message,
             type,
             related_id: relatedId || null,
+            class_id: params.classId || null,
             is_read: false,
         });
 
@@ -43,15 +45,16 @@ export async function createBulkNotifications(
     userIds: string[],
     params: Omit<CreateNotificationParams, "userId">
 ) {
-    const { title, message, type, relatedId } = params;
+    const { title, message, type, relatedId, classId } = params;
 
     try {
         const notifications = userIds.map((userId) => ({
-            user_id: userId,
+            recipient_id: userId,
             title,
             message,
             type,
             related_id: relatedId || null,
+            class_id: classId || null,
             is_read: false,
         }));
 
@@ -290,11 +293,13 @@ export async function notifyClassStudents(
 
         // Create notifications with class_id and sender_id
         const notifications = notifyUserIds.map((userId) => ({
-            user_id: userId,
+            recipient_id: userId,
             title,
             message,
             type,
             related_id: relatedId || null,
+            class_id: classId,
+            sender_id: senderId,
             is_read: false,
         }));
 
@@ -343,11 +348,13 @@ export async function notifyLecturer(
 
         // Create notification
         const { error } = await supabase.from("notifications").insert({
-            user_id: lecturerId,
+            recipient_id: lecturerId,
             title,
             message,
             type,
             related_id: relatedId || null,
+            class_id: classId || null,
+            sender_id: senderId || null,
             is_read: false,
         });
 
@@ -435,3 +442,70 @@ export async function notifyInvitationRejected(
     }
 }
 
+/**
+ * Create notification for pending access request (when popup is dismissed)
+ */
+export async function notifyPendingAccessRequest(
+    studentId: string,
+    lecturerName: string,
+    courseCode: string,
+    className: string | undefined,
+    requestId: string
+) {
+    try {
+        // Check if a notification already exists for this request
+        const { data: existingNotification } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("recipient_id", studentId)
+            .eq("type", "access_request")
+            .eq("related_id", requestId)
+            .eq("is_read", false)
+            .single();
+
+        // Don't create duplicate notification
+        if (existingNotification) {
+            return { success: true, message: "Notification already exists" };
+        }
+
+        const classInfo = className ? ` - ${className}` : '';
+
+        return createNotification({
+            userId: studentId,
+            title: "Pending Class Invitation",
+            message: `${lecturerName} has invited you to join ${courseCode}${classInfo}. Click to review and respond.`,
+            type: "access_request",
+            relatedId: requestId,
+        });
+    } catch (err) {
+        console.error("Error in notifyPendingAccessRequest:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Clear notification for a specific access request
+ */
+export async function clearAccessRequestNotification(
+    studentId: string,
+    requestId: string
+) {
+    try {
+        const { error } = await supabase
+            .from("notifications")
+            .delete()
+            .eq("recipient_id", studentId)
+            .eq("type", "access_request")
+            .eq("related_id", requestId);
+
+        if (error) {
+            console.error("Error clearing access request notification:", error);
+            return { success: false, error };
+        }
+
+        return { success: true };
+    } catch (err) {
+        console.error("Error in clearAccessRequestNotification:", err);
+        return { success: false, error: err };
+    }
+}

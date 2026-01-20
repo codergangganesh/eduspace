@@ -11,6 +11,7 @@ import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
 import { PendingInvitationsPanel } from "@/components/student/PendingInvitationsPanel";
+import { JoinRequestModal } from "@/components/student/JoinRequestModal";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
@@ -26,8 +27,28 @@ export default function Dashboard() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Student onboarding and real-time invitations
-  const { hasPending, isOnboarding } = useStudentOnboarding();
-  useRealtimeInvitations();
+  const {
+    hasPending,
+    isOnboarding,
+    pendingInvitations,
+    showModal,
+    dismissModal,
+    refreshInvitations,
+    showModalForNewRequest,
+    markRequestAsHandled
+  } = useStudentOnboarding();
+
+  // Set up real-time invitations with modal trigger
+  useRealtimeInvitations(
+    () => {
+      // Refresh invitations when new one arrives
+      refreshInvitations();
+    },
+    () => {
+      // Show modal when new invitation arrives
+      showModalForNewRequest();
+    }
+  );
 
   const loading = assignmentsLoading || scheduleLoading || isOnboarding;
 
@@ -102,8 +123,8 @@ export default function Dashboard() {
         {/* Hero Section */}
         <DashboardHero />
 
-        {/* Pending Invitations Panel */}
-        {hasPending && <PendingInvitationsPanel />}
+        {/* Pending Invitations Panel - Hidden, now shown in modal */}
+        {/* {hasPending && <PendingInvitationsPanel />} */}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -233,6 +254,15 @@ export default function Dashboard() {
         onOpenChange={setInviteDialogOpen}
         lecturerName={profile?.full_name || "Student"}
         lecturerEmail={profile?.email || ""}
+      />
+
+      {/* Join Request Modal */}
+      <JoinRequestModal
+        open={showModal}
+        onOpenChange={dismissModal}
+        pendingInvitations={pendingInvitations}
+        onRequestHandled={refreshInvitations}
+        onRequestMarkedAsHandled={markRequestAsHandled}
       />
     </DashboardLayout>
   );

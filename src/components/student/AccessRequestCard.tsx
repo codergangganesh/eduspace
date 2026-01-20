@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 interface AccessRequestCardProps {
     request: any;
-    onRespond: () => void;
+    onRespond: (requestId: string) => void;
 }
 
 export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps) {
@@ -20,7 +20,7 @@ export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps
             setResponding(true);
             await respondToAccessRequest(request.id, 'accepted');
             toast.success("Access request accepted! You've been added to the class.");
-            onRespond();
+            onRespond(request.id);
         } catch (error) {
             toast.error("Failed to accept request");
         } finally {
@@ -33,7 +33,7 @@ export function AccessRequestCard({ request, onRespond }: AccessRequestCardProps
             setResponding(true);
             await respondToAccessRequest(request.id, 'rejected');
             toast.success("Access request rejected");
-            onRespond();
+            onRespond(request.id);
         } catch (error) {
             toast.error("Failed to reject request");
         } finally {

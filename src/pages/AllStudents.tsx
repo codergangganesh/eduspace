@@ -22,6 +22,7 @@ import {
     Trash2,
     ChevronLeft,
     FileSpreadsheet,
+    MoreVertical,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,13 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export default function AllStudents() {
     const { classId } = useParams<{ classId: string }>();
@@ -72,6 +80,8 @@ export default function AllStudents() {
     const {
         sendAccessRequestToAll,
         sendAccessRequest,
+        resendAccessRequest,
+        resendAccessRequestToAll,
         getAccessRequests,
     } = useAccessRequests();
 
@@ -111,7 +121,10 @@ export default function AllStudents() {
 
         if (statusFilter === "all") return matchesSearch;
 
-        const request = accessRequests.find(r => r.student_id === student.student_id);
+        const request = accessRequests.find(r =>
+            (student.student_id && r.student_id === student.student_id) ||
+            (r.student_email === student.email)
+        );
         const status = request?.status || "not_sent";
 
         return matchesSearch && status === statusFilter;
@@ -163,11 +176,56 @@ export default function AllStudents() {
         }
     };
 
+    const handleResendRequest = async (studentEmail: string) => {
+        if (!classId) return;
+
+        try {
+            await resendAccessRequest(classId, studentEmail);
+            await loadAccessRequests();
+            toast({
+                title: "Request Resent",
+                description: "Access request has been resent to the student",
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to resend access request",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleResendAllRequests = async () => {
+        if (!classId) return;
+
+        try {
+            setSendingRequests(true);
+            const result = await resendAccessRequestToAll(classId);
+            await loadAccessRequests();
+            toast({
+                title: "Requests Resent",
+                description: result.message,
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to resend access requests",
+                variant: "destructive",
+            });
+        } finally {
+            setSendingRequests(false);
+        }
+    };
+
     const handleImport = async (studentsData: any[]) => {
         try {
             const result = await importStudents(studentsData);
             await loadAccessRequests();
-            return result;
+            return {
+                success: result.imported,
+                failed: result.failed,
+                errors: result.errors
+            };
         } catch (error) {
             throw error;
         }
@@ -229,8 +287,11 @@ export default function AllStudents() {
         }
     };
 
-    const getAccessStatus = (studentId: string) => {
-        const request = accessRequests.find(r => r.student_id === studentId);
+    const getAccessStatus = (student: any) => {
+        const request = accessRequests.find(r =>
+            (student.student_id && r.student_id === student.student_id) ||
+            (r.student_email === student.email)
+        );
         return request?.status || "not_sent";
     };
 
@@ -296,14 +357,27 @@ export default function AllStudents() {
                             <Upload className="size-4" />
                             Import Excel
                         </Button>
-                        <Button
-                            onClick={handleSendAllRequests}
-                            disabled={students.length === 0 || sendingRequests}
-                            className="gap-2"
-                        >
-                            <Send className="size-4" />
-                            {sendingRequests ? "Sending..." : "Send Requests to All"}
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    disabled={students.length === 0 || sendingRequests}
+                                    className="gap-2"
+                                >
+                                    <Send className="size-4" />
+                                    {sendingRequests ? "Sending..." : "Manage Requests"}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={handleSendAllRequests}>
+                                    <Send className="size-4 mr-2" />
+                                    Send Request to All
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleResendAllRequests}>
+                                    <Send className="size-4 mr-2" />
+                                    Resend Request to All
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 
@@ -417,7 +491,7 @@ export default function AllStudents() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredStudents.map((student) => {
-                                        const status = getAccessStatus(student.student_id);
+                                        const status = getAccessStatus(student);
                                         const imageUrl = student.student_image_url
                                             ? getOptimizedImageUrl(student.student_image_url, { width: 100, height: 100 })
                                             : null;
@@ -451,34 +525,40 @@ export default function AllStudents() {
                                                 <TableCell>{student.year || "-"}</TableCell>
                                                 <TableCell>{getStatusBadge(status)}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {status === "not_sent" && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => handleSendIndividualRequest(student.student_id, student.email)}
-                                                                className="gap-2"
-                                                            >
-                                                                <Send className="size-3" />
-                                                                Send Request
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreVertical className="h-4 w-4" />
                                                             </Button>
-                                                        )}
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleEditStudent(student)}
-                                                        >
-                                                            <Edit className="size-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleDeleteClick(student)}
-                                                            className="text-destructive hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="size-4" />
-                                                        </Button>
-                                                    </div>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            {status === "not_sent" && (
+                                                                <DropdownMenuItem onClick={() => handleSendIndividualRequest(student.student_id, student.email)}>
+                                                                    <Send className="mr-2 h-4 w-4" />
+                                                                    Send Request
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {(status === "rejected" || status === "pending") && (
+                                                                <DropdownMenuItem onClick={() => handleResendRequest(student.email)}>
+                                                                    <Send className="mr-2 h-4 w-4" />
+                                                                    Resend Request
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuItem onClick={() => handleEditStudent(student)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit Details
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteClick(student)}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remove Student
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         );

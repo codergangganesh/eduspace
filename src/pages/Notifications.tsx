@@ -37,6 +37,8 @@ import {
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAccessRequests } from "@/hooks/useAccessRequests";
 import { AccessRequestCard } from "@/components/student/AccessRequestCard";
+import { JoinRequestModal } from "@/components/student/JoinRequestModal";
+import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
 import { toast } from "sonner";
 
 type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement' | 'general' | 'access_request';
@@ -98,6 +100,14 @@ export default function Notifications() {
   const navigate = useNavigate();
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
   const { getMyAccessRequests } = useAccessRequests();
+  const {
+    pendingInvitations,
+    showModal,
+    dismissModal,
+    refreshInvitations,
+    reopenModalForRequest,
+    markRequestAsHandled
+  } = useStudentOnboarding();
   const [activeTab, setActiveTab] = useState("all");
   const [selectedNotification, setSelectedNotification] = useState<NotificationData | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -253,9 +263,19 @@ export default function Notifications() {
                             : "bg-primary/5 border-primary/20"
                         )}
                         onClick={() => {
-                          setSelectedNotification(notification);
-                          if (!notification.is_read) {
-                            markAsRead(notification.id);
+                          // Handle access_request notifications differently
+                          if (notification.type === 'access_request' && notification.related_id) {
+                            // Reopen modal for this specific request
+                            reopenModalForRequest(notification.related_id);
+                            // Mark as read
+                            if (!notification.is_read) {
+                              markAsRead(notification.id);
+                            }
+                          } else {
+                            setSelectedNotification(notification);
+                            if (!notification.is_read) {
+                              markAsRead(notification.id);
+                            }
                           }
                         }}
                       >
@@ -416,6 +436,15 @@ export default function Notifications() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Join Request Modal */}
+        <JoinRequestModal
+          open={showModal}
+          onOpenChange={dismissModal}
+          pendingInvitations={pendingInvitations}
+          onRequestHandled={refreshInvitations}
+          onRequestMarkedAsHandled={markRequestAsHandled}
+        />
       </div>
     </DashboardLayout>
   );

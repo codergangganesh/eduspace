@@ -72,24 +72,52 @@ export function useAssignments() {
                 data = assignmentsData || [];
 
             } else {
-                // Student sees published assignments
-                const { data: assignmentsData, error: fetchError } = await supabase
-                    .from('assignments')
-                    .select('*')
-                    .eq('status', 'published')
-                    .order('due_date', { ascending: true });
-
-                if (fetchError) throw fetchError;
-                data = assignmentsData || [];
-
-                // Fetch My Submissions to determine status
-                const { data: submissionsData, error: subError } = await supabase
-                    .from('assignment_submissions')
-                    .select('*')
+                // Student sees only assignments from classes they're enrolled in
+                // First, get the student's enrolled classes
+                const { data: enrolledClasses } = await supabase
+                    .from('class_students')
+                    .select('class_id, classes!inner(course_code)')
                     .eq('student_id', user.id);
 
-                if (subError) throw subError;
-                mySubmissions = (submissionsData || []) as any[];
+                if (!enrolledClasses || enrolledClasses.length === 0) {
+                    // Student not enrolled in any classes, show no assignments
+                    data = [];
+                    mySubmissions = [];
+                } else {
+                    // Get course_ids that match the enrolled class course_codes
+                    const enrolledCourseCodes = enrolledClasses.map((ec: any) => ec.classes.course_code);
+
+                    const { data: enrolledCourses } = await supabase
+                        .from('courses')
+                        .select('id')
+                        .in('course_code', enrolledCourseCodes);
+
+                    const enrolledCourseIds = enrolledCourses?.map(c => c.id) || [];
+
+                    if (enrolledCourseIds.length > 0) {
+                        // Fetch assignments only for enrolled courses
+                        const { data: assignmentsData, error: fetchError } = await supabase
+                            .from('assignments')
+                            .select('*')
+                            .eq('status', 'published')
+                            .in('course_id', enrolledCourseIds)
+                            .order('due_date', { ascending: true });
+
+                        if (fetchError) throw fetchError;
+                        data = assignmentsData || [];
+                    } else {
+                        data = [];
+                    }
+
+                    // Fetch My Submissions to determine status
+                    const { data: submissionsData, error: subError } = await supabase
+                        .from('assignment_submissions')
+                        .select('*')
+                        .eq('student_id', user.id);
+
+                    if (subError) throw subError;
+                    mySubmissions = (submissionsData || []) as any[];
+                }
             }
 
             const formattedAssignments = data.map((a: any) => {

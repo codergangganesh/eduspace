@@ -11,7 +11,10 @@ export interface InvitationUpdate {
     sent_at: string;
 }
 
-export function useRealtimeInvitations(onNewInvitation?: (invitation: InvitationUpdate) => void) {
+export function useRealtimeInvitations(
+    onNewInvitation?: (invitation: InvitationUpdate) => void,
+    onShowModal?: () => void
+) {
     const { user } = useAuth();
     const [invitations, setInvitations] = useState<InvitationUpdate[]>([]);
 
@@ -54,6 +57,11 @@ export function useRealtimeInvitations(onNewInvitation?: (invitation: Invitation
 
                     setInvitations(prev => [newInvitation, ...prev]);
 
+                    // Trigger modal to show
+                    if (onShowModal) {
+                        onShowModal();
+                    }
+
                     if (onNewInvitation) {
                         onNewInvitation(newInvitation);
                     }
@@ -84,7 +92,7 @@ export function useRealtimeInvitations(onNewInvitation?: (invitation: Invitation
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.email, onNewInvitation]);
+    }, [user?.email, onNewInvitation, onShowModal]);
 
     return { invitations };
 }

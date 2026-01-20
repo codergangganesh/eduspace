@@ -389,6 +389,216 @@ export async function getStudentPendingInvitations(email: string) {
 }
 
 /**
+ * Resend invitation to a student (for rejected or dismissed pending requests)
+ */
+export async function resendInvitationToStudent(classId: string, studentEmail: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Get class details
+        const { data: classData, error: classError } = await supabase
+            .from('classes')
+            .select('course_code, class_name, lecturer_id, lecturer_name')
+            .eq('id', classId)
+            .single();
+
+        if (classError || !classData) {
+            throw new Error('Class not found');
+        }
+
+        // Get student from class_students
+        const { data: student } = await supabase
+            .from('class_students')
+            .select('id, student_id, email, student_name')
+            .eq('class_id', classId)
+            .eq('email', studentEmail)
+            .single();
+
+        if (!student) {
+            throw new Error('Student not found in this class');
+        }
+
+        // Check if access request exists
+        const { data: existing } = await supabase
+            .from('access_requests')
+            .select('id, status')
+            .eq('class_id', classId)
+            .eq('student_email', studentEmail)
+            .maybeSingle();
+
+        let requestId: string;
+
+        if (existing) {
+            // Update existing request to pending
+            const { error: updateError } = await supabase
+                .from('access_requests')
+                .update({
+                    status: 'pending',
+                    responded_at: null,
+                    sent_at: new Date().toISOString()
+                })
+                .eq('id', existing.id);
+
+            if (updateError) throw updateError;
+            requestId = existing.id;
+        } else {
+            // Create new access request
+            const { data: newRequest, error: requestError } = await supabase
+                .from('access_requests')
+                .insert({
+                    class_id: classId,
+                    lecturer_id: classData.lecturer_id,
+                    student_id: student.student_id,
+                    student_email: studentEmail,
+                    status: 'pending'
+                })
+                .select()
+                .single();
+
+            if (requestError) throw requestError;
+            requestId = newRequest.id;
+        }
+
+        // Send notification if student has account
+        if (student.student_id) {
+            await notifyAccessRequest(
+                student.student_id,
+                classData.lecturer_name || 'A lecturer',
+                classData.course_code,
+                classId,
+                requestId
+            );
+        } else {
+            // Send SMTP email to non-registered students
+            try {
+                const { error: emailError } = await supabase.functions.invoke('send-class-invitation-email', {
+                    body: {
+                        studentEmail: student.email,
+                        studentName: student.student_name,
+                        lecturerName: classData.lecturer_name || 'Your Lecturer',
+                        courseCode: classData.course_code,
+                        className: classData.class_name || '',
+                    }
+                });
+
+                if (!emailError) {
+                    // Mark email as sent
+                    await supabase
+                        .from('access_requests')
+                        .update({
+                            invitation_email_sent: true,
+                            invitation_email_sent_at: new Date().toISOString()
+                        })
+                        .eq('id', requestId);
+                }
+            } catch (emailErr) {
+                console.error('Failed to send invitation email:', emailErr);
+            }
+        }
+
+        return { success: true };
+    } catch (err) {
+        console.error('Error resending invitation:', err);
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : 'Failed to resend invitation'
+        };
+    }
+}
+
+/**
+ * Resend invitations to all non-accepted students in a class
+ */
+export async function resendInvitationsToAll(classId: string): Promise<InvitationResult> {
+    try {
+        // Get class details
+        const { data: classData, error: classError } = await supabase
+            .from('classes')
+            .select('course_code, class_name, lecturer_id, lecturer_name, lecturer_department')
+            .eq('id', classId)
+            .single();
+
+        if (classError || !classData) {
+            throw new Error('Class not found');
+        }
+
+        // Get all students in the class
+        const { data: students, error: studentsError } = await supabase
+            .from('class_students')
+            .select('id, student_id, email, student_name, register_number')
+            .eq('class_id', classId);
+
+        if (studentsError) throw studentsError;
+
+        if (!students || students.length === 0) {
+            return {
+                success: true,
+                sent: 0,
+                skipped: 0,
+                failed: 0,
+                message: 'No students found in this class'
+            };
+        }
+
+        // Get all access requests for this class
+        const { data: accessRequests } = await supabase
+            .from('access_requests')
+            .select('student_email, status')
+            .eq('class_id', classId);
+
+        const requestMap = new Map(accessRequests?.map(r => [r.student_email, r.status]) || []);
+
+        let sent = 0;
+        let skipped = 0;
+        let failed = 0;
+        const errors: string[] = [];
+
+        for (const student of students) {
+            try {
+                const existingStatus = requestMap.get(student.email);
+
+                // Skip if already accepted
+                if (existingStatus === 'accepted') {
+                    skipped++;
+                    continue;
+                }
+
+                // Resend to rejected or pending students
+                const result = await resendInvitationToStudent(classId, student.email);
+
+                if (result.success) {
+                    sent++;
+                } else {
+                    failed++;
+                    errors.push(`Failed to send to ${student.email}: ${result.error}`);
+                }
+            } catch (err) {
+                console.error('Error processing student:', student.email, err);
+                failed++;
+                errors.push(`Failed to process ${student.email}`);
+            }
+        }
+
+        return {
+            success: true,
+            sent,
+            skipped,
+            failed,
+            message: `Sent ${sent} invitations, skipped ${skipped} (already accepted), failed ${failed}`,
+            errors: errors.length > 0 ? errors : undefined
+        };
+    } catch (err) {
+        console.error('Error resending invitations:', err);
+        return {
+            success: false,
+            sent: 0,
+            skipped: 0,
+            failed: 0,
+            message: err instanceof Error ? err.message : 'Failed to resend invitations',
+            errors: [err instanceof Error ? err.message : 'Unknown error']
+        };
+    }
+}
+
+/**
  * Link email-based records to a new user account
  */
 export async function linkEmailToAccount(email: string, userId: string): Promise<{ success: boolean; linkedCount: number }> {

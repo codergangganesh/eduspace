@@ -126,29 +126,54 @@ export function useLecturerAssignments() {
                 throw assignmentError;
             }
 
-            // Create notifications for all students (simplified - notify all users with student role)
-            // Note: This is a simplified version. In production, you'd want to notify only enrolled students
-            const { data: students, error: studentsError } = await supabase
-                .from("user_roles")
-                .select("user_id")
-                .eq("role", "student");
+            // Get the course to find associated class
+            const { data: course } = await supabase
+                .from("courses")
+                .select("id, course_code")
+                .eq("id", data.course_id)
+                .single();
 
-            if (!studentsError && students && students.length > 0) {
-                const notifications = students.map(student => ({
-                    recipient_id: student.user_id,
-                    title: "New Assignment Posted",
-                    message: `${data.title} has been posted. Due date: ${data.due_date.toLocaleDateString()}`,
-                    type: "assignment",
-                    related_id: newAssignment.id,
-                    is_read: false
-                }));
+            // Find the class associated with this course (by matching course_code)
+            let classId: string | null = null;
+            if (course) {
+                const { data: matchingClass } = await supabase
+                    .from("classes")
+                    .select("id")
+                    .eq("course_code", course.course_code)
+                    .eq("lecturer_id", user.id)
+                    .eq("is_active", true)
+                    .maybeSingle();
 
-                const { error: notifError } = await supabase
-                    .from("notifications")
-                    .insert(notifications);
+                classId = matchingClass?.id || null;
+            }
 
-                if (notifError) {
-                    console.error("Error creating notifications:", notifError);
+            // Only notify students enrolled in the specific class (if class exists)
+            if (classId) {
+                // Get enrolled students from class_students table
+                const { data: enrolledStudents, error: studentsError } = await supabase
+                    .from("class_students")
+                    .select("student_id")
+                    .eq("class_id", classId)
+                    .not("student_id", "is", null); // Only students with accounts
+
+                if (!studentsError && enrolledStudents && enrolledStudents.length > 0) {
+                    const notifications = enrolledStudents.map(student => ({
+                        recipient_id: student.student_id,
+                        title: "New Assignment Posted",
+                        message: `${data.title} has been posted. Due date: ${data.due_date.toLocaleDateString()}`,
+                        type: "assignment",
+                        related_id: newAssignment.id,
+                        class_id: classId, // Include class_id for filtering
+                        is_read: false
+                    }));
+
+                    const { error: notifError } = await supabase
+                        .from("notifications")
+                        .insert(notifications);
+
+                    if (notifError) {
+                        console.error("Error creating notifications:", notifError);
+                    }
                 }
             }
 

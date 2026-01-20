@@ -18,7 +18,7 @@ export function PendingInvitationsPanel() {
         setLocalInvitations(pendingInvitations);
     }, [pendingInvitations]);
 
-    const handleRespond = async () => {
+    const handleRespond = async (requestId: string) => {
         // Refresh invitations after responding
         await refreshInvitations();
     };

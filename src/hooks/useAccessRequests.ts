@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
     sendInvitationsToClass,
     sendInvitationToStudent,
+    resendInvitationToStudent,
+    resendInvitationsToAll,
     acceptInvitation,
     rejectInvitation,
     getStudentPendingInvitations,
@@ -138,11 +140,45 @@ export function useAccessRequests() {
         }
     };
 
+    const resendAccessRequest = async (classId: string, studentEmail: string) => {
+        if (!user) throw new Error('User not authenticated');
+
+        try {
+            setLoading(true);
+            const result = await resendInvitationToStudent(classId, studentEmail);
+            return result;
+        } catch (err) {
+            console.error('Error resending access request:', err);
+            setError(err as Error);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resendAccessRequestToAll = async (classId: string): Promise<InvitationResult> => {
+        if (!user) throw new Error('User not authenticated');
+
+        try {
+            setLoading(true);
+            const result = await resendInvitationsToAll(classId);
+            return result;
+        } catch (err) {
+            console.error('Error resending access requests to all:', err);
+            setError(err as Error);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         loading,
         error,
         sendAccessRequestToAll,
         sendAccessRequest,
+        resendAccessRequest,
+        resendAccessRequestToAll,
         getAccessRequests,
         getMyAccessRequests,
         respondToAccessRequest,
