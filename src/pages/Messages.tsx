@@ -35,8 +35,17 @@ import { useLongPress } from "@/hooks/useLongPress";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { useEligibleStudents } from "@/hooks/useEligibleStudents";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
 interface Message {
   id: string;
@@ -119,10 +128,55 @@ const MessageBubble = ({ message, setMessageToDelete }: MessageBubbleProps) => {
                 {message.attachment.size}
               </p>
             </div>
-            <Button variant="ghost" size="icon" className="shrink-0" asChild>
-              <a href={message.attachment.url} target="_blank" rel="noopener noreferrer" download>
-                <Download className="size-4" />
-              </a>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => {
+                try {
+                  let downloadUrl = message.attachment.url;
+
+                  // Cloudinary Strategy: fl_attachment
+                  if (downloadUrl.includes('cloudinary.com') && downloadUrl.includes('/upload/')) {
+                    downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = message.attachment.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    return;
+                  }
+
+                  // Supabase Strategy: Force Download via fetch/blob for strict control
+                  // Since we made bucket public, simple fetch works.
+                  const downloadFile = async () => {
+                    try {
+                      const response = await fetch(downloadUrl);
+                      if (!response.ok) throw new Error('Network response was not ok');
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = message.attachment.name;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                    } catch (e) {
+                      // Fallback
+                      window.open(downloadUrl, '_blank');
+                    }
+                  }
+                  downloadFile();
+
+                } catch (error) {
+                  console.error('Download failed:', error);
+                  window.open(message.attachment.url, '_blank');
+                }
+              }}
+            >
+              <Download className="size-4" />
             </Button>
           </div>
         )}
@@ -168,8 +222,8 @@ export default function Messages() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       // Basic validation
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error("File size must be less than 10MB");
+      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+        toast.error("File size must be less than 20MB");
         return;
       }
       setSelectedFile(file);
@@ -194,13 +248,21 @@ export default function Messages() {
       if (selectedFile) {
         setIsUploading(true);
         try {
-          const uploaded = await uploadToCloudinary(selectedFile);
+          let uploaded;
+          // Hybrid Storage: PDFs -> Supabase, Others -> Cloudinary
+          if (selectedFile.type === 'application/pdf') {
+            uploaded = await uploadToSupabaseStorage(selectedFile);
+          } else {
+            uploaded = await uploadToCloudinary(selectedFile);
+          }
+
           attachmentData = {
             name: uploaded.name,
             url: uploaded.url,
             type: uploaded.type,
-            size: uploaded.size
+            size: formatFileSize(selectedFile!.size)
           };
+          console.log('Attachment Data prepared:', attachmentData);
         } catch (uploadError: any) {
           toast.error(`Upload failed: ${uploadError.message}`);
           setIsUploading(false);
@@ -369,7 +431,7 @@ export default function Messages() {
     sender: msg.sender_name || 'Unknown',
     attachment: msg.attachment_name ? {
       name: msg.attachment_name,
-      size: '',
+      size: msg.attachment_size || '',
       type: msg.attachment_type || '',
       url: msg.attachment_url || ''
     } : undefined,
@@ -548,7 +610,7 @@ export default function Messages() {
                     ref={fileInputRef}
                     className="hidden"
                     onChange={handleFileSelect}
-                    accept="image/*,.pdf,.doc,.docx"
+                    accept="*"
                   />
                   <Button
                     variant="ghost"

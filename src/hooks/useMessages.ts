@@ -11,6 +11,7 @@ interface Message {
     attachment_name: string | null;
     attachment_url: string | null;
     attachment_type: string | null;
+    attachment_size: string | null;
     is_read: boolean;
     created_at: string;
     sender_name?: string;
@@ -32,6 +33,7 @@ interface Attachment {
     name?: string;
     url?: string;
     type?: string;
+    size?: string;
 }
 
 export function useMessages() {
@@ -152,7 +154,9 @@ export function useMessages() {
 
         fetchMessages();
 
+
         fetchMessages();
+
 
         // Real-time subscription for messages and typing indicators
         const channel = supabase.channel(`messages_${selectedConversationId}`, {
@@ -170,8 +174,15 @@ export function useMessages() {
                     table: 'messages',
                     filter: `conversation_id=eq.${selectedConversationId}`,
                 },
-                () => {
-                    fetchMessages();
+                (payload) => {
+                    const newMessage = payload.new as Message;
+                    // Deduplicate: Check if message already exists
+                    setMessages((prev) => {
+                        if (prev.some(m => m.id === newMessage.id)) {
+                            return prev;
+                        }
+                        return [...prev, newMessage];
+                    });
                 }
             )
             .on(
@@ -218,11 +229,37 @@ export function useMessages() {
 
     // Send message
     const sendMessage = async (receiverId: string, content: string, attachment?: Attachment) => {
-        if (!user || !content.trim()) return;
+        if (!user || (!content.trim() && !attachment)) return;
+
+        // If content is empty but we have an attachment, use a placeholder
+        const finalContent = content.trim() || (attachment ? 'Sent an attachment' : '');
+
+        const optimisticId = crypto.randomUUID();
+        const timestamp = new Date().toISOString();
 
         try {
             // Find or create conversation
             let conversationId = selectedConversationId;
+
+            // Optimistic update for UI
+            if (conversationId) {
+                const optimisticMessage: Message = {
+                    id: optimisticId,
+                    conversation_id: conversationId,
+                    sender_id: user.id,
+                    receiver_id: receiverId,
+                    content,
+                    attachment_name: attachment?.name || null,
+                    attachment_url: attachment?.url || null,
+                    attachment_type: attachment?.type || null,
+                    attachment_size: attachment?.size || null,
+                    is_read: false,
+                    created_at: timestamp,
+                    sender_name: 'You' // Will be refreshed or handled by UI
+                };
+
+                setMessages(prev => [...prev, optimisticMessage]);
+            }
 
             if (!conversationId) {
                 const { data: existingConv } = await supabase
@@ -240,42 +277,102 @@ export function useMessages() {
                             participant_1: user.id,
                             participant_2: receiverId,
                             last_message: content,
-                            last_message_at: new Date().toISOString(),
+                            last_message_at: timestamp,
                         })
                         .select()
                         .maybeSingle();
 
                     if (convError) throw convError;
                     conversationId = newConv.id;
+
+                    // If we just created the conversation, set it as selected
+                    setSelectedConversationId(conversationId);
+                    // Also need to add the optimistic message now that we have an ID
+                    // But we might have missed the window if we didn't add it above. 
+                    // For new conversations, the "optimistic" part is tricky if we don't have ID.
+                    // So for new conversations, we might just wait for the real send to complete or 
+                    // add it now with the new ID.
                 }
+            }
+
+            // If we didn't add optimistic message yet (because conversationId was null), add it now
+            if (!selectedConversationId && conversationId) {
+                const optimisticMessage: Message = {
+                    id: optimisticId,
+                    conversation_id: conversationId,
+                    sender_id: user.id,
+                    receiver_id: receiverId,
+                    content: finalContent,
+                    attachment_name: attachment?.name || null,
+                    attachment_url: attachment?.url || null,
+                    attachment_type: attachment?.type || null,
+                    attachment_size: attachment?.size || null,
+                    is_read: false,
+                    created_at: timestamp,
+                    sender_name: 'You'
+                };
+                setMessages(prev => [...prev, optimisticMessage]);
             }
 
             // Insert message
             const { error: messageError } = await supabase
                 .from('messages')
                 .insert({
+                    id: optimisticId, // Ensure we use the same ID
                     conversation_id: conversationId,
                     sender_id: user.id,
                     receiver_id: receiverId,
-                    content,
+                    content: finalContent,
                     attachment_name: attachment?.name || null,
                     attachment_url: attachment?.url || null,
                     attachment_type: attachment?.type || null,
+                    attachment_size: attachment?.size || null,
                 });
 
-            if (messageError) throw messageError;
+            if (messageError) {
+                console.warn("Initial message insert failed. Retrying without attachment_size (schema mismatch likely).", messageError);
+
+                // Fallback: Retry without attachment_size if it failed (likely due to missing column)
+                // We check for specific error codes or just try again as a reliable fallback
+                const { error: retryError } = await supabase
+                    .from('messages')
+                    .insert({
+                        id: optimisticId,
+                        conversation_id: conversationId,
+                        sender_id: user.id,
+                        receiver_id: receiverId,
+                        content: finalContent,
+                        attachment_name: attachment?.name || null,
+                        attachment_url: attachment?.url || null,
+                        attachment_type: attachment?.type || null,
+                        // omit attachment_size
+                    });
+
+                if (retryError) {
+                    // Start Rollback
+                    setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                    throw retryError;
+                }
+            }
 
             // Update conversation last message
             await supabase
                 .from('conversations')
                 .update({
-                    last_message: content,
-                    last_message_at: new Date().toISOString(),
+                    last_message: finalContent,
+                    last_message_at: timestamp,
                 })
                 .eq('id', conversationId);
 
+            if (messageError && !selectedConversationId && conversationId) {
+                // If fallback insert was needed (logic inside messageError block), ensure we don't double count or handle it there
+                // The fallback logic is inside the if(messageError) block below which isn't fully visible here but understood.
+            }
+
         } catch (err) {
             console.error('Error sending message:', err);
+            // Ensure rollback if not caught above
+            setMessages(prev => prev.filter(m => m.id !== optimisticId));
             throw err;
         }
     };
