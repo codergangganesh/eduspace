@@ -35,6 +35,8 @@ import { useLongPress } from "@/hooks/useLongPress";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { useEligibleStudents } from "@/hooks/useEligibleStudents";
+import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 
 interface Message {
   id: string;
@@ -51,9 +53,11 @@ interface Message {
 }
 
 export default function Messages() {
-  const { user } = useAuth();
-  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading } = useMessages();
+  const { user, role } = useAuth();
+  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
+  const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
+  const { onlineUsers } = useOnlinePresence();
 
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,6 +81,9 @@ export default function Messages() {
   };
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+  const otherUserId = selectedConversation ? (selectedConversation.participant_1 === user?.id ? selectedConversation.participant_2 : selectedConversation.participant_1) : null;
+  const isOtherUserOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
+  const isOtherUserTyping = otherUserId ? typingUsers.has(otherUserId) : false;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -224,9 +231,55 @@ export default function Messages() {
     }
   };
 
-  const filteredConversations = conversations.filter((conv) =>
-    (conv.other_user_name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  /* 
+    MERGE LOGIC: 
+    We want to show:
+    1. Existing conversations (with history)
+    2. Eligible students who DON'T have a conversation yet (as "contacts")
+  */
+
+  // 1. Get IDs of students researchers already have conversations with
+  // Note: For a lecturer, the "other user" is the student.
+  const existingContactIds = new Set(conversations.map(c =>
+    c.participant_1 === user?.id ? c.participant_2 : c.participant_1
+  ));
+
+  // 2. Filter eligible students who are NOT in the conversation list
+  const studentsWithoutChat = eligibleStudents.filter(s => !existingContactIds.has(s.id));
+
+  // 3. Create "Virtual Conversation" objects for these students for display purposes
+  const studentContacts = studentsWithoutChat.map(s => ({
+    id: `new:${s.id}`, // specific prefix to identify as virtual
+    participant_1: user?.id || '',
+    participant_2: s.id,
+    last_message: 'Start a conversation',
+    last_message_at: null, // No date means generic placement
+    other_user_name: s.full_name,
+    other_user_avatar: s.avatar_url,
+    other_user_role: 'student',
+    other_user_id: s.id, // Explicitly store ID
+    is_virtual: true     // Flag
+  }));
+
+  // 4. Combine and Filter by Search
+  const allItems = [...conversations, ...studentContacts].filter((item) =>
+    (item.other_user_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // 5. Sort: Real conversations first (by date), then virtual ones (alphabetical)
+  const sortedItems = allItems.sort((a, b) => {
+    // Both real
+    if (a.last_message_at && b.last_message_at) {
+      return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+    }
+    // A is real, B is virtual -> A first
+    if (a.last_message_at) return -1;
+    // B is real, A is virtual -> B first
+    if (b.last_message_at) return 1;
+
+    // Both virtual: Sort Alphabetical
+    return (a.other_user_name || '').localeCompare(b.other_user_name || '');
+  });
 
   // Transform messages
   const transformedMessages = messages.map((msg) => ({
@@ -264,7 +317,7 @@ export default function Messages() {
               <h2 className="text-lg font-semibold">Messages</h2>
               <p className="text-sm text-muted-foreground">Direct conversations</p>
             </div>
-            <Button size="icon" variant="ghost" onClick={() => setIsAskDoubtOpen(true)} title="Ask a Doubt">
+            <Button size="icon" variant="ghost" onClick={() => setIsAskDoubtOpen(true)} title={role === 'lecturer' ? "New Message" : "Ask a Doubt"}>
               <Plus className="size-5" />
             </Button>
           </div>
@@ -288,48 +341,56 @@ export default function Messages() {
               <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Direct Messages
               </div>
-              {filteredConversations.length === 0 ? (
+              {sortedItems.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="size-12 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">No conversations yet</p>
                   <Button variant="link" onClick={() => setIsAskDoubtOpen(true)}>
-                    Ask a Doubt
+                    {role === 'lecturer' ? "Start a new conversation" : "Ask a Doubt"}
                   </Button>
                 </div>
               ) : (
-                filteredConversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => setSelectedConversationId(conv.id)}
-                    className={cn(
-                      "w-full flex items-start gap-3 p-3 rounded-lg text-left transition-colors",
-                      selectedConversationId === conv.id
-                        ? "bg-primary/10"
-                        : "hover:bg-secondary"
-                    )}
-                  >
-                    <div className="relative">
-                      <Avatar className="size-10">
-                        <AvatarImage src={conv.other_user_avatar} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {(conv.other_user_name || 'U').split(" ").map((n) => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      {conv.online && (
-                        <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full border-2 border-surface" />
+                sortedItems.map((item) => {
+                  const isVirtual = 'is_virtual' in item && item.is_virtual;
+                  const realId = isVirtual ? (item as any).other_user_id : item.id;
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => isVirtual ? handleStartNewChat(realId) : setSelectedConversationId(item.id)}
+                      className={cn(
+                        "w-full flex items-start gap-3 p-3 rounded-lg text-left transition-colors",
+                        selectedConversationId === item.id
+                          ? "bg-primary/10"
+                          : "hover:bg-secondary"
                       )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium truncate">{conv.other_user_name || 'Unknown User'}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          {conv.last_message_at ? format(new Date(conv.last_message_at), 'MMM d') : ''}
-                        </span>
+                    >
+                      <div className="relative">
+                        <Avatar className="size-10">
+                          <AvatarImage src={item.other_user_avatar} />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {(item.other_user_name || 'U').split(" ").map((n: string) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        {/* Online Status for Real & Virtual */}
+                        {onlineUsers.has(isVirtual ? realId : (item.participant_1 === user?.id ? item.participant_2 : item.participant_1)) && (
+                          <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full border-2 border-surface" />
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">{conv.last_message || 'No messages yet'}</p>
-                    </div>
-                  </button>
-                ))
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium truncate">{item.other_user_name || 'Unknown User'}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {item.last_message_at ? format(new Date(item.last_message_at), 'MMM d') : ''}
+                          </span>
+                        </div>
+                        <p className={cn("text-sm truncate", isVirtual ? "text-primary/70 italic" : "text-muted-foreground")}>
+                          {item.last_message || 'No messages yet'}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </ScrollArea>
@@ -351,6 +412,8 @@ export default function Messages() {
                   <h3 className="font-semibold">{selectedConversation.other_user_name || 'Unknown User'}</h3>
                   <p className="text-xs text-muted-foreground">
                     {selectedConversation.other_user_role || 'User'}
+                    {isOtherUserOnline ? <span className="text-green-500 ml-2 text-xs font-medium">● Online</span> : <span className="ml-2 text-xs">Offline</span>}
+                    {isOtherUserTyping && <span className="ml-2 text-muted-foreground animate-pulse">Typing...</span>}
                   </p>
                 </div>
               </div>
@@ -452,7 +515,11 @@ export default function Messages() {
                 <div className="flex-1 relative">
                   <textarea
                     value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
+                    onChange={(e) => {
+                      setMessageInput(e.target.value);
+                      // Throttle typing events
+                      if (e.target.value.length % 5 === 0) sendTyping();
+                    }}
                     onKeyDown={handleKeyPress}
                     placeholder="Type a message..."
                     className="w-full min-h-[44px] max-h-32 px-4 py-3 rounded-xl bg-secondary border-0 resize-none text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -497,7 +564,7 @@ export default function Messages() {
                 Choose a conversation from the sidebar or ask a doubt to a lecturer.
               </p>
               <Button onClick={() => setIsAskDoubtOpen(true)} className="mt-4">
-                Ask a Doubt
+                {role === 'lecturer' ? "New Message" : "Ask a Doubt"}
               </Button>
             </div>
           </div>
@@ -524,43 +591,80 @@ export default function Messages() {
           </DialogContent>
         </Dialog>
 
-        {/* Ask a Doubt Dialog */}
         <Dialog open={isAskDoubtOpen} onOpenChange={setIsAskDoubtOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Ask a Doubt</DialogTitle>
+              <DialogTitle>{role === 'lecturer' ? "New Message" : "Ask a Doubt"}</DialogTitle>
               <DialogDescription>
-                Select a lecturer to start a conversation.
+                {role === 'lecturer'
+                  ? "Select a student to message."
+                  : "Select a lecturer to start a conversation."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              {instructorsLoading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="size-8 animate-spin text-primary" />
-                </div>
-              ) : instructors.length === 0 ? (
-                <p className="text-center text-muted-foreground">No lecturers found.</p>
-              ) : (
-                <ScrollArea className="h-[300px] pr-4">
-                  <div className="space-y-2">
-                    {instructors.map(inst => (
-                      <button
-                        key={inst.id}
-                        onClick={() => handleStartNewChat(inst.id)}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                      >
-                        <Avatar>
-                          <AvatarImage src={inst.avatar_url || ''} />
-                          <AvatarFallback>{(inst.full_name || 'L').charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{inst.full_name}</p>
-                          <Badge variant="secondary" className="text-xs">Lecturer</Badge>
-                        </div>
-                      </button>
-                    ))}
+              {role === 'lecturer' ? (
+                // Lecturer View: List Eligible Students
+                studentsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="size-8 animate-spin text-primary" />
                   </div>
-                </ScrollArea>
+                ) : eligibleStudents.length === 0 ? (
+                  <p className="text-center text-muted-foreground">No eligible students found.</p>
+                ) : (
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div className="space-y-2">
+                      {eligibleStudents.map(student => (
+                        <button
+                          key={student.id}
+                          onClick={() => handleStartNewChat(student.id)}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors text-left"
+                        >
+                          <Avatar>
+                            <AvatarImage src={student.avatar_url || ''} />
+                            <AvatarFallback>{(student.full_name || 'S').charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{student.full_name}</p>
+                            <p className="text-xs text-muted-foreground">{student.email}</p>
+                            {student.class_name && (
+                              <Badge variant="outline" className="mt-1 text-xs">{student.class_name}</Badge>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )
+              ) : (
+                // Student View: List Instructors
+                instructorsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="size-8 animate-spin text-primary" />
+                  </div>
+                ) : instructors.length === 0 ? (
+                  <p className="text-center text-muted-foreground">No lecturers found.</p>
+                ) : (
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div className="space-y-2">
+                      {instructors.map(inst => (
+                        <button
+                          key={inst.id}
+                          onClick={() => handleStartNewChat(inst.id)}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors text-left"
+                        >
+                          <Avatar>
+                            <AvatarImage src={inst.avatar_url || ''} />
+                            <AvatarFallback>{(inst.full_name || 'L').charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{inst.full_name}</p>
+                            <Badge variant="secondary" className="text-xs">Lecturer</Badge>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )
               )}
             </div>
           </DialogContent>

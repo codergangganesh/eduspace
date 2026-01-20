@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -41,6 +41,8 @@ export function useMessages() {
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
     const fetchConversations = useCallback(async () => {
         if (!user) return;
@@ -150,9 +152,16 @@ export function useMessages() {
 
         fetchMessages();
 
-        // Real-time subscription for messages
-        const subscription = supabase
-            .channel(`messages_${selectedConversationId}`)
+        fetchMessages();
+
+        // Real-time subscription for messages and typing indicators
+        const channel = supabase.channel(`messages_${selectedConversationId}`, {
+            config: {
+                broadcast: { self: false } // We don't want to receive our own typing events
+            }
+        });
+
+        channel
             .on(
                 'postgres_changes',
                 {
@@ -165,12 +174,47 @@ export function useMessages() {
                     fetchMessages();
                 }
             )
+            .on(
+                'broadcast',
+                { event: 'typing' },
+                (payload) => {
+                    const typerId = payload.payload.userId;
+                    if (typerId !== user.id) {
+                        setTypingUsers(prev => {
+                            const newSet = new Set(prev);
+                            newSet.add(typerId);
+                            return newSet;
+                        });
+
+                        // Clear typing status after 3 seconds
+                        setTimeout(() => {
+                            setTypingUsers(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(typerId);
+                                return newSet;
+                            });
+                        }, 3000);
+                    }
+                }
+            )
             .subscribe();
 
+        channelRef.current = channel;
+
         return () => {
-            subscription.unsubscribe();
+            channel.unsubscribe();
+            channelRef.current = null;
         };
     }, [selectedConversationId, user]);
+
+    const sendTyping = async () => {
+        if (!channelRef.current || !user) return;
+        await channelRef.current.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { userId: user.id }
+        });
+    };
 
     // Send message
     const sendMessage = async (receiverId: string, content: string, attachment?: Attachment) => {
@@ -322,5 +366,7 @@ export function useMessages() {
         loading,
         error,
         refreshConversations: fetchConversations,
+        typingUsers,
+        sendTyping
     };
 }
