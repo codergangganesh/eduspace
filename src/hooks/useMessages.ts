@@ -229,7 +229,7 @@ export function useMessages() {
                     .from('conversations')
                     .select('id')
                     .or(`and(participant_1.eq.${user.id},participant_2.eq.${receiverId}),and(participant_1.eq.${receiverId},participant_2.eq.${user.id})`)
-                    .single();
+                    .maybeSingle();
 
                 if (existingConv) {
                     conversationId = existingConv.id;
@@ -243,7 +243,7 @@ export function useMessages() {
                             last_message_at: new Date().toISOString(),
                         })
                         .select()
-                        .single();
+                        .maybeSingle();
 
                     if (convError) throw convError;
                     conversationId = newConv.id;
@@ -290,7 +290,7 @@ export function useMessages() {
                 .from('conversations')
                 .select('id')
                 .or(`and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`)
-                .single();
+                .maybeSingle();
 
             if (existingConv) {
                 setSelectedConversationId(existingConv.id);

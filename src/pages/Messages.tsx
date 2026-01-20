@@ -52,6 +52,85 @@ interface Message {
   };
 }
 
+// ----------------------------------------------------------------------
+// SUB-COMPONENTS
+// ----------------------------------------------------------------------
+
+interface MessageBubbleProps {
+  message: any;
+  setMessageToDelete: (id: string) => void;
+}
+
+const MessageBubble = ({ message, setMessageToDelete }: MessageBubbleProps) => {
+  const longPressHandlers = useLongPress({
+    onLongPress: () => message.isOwn && setMessageToDelete(message.id),
+    delay: 500,
+  });
+
+  return (
+    <div
+      className={cn(
+        "flex gap-3",
+        message.isOwn && "flex-row-reverse"
+      )}
+    >
+      {!message.isOwn && (
+        <Avatar className="size-8 shrink-0">
+          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+            {message.sender.split(" ").map((n: string) => n[0]).join("")}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      <div className="max-w-[70%] space-y-2">
+        <div
+          {...(message.isOwn ? longPressHandlers : {})}
+          className={cn(
+            "rounded-2xl px-4 py-2.5 transition-all relative group",
+            message.isOwn
+              ? "bg-primary text-primary-foreground cursor-pointer active:scale-95"
+              : "bg-secondary"
+          )}
+        >
+          {!message.isOwn && (
+            <p className="text-xs font-medium text-primary mb-1">{message.sender}</p>
+          )}
+          <p className="text-sm">{message.content}</p>
+          <p
+            className={cn(
+              "text-xs mt-1",
+              message.isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+            )}
+          >
+            {message.timestamp}
+          </p>
+        </div>
+        {message.attachment && (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary border border-border">
+            <div className="size-10 rounded-lg bg-destructive/10 flex items-center justify-center overflow-hidden">
+              {message.attachment.type.startsWith('image/') ? (
+                <img src={message.attachment.url} alt="Attachment" className="w-full h-full object-cover" />
+              ) : (
+                <FileText className="size-5 text-destructive" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{message.attachment.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {message.attachment.size}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
+              <a href={message.attachment.url} target="_blank" rel="noopener noreferrer" download>
+                <Download className="size-4" />
+              </a>
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function Messages() {
   const { user, role } = useAuth();
   const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping } = useMessages();
@@ -423,76 +502,13 @@ export default function Messages() {
             <ScrollArea className="flex-1 p-6">
               <div className="space-y-6">
                 {/* Messages Mapping */}
-                {transformedMessages.map((message) => {
-                  const longPressHandlers = useLongPress({
-                    onLongPress: () => message.isOwn && setMessageToDelete(message.id),
-                    delay: 500,
-                  });
-
-                  return (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "flex gap-3",
-                        message.isOwn && "flex-row-reverse"
-                      )}
-                    >
-                      {!message.isOwn && (
-                        <Avatar className="size-8 shrink-0">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {message.sender.split(" ").map((n) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div className="max-w-[70%] space-y-2">
-                        <div
-                          {...(message.isOwn ? longPressHandlers : {})}
-                          className={cn(
-                            "rounded-2xl px-4 py-2.5 transition-all relative group",
-                            message.isOwn
-                              ? "bg-primary text-primary-foreground cursor-pointer active:scale-95"
-                              : "bg-secondary"
-                          )}
-                        >
-                          {!message.isOwn && (
-                            <p className="text-xs font-medium text-primary mb-1">{message.sender}</p>
-                          )}
-                          <p className="text-sm">{message.content}</p>
-                          <p
-                            className={cn(
-                              "text-xs mt-1",
-                              message.isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                            )}
-                          >
-                            {message.timestamp}
-                          </p>
-                        </div>
-                        {message.attachment && (
-                          <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary border border-border">
-                            <div className="size-10 rounded-lg bg-destructive/10 flex items-center justify-center overflow-hidden">
-                              {message.attachment.type.startsWith('image/') ? (
-                                <img src={message.attachment.url} alt="Attachment" className="w-full h-full object-cover" />
-                              ) : (
-                                <FileText className="size-5 text-destructive" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{message.attachment.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {message.attachment.size}
-                              </p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="shrink-0" asChild>
-                              <a href={message.attachment.url} target="_blank" rel="noopener noreferrer" download>
-                                <Download className="size-4" />
-                              </a>
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {transformedMessages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    setMessageToDelete={setMessageToDelete}
+                  />
+                ))}
               </div>
             </ScrollArea>
 
