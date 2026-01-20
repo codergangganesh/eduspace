@@ -1,0 +1,2 @@
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS batch text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS hod_name text;

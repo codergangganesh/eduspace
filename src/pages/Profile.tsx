@@ -106,6 +106,8 @@ export default function Profile() {
     language: "en",
     timezone: "America/New_York",
     theme: "system",
+    batch: "",
+    hod_name: "",
   });
 
   // Password change state
@@ -153,6 +155,8 @@ export default function Profile() {
         language: profile.language || "en",
         timezone: profile.timezone || "America/New_York",
         theme: profile.theme || "system",
+        batch: profile.batch || "",
+        hod_name: profile.hod_name || "",
       });
     }
   }, [profile]);
@@ -262,7 +266,10 @@ export default function Profile() {
       weekly_digest: formData.weekly_digest,
       language: formData.language,
       timezone: formData.timezone,
+      timezone: formData.timezone,
       theme: formData.theme,
+      batch: formData.batch,
+      hod_name: formData.hod_name,
     } as Partial<ProfileType>);
 
     if (result.success) {
@@ -327,7 +334,7 @@ export default function Profile() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground truncate">{formData.full_name || "User"}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {role === "lecturer" ? "Lecturer" : `Student ID: ${formData.student_id || "N/A"}`}
+                  {role === "lecturer" ? `Lecturer ID: ${formData.student_id || "N/A"}` : `Student ID: ${formData.student_id || "N/A"}`}
                 </p>
               </div>
             </div>
@@ -599,9 +606,11 @@ export default function Profile() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Student ID */}
+                  {/* Student/Lecturer ID - Moved outside to be top level first item maybe? Or keep in grid */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Student ID</label>
+                    <label className="text-sm font-medium text-foreground">
+                      {role === "lecturer" ? "Lecturer ID" : "Student ID"}
+                    </label>
                     <div className="relative">
                       <Award className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
                       <Input
@@ -628,99 +637,135 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  {/* Year */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Year</label>
-                    <Select
-                      value={formData.year}
-                      onValueChange={(value) => handleInputChange("year", value)}
-                      disabled={!isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1st Year">1st Year</SelectItem>
-                        <SelectItem value="2nd Year">2nd Year</SelectItem>
-                        <SelectItem value="3rd Year">3rd Year</SelectItem>
-                        <SelectItem value="4th Year">4th Year</SelectItem>
-                        <SelectItem value="Graduate">Graduate</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Additional Lecturer Fields */}
+                  {role === "lecturer" && (
+                    <>
+                      {/* Batch */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Batch</label>
+                        <Select
+                          value={formData.batch}
+                          onValueChange={(value) => handleInputChange("batch", value)}
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select batch" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="2022-2026">2022–2026</SelectItem>
+                            <SelectItem value="2023-2027">2023–2027</SelectItem>
+                            <SelectItem value="2024-2028">2024–2028</SelectItem>
+                            <SelectItem value="2025-2029">2025–2029</SelectItem>
+                            <SelectItem value="2026-2030">2026–2030</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  {/* Department */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Department</label>
-                    <Input
-                      value={formData.department}
-                      onChange={(e) => handleInputChange("department", e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="e.g., Computer Science"
-                    />
-                  </div>
+                      {/* HOD Name */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">HOD Name</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+                          <Input
+                            value={formData.hod_name}
+                            onChange={(e) => handleInputChange("hod_name", e.target.value)}
+                            disabled={!isEditing}
+                            className="pl-10"
+                            placeholder="e.g., Dr. Head of Dept"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                  {/* GPA */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">GPA</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="4"
-                      value={formData.gpa}
-                      onChange={(e) => handleInputChange("gpa", e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="e.g., 3.75"
-                    />
-                  </div>
+                  {/* Student Specific Fields */}
+                  {role !== "lecturer" && (
+                    <>
+                      {/* Year */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Year</label>
+                        <Select
+                          value={formData.year}
+                          onValueChange={(value) => handleInputChange("year", value)}
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1st Year">1st Year</SelectItem>
+                            <SelectItem value="2nd Year">2nd Year</SelectItem>
+                            <SelectItem value="3rd Year">3rd Year</SelectItem>
+                            <SelectItem value="4th Year">4th Year</SelectItem>
+                            <SelectItem value="Graduate">Graduate</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  {/* Advisor */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Academic Advisor</label>
-                    <Input
-                      value={formData.advisor}
-                      onChange={(e) => handleInputChange("advisor", e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="e.g., Dr. Smith"
-                    />
-                  </div>
+                      {/* GPA */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">GPA</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="4"
+                          value={formData.gpa}
+                          onChange={(e) => handleInputChange("gpa", e.target.value)}
+                          disabled={!isEditing}
+                          placeholder="e.g., 3.75"
+                        />
+                      </div>
+
+                      {/* Advisor */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Academic Advisor</label>
+                        <Input
+                          value={formData.advisor}
+                          onChange={(e) => handleInputChange("advisor", e.target.value)}
+                          disabled={!isEditing}
+                          placeholder="e.g., Dr. Smith"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Dates */}
-              <div className="bg-surface border border-border rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-6">Important Dates</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Enrollment Date</label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-                      <Input
-                        type="date"
-                        value={formData.enrollment_date}
-                        onChange={(e) => handleInputChange("enrollment_date", e.target.value)}
-                        disabled={!isEditing}
-                        className="pl-10"
-                      />
+              {/* Only show Important Dates for Students */}
+              {role !== "lecturer" && (
+                <div className="bg-surface border border-border rounded-xl p-6">
+                  <h2 className="text-lg font-semibold text-foreground mb-6">Important Dates</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Enrollment Date</label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+                        <Input
+                          type="date"
+                          value={formData.enrollment_date}
+                          onChange={(e) => handleInputChange("enrollment_date", e.target.value)}
+                          disabled={!isEditing}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Expected Graduation</label>
-                    <div className="relative">
-                      <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-                      <Input
-                        type="date"
-                        value={formData.expected_graduation}
-                        onChange={(e) => handleInputChange("expected_graduation", e.target.value)}
-                        disabled={!isEditing}
-                        className="pl-10"
-                      />
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Expected Graduation</label>
+                      <div className="relative">
+                        <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+                        <Input
+                          type="date"
+                          value={formData.expected_graduation}
+                          onChange={(e) => handleInputChange("expected_graduation", e.target.value)}
+                          disabled={!isEditing}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 
