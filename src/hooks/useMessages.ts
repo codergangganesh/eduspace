@@ -208,7 +208,30 @@ export function useMessages() {
                     }
                 }
             )
-            .subscribe();
+            .on(
+                'broadcast',
+                { event: 'new_message' },
+                (payload) => {
+                    const newMessage = payload.payload as Message;
+                    // Only process if it belongs to current conversation (safety check)
+                    if (newMessage && newMessage.conversation_id === selectedConversationId) {
+                        setMessages((prev) => {
+                            if (prev.some(m => m.id === newMessage.id)) {
+                                return prev;
+                            }
+                            return [...prev, newMessage];
+                        });
+                    }
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    // console.log('Subscribed to messages channel:', selectedConversationId);
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('There was an error subscribing to messages channel.');
+                }
+            });
 
         channelRef.current = channel;
 
@@ -239,25 +262,35 @@ export function useMessages() {
 
         try {
             // Find or create conversation
-            let conversationId = selectedConversationId;
+            let conversationId: string | null = null;
+
+            // Validate if selectedConversationId matches the intended receiver
+            // This prevents messages from being sent to the wrong conversation if the selection logic is stale
+            if (selectedConversationId) {
+                const currentConv = conversations.find(c => c.id === selectedConversationId);
+                if (currentConv && (currentConv.participant_1 === receiverId || currentConv.participant_2 === receiverId)) {
+                    conversationId = selectedConversationId;
+                }
+            }
 
             // Optimistic update for UI
-            if (conversationId) {
-                const optimisticMessage: Message = {
-                    id: optimisticId,
-                    conversation_id: conversationId,
-                    sender_id: user.id,
-                    receiver_id: receiverId,
-                    content,
-                    attachment_name: attachment?.name || null,
-                    attachment_url: attachment?.url || null,
-                    attachment_type: attachment?.type || null,
-                    attachment_size: attachment?.size || null,
-                    is_read: false,
-                    created_at: timestamp,
-                    sender_name: 'You' // Will be refreshed or handled by UI
-                };
+            const optimisticMessage: Message = {
+                id: optimisticId,
+                conversation_id: conversationId || 'temp-id', // Temporary ID if creating new
+                sender_id: user.id,
+                receiver_id: receiverId,
+                content: finalContent,
+                attachment_name: attachment?.name || null,
+                attachment_url: attachment?.url || null,
+                attachment_type: attachment?.type || null,
+                attachment_size: attachment?.size || null,
+                is_read: false,
+                created_at: timestamp,
+                sender_name: 'You' // Will be refreshed or handled by UI
+            };
 
+            // Assuming conversation exists for now in the optimistic update logic if we have ID
+            if (conversationId) {
                 setMessages(prev => [...prev, optimisticMessage]);
             }
 
@@ -285,33 +318,29 @@ export function useMessages() {
                     if (convError) throw convError;
                     conversationId = newConv.id;
 
+                    // Update the optimistic message with the real conversation ID
+                    optimisticMessage.conversation_id = conversationId;
+
                     // If we just created the conversation, set it as selected
                     setSelectedConversationId(conversationId);
-                    // Also need to add the optimistic message now that we have an ID
-                    // But we might have missed the window if we didn't add it above. 
-                    // For new conversations, the "optimistic" part is tricky if we don't have ID.
-                    // So for new conversations, we might just wait for the real send to complete or 
-                    // add it now with the new ID.
+
+                    // Add optimistic message now if needed
+                    if (!selectedConversationId) {
+                        setMessages(prev => [...prev, optimisticMessage]);
+                    }
                 }
+            } else {
+                // Ensure specific optimistic ID is used
+                optimisticMessage.conversation_id = conversationId;
             }
 
-            // If we didn't add optimistic message yet (because conversationId was null), add it now
-            if (!selectedConversationId && conversationId) {
-                const optimisticMessage: Message = {
-                    id: optimisticId,
-                    conversation_id: conversationId,
-                    sender_id: user.id,
-                    receiver_id: receiverId,
-                    content: finalContent,
-                    attachment_name: attachment?.name || null,
-                    attachment_url: attachment?.url || null,
-                    attachment_type: attachment?.type || null,
-                    attachment_size: attachment?.size || null,
-                    is_read: false,
-                    created_at: timestamp,
-                    sender_name: 'You'
-                };
-                setMessages(prev => [...prev, optimisticMessage]);
+            // BROADCAST MESSAGE IMMEDIATELY (Instant Delivery)
+            if (channelRef.current && conversationId === selectedConversationId) {
+                await channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'new_message',
+                    payload: optimisticMessage
+                });
             }
 
             // Insert message
@@ -332,8 +361,7 @@ export function useMessages() {
             if (messageError) {
                 console.warn("Initial message insert failed. Retrying without attachment_size (schema mismatch likely).", messageError);
 
-                // Fallback: Retry without attachment_size if it failed (likely due to missing column)
-                // We check for specific error codes or just try again as a reliable fallback
+                // Fallback: Retry without attachment_size
                 const { error: retryError } = await supabase
                     .from('messages')
                     .insert({
@@ -364,6 +392,7 @@ export function useMessages() {
                 })
                 .eq('id', conversationId);
 
+<<<<<<< HEAD
             // Send notification to receiver
             try {
                 const { data: senderProfile } = await supabase
@@ -392,6 +421,8 @@ export function useMessages() {
                 // The fallback logic is inside the if(messageError) block below which isn't fully visible here but understood.
             }
 
+=======
+>>>>>>> restore-code
         } catch (err) {
             console.error('Error sending message:', err);
             // Ensure rollback if not caught above
