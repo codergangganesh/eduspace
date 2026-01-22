@@ -94,7 +94,7 @@ export function useNotifications() {
 
         // Subscribe to real-time updates
         const subscription = supabase
-            .channel("notifications-channel")
+            .channel(`notifications-${user.id}`) // Unique channel per user
             .on(
                 "postgres_changes",
                 {
@@ -123,11 +123,42 @@ export function useNotifications() {
                         }
                     }
 
-                    setNotifications((prev) => [newNotification, ...prev]);
+                    // Check for duplicates before adding
+                    setNotifications((prev) => {
+                        if (prev.some(n => n.id === newNotification.id)) {
+                            return prev;
+                        }
+                        return [newNotification, ...prev];
+                    });
                     setUnreadCount((prev) => prev + 1);
 
                     toast(newNotification.title, {
                         description: newNotification.message,
+                    });
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "UPDATE",
+                    schema: "public",
+                    table: "notifications",
+                    filter: `recipient_id=eq.${user.id}`,
+                },
+                (payload) => {
+                    const updatedNotification = payload.new as Notification;
+
+                    // Update the notification in state
+                    setNotifications((prev) =>
+                        prev.map((n) =>
+                            n.id === updatedNotification.id ? updatedNotification : n
+                        )
+                    );
+
+                    // Recalculate unread count
+                    setNotifications((prev) => {
+                        setUnreadCount(prev.filter(n => !n.is_read).length);
+                        return prev;
                     });
                 }
             )

@@ -4,16 +4,18 @@ interface CreateNotificationParams {
     userId: string;
     title: string;
     message: string;
-    type: "assignment" | "grade" | "announcement" | "message" | "schedule" | "access_request" | "general";
+    type: "assignment" | "grade" | "announcement" | "message" | "schedule" | "access_request" | "submission" | "general";
     relatedId?: string;
     classId?: string; // Class ID for filtering
+    senderId?: string; // User who triggered this notification
+    actionType?: string; // Specific action: created, updated, submitted, accepted, rejected, etc.
 }
 
 /**
  * Create a notification for a specific user
  */
 export async function createNotification(params: CreateNotificationParams) {
-    const { userId, title, message, type, relatedId } = params;
+    const { userId, title, message, type, relatedId, senderId, actionType } = params;
 
     try {
         const { error } = await supabase.from("notifications").insert({
@@ -23,6 +25,8 @@ export async function createNotification(params: CreateNotificationParams) {
             type,
             related_id: relatedId || null,
             class_id: params.classId || null,
+            sender_id: senderId || null,
+            action_type: actionType || null,
             is_read: false,
         });
 
@@ -45,7 +49,7 @@ export async function createBulkNotifications(
     userIds: string[],
     params: Omit<CreateNotificationParams, "userId">
 ) {
-    const { title, message, type, relatedId, classId } = params;
+    const { title, message, type, relatedId, classId, senderId, actionType } = params;
 
     try {
         const notifications = userIds.map((userId) => ({
@@ -55,6 +59,8 @@ export async function createBulkNotifications(
             type,
             related_id: relatedId || null,
             class_id: classId || null,
+            sender_id: senderId || null,
+            action_type: actionType || null,
             is_read: false,
         }));
 
