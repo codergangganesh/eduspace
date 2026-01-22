@@ -191,8 +191,8 @@ var ctx,
     E = {
         debug: true,
         friction: 0.5,
-        trails: 80,
-        size: 50,
+        trails: 20, // Reduced from 80 for better performance
+        size: 30,   // Reduced from 50 for better performance
         dampening: 0.025,
         tension: 0.99,
     };
@@ -220,10 +220,23 @@ export const renderCanvas = function () {
         frequency: 0.0015,
         offset: 285,
     });
-    document.addEventListener("mousemove", onMousemove);
-    document.addEventListener("touchstart", onMousemove);
+
+    // Throttle mouse events for better performance
+    let throttleTimeout: number | null = null;
+    const throttledMouseMove = (e: any) => {
+        if (!throttleTimeout) {
+            throttleTimeout = window.setTimeout(() => {
+                onMousemove(e);
+                throttleTimeout = null;
+            }, 16); // ~60fps
+        }
+    };
+
+    // Use passive listeners for better scroll performance
+    document.addEventListener("mousemove", throttledMouseMove, { passive: true } as any);
+    document.addEventListener("touchstart", onMousemove, { passive: true } as any);
     document.body.addEventListener("orientationchange", resizeCanvas);
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", resizeCanvas, { passive: true } as any);
     window.addEventListener("focus", () => {
         // @ts-ignore
         if (!ctx.running) {
@@ -234,7 +247,7 @@ export const renderCanvas = function () {
     });
     window.addEventListener("blur", () => {
         // @ts-ignore
-        ctx.running = true;
+        ctx.running = false; // Stop rendering when tab is not visible
     });
     resizeCanvas();
 };

@@ -136,7 +136,7 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         float: "float 3s ease-in-out infinite",
-        scroll: "scroll 40s linear infinite",
+        scroll: "scroll 60s linear infinite", // Slower animation = less CPU usage
         first: "moveVertical 30s ease infinite",
         second: "moveInCircle 20s reverse infinite",
         third: "moveInCircle 40s linear infinite",

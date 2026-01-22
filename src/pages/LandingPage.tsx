@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
     GraduationCap,
     CheckCircle2,
@@ -55,10 +55,13 @@ export default function LandingPage() {
     const [showHelp, setShowHelp] = useState(false);
     const [showContact, setShowContact] = useState(false);
 
-
-
+    // Initialize canvas only once on mount
     useEffect(() => {
-        renderCanvas();
+        const canvas = document.getElementById("canvas");
+        if (canvas && !canvas.hasAttribute('data-initialized')) {
+            renderCanvas();
+            canvas.setAttribute('data-initialized', 'true');
+        }
     }, []);
 
     const features = [
@@ -173,18 +176,18 @@ export default function LandingPage() {
 
                             {/* Navigation Links */}
                             <div className="hidden md:flex items-center gap-6">
-                                <a href="#features" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors">
+                                <a href="#features" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform">
                                     Features
                                 </a>
-                                <a href="#students" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors">
+                                <a href="#students" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform">
                                     For Students
                                 </a>
-                                <a href="#lecturers" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors">
+                                <a href="#lecturers" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform">
                                     For Lecturers
                                 </a>
                                 <button
                                     onClick={() => setShowContact(true)}
-                                    className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors"
+                                    className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform"
                                 >
                                     Support
                                 </button>
@@ -225,23 +228,25 @@ export default function LandingPage() {
 
                             {/* CTA Buttons */}
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Button
-                                    size="lg"
-                                    onClick={() => navigate('/student/login')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-8"
-                                >
-                                    <GraduationCap className="size-5" />
-                                    I'm a Student
-                                </Button>
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    onClick={() => navigate('/lecturer/login')}
-                                    className="gap-2 px-8 border-slate-300 dark:border-slate-700"
-                                >
-                                    <BookOpen className="size-5" />
-                                    I'm a Lecturer
-                                </Button>
+                                <Link to="/student/login">
+                                    <Button
+                                        size="lg"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-8 w-full"
+                                    >
+                                        <GraduationCap className="size-5" />
+                                        I'm a Student
+                                    </Button>
+                                </Link>
+                                <Link to="/lecturer/login">
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="gap-2 px-8 border-slate-300 dark:border-slate-700 w-full"
+                                    >
+                                        <BookOpen className="size-5" />
+                                        I'm a Lecturer
+                                    </Button>
+                                </Link>
                             </div>
 
                             {/* Features */}
@@ -431,13 +436,14 @@ export default function LandingPage() {
                                         </div>
                                     ))}
                                 </div>
-                                <Button
-                                    onClick={() => navigate('/student/login')}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
-                                >
-                                    Get Started as Student
-                                    <ArrowRight className="size-4" />
-                                </Button>
+                                <Link to="/student/login">
+                                    <Button
+                                        className="bg-purple-600 hover:bg-purple-700 text-white gap-2 w-full"
+                                    >
+                                        Get Started as Student
+                                        <ArrowRight className="size-4" />
+                                    </Button>
+                                </Link>
                             </div>
                             <div className="relative">
                                 <div className="bg-gradient-to-br from-purple-100/90 to-blue-100/90 dark:from-purple-900/30 dark:to-blue-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6">
@@ -542,13 +548,14 @@ export default function LandingPage() {
                                         </div>
                                     ))}
                                 </div>
-                                <Button
-                                    onClick={() => navigate('/lecturer/login')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                                >
-                                    Get Started as Lecturer
-                                    <ArrowRight className="size-4" />
-                                </Button>
+                                <Link to="/lecturer/login">
+                                    <Button
+                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 w-full"
+                                    >
+                                        Get Started as Lecturer
+                                        <ArrowRight className="size-4" />
+                                    </Button>
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -673,7 +680,7 @@ export default function LandingPage() {
                             <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-100 dark:from-slate-900 to-transparent z-10" />
                             <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-100 dark:from-slate-900 to-transparent z-10" />
 
-                            <div className="flex w-max gap-6 animate-scroll hover:[animation-play-state:paused]">
+                            <div className="flex w-max gap-6 animate-scroll hover:[animation-play-state:paused] will-change-transform gpu-accelerated">
                                 {[...Array(2)].map((_, setIndex) => (
                                     <div key={setIndex} className="flex gap-6">
                                         {[
