@@ -379,7 +379,8 @@ export function useMessages() {
                     receiverId,
                     senderProfile?.full_name || 'Someone',
                     finalContent.substring(0, 100),
-                    conversationId
+                    conversationId,
+                    user.id // sender_id
                 );
             } catch (notifError) {
                 // Don't fail the message send if notification fails

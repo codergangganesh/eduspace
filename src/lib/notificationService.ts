@@ -86,6 +86,8 @@ export async function notifyNewAssignment(
     studentIds: string[],
     assignmentTitle: string,
     assignmentId: string,
+    lecturerId: string,
+    classId?: string,
     dueDate?: string
 ) {
     try {
@@ -121,6 +123,9 @@ export async function notifyNewAssignment(
             message,
             type: "assignment",
             relatedId: assignmentId,
+            classId: classId,
+            senderId: lecturerId,
+            actionType: 'created',
         });
     } catch (err) {
         console.error("Error in notifyNewAssignment:", err);
@@ -163,7 +168,9 @@ export async function notifyAssignmentUpdated(
     studentIds: string[],
     assignmentTitle: string,
     assignmentId: string,
-    updateDetails: string
+    updateDetails: string,
+    lecturerId: string,
+    classId?: string
 ) {
     try {
         if (!studentIds || studentIds.length === 0) {
@@ -194,6 +201,9 @@ export async function notifyAssignmentUpdated(
             message: `"${assignmentTitle}" has been updated: ${updateDetails}`,
             type: "assignment",
             relatedId: assignmentId,
+            classId: classId,
+            senderId: lecturerId,
+            actionType: 'updated',
         });
     } catch (err) {
         console.error("Error in notifyAssignmentUpdated:", err);
@@ -208,7 +218,8 @@ export async function notifyNewMessage(
     recipientId: string,
     senderName: string,
     messagePreview: string,
-    conversationId: string
+    conversationId: string,
+    senderId: string
 ) {
     // Check if recipient has push_notifications enabled
     const { data } = await supabase
@@ -225,6 +236,8 @@ export async function notifyNewMessage(
         message: messagePreview.length > 100 ? messagePreview.substring(0, 100) + "..." : messagePreview,
         type: "message",
         relatedId: conversationId,
+        senderId: senderId,
+        actionType: 'sent',
     });
 }
 
