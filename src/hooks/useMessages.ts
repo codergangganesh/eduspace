@@ -392,7 +392,6 @@ export function useMessages() {
                 })
                 .eq('id', conversationId);
 
-<<<<<<< HEAD
             // Send notification to receiver
             try {
                 const { data: senderProfile } = await supabase
@@ -420,9 +419,6 @@ export function useMessages() {
                 // If fallback insert was needed (logic inside messageError block), ensure we don't double count or handle it there
                 // The fallback logic is inside the if(messageError) block below which isn't fully visible here but understood.
             }
-
-=======
->>>>>>> restore-code
         } catch (err) {
             console.error('Error sending message:', err);
             // Ensure rollback if not caught above
