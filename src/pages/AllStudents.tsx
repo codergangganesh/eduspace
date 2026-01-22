@@ -30,6 +30,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ImportStudentsModal } from "@/components/lecturer/ImportStudentsModal";
+import { AddStudentModal } from "@/components/lecturer/AddStudentModal";
 import { EditStudentModal } from "@/components/lecturer/EditStudentModal";
 import { ImageUploadButton } from "@/components/common/ImageUploadButton";
 import { getOptimizedImageUrl } from "@/utils/cloudinaryUpload";
@@ -88,6 +89,7 @@ export default function AllStudents() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [showImportModal, setShowImportModal] = useState(false);
+    const [showAddStudentModal, setShowAddStudentModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -231,6 +233,48 @@ export default function AllStudents() {
         }
     };
 
+    const handleAddStudent = async (studentData: any) => {
+        if (!classId) return;
+
+        try {
+            // Add student to class_students table
+            const result = await addStudent({
+                class_id: classId,
+                student_id: null, // Will be filled when student accepts
+                register_number: studentData.registerNumber,
+                student_name: studentData.studentName,
+                email: studentData.email,
+                department: studentData.department || null,
+                course: null,
+                year: studentData.year || null,
+                section: studentData.section || null,
+                phone: studentData.phone || null,
+                import_source: 'manual'
+            });
+
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to add student');
+            }
+
+            // Automatically send access request
+            await sendAccessRequest(classId, studentData.email);
+            await loadAccessRequests();
+
+            toast({
+                title: "Student Added",
+                description: `${studentData.studentName} has been added and a join request has been sent.`,
+            });
+        } catch (error) {
+            console.error('Error adding student:', error);
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to add student",
+                variant: "destructive",
+            });
+            throw error;
+        }
+    };
+
     const handleEditStudent = (student: any) => {
         setSelectedStudent(student);
         setShowEditModal(true);
@@ -351,6 +395,14 @@ export default function AllStudents() {
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
+                            onClick={() => setShowAddStudentModal(true)}
+                            className="gap-2"
+                        >
+                            <UserPlus className="size-4" />
+                            Add Student
+                        </Button>
+                        <Button
+                            variant="outline"
                             onClick={() => setShowImportModal(true)}
                             className="gap-2"
                         >
@@ -426,31 +478,33 @@ export default function AllStudents() {
                     </Card>
                 </div>
 
-                {/* Filters */}
+                {/* Search and Filters */}
                 <Card className="bg-card border-border">
                     <CardContent className="p-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search by name, email, or register number..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10"
-                                />
+                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1 relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search by name, email, or register number..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-full sm:w-[200px]">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="accepted">Accepted</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="rejected">Rejected</SelectItem>
+                                        <SelectItem value="not_sent">Not Sent</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full sm:w-[200px]">
-                                    <SelectValue placeholder="Filter by status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="accepted">Accepted</SelectItem>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                    <SelectItem value="rejected">Rejected</SelectItem>
-                                    <SelectItem value="not_sent">Not Sent</SelectItem>
-                                </SelectContent>
-                            </Select>
                         </div>
                     </CardContent>
                 </Card>
@@ -571,6 +625,13 @@ export default function AllStudents() {
             </div>
 
             {/* Modals */}
+            <AddStudentModal
+                open={showAddStudentModal}
+                onOpenChange={setShowAddStudentModal}
+                classId={classId}
+                onStudentAdded={handleAddStudent}
+            />
+
             <ImportStudentsModal
                 open={showImportModal}
                 onOpenChange={setShowImportModal}

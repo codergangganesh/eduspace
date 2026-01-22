@@ -187,7 +187,7 @@ const MessageBubble = ({ message, setMessageToDelete }: MessageBubbleProps) => {
 
 export default function Messages() {
   const { user, role } = useAuth();
-  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping } = useMessages();
+  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
@@ -338,28 +338,16 @@ export default function Messages() {
       return;
     }
 
-    // Create new conversation via Supabase
-    // Note: Ideally moving this to hook, but for speed doing it here
+    // Create new empty conversation using the hook's startConversation function
+    // This creates a conversation record without sending any automatic message
     try {
-      // Need to import supabase here? No, I need it from context or props.
-      // I don't have direct access here easily without importing.
-      // I'll ask the USER to select it, and if it doesn't exist, 
-      // I might need a "PendingConversation" state.
-
-      // BETTER: Invoke a temporary "Draft" mode where selectedConversation is a mock object
-      // containing just the other user details, and ID is "new".
-      // `sendMessage` needs modification to handle "new".
-      // BUT `sendMessage` in `useMessages` already handles dynamic creation!
-      // So I just need to mock the `selectedConversation` object so the UI renders.
-      // But `selectedConversation` comes from `conversations.find`.
-      // I will force a "draft" state.
-      toast.info("Starting new conversation...");
-      await sendMessage(instructorId, "Started a new conversation"); // Auto-initiate
-      // Refetch or wait for subscription
-      // This is a bit "hacky" but works for MVP "Ask a Doubt"
-
+      const conversationId = await startConversation(instructorId);
+      if (conversationId) {
+        setSelectedConversationId(conversationId);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Error starting conversation:', e);
+      toast.error("Failed to start conversation");
     }
     setIsAskDoubtOpen(false);
   }

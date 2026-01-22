@@ -1,4 +1,4 @@
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, MessageSquare, FileText, Calendar, UserPlus, Upload, CheckCircle } from "lucide-react";
 import {
     Popover,
     PopoverContent,
@@ -6,99 +6,272 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 
 export function NotificationsPopover() {
     const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
     const navigate = useNavigate();
-    const { profile } = useAuth(); // To check if notifications are enabled if we want UI hiding logic
 
-    const handleNotificationClick = async (notification: Notification) => {
-        if (!notification.is_read) {
-            await markAsRead(notification.id);
-        }
-        if (notification.link) {
-            navigate(notification.link);
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case "message":
+                return <MessageSquare className="h-4 w-4" />;
+            case "assignment":
+                return <FileText className="h-4 w-4" />;
+            case "schedule":
+                return <Calendar className="h-4 w-4" />;
+            case "access_request":
+                return <UserPlus className="h-4 w-4" />;
+            case "submission":
+                return <Upload className="h-4 w-4" />;
+            case "grade":
+                return <CheckCircle className="h-4 w-4" />;
+            default:
+                return <Bell className="h-4 w-4" />;
         }
     };
 
-    // If preferences say disabled, maybe we don't show the bell or show it muted?
-    // The user requirement: "If notification icon should be enabled... if it was disabled quite opposite"
-    // This implies if disabled, the icon might be gone or disabled.
-    // We'll check profile.notifications_enabled later, assuming it's fetched. 
-    // For now, render always.
+    const handleNotificationClick = async (notification: Notification) => {
+        // Mark as read
+        if (!notification.is_read) {
+            await markAsRead(notification.id);
+        }
+
+        // Navigate based on type and related_id
+        if (notification.link) {
+            navigate(notification.link);
+        } else if (notification.related_id) {
+            switch (notification.type) {
+                case "message":
+                    navigate(`/messages?conversation=${notification.related_id}`);
+                    break;
+                case "assignment":
+                    navigate(`/assignments?id=${notification.related_id}`);
+                    break;
+                case "schedule":
+                    navigate(`/schedule?id=${notification.related_id}`);
+                    break;
+                case "access_request":
+                    navigate(`/classes?request=${notification.related_id}`);
+                    break;
+                case "submission":
+                    navigate(`/lecturer-assignments?submission=${notification.related_id}`);
+                    break;
+                case "grade":
+                    navigate(`/assignments?id=${notification.related_id}`);
+                    break;
+                default:
+                    navigate("/notifications");
+            }
+        } else {
+            navigate("/notifications");
+        }
+    };
+
+    // Group notifications by date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const groupedNotifications = {
+        today: notifications.filter(n => new Date(n.created_at) >= today),
+        yesterday: notifications.filter(n => {
+            const date = new Date(n.created_at);
+            return date >= yesterday && date < today;
+        }),
+        earlier: notifications.filter(n => new Date(n.created_at) < yesterday),
+    };
 
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="size-5 text-muted-foreground" />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+                >
+                    <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2 size-2.5 rounded-full bg-destructive border-2 border-background" />
+                        <Badge
+                            variant="destructive"
+                            className={cn(
+                                "absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1",
+                                "flex items-center justify-center text-xs font-bold",
+                                "animate-in zoom-in-50 duration-200"
+                            )}
+                        >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </Badge>
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end">
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h4 className="font-semibold">Notifications</h4>
-                    {unreadCount > 0 && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-auto py-1"
-                            onClick={() => markAllAsRead()}
-                        >
-                            <CheckCheck className="size-3 mr-1" />
-                            Mark all read
-                        </Button>
-                    )}
-                </div>
-                <ScrollArea className="h-[300px]">
+            <PopoverContent className="w-96 p-0" align="end">
+                <div className="flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 flex items-center justify-between border-b">
+                        <div>
+                            <h3 className="font-semibold">Notifications</h3>
+                            {unreadCount > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    {unreadCount} unread
+                                </p>
+                            )}
+                        </div>
+                        {unreadCount > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={markAllAsRead}
+                                className="text-xs"
+                            >
+                                <CheckCheck className="h-3 w-3 mr-1" />
+                                Mark all read
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* Notifications List */}
                     {loading ? (
-                        <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
-                            Loading...
+                        <div className="p-8 text-center">
+                            <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground animate-pulse" />
+                            <p className="text-sm text-muted-foreground">Loading notifications...</p>
                         </div>
                     ) : notifications.length === 0 ? (
-                        <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
-                            No new notifications
+                        <div className="p-8 text-center">
+                            <Bell className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                            <p className="text-sm font-medium mb-1">No notifications</p>
+                            <p className="text-xs text-muted-foreground">
+                                You're all caught up!
+                            </p>
                         </div>
                     ) : (
-                        <div className="divide-y">
-                            {notifications.map((notification) => (
-                                <div
-                                    key={notification.id}
-                                    className={cn(
-                                        "p-4 cursor-pointer hover:bg-muted/50 transition-colors",
-                                        !notification.is_read && "bg-muted/20"
-                                    )}
-                                    onClick={() => handleNotificationClick(notification)}
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="space-y-1">
-                                            <p className={cn("text-sm font-medium leading-none", !notification.is_read && "font-semibold")}>
-                                                {notification.title}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground line-clamp-2">
-                                                {notification.message}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground">
-                                                {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                                            </p>
-                                        </div>
-                                        {!notification.is_read && (
-                                            <div className="size-2 rounded-full bg-primary shrink-0 mt-1" />
-                                        )}
+                        <ScrollArea className="h-[400px]">
+                            <div className="p-2">
+                                {/* Today */}
+                                {groupedNotifications.today.length > 0 && (
+                                    <div className="mb-4">
+                                        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            Today
+                                        </p>
+                                        {groupedNotifications.today.map((notification) => (
+                                            <NotificationItem
+                                                key={notification.id}
+                                                notification={notification}
+                                                onClick={() => handleNotificationClick(notification)}
+                                                icon={getNotificationIcon(notification.type)}
+                                            />
+                                        ))}
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                )}
+
+                                {/* Yesterday */}
+                                {groupedNotifications.yesterday.length > 0 && (
+                                    <div className="mb-4">
+                                        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            Yesterday
+                                        </p>
+                                        {groupedNotifications.yesterday.map((notification) => (
+                                            <NotificationItem
+                                                key={notification.id}
+                                                notification={notification}
+                                                onClick={() => handleNotificationClick(notification)}
+                                                icon={getNotificationIcon(notification.type)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Earlier */}
+                                {groupedNotifications.earlier.length > 0 && (
+                                    <div className="mb-4">
+                                        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            Earlier
+                                        </p>
+                                        {groupedNotifications.earlier.map((notification) => (
+                                            <NotificationItem
+                                                key={notification.id}
+                                                notification={notification}
+                                                onClick={() => handleNotificationClick(notification)}
+                                                icon={getNotificationIcon(notification.type)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
                     )}
-                </ScrollArea>
+
+                    {/* Footer */}
+                    {notifications.length > 0 && (
+                        <>
+                            <Separator />
+                            <div className="p-2">
+                                <Button
+                                    variant="ghost"
+                                    className="w-full text-sm"
+                                    onClick={() => navigate("/notifications")}
+                                >
+                                    View all notifications
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </PopoverContent>
         </Popover>
+    );
+}
+
+interface NotificationItemProps {
+    notification: Notification;
+    onClick: () => void;
+    icon: React.ReactNode;
+}
+
+function NotificationItem({ notification, onClick, icon }: NotificationItemProps) {
+    return (
+        <button
+            onClick={onClick}
+            className={cn(
+                "w-full flex items-start gap-3 p-3 rounded-lg text-left transition-colors",
+                "hover:bg-secondary",
+                !notification.is_read && "bg-primary/5"
+            )}
+        >
+            <div
+                className={cn(
+                    "mt-0.5 p-2 rounded-full shrink-0",
+                    notification.is_read ? "bg-secondary" : "bg-primary/10"
+                )}
+            >
+                <div className={cn(notification.is_read ? "text-muted-foreground" : "text-primary")}>
+                    {icon}
+                </div>
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className={cn("text-sm font-medium mb-0.5", !notification.is_read && "font-semibold")}>
+                    {notification.title}
+                </p>
+                <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
+                    {notification.message}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                </p>
+            </div>
+            {!notification.is_read && (
+                <div className="mt-2 shrink-0">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                </div>
+            )}
+        </button>
     );
 }

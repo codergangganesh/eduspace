@@ -356,6 +356,37 @@ export function useAssignments() {
 
             if (error) throw error;
 
+            // Send notification to lecturer
+            try {
+                // Get assignment and student details
+                const { data: assignment } = await supabase
+                    .from('assignments')
+                    .select('lecturer_id, title')
+                    .eq('id', assignmentId)
+                    .single();
+
+                const { data: studentProfile } = await supabase
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (assignment) {
+                    await supabase.from('notifications').insert({
+                        recipient_id: assignment.lecturer_id,
+                        sender_id: user.id,
+                        title: 'New Submission',
+                        message: `${studentProfile?.full_name || 'A student'} submitted ${assignment.title}`,
+                        type: 'submission',
+                        action_type: 'submitted',
+                        related_id: assignmentId,
+                        is_read: false
+                    });
+                }
+            } catch (notifError) {
+                console.warn('Failed to send submission notification:', notifError);
+            }
+
             return { success: true };
         } catch (err: any) {
             console.error('Error submitting assignment:', err);

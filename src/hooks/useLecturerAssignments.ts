@@ -159,9 +159,11 @@ export function useLecturerAssignments() {
                 if (!studentsError && enrolledStudents && enrolledStudents.length > 0) {
                     const notifications = enrolledStudents.map(student => ({
                         recipient_id: student.student_id,
+                        sender_id: user.id, // Track who created the assignment
                         title: "New Assignment Posted",
                         message: `${data.title} has been posted. Due date: ${data.due_date.toLocaleDateString()}`,
                         type: "assignment",
+                        action_type: "created",
                         related_id: newAssignment.id,
                         class_id: classId, // Include class_id for filtering
                         is_read: false
@@ -211,6 +213,54 @@ export function useLecturerAssignments() {
                 .eq("lecturer_id", user.id);
 
             if (error) throw error;
+
+            // Send update notifications to enrolled students
+            try {
+                // Get assignment details
+                const { data: assignment } = await supabase
+                    .from("assignments")
+                    .select("title, course_name")
+                    .eq("id", id)
+                    .single();
+
+                if (assignment) {
+                    // Find class by course_name (which stores course_code)
+                    const { data: matchingClass } = await supabase
+                        .from("classes")
+                        .select("id")
+                        .eq("course_code", assignment.course_name)
+                        .eq("lecturer_id", user.id)
+                        .eq("is_active", true)
+                        .maybeSingle();
+
+                    if (matchingClass) {
+                        // Get enrolled students
+                        const { data: enrolledStudents } = await supabase
+                            .from("class_students")
+                            .select("student_id")
+                            .eq("class_id", matchingClass.id)
+                            .not("student_id", "is", null);
+
+                        if (enrolledStudents && enrolledStudents.length > 0) {
+                            const notifications = enrolledStudents.map(student => ({
+                                recipient_id: student.student_id,
+                                sender_id: user.id,
+                                title: "Assignment Updated",
+                                message: `${assignment.title} has been updated`,
+                                type: "assignment",
+                                action_type: "updated",
+                                related_id: id,
+                                class_id: matchingClass.id,
+                                is_read: false
+                            }));
+
+                            await supabase.from("notifications").insert(notifications);
+                        }
+                    }
+                }
+            } catch (notifError) {
+                console.warn("Failed to send update notifications:", notifError);
+            }
 
             toast.success("Assignment updated successfully!");
             fetchAssignments();

@@ -364,6 +364,28 @@ export function useMessages() {
                 })
                 .eq('id', conversationId);
 
+            // Send notification to receiver
+            try {
+                const { data: senderProfile } = await supabase
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('user_id', user.id)
+                    .single();
+
+                // Import notification service dynamically to avoid circular dependencies
+                const { notifyNewMessage } = await import('@/lib/notificationService');
+
+                await notifyNewMessage(
+                    receiverId,
+                    senderProfile?.full_name || 'Someone',
+                    finalContent.substring(0, 100),
+                    conversationId
+                );
+            } catch (notifError) {
+                // Don't fail the message send if notification fails
+                console.warn('Failed to send message notification:', notifError);
+            }
+
             if (messageError && !selectedConversationId && conversationId) {
                 // If fallback insert was needed (logic inside messageError block), ensure we don't double count or handle it there
                 // The fallback logic is inside the if(messageError) block below which isn't fully visible here but understood.
