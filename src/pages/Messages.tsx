@@ -427,8 +427,8 @@ export default function Messages() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+      <DashboardLayout fullHeight={true}>
+        <div className="flex items-center justify-center h-full">
           <Loader2 className="size-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
@@ -436,8 +436,8 @@ export default function Messages() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="flex h-[calc(100vh-4rem)] bg-background">
+    <DashboardLayout fullHeight={true}>
+      <div className="flex h-full bg-background">
         {/* Sidebar */}
         <div className="w-80 border-r border-border flex flex-col bg-surface">
           {/* Sidebar Header */}

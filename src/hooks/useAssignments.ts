@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getEnrolledClassIds } from '@/lib/studentUtils';
 
 interface Assignment {
     id: string;
@@ -73,50 +74,57 @@ export function useAssignments() {
 
             } else {
                 // Student sees only assignments from classes they're enrolled in
-                // First, get the student's enrolled classes
-                const { data: enrolledClasses } = await supabase
-                    .from('class_students')
-                    .select('class_id, classes!inner(course_code)')
-                    .eq('student_id', user.id);
+                // Strict check using shared utility
+                const enrolledClassIds = await getEnrolledClassIds(user.id);
 
-                if (!enrolledClasses || enrolledClasses.length === 0) {
+                if (enrolledClassIds.length === 0) {
                     // Student not enrolled in any classes, show no assignments
                     data = [];
                     mySubmissions = [];
                 } else {
-                    // Get course_ids that match the enrolled class course_codes
-                    const enrolledCourseCodes = enrolledClasses.map((ec: any) => ec.classes.course_code);
+                    // Get course codes for enrolled classes
+                    const { data: classesData } = await supabase
+                        .from('classes')
+                        .select('course_code')
+                        .in('id', enrolledClassIds);
 
-                    const { data: enrolledCourses } = await supabase
-                        .from('courses')
-                        .select('id')
-                        .in('course_code', enrolledCourseCodes);
-
-                    const enrolledCourseIds = enrolledCourses?.map(c => c.id) || [];
-
-                    if (enrolledCourseIds.length > 0) {
-                        // Fetch assignments only for enrolled courses
-                        const { data: assignmentsData, error: fetchError } = await supabase
-                            .from('assignments')
-                            .select('*')
-                            .eq('status', 'published')
-                            .in('course_id', enrolledCourseIds)
-                            .order('due_date', { ascending: true });
-
-                        if (fetchError) throw fetchError;
-                        data = assignmentsData || [];
-                    } else {
+                    if (!classesData || classesData.length === 0) {
                         data = [];
+                        mySubmissions = [];
+                    } else {
+                        const enrolledCourseCodes = classesData.map(c => c.course_code);
+
+                        const { data: enrolledCourses } = await supabase
+                            .from('courses')
+                            .select('id')
+                            .in('course_code', enrolledCourseCodes);
+
+                        const enrolledCourseIds = enrolledCourses?.map(c => c.id) || [];
+
+                        if (enrolledCourseIds.length > 0) {
+                            // Fetch assignments only for enrolled courses
+                            const { data: assignmentsData, error: fetchError } = await supabase
+                                .from('assignments')
+                                .select('*')
+                                .eq('status', 'published')
+                                .in('course_id', enrolledCourseIds)
+                                .order('due_date', { ascending: true });
+
+                            if (fetchError) throw fetchError;
+                            data = assignmentsData || [];
+                        } else {
+                            data = [];
+                        }
+
+                        // Fetch My Submissions to determine status
+                        const { data: submissionsData, error: subError } = await supabase
+                            .from('assignment_submissions')
+                            .select('*')
+                            .eq('student_id', user.id);
+
+                        if (subError) throw subError;
+                        mySubmissions = (submissionsData || []) as any[];
                     }
-
-                    // Fetch My Submissions to determine status
-                    const { data: submissionsData, error: subError } = await supabase
-                        .from('assignment_submissions')
-                        .select('*')
-                        .eq('student_id', user.id);
-
-                    if (subError) throw subError;
-                    mySubmissions = (submissionsData || []) as any[];
                 }
             }
 

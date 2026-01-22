@@ -278,6 +278,32 @@ export async function acceptInvitation(requestId: string, userId: string): Promi
             .eq('related_id', requestId)
             .eq('type', 'access_request');
 
+        // Notify lecturer about acceptance
+        try {
+            const { notifyLecturer } = await import("./notificationService");
+
+            // Get student name
+            const { data: studentProfile } = await supabase
+                .from('student_profiles')
+                .select('full_name')
+                .eq('user_id', userId)
+                .single();
+
+            const studentName = studentProfile?.full_name || request.student_email;
+
+            await notifyLecturer(
+                request.classes.lecturer_id,
+                'access_request',
+                'Class Invitation Accepted',
+                `${studentName} has accepted the invitation to join ${request.classes.course_code}${request.classes.class_name ? ` - ${request.classes.class_name}` : ''}`,
+                request.class_id,
+                userId,
+                requestId
+            );
+        } catch (notifErr) {
+            console.error('Failed to notify lecturer about acceptance:', notifErr);
+        }
+
         return { success: true };
     } catch (err) {
         console.error('Error accepting invitation:', err);

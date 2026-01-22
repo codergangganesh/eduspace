@@ -37,6 +37,8 @@ const shouldShowNotification = (
     return enrolledClassIds.includes(notification.class_id);
 };
 
+import { getEnrolledClassIds } from "@/lib/studentUtils";
+
 export function useNotifications() {
     const { user, role } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -57,12 +59,7 @@ export function useNotifications() {
                 let enrolledClassIds: string[] = [];
 
                 if (isStudent) {
-                    const { data: enrollments } = await supabase
-                        .from('class_students')
-                        .select('class_id')
-                        .eq('student_id', user.id);
-
-                    enrolledClassIds = enrollments?.map(e => e.class_id) || [];
+                    enrolledClassIds = await getEnrolledClassIds(user.id);
                     enrolledClassIdsRef.current = enrolledClassIds;
                 }
 
@@ -109,12 +106,8 @@ export function useNotifications() {
                     // For students, check if notification should be shown
                     if (isStudent) {
                         // Refresh enrolled class IDs if needed (e.g., after accepting invitation)
-                        const { data: enrollments } = await supabase
-                            .from('class_students')
-                            .select('class_id')
-                            .eq('student_id', user.id);
-
-                        enrolledClassIdsRef.current = enrollments?.map(e => e.class_id) || [];
+                        const enrolledClassIds = await getEnrolledClassIds(user.id);
+                        enrolledClassIdsRef.current = enrolledClassIds;
 
                         // Check if this notification should be visible
                         if (!shouldShowNotification(newNotification, enrolledClassIdsRef.current, true)) {

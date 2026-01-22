@@ -6,9 +6,10 @@ import { MobileSidebar } from "./MobileSidebar";
 interface DashboardLayoutProps {
   children: ReactNode;
   actions?: ReactNode;
+  fullHeight?: boolean;
 }
 
-export function DashboardLayout({ children, actions }: DashboardLayoutProps) {
+export function DashboardLayout({ children, actions, fullHeight = false }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -18,7 +19,12 @@ export function DashboardLayout({ children, actions }: DashboardLayoutProps) {
 
       <div className="lg:pl-72 transition-all duration-300">
         <DashboardHeader onMenuClick={() => setIsMobileMenuOpen(true)} actions={actions} />
-        <main className="p-4 lg:p-6">
+        <main
+          className={fullHeight
+            ? "h-[calc(100vh-4rem)] overflow-hidden"
+            : "p-4 lg:p-6"
+          }
+        >
           {children}
         </main>
       </div>

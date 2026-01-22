@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getEnrolledClassIds } from '@/lib/studentUtils';
 
 export interface Schedule {
     id: string;
@@ -52,21 +53,28 @@ export function useSchedule() {
                     .order('day_of_week', { ascending: true });
             } else {
                 // For students, only fetch schedules for classes they're enrolled in
-                // First, get the student's enrolled classes
-                const { data: enrolledClasses } = await supabase
-                    .from('class_students')
-                    .select('class_id, classes!inner(course_code)')
-                    .eq('student_id', user.id);
+                // Strict check using shared utility
+                const enrolledClassIds = await getEnrolledClassIds(user.id);
 
-                if (!enrolledClasses || enrolledClasses.length === 0) {
-                    // Student not enrolled in any classes, show no schedules
+                if (enrolledClassIds.length === 0) {
                     setSchedules([]);
                     setLoading(false);
                     return;
                 }
 
-                // Get course_ids that match the enrolled class course_codes
-                const enrolledCourseCodes = enrolledClasses.map((ec: any) => ec.classes.course_code);
+                // Get course codes for enrolled classes
+                const { data: classesData } = await supabase
+                    .from('classes')
+                    .select('course_code')
+                    .in('id', enrolledClassIds);
+
+                if (!classesData || classesData.length === 0) {
+                    setSchedules([]);
+                    setLoading(false);
+                    return;
+                }
+
+                const enrolledCourseCodes = classesData.map(c => c.course_code);
 
                 const { data: enrolledCourses } = await supabase
                     .from('courses')
@@ -240,6 +248,58 @@ export function useSchedule() {
 
             if (error) throw error;
 
+            // Send notifications to enrolled students
+            try {
+                if (data.course_id) {
+                    // Get the course to find associated class
+                    const { data: course } = await supabase
+                        .from('courses')
+                        .select('course_code')
+                        .eq('id', data.course_id)
+                        .single();
+
+                    if (course) {
+                        // Find the class associated with this course (by matching course_code)
+                        const { data: matchingClass } = await supabase
+                            .from('classes')
+                            .select('id')
+                            .eq('course_code', course.course_code)
+                            .eq('lecturer_id', user.id)
+                            .eq('is_active', true)
+                            .maybeSingle();
+
+                        if (matchingClass) {
+                            // Get enrolled students from class_students table
+                            const { data: enrolledStudents } = await supabase
+                                .from('class_students')
+                                .select('student_id')
+                                .eq('class_id', matchingClass.id)
+                                .not('student_id', 'is', null);
+
+                            if (enrolledStudents && enrolledStudents.length > 0) {
+                                const studentIds = enrolledStudents.map(s => s.student_id);
+
+                                // Import and use the notification service
+                                const { notifyScheduleCreated } = await import('@/lib/notificationService');
+
+                                const scheduleDetails = `${data.type || 'Event'} on ${data.is_recurring ? getDayName(data.day_of_week) : new Date(data.specific_date!).toLocaleDateString()} at ${data.start_time}${data.location ? ` - ${data.location}` : ''}`;
+
+                                await notifyScheduleCreated(
+                                    studentIds,
+                                    data.title,
+                                    scheduleDetails,
+                                    newSchedule.id,
+                                    user.id,
+                                    matchingClass.id
+                                );
+                            }
+                        }
+                    }
+                }
+            } catch (notifError) {
+                console.warn('Failed to send schedule creation notifications:', notifError);
+            }
+
             await fetchSchedules();
             return { success: true, data: newSchedule };
         } catch (err: any) {
@@ -247,6 +307,13 @@ export function useSchedule() {
             return { success: false, error: err.message };
         }
     };
+
+    // Helper function to get day name
+    const getDayName = (dayOfWeek: number): string => {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return days[dayOfWeek] || 'Unknown';
+    };
+
 
     const updateSchedule = async (id: string, data: Partial<Schedule>) => {
         if (!user || role !== 'lecturer') return { success: false, error: 'Unauthorized' };
@@ -260,6 +327,75 @@ export function useSchedule() {
 
             if (error) throw error;
 
+            // Send notifications to enrolled students
+            try {
+                // Get the schedule details to find the course
+                const { data: schedule } = await supabase
+                    .from('schedules')
+                    .select('title, course_id, type, day_of_week, start_time, location, is_recurring, specific_date')
+                    .eq('id', id)
+                    .single();
+
+                if (schedule && schedule.course_id) {
+                    // Get the course to find associated class
+                    const { data: course } = await supabase
+                        .from('courses')
+                        .select('course_code')
+                        .eq('id', schedule.course_id)
+                        .single();
+
+                    if (course) {
+                        // Find the class associated with this course
+                        const { data: matchingClass } = await supabase
+                            .from('classes')
+                            .select('id')
+                            .eq('course_code', course.course_code)
+                            .eq('lecturer_id', user.id)
+                            .eq('is_active', true)
+                            .maybeSingle();
+
+                        if (matchingClass) {
+                            // Get enrolled students from class_students table
+                            const { data: enrolledStudents } = await supabase
+                                .from('class_students')
+                                .select('student_id')
+                                .eq('class_id', matchingClass.id)
+                                .not('student_id', 'is', null);
+
+                            if (enrolledStudents && enrolledStudents.length > 0) {
+                                const studentIds = enrolledStudents.map(s => s.student_id);
+
+                                // Import and use the notification service
+                                const { notifyScheduleUpdated } = await import('@/lib/notificationService');
+
+                                // Build update details based on what changed
+                                let updateDetails = '';
+                                if (data.start_time || data.end_time) {
+                                    updateDetails = `Time changed to ${data.start_time || schedule.start_time}`;
+                                } else if (data.location) {
+                                    updateDetails = `Location changed to ${data.location}`;
+                                } else if (data.day_of_week !== undefined) {
+                                    updateDetails = `Day changed to ${getDayName(data.day_of_week)}`;
+                                } else {
+                                    updateDetails = 'Schedule has been updated';
+                                }
+
+                                await notifyScheduleUpdated(
+                                    studentIds,
+                                    schedule.title,
+                                    updateDetails,
+                                    id,
+                                    user.id,
+                                    matchingClass.id
+                                );
+                            }
+                        }
+                    }
+                }
+            } catch (notifError) {
+                console.warn('Failed to send schedule update notifications:', notifError);
+            }
+
             await fetchSchedules();
             return { success: true };
         } catch (err: any) {
@@ -267,6 +403,7 @@ export function useSchedule() {
             return { success: false, error: err.message };
         }
     };
+
 
     const deleteSchedule = async (id: string) => {
         if (!user || role !== 'lecturer') return { success: false, error: 'Unauthorized' };

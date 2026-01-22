@@ -268,6 +268,109 @@ export async function notifyScheduleChange(
 }
 
 /**
+ * Notify students about a new schedule
+ * Only sends notifications to students enrolled in the class
+ */
+export async function notifyScheduleCreated(
+    studentIds: string[],
+    scheduleTitle: string,
+    scheduleDetails: string,
+    scheduleId: string,
+    lecturerId: string,
+    classId?: string
+) {
+    try {
+        if (!studentIds || studentIds.length === 0) {
+            return { success: true, message: "No students to notify" };
+        }
+
+        // Get students who have schedule notifications enabled
+        const { data: profiles, error: profileError } = await supabase
+            .from("student_profiles")
+            .select("user_id")
+            .in("user_id", studentIds)
+            .eq("email_notifications", true); // Using email_notifications as proxy for schedule notifications
+
+        if (profileError) {
+            console.error("Error fetching profiles:", profileError);
+            return { success: false, error: profileError };
+        }
+
+        if (!profiles || profiles.length === 0) {
+            return { success: true, message: "No students with notifications enabled" };
+        }
+
+        const notifyUserIds = profiles.map(p => p.user_id);
+
+        // Send notifications to students with notifications enabled
+        return await createBulkNotifications(notifyUserIds, {
+            title: "New Schedule Added",
+            message: `${scheduleTitle}: ${scheduleDetails}`,
+            type: "schedule",
+            relatedId: scheduleId,
+            classId: classId,
+            senderId: lecturerId,
+            actionType: 'created',
+        });
+    } catch (err) {
+        console.error("Error in notifyScheduleCreated:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Notify students about a schedule update
+ * Only sends notifications to students enrolled in the class
+ */
+export async function notifyScheduleUpdated(
+    studentIds: string[],
+    scheduleTitle: string,
+    updateDetails: string,
+    scheduleId: string,
+    lecturerId: string,
+    classId?: string
+) {
+    try {
+        if (!studentIds || studentIds.length === 0) {
+            return { success: true, message: "No students to notify" };
+        }
+
+        // Get students who have schedule notifications enabled
+        const { data: profiles, error: profileError } = await supabase
+            .from("student_profiles")
+            .select("user_id")
+            .in("user_id", studentIds)
+            .eq("email_notifications", true); // Using email_notifications as proxy for schedule notifications
+
+        if (profileError) {
+            console.error("Error fetching profiles:", profileError);
+            return { success: false, error: profileError };
+        }
+
+        if (!profiles || profiles.length === 0) {
+            return { success: true, message: "No students with notifications enabled" };
+        }
+
+        const notifyUserIds = profiles.map(p => p.user_id);
+
+        // Send notifications to students with notifications enabled
+        return await createBulkNotifications(notifyUserIds, {
+            title: "Schedule Updated",
+            message: `${scheduleTitle}: ${updateDetails}`,
+            type: "schedule",
+            relatedId: scheduleId,
+            classId: classId,
+            senderId: lecturerId,
+            actionType: 'updated',
+        });
+    } catch (err) {
+        console.error("Error in notifyScheduleUpdated:", err);
+        return { success: false, error: err };
+    }
+}
+
+
+/**
  * Notify all students in a class (class-scoped notification)
  * Respects individual student preferences
  */
