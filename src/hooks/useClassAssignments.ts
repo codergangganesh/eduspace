@@ -114,7 +114,7 @@ export function useClassAssignments(classId: string | null) {
         if (!classId || !user) return;
 
         // Real-time subscription for assignments
-        const subscription = supabase
+        const assignmentsSubscription = supabase
             .channel(`assignments_${classId}`)
             .on(
                 'postgres_changes',
@@ -130,8 +130,38 @@ export function useClassAssignments(classId: string | null) {
             )
             .subscribe();
 
+        // Real-time subscription for assignment_submissions
+        // This ensures submission counts update instantly as students submit
+        const submissionsSubscription = supabase
+            .channel(`submissions_${classId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'assignment_submissions',
+                },
+                async (payload) => {
+                    // Check if this submission is for an assignment in this class
+                    if (payload.new && 'assignment_id' in payload.new) {
+                        const assignmentId = payload.new.assignment_id;
+                        const isRelevant = assignments.some(a => a.id === assignmentId);
+
+                        if (isRelevant) {
+                            // Refetch to update submission counts
+                            fetchAssignments();
+                        }
+                    } else {
+                        // For DELETE events, refetch to be safe
+                        fetchAssignments();
+                    }
+                }
+            )
+            .subscribe();
+
         return () => {
-            subscription.unsubscribe();
+            assignmentsSubscription.unsubscribe();
+            submissionsSubscription.unsubscribe();
         };
     }, [classId, user, fetchAssignments]);
 

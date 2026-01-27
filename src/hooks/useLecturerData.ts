@@ -204,9 +204,48 @@ export function useLecturerData() {
             )
             .subscribe();
 
+        // Set up real-time subscription for class_students
+        // This updates enrolled student counts when students are added/removed
+        const classStudentsChannel = supabase
+            .channel('class_students_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'class_students'
+                },
+                () => {
+                    // Refetch data when class enrollment changes
+                    fetchData();
+                }
+            )
+            .subscribe();
+
+        // Set up real-time subscription for access_requests
+        // This updates stats when students accept/reject invitations
+        const accessRequestsChannel = supabase
+            .channel(`access_requests_lecturer_${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'access_requests',
+                    filter: `lecturer_id=eq.${user.id}`
+                },
+                () => {
+                    // Refetch data when access requests change
+                    fetchData();
+                }
+            )
+            .subscribe();
+
         // Cleanup subscription on unmount
         return () => {
             supabase.removeChannel(submissionsChannel);
+            supabase.removeChannel(classStudentsChannel);
+            supabase.removeChannel(accessRequestsChannel);
         };
     }, [user]);
 

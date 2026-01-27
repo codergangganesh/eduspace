@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -26,9 +26,110 @@ export interface AccessRequest {
 }
 
 export function useAccessRequests() {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
+
+    // Fetch access requests based on user role
+    const fetchAccessRequests = useCallback(async () => {
+        if (!user) return;
+
+        try {
+            if (role === 'lecturer') {
+                // Lecturers see all requests they've sent
+                const { data, error: fetchError } = await supabase
+                    .from('access_requests')
+                    .select('*')
+                    .eq('lecturer_id', user.id)
+                    .order('sent_at', { ascending: false });
+
+                if (fetchError) throw fetchError;
+                setAccessRequests(data || []);
+            } else if (role === 'student') {
+                // Students see requests sent to them
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                const userEmail = authUser?.email;
+
+                if (userEmail) {
+                    const { data, error: fetchError } = await supabase
+                        .from('access_requests')
+                        .select('*')
+                        .eq('student_email', userEmail)
+                        .order('sent_at', { ascending: false });
+
+                    if (fetchError) throw fetchError;
+                    setAccessRequests(data || []);
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching access requests:', err);
+            setError(err as Error);
+        }
+    }, [user, role]);
+
+    // Set up real-time subscriptions
+    useEffect(() => {
+        if (!user) return;
+
+        // Initial fetch
+        fetchAccessRequests();
+
+        let subscription;
+
+        if (role === 'lecturer') {
+            // Subscribe to changes in requests sent by this lecturer
+            subscription = supabase
+                .channel(`access_requests_lecturer_${user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'access_requests',
+                        filter: `lecturer_id=eq.${user.id}`
+                    },
+                    () => {
+                        fetchAccessRequests();
+                    }
+                )
+                .subscribe();
+        } else if (role === 'student') {
+            // Subscribe to changes in requests sent to this student
+            // Note: We can't filter by email directly in realtime, so we fetch and filter
+            subscription = supabase
+                .channel(`access_requests_student_${user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'access_requests'
+                    },
+                    async (payload) => {
+                        // Check if this change is relevant to the current student
+                        const { data: { user: authUser } } = await supabase.auth.getUser();
+                        const userEmail = authUser?.email;
+
+                        if (payload.new && 'student_email' in payload.new) {
+                            if (payload.new.student_email === userEmail) {
+                                fetchAccessRequests();
+                            }
+                        } else {
+                            // For DELETE events, refetch to be safe
+                            fetchAccessRequests();
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        return () => {
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
+        };
+    }, [user, role, fetchAccessRequests]);
 
     const sendAccessRequestToAll = async (classId: string): Promise<InvitationResult> => {
         if (!user) throw new Error('User not authenticated');
@@ -175,6 +276,7 @@ export function useAccessRequests() {
     return {
         loading,
         error,
+        accessRequests,
         sendAccessRequestToAll,
         sendAccessRequest,
         resendAccessRequest,
@@ -182,5 +284,6 @@ export function useAccessRequests() {
         getAccessRequests,
         getMyAccessRequests,
         respondToAccessRequest,
+        refetchAccessRequests: fetchAccessRequests,
     };
 }

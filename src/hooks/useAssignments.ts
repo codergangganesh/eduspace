@@ -198,8 +198,8 @@ export function useAssignments() {
 
         fetchAssignments();
 
-        // Real-time subscription
-        const subscription = supabase
+        // Real-time subscription for assignments table
+        const assignmentsSubscription = supabase
             .channel('assignments_changes')
             .on(
                 'postgres_changes',
@@ -214,10 +214,30 @@ export function useAssignments() {
             )
             .subscribe();
 
+        // Real-time subscription for assignment_submissions table
+        // This ensures students see their submission status update instantly
+        const submissionsSubscription = supabase
+            .channel(`assignment_submissions_${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'assignment_submissions',
+                    filter: role === 'student' ? `student_id=eq.${user.id}` : undefined,
+                },
+                () => {
+                    // Refetch assignments to update submission status
+                    fetchAssignments();
+                }
+            )
+            .subscribe();
+
         return () => {
-            subscription.unsubscribe();
+            assignmentsSubscription.unsubscribe();
+            submissionsSubscription.unsubscribe();
         };
-    }, [user, fetchAssignments]);
+    }, [user, fetchAssignments, role]);
 
     // Create assignment (lecturer only)
     const createAssignment = async (data: {
