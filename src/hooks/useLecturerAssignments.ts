@@ -318,6 +318,7 @@ export function useLecturerAssignments() {
         subjects,
         loading,
         createAssignment,
+        updateAssignment,
         deleteAssignment,
         fetchSubjects,
         refreshParams: fetchAssignments

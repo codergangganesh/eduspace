@@ -38,6 +38,7 @@ import { format } from 'date-fns';
 import { CreateClassAssignmentDialog } from '@/components/assignments/CreateClassAssignmentDialog';
 import { EditClassAssignmentDialog } from '@/components/assignments/EditClassAssignmentDialog';
 import { ManageSubjectsDialog } from '@/components/assignments/ManageSubjectsDialog';
+import { SubmissionDetailsDialog } from '@/components/assignments/SubmissionDetailsDialog';
 import { ClassAssignment } from '@/hooks/useClassAssignments';
 
 type FilterType = 'all' | 'active' | 'closed';
@@ -51,6 +52,7 @@ export default function ClassAssignmentsView() {
 
     const [filter, setFilter] = useState<FilterType>('all');
     const [editingAssignment, setEditingAssignment] = useState<ClassAssignment | null>(null);
+    const [viewSubmissionAssignment, setViewSubmissionAssignment] = useState<ClassAssignment | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isSubjectsOpen, setIsSubjectsOpen] = useState(false);
 
@@ -213,156 +215,154 @@ export default function ClassAssignmentsView() {
                     </Button>
                 </div>
 
-                {/* Assignments Table */}
-                <Card>
-                    <CardContent className="p-0">
-                        {loading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            </div>
-                        ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Title</TableHead>
-                                        <TableHead>Subject / Topic</TableHead>
-                                        <TableHead>Due Date</TableHead>
-                                        <TableHead>Submissions</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredAssignments.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell
-                                                colSpan={6}
-                                                className="h-24 text-center text-muted-foreground"
-                                            >
-                                                {filter === 'all'
-                                                    ? 'No assignments created yet.'
-                                                    : `No ${filter} assignments.`}
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        filteredAssignments.map((assignment) => (
-                                            <TableRow key={assignment.id}>
-                                                <TableCell>
-                                                    <div className="font-medium text-foreground">
-                                                        {assignment.title}
-                                                    </div>
-                                                    {assignment.attachment_url && (
-                                                        <a
-                                                            href={assignment.attachment_url}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1"
-                                                        >
-                                                            <ExternalLink className="size-3" />
-                                                            View Attachment
-                                                        </a>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-medium text-sm">
-                                                            {assignment.subject_name || 'General'}
-                                                        </span>
-                                                        {assignment.topic && (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {assignment.topic}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                                        <Calendar className="size-4" />
-                                                        <span>
-                                                            {assignment.due_date
-                                                                ? format(
-                                                                    new Date(assignment.due_date),
-                                                                    'MMM d, yyyy'
-                                                                )
-                                                                : 'No due date'}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Users className="size-4 text-muted-foreground" />
-                                                        <span className="font-medium">
-                                                            {assignment.submission_count || 0} /{' '}
-                                                            {assignment.total_students || 0}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        variant={
-                                                            assignment.status === 'active'
-                                                                ? 'default'
+                {/* Assignments Grid */}
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                ) : filteredAssignments.length === 0 ? (
+                    <Card>
+                        <CardContent className="p-12 text-center">
+                            <FileText className="size-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">
+                                {filter === 'all' ? 'No assignments created yet' : `No ${filter} assignments`}
+                            </h3>
+                            <p className="text-muted-foreground">
+                                {filter === 'all'
+                                    ? 'Create an assignment to get started'
+                                    : 'Try adjusting your filters'}
+                            </p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredAssignments.map((assignment) => (
+                            <Card key={assignment.id} className="flex flex-col h-full hover:shadow-md transition-shadow">
+                                <CardContent className="p-6 flex flex-col h-full gap-4">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="space-y-1">
+                                            <h3 className="font-semibold text-lg line-clamp-2" title={assignment.title}>
+                                                {assignment.title}
+                                            </h3>
+                                            <div className="flex flex-wrap gap-2 text-xs">
+                                                <Badge
+                                                    variant={
+                                                        assignment.status === 'active'
+                                                            ? 'default'
+                                                            : assignment.status === 'completed'
+                                                                ? 'default' // usage of a success color would be better, but default is fine or custom class
                                                                 : 'secondary'
-                                                        }
-                                                        className="capitalize"
-                                                    >
-                                                        {assignment.status}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon">
-                                                                <MoreVertical className="size-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem
-                                                                onClick={() => handleEditClick(assignment)}
-                                                            >
-                                                                <Edit className="size-4 mr-2" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleStatusToggle(
-                                                                        assignment.id,
-                                                                        assignment.status
-                                                                    )
-                                                                }
-                                                            >
-                                                                {assignment.status === 'active' ? (
-                                                                    <>
-                                                                        <XCircle className="size-4 mr-2" />
-                                                                        Close Assignment
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <CheckCircle className="size-4 mr-2" />
-                                                                        Activate Assignment
-                                                                    </>
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive"
-                                                                onClick={() =>
-                                                                    handleDeleteClick(assignment.id)
-                                                                }
-                                                            >
-                                                                <Trash2 className="size-4 mr-2" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        )}
-                    </CardContent>
-                </Card>
+                                                    }
+                                                    className={
+                                                        assignment.status === 'active'
+                                                            ? 'bg-green-600 hover:bg-green-700'
+                                                            : assignment.status === 'completed'
+                                                                ? 'bg-blue-600 hover:bg-blue-700'
+                                                                : ''
+                                                    }
+                                                >
+                                                    {assignment.status === 'completed' ? 'Completed' : assignment.status}
+                                                </Badge>
+                                                {assignment.subject_name && (
+                                                    <Badge variant="outline">{assignment.subject_name}</Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                                                    <MoreVertical className="size-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handleEditClick(assignment)}>
+                                                    <Edit className="size-4 mr-2" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleStatusToggle(assignment.id, assignment.status)}
+                                                >
+                                                    {assignment.status === 'active' ? (
+                                                        <>
+                                                            <XCircle className="size-4 mr-2" />
+                                                            Close
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <CheckCircle className="size-4 mr-2" />
+                                                            Activate
+                                                        </>
+                                                    )}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-destructive focus:text-destructive"
+                                                    onClick={() => handleDeleteClick(assignment.id)}
+                                                >
+                                                    <Trash2 className="size-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+
+                                    <div className="space-y-2 text-sm text-muted-foreground flex-1">
+                                        {assignment.topic && (
+                                            <p className="line-clamp-2">Topic: {assignment.topic}</p>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="size-4" />
+                                            <span>
+                                                Due: {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, yyyy") : "No due date"}
+                                            </span>
+                                        </div>
+                                        {assignment.attachment_url && (
+                                            <a
+                                                href={assignment.attachment_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 text-primary hover:underline w-fit"
+                                            >
+                                                <ExternalLink className="size-4" />
+                                                Attachment
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-4 border-t space-y-4">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Users className="size-4" />
+                                                <span>Submissions</span>
+                                            </div>
+                                            <span className="font-medium">
+                                                {assignment.submission_count || 0} / {assignment.total_students || 0}
+                                            </span>
+                                        </div>
+
+                                        {/* Progress Bar could go here */}
+                                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-primary transition-all duration-500"
+                                                style={{
+                                                    width: `${Math.min(100, ((assignment.submission_count || 0) / (assignment.total_students || 1)) * 100)}%`
+                                                }}
+                                            />
+                                        </div>
+
+                                        <Button
+                                            className="w-full"
+                                            variant="outline"
+                                            onClick={() => setViewSubmissionAssignment(assignment)}
+                                        >
+                                            <Users className="size-4 mr-2" />
+                                            Submission Details
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
 
                 {/* Dialogs */}
                 <EditClassAssignmentDialog
@@ -378,6 +378,17 @@ export default function ClassAssignmentsView() {
                     onOpenChange={setIsSubjectsOpen}
                     classId={classId!}
                 />
+
+                {viewSubmissionAssignment && (
+                    <SubmissionDetailsDialog
+                        open={!!viewSubmissionAssignment}
+                        onOpenChange={(open) => !open && setViewSubmissionAssignment(null)}
+                        assignmentId={viewSubmissionAssignment.id}
+                        classId={classId!}
+                        assignmentTitle={viewSubmissionAssignment.title}
+                        className={currentClass.class_name || currentClass.course_code}
+                    />
+                )}
             </div>
         </DashboardLayout>
     );

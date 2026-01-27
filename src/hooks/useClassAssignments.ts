@@ -14,7 +14,7 @@ export interface ClassAssignment {
     due_date: string | null;
     attachment_url: string | null;
     attachment_name: string | null;
-    status: 'active' | 'closed';
+    status: 'active' | 'closed' | 'completed';
     created_at: string;
     updated_at: string;
     submission_count?: number;
@@ -97,6 +97,29 @@ export function useClassAssignments(classId: string | null) {
 
             console.log('Assignments with stats:', assignmentsWithStats);
             setAssignments(assignmentsWithStats);
+
+            // Auto-complete logic: Check if any active assignment has full submissions
+            // We do this check after setting state to avoid blocking the UI, but we trigger the update
+            assignmentsWithStats.forEach(async (assignment) => {
+                if (
+                    assignment.status === 'active' &&
+                    assignment.total_students > 0 &&
+                    assignment.submission_count === assignment.total_students
+                ) {
+                    console.log(`Auto-completing assignment ${assignment.id} as all ${assignment.total_students} students have submitted.`);
+                    // We call the update directly via Supabase to avoid circular dependency with the hook's updateAssignmentStatus wrapper if it causes issues
+                    // But using the wrapper is better for notifications if we add them later. 
+                    // To be safe and simple, we'll direct update here or use the internal logic.
+                    // For now, let's just use the Supabase call directly to avoid needing the function wrapper in scope if it's defined later.
+                    const { error } = await supabase
+                        .from('assignments')
+                        .update({ status: 'completed', updated_at: new Date().toISOString() })
+                        .eq('id', assignment.id);
+
+                    if (error) console.error('Error auto-completing assignment:', error);
+                }
+            });
+
             setError(null);
         } catch (err) {
             console.error('Error fetching class assignments:', err);
@@ -331,7 +354,7 @@ export function useClassAssignments(classId: string | null) {
         }
     };
 
-    const updateAssignmentStatus = async (id: string, status: 'active' | 'closed') => {
+    const updateAssignmentStatus = async (id: string, status: 'active' | 'closed' | 'completed') => {
         if (!user) throw new Error('User not authenticated');
 
         try {
