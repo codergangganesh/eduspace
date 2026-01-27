@@ -11,6 +11,7 @@ export interface Notification {
     is_read: boolean;
     created_at: string;
     link?: string;
+    related_id?: string; // ID of related entity (assignment, message, etc.)
     metadata?: any;
     class_id?: string; // Class association for filtering
 }
@@ -197,11 +198,28 @@ export function useNotifications() {
         }
     };
 
+    const clearAllNotifications = async () => {
+        try {
+            const { error } = await supabase
+                .from("notifications")
+                .delete()
+                .eq("recipient_id", user?.id);
+
+            if (error) throw error;
+
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (error) {
+            console.error("Error clearing all notifications:", error);
+        }
+    };
+
     return {
         notifications,
         loading,
         unreadCount,
         markAsRead,
         markAllAsRead,
+        clearAllNotifications,
     };
 }

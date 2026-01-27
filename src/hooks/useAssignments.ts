@@ -370,6 +370,35 @@ export function useAssignments() {
 
             if (error) throw error;
 
+            // Send notification to student about the grade
+            try {
+                const { data: submission } = await supabase
+                    .from('assignment_submissions')
+                    .select('student_id, assignment_id')
+                    .eq('id', submissionId)
+                    .single();
+
+                if (submission) {
+                    const { data: assignment } = await supabase
+                        .from('assignments')
+                        .select('title')
+                        .eq('id', submission.assignment_id)
+                        .single();
+
+                    if (assignment) {
+                        const { notifyGradePosted } = await import('@/lib/notificationService');
+                        await notifyGradePosted(
+                            submission.student_id,
+                            assignment.title,
+                            grade.toString(),
+                            submission.assignment_id
+                        );
+                    }
+                }
+            } catch (notifError) {
+                console.warn('Failed to send grade notification:', notifError);
+            }
+
             return { success: true };
         } catch (err: any) {
             console.error('Error grading submission:', err);
@@ -400,10 +429,10 @@ export function useAssignments() {
 
             // Send notification to lecturer
             try {
-                // Get assignment and student details
+                // Get assignment details including class_id
                 const { data: assignment } = await supabase
                     .from('assignments')
-                    .select('lecturer_id, title')
+                    .select('lecturer_id, title, class_id')
                     .eq('id', assignmentId)
                     .single();
 
@@ -413,17 +442,17 @@ export function useAssignments() {
                     .eq('user_id', user.id)
                     .single();
 
-                if (assignment) {
-                    await supabase.from('notifications').insert({
-                        recipient_id: assignment.lecturer_id,
-                        sender_id: user.id,
-                        title: 'New Submission',
-                        message: `${studentProfile?.full_name || 'A student'} submitted ${assignment.title}`,
-                        type: 'submission',
-                        action_type: 'submitted',
-                        related_id: assignmentId,
-                        is_read: false
-                    });
+                if (assignment && assignment.class_id) {
+                    // Use notification service for consistent handling
+                    const { notifyAssignmentSubmission } = await import('@/lib/notificationService');
+                    await notifyAssignmentSubmission(
+                        assignment.lecturer_id,
+                        studentProfile?.full_name || 'A student',
+                        assignment.title,
+                        assignmentId,
+                        assignment.class_id,
+                        user.id
+                    );
                 }
             } catch (notifError) {
                 console.warn('Failed to send submission notification:', notifError);

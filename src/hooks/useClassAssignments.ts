@@ -206,30 +206,19 @@ export function useClassAssignments(classId: string | null) {
                     .eq('class_id', classId)
                     .eq('status', 'accepted');
 
-                const acceptedStudentIds = new Set(acceptedRequests?.map(r => r.student_id) || []);
+                const acceptedStudentIds = acceptedRequests?.map(r => r.student_id).filter(id => id !== null) || [];
 
-                const notifications = enrolledStudents
-                    .filter(student => acceptedStudentIds.has(student.student_id))
-                    .map(student => ({
-                        recipient_id: student.student_id,
-                        sender_id: user.id,
-                        title: 'New Assignment Posted',
-                        message: `${data.title} has been posted. Due date: ${data.due_date.toLocaleDateString()}`,
-                        type: 'assignment',
-                        action_type: 'created',
-                        related_id: newAssignment.id,
-                        class_id: classId,
-                        is_read: false,
-                    }));
-
-                if (notifications.length > 0) {
-                    const { error: notifError } = await supabase
-                        .from('notifications')
-                        .insert(notifications);
-
-                    if (notifError) {
-                        console.error('Error creating notifications:', notifError);
-                    }
+                if (acceptedStudentIds.length > 0) {
+                    // Use notification service for consistent handling and preference checking
+                    const { notifyNewAssignment } = await import('@/lib/notificationService');
+                    await notifyNewAssignment(
+                        acceptedStudentIds,
+                        data.title,
+                        newAssignment.id,
+                        user.id,
+                        classId,
+                        data.due_date.toISOString()
+                    );
                 }
             }
 
@@ -289,24 +278,25 @@ export function useClassAssignments(classId: string | null) {
                         .eq('class_id', assignment.class_id)
                         .eq('status', 'accepted');
 
-                    const acceptedStudentIds = new Set(acceptedRequests?.map(r => r.student_id) || []);
+                    const acceptedStudentIds = acceptedRequests?.map(r => r.student_id).filter(id => id !== null) || [];
 
-                    const notifications = enrolledStudents
-                        .filter(student => acceptedStudentIds.has(student.student_id))
-                        .map(student => ({
-                            recipient_id: student.student_id,
-                            sender_id: user.id,
-                            title: 'Assignment Updated',
-                            message: `${assignment.title} has been updated`,
-                            type: 'assignment',
-                            action_type: 'updated',
-                            related_id: id,
-                            class_id: assignment.class_id,
-                            is_read: false,
-                        }));
+                    if (acceptedStudentIds.length > 0) {
+                        // Build update details based on what changed
+                        let updateDetails = 'Assignment has been updated';
+                        if (data.title) updateDetails = 'Title updated';
+                        else if (data.due_date) updateDetails = `Due date changed to ${data.due_date.toLocaleDateString()}`;
+                        else if (data.description) updateDetails = 'Description updated';
 
-                    if (notifications.length > 0) {
-                        await supabase.from('notifications').insert(notifications);
+                        // Use notification service for consistent handling
+                        const { notifyAssignmentUpdated } = await import('@/lib/notificationService');
+                        await notifyAssignmentUpdated(
+                            acceptedStudentIds,
+                            assignment.title,
+                            id,
+                            updateDetails,
+                            user.id,
+                            assignment.class_id
+                        );
                     }
                 }
             }

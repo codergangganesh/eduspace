@@ -9,12 +9,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 export function NotificationsPopover() {
     const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
+    const { role } = useAuth();
     const navigate = useNavigate();
 
     const getNotificationIcon = (type: string) => {
@@ -42,7 +44,7 @@ export function NotificationsPopover() {
             await markAsRead(notification.id);
         }
 
-        // Navigate based on type and related_id
+        // Navigate based on type, related_id, and user role
         if (notification.link) {
             navigate(notification.link);
         } else if (notification.related_id) {
@@ -51,19 +53,32 @@ export function NotificationsPopover() {
                     navigate(`/messages?conversation=${notification.related_id}`);
                     break;
                 case "assignment":
-                    navigate(`/assignments?id=${notification.related_id}`);
+                    // Students go to /assignments, lecturers go to /lecturer/assignments
+                    if (role === 'student') {
+                        navigate(`/assignments`);
+                    } else if (role === 'lecturer' && notification.class_id) {
+                        navigate(`/lecturer/assignments/${notification.class_id}`);
+                    } else {
+                        navigate(`/assignments`);
+                    }
                     break;
                 case "schedule":
-                    navigate(`/schedule?id=${notification.related_id}`);
+                    navigate(`/schedule`);
                     break;
                 case "access_request":
-                    navigate(`/classes?request=${notification.related_id}`);
+                    navigate(`/all-students`);
                     break;
                 case "submission":
-                    navigate(`/lecturer-assignments?submission=${notification.related_id}`);
+                    // Lecturers go to the class assignments view to see submissions
+                    if (role === 'lecturer' && notification.class_id) {
+                        navigate(`/lecturer/assignments/${notification.class_id}`);
+                    } else {
+                        navigate(`/assignments`);
+                    }
                     break;
                 case "grade":
-                    navigate(`/assignments?id=${notification.related_id}`);
+                    // Students go to assignments to see their grades
+                    navigate(`/assignments`);
                     break;
                 default:
                     navigate("/notifications");

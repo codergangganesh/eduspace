@@ -631,3 +631,53 @@ export async function clearAccessRequestNotification(
         return { success: false, error: err };
     }
 }
+
+/**
+ * Notify lecturer about an assignment submission
+ * Includes class_id for proper filtering and respects lecturer preferences
+ */
+export async function notifyAssignmentSubmission(
+    lecturerId: string,
+    studentName: string,
+    assignmentTitle: string,
+    assignmentId: string,
+    classId: string,
+    studentId: string
+) {
+    try {
+        // Check lecturer preferences
+        const { data: lecturerProfile } = await supabase
+            .from("lecturer_profiles")
+            .select("submission_notifications")
+            .eq("user_id", lecturerId)
+            .single();
+
+        if (!lecturerProfile?.submission_notifications) {
+            return { success: true, message: "Notifications disabled" };
+        }
+
+        // Create notification with class_id for proper filtering
+        const { error } = await supabase.from("notifications").insert({
+            recipient_id: lecturerId,
+            sender_id: studentId,
+            title: "New Assignment Submission",
+            message: `${studentName} submitted "${assignmentTitle}"`,
+            type: "submission",
+            action_type: "submitted",
+            related_id: assignmentId,
+            class_id: classId,
+            is_read: false,
+        });
+
+        if (error) {
+            console.error("Error creating submission notification:", error);
+            return { success: false, error };
+        }
+
+        return { success: true };
+    } catch (err) {
+        console.error("Error in notifyAssignmentSubmission:", err);
+        return { success: false, error: err };
+    }
+}
+
