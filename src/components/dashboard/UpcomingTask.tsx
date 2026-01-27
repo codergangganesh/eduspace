@@ -23,7 +23,7 @@ const typeStyles = {
 export function UpcomingTask({ title, course, dueDate, dueTime, type, isUrgent }: UpcomingTaskProps) {
   return (
     <div className={cn(
-      "flex items-start gap-4 p-4 rounded-lg border transition-all hover:shadow-sm cursor-pointer",
+      "flex items-start gap-4 p-4 rounded-lg border",
       isUrgent ? "border-destructive/50 bg-destructive/5" : "border-border bg-surface"
     )}>
       <div className={cn("px-2.5 py-1 rounded-md text-xs font-medium capitalize", typeStyles[type])}>

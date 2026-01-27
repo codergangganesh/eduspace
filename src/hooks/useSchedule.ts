@@ -36,7 +36,10 @@ export function useSchedule(classId?: string) {
     const enrolledClassIdsRef = useRef<string[]>([]);
 
     const fetchSchedules = useCallback(async () => {
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
 
         try {
@@ -94,9 +97,9 @@ export function useSchedule(classId?: string) {
 
     // Set up Real-time Subscription
     useEffect(() => {
-        if (!user) return;
-
         fetchSchedules();
+
+        if (!user) return;
 
         const channel = supabase
             .channel(`schedules-${role}-${user.id}-${classId || 'all'}`)

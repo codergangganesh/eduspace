@@ -198,7 +198,7 @@ export default function StudentAssignments() {
                                 <Card
                                     key={assignment.id}
                                     className={cn(
-                                        "transition-all hover:shadow-lg border-l-4",
+                                        "border-l-4",
                                         assignment.studentStatus === "overdue" && "border-l-red-500",
                                         assignment.studentStatus === "pending" && "border-l-amber-500",
                                         assignment.studentStatus === "submitted" && "border-l-blue-500",
@@ -217,7 +217,7 @@ export default function StudentAssignments() {
                                                             <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md">
                                                                 {assignment.course_code || "GEN"}
                                                             </span>
-                                                            <span className="text-sm text-muted-foreground">{assignment.subject_name || assignment.course_title}</span>
+                                                            <span className="text-sm text-muted-foreground">{assignment.course_title}</span>
                                                             {assignment.lecturer_name && (
                                                                 <>
                                                                     <span className="text-muted-foreground">•</span>

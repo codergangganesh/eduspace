@@ -80,7 +80,7 @@ export default function LecturerDashboard() {
           <div className="xl:col-span-2 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Recent Submissions</h2>
-              <a href="/assignments" className="text-sm text-primary hover:underline font-medium">
+              <a href="/lecturer/assignments" className="text-sm text-primary hover:underline font-medium">
                 View All
               </a>
             </div>
@@ -207,7 +207,7 @@ export default function LecturerDashboard() {
               <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button
-                  onClick={() => navigate('/assignments')}
+                  onClick={() => navigate('/lecturer/assignments')}
                   className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
                 >
                   <FileText className="size-5 text-primary" />

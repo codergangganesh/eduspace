@@ -22,7 +22,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 

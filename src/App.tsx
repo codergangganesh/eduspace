@@ -119,14 +119,7 @@ const App = () => (
                 />
 
                 {/* Protected Common Routes */}
-                <Route
-                  path="/assignments"
-                  element={
-                    <ProtectedRoute>
-                      <Assignments />
-                    </ProtectedRoute>
-                  }
-                />
+                {/* Assignments Route Removed */}
                 <Route
                   path="/assignments/:id/submit"
                   element={

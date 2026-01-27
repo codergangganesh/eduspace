@@ -168,13 +168,6 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-foreground">Current Assignments</h2>
-                <Button
-                  variant="link"
-                  onClick={() => navigate("/assignments")}
-                  className="text-primary hover:no-underline px-0"
-                >
-                  View All
-                </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -182,14 +175,14 @@ export default function Dashboard() {
                   title="Assignments Assigned"
                   value={stats.total}
                   icon={FileText}
-                  onClick={() => navigate("/assignments")}
+                  onClick={() => { }} // Disabled navigation
                   subtitle="View all assignments"
                 />
                 <AssignmentCard
                   title="Action Required"
                   value={stats.pending}
                   icon={AlertCircle}
-                  onClick={() => navigate("/assignments?filter=pending")}
+                  onClick={() => { }} // Disabled navigation
                   variant="danger"
                   subtitle="Pending submissions"
                 />

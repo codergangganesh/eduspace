@@ -56,11 +56,11 @@ export function NotificationPanel() {
             case "assignment":
                 // Students go to /assignments, lecturers go to /lecturer/assignments
                 if (role === 'student') {
-                    navigate(`/assignments`);
+                    navigate(`/dashboard`);
                 } else if (role === 'lecturer' && notification.class_id) {
                     navigate(`/lecturer/assignments/${notification.class_id}`);
                 } else {
-                    navigate(`/assignments`);
+                    navigate(`/dashboard`);
                 }
                 break;
             case "schedule":
@@ -74,12 +74,12 @@ export function NotificationPanel() {
                 if (role === 'lecturer' && notification.class_id) {
                     navigate(`/lecturer/assignments/${notification.class_id}`);
                 } else {
-                    navigate(`/assignments`);
+                    navigate(`/dashboard`);
                 }
                 break;
             case "grade":
-                // Students go to assignments to see their grades
-                navigate(`/assignments`);
+                // Students go to dashboard
+                navigate(`/dashboard`);
                 break;
             default:
                 navigate("/notifications");

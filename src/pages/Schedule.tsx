@@ -28,7 +28,8 @@ import {
   Edit,
   Trash2,
   ArrowLeft,
-  CalendarDays
+  CalendarDays,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
@@ -71,7 +72,7 @@ const convertToClassEvent = (schedule: ScheduleType): ClassEvent => ({
   startTime: schedule.start_time?.slice(0, 5) || "08:00",
   endTime: schedule.end_time?.slice(0, 5) || "09:00",
   location: schedule.location || undefined,
-  instructor: schedule.course_title || undefined,
+  instructor: schedule.course_code || undefined,
   color: schedule.color || "bg-blue-500",
   dayOfWeek: schedule.day_of_week,
   lecturerName: schedule.lecturer_name || "Unknown Lecturer",
@@ -94,11 +95,13 @@ export default function Schedule() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   // Hooks
-  const { classes } = useClasses();
+  const { classes, loading: classesLoading } = useClasses();
   const { schedules, createSchedule, updateSchedule, deleteSchedule, loading } = useSchedule(selectedClassId || undefined);
 
   // UI State
   const [currentDate, setCurrentDate] = useState(new Date());
+
+
   const [viewMode, setViewMode] = useState<"week" | "month" | "list">("week");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
@@ -133,6 +136,16 @@ export default function Schedule() {
       }
     }
   }, [selectedClassId, role, classes, profile]);
+
+  if (loading || classesLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const weeklySchedule: ClassEvent[] = schedules.map(convertToClassEvent);
 
