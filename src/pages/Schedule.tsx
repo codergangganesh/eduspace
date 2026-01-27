@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -22,23 +22,25 @@ import {
   MapPin,
   Users,
   BookOpen,
-  CalendarDays,
   Grid3X3,
   List,
   FileText,
   Edit,
   Trash2,
+  ArrowLeft,
+  CalendarDays
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSchedule, Schedule as ScheduleType } from "@/hooks/useSchedule";
+import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
 
 interface ClassEvent {
   id: string;
   title: string;
-  type: "lecture" | "lab" | "tutorial" | "exam";
+  type: "lecture" | "lab" | "tutorial" | "exam" | "office_hours" | "event";
   startTime: string;
   endTime: string;
   location?: string;
@@ -49,6 +51,7 @@ interface ClassEvent {
   subjectName: string;
   notes?: string;
   specificDate?: string;
+  classId?: string;
 }
 
 interface CalendarEvent {
@@ -61,10 +64,10 @@ interface CalendarEvent {
 }
 
 // Convert Supabase schedule to ClassEvent format
-const convertToClassEvent = (schedule: any): ClassEvent => ({
+const convertToClassEvent = (schedule: ScheduleType): ClassEvent => ({
   id: schedule.id,
   title: schedule.title,
-  type: schedule.type as ClassEvent['type'],
+  type: schedule.type,
   startTime: schedule.start_time?.slice(0, 5) || "08:00",
   endTime: schedule.end_time?.slice(0, 5) || "09:00",
   location: schedule.location || undefined,
@@ -73,8 +76,9 @@ const convertToClassEvent = (schedule: any): ClassEvent => ({
   dayOfWeek: schedule.day_of_week,
   lecturerName: schedule.lecturer_name || "Unknown Lecturer",
   subjectName: schedule.subject_name || schedule.title || "Unknown Subject",
-  notes: schedule.notes,
-  specificDate: schedule.specific_date
+  notes: schedule.notes || undefined,
+  specificDate: schedule.specific_date || undefined,
+  classId: schedule.class_id || undefined
 });
 
 const timeSlots = [
@@ -86,7 +90,14 @@ const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 
 export default function Schedule() {
   const { role, profile, user } = useAuth();
-  const { schedules, assignments, createSchedule, updateSchedule, deleteSchedule, loading } = useSchedule();
+  // Lecturer State: Selected Class ID
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
+  // Hooks
+  const { classes } = useClasses();
+  const { schedules, createSchedule, updateSchedule, deleteSchedule, loading } = useSchedule(selectedClassId || undefined);
+
+  // UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"week" | "month" | "list">("week");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -107,14 +118,21 @@ export default function Schedule() {
     notes: ""
   });
 
-  // Pre-fill lecturer name for lecturers
-  useEffect(() => {
-    if (role === 'lecturer' && profile?.full_name) {
-      setFormData(prev => ({ ...prev, lecturerName: profile.full_name || "" }));
-    }
-  }, [role, profile]);
-
   const isStudent = role === "student";
+
+  // When a class is selected (for lecturer), pre-fill form data
+  useEffect(() => {
+    if (selectedClassId && role === 'lecturer') {
+      const selectedClass = classes.find(c => c.id === selectedClassId);
+      if (selectedClass) {
+        setFormData(prev => ({
+          ...prev,
+          subjectName: selectedClass.course_code + (selectedClass.class_name ? ` - ${selectedClass.class_name}` : ''),
+          lecturerName: profile?.full_name || ""
+        }));
+      }
+    }
+  }, [selectedClassId, role, classes, profile]);
 
   const weeklySchedule: ClassEvent[] = schedules.map(convertToClassEvent);
 
@@ -129,14 +147,9 @@ export default function Schedule() {
     const scheduleDay = schedule.day_of_week;
 
     let daysUntil = scheduleDay - currentDay;
-    // If schedule day is past in this week, or today but time passed (simplified Check), jump to next week
-    // For simplicity, just check day. Precise time check would need parsing HH:MM
     if (daysUntil < 0) {
       daysUntil += 7;
     } else if (daysUntil === 0) {
-      // Check if time passed? Let's assume if it's today we include it for now, 
-      // to be safe we can check current time but typically "upcoming" includes today's remaining.
-      // For strict "upcoming", we might check time.
       const now = format(new Date(), "HH:mm");
       if (schedule.start_time < now) {
         daysUntil += 7;
@@ -156,7 +169,6 @@ export default function Schedule() {
       color: p.color || "bg-blue-500",
       details: `${p.start_time?.slice(0, 5)} - ${p.end_time?.slice(0, 5)}`
     })),
-    // Assignments removed as per request
   ]
     .filter(e => {
       // Filter out past events (allow today)
@@ -168,13 +180,6 @@ export default function Schedule() {
     .slice(0, 5); // Top 5
 
   const displayWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // Sunday start
-  const displayWeekEnd = addDays(displayWeekStart, 6);
-
-  // Filter assignments for the current view week for Summary
-  const assignmentsThisWeek = (assignments || []).filter((a: any) => {
-    const d = new Date(a.due_date);
-    return d >= displayWeekStart && d <= displayWeekEnd;
-  });
 
   const goToPreviousWeek = () => {
     setCurrentDate(addDays(currentDate, -7));
@@ -221,14 +226,16 @@ export default function Schedule() {
       tutorial: "Tutorial",
       exam: "Exam",
       event: "Event",
+      office_hours: "Office Hours"
     };
     return labels[type] || type;
   };
 
   const resetForm = () => {
+    const selectedClass = classes.find(c => c.id === selectedClassId);
     setFormData({
       title: "",
-      subjectName: "",
+      subjectName: selectedClass ? (selectedClass.course_code + (selectedClass.class_name ? ` - ${selectedClass.class_name}` : '')) : "",
       lecturerName: role === 'lecturer' ? profile?.full_name || "" : "",
       date: format(new Date(), "yyyy-MM-dd"),
       type: "lecture",
@@ -246,8 +253,6 @@ export default function Schedule() {
     "13:00", "13:45", "14:30", "15:15", "16:00"
   ];
 
-  // Helper to get valid end times based on start time (up to 16:45)
-  // End times should align with the 45 min structure
   const validEndTimesList = [
     "09:15", "10:00", "10:45", "11:30", "12:15",
     "13:00", "13:45", "14:30", "15:15", "16:00", "16:45"
@@ -265,7 +270,6 @@ export default function Schedule() {
   ];
 
   const getEventColor = (day: number, time: string) => {
-    // deterministic hash
     const timeVal = parseInt(time.replace(":", ""));
     const hash = (day * 37 + timeVal) % EVENT_COLORS.length;
     return EVENT_COLORS[hash];
@@ -275,7 +279,7 @@ export default function Schedule() {
     const { title, date, startTime, endTime, lecturerName, subjectName, location, notes } = formData;
 
     if (!title || !date || !startTime || !endTime || !lecturerName || !subjectName || !location || !notes) {
-      toast.error("Please fill in all required fields (including Classroom and Notes)");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -291,10 +295,11 @@ export default function Schedule() {
       day_of_week: dayOfWeek,
       start_time: startTime,
       end_time: endTime,
-      location, // Now mapped to Classroom label
+      location,
       notes,
-      color, // Auto-assigned color
-      is_recurring: true
+      color,
+      is_recurring: true,
+      class_id: selectedClassId // Crucial: Link to selected class
     });
 
     if (result.success) {
@@ -312,8 +317,8 @@ export default function Schedule() {
       title: event.title,
       subjectName: event.subjectName,
       lecturerName: event.lecturerName,
-      date: event.specificDate || format(new Date(), "yyyy-MM-dd"), // Fallback if recurring
-      type: event.type,
+      date: event.specificDate || format(new Date(), "yyyy-MM-dd"),
+      type: event.type as any,
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location || "",
@@ -328,7 +333,7 @@ export default function Schedule() {
     const { title, date, startTime, endTime, lecturerName, subjectName, location, notes } = formData;
 
     if (!title || !date || !startTime || !endTime || !lecturerName || !subjectName || !location || !notes) {
-      toast.error("Please fill in all required fields (including Classroom and Notes)");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -346,7 +351,7 @@ export default function Schedule() {
       end_time: endTime,
       location,
       notes,
-      color, // Update color based on new time
+      color,
     });
 
     if (result.success) {
@@ -363,22 +368,86 @@ export default function Schedule() {
       const result = await deleteSchedule(id);
       if (result.success) {
         toast.success("Event deleted");
-        setIsEditEventOpen(false); // If open
+        setIsEditEventOpen(false);
       } else {
         toast.error(result.error || "Failed to delete event");
       }
     }
   };
 
+  // Render Logic
+
+  // 1. Lecturer view with NO class selected -> Show Class Selection Grid
+  if (role === 'lecturer' && !selectedClassId) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Class Schedule</h1>
+              <p className="text-muted-foreground">Select a class to manage its schedule</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {classes.map((cls) => (
+              <Card
+                key={cls.id}
+                className="hover:border-primary/50 cursor-pointer transition-colors group"
+                onClick={() => setSelectedClassId(cls.id)}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    {cls.course_code}
+                    <Clock className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </CardTitle>
+                  <CardDescription>{cls.class_name || 'No class name'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>{cls.student_count || 0} Students</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {classes.length === 0 && (
+              <div className="col-span-full text-center py-12 text-muted-foreground">
+                No classes found. Please create a class first.
+              </div>
+            )}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // 2. Main Schedule View (For Student OR Lecturer with Selected Class)
+  const selectedClassDetails = role === 'lecturer' ? classes.find(c => c.id === selectedClassId) : null;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Schedule</h1>
-            <p className="text-muted-foreground">Manage your class timetable and events</p>
+          <div className="flex items-center gap-4">
+            {role === 'lecturer' && selectedClassId && (
+              <Button variant="ghost" size="icon" onClick={() => setSelectedClassId(null)}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold">
+                {role === 'lecturer' ? `${selectedClassDetails?.course_code} Schedule` : 'Time Table'}
+              </h1>
+              <p className="text-muted-foreground">
+                {role === 'lecturer'
+                  ? `Manage events for ${selectedClassDetails?.class_name || 'this class'}`
+                  : 'View your class timetable and upcoming events'}
+              </p>
+            </div>
           </div>
+
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded-lg border border-border bg-surface p-1">
               <Button
@@ -412,7 +481,7 @@ export default function Schedule() {
                     <DialogTitle>Add New Event</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    {/* Add/Edit Form Fields */}
+                    {/* Add Form */}
                     <div className="space-y-2">
                       <Label htmlFor="title">Event Title *</Label>
                       <Input
@@ -422,23 +491,16 @@ export default function Schedule() {
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="subjectName">Subject Name *</Label>
-                      <Input
-                        id="subjectName"
-                        placeholder="e.g. Computer Science 101"
-                        value={formData.subjectName}
-                        onChange={(e) => setFormData({ ...formData, subjectName: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lecturerName">Lecturer Name *</Label>
-                      <Input
-                        id="lecturerName"
-                        placeholder="e.g. Dr. Smith"
-                        value={formData.lecturerName}
-                        onChange={(e) => setFormData({ ...formData, lecturerName: e.target.value })}
-                      />
+                    {/* Pre-filled Read-only fields for context */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="subjectName">Subject</Label>
+                        <Input id="subjectName" value={formData.subjectName} disabled className="bg-muted" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lecturerName">Lecturer</Label>
+                        <Input id="lecturerName" value={formData.lecturerName} disabled className="bg-muted" />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -455,7 +517,7 @@ export default function Schedule() {
                         <Label htmlFor="type">Type</Label>
                         <Select
                           value={formData.type}
-                          onValueChange={(val) => setFormData({ ...formData, type: val })}
+                          onValueChange={(val) => setFormData({ ...formData, type: val as any })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -466,6 +528,7 @@ export default function Schedule() {
                             <SelectItem value="tutorial">Tutorial</SelectItem>
                             <SelectItem value="exam">Exam</SelectItem>
                             <SelectItem value="event">Event</SelectItem>
+                            <SelectItem value="office_hours">Office Hours</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -476,12 +539,10 @@ export default function Schedule() {
                         <Select
                           value={formData.startTime}
                           onValueChange={(val) => {
-                            // Auto calculate end time (Start + 45mins)
-                            // Find index of start time, next slot is end time
                             const startIndex = validStartTimes.indexOf(val);
                             let newEndTime = "";
                             if (startIndex !== -1 && startIndex < validEndTimesList.length) {
-                              newEndTime = validEndTimesList[startIndex]; // The corresponding end time for this slot
+                              newEndTime = validEndTimesList[startIndex];
                             }
                             setFormData({ ...formData, startTime: val, endTime: newEndTime })
                           }}
@@ -549,7 +610,6 @@ export default function Schedule() {
               <DialogTitle>Edit Event</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              {/* Same Fields as Add */}
               <div className="space-y-2">
                 <Label htmlFor="edit-title">Event Title *</Label>
                 <Input
@@ -558,23 +618,18 @@ export default function Schedule() {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-subjectName">Subject Name *</Label>
-                <Input
-                  id="edit-subjectName"
-                  value={formData.subjectName}
-                  onChange={(e) => setFormData({ ...formData, subjectName: e.target.value })}
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-subjectName">Subject</Label>
+                  <Input id="edit-subjectName" value={formData.subjectName} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lecturerName">Lecturer</Label>
+                  <Input id="edit-lecturerName" value={formData.lecturerName} disabled className="bg-muted" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-lecturerName">Lecturer Name *</Label>
-                <Input
-                  id="edit-lecturerName"
-                  value={formData.lecturerName}
-                  onChange={(e) => setFormData({ ...formData, lecturerName: e.target.value })}
-                />
-              </div>
-              {/* ... (Date, Type, Time, Location, Notes) - condensed for brevity but must be present */}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-date">Date *</Label>
@@ -589,7 +644,7 @@ export default function Schedule() {
                   <Label htmlFor="edit-type">Type</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(val) => setFormData({ ...formData, type: val })}
+                    onValueChange={(val) => setFormData({ ...formData, type: val as any })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -600,6 +655,7 @@ export default function Schedule() {
                       <SelectItem value="tutorial">Tutorial</SelectItem>
                       <SelectItem value="exam">Exam</SelectItem>
                       <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="office_hours">Office Hours</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -610,7 +666,6 @@ export default function Schedule() {
                   <Select
                     value={formData.startTime}
                     onValueChange={(val) => {
-                      // Auto calculate end time (Start + 45mins)
                       const startIndex = validStartTimes.indexOf(val);
                       let newEndTime = "";
                       if (startIndex !== -1 && startIndex < validEndTimesList.length) {
@@ -838,19 +893,6 @@ export default function Schedule() {
               </Card>
             )}
 
-            {viewMode === "month" && (
-              <Card>
-                <CardContent className="p-6">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="w-full"
-                  />
-                </CardContent>
-              </Card>
-            )}
-
             {viewMode === "list" && (
               <Card>
                 <CardHeader>
@@ -958,7 +1000,7 @@ export default function Schedule() {
             {/* Weekly Academic Summary */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Weekly Academic Summary</CardTitle>
+                <CardTitle className="text-base">Weekly Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -976,8 +1018,6 @@ export default function Schedule() {
                       {weeklySchedule.length}
                     </span>
                   </div>
-
-                  {/* Assignments Due removed as per request */}
                 </div>
               </CardContent>
             </Card>
