@@ -23,6 +23,8 @@ import LecturerDashboard from "./pages/LecturerDashboard";
 import LecturerStudents from "./pages/LecturerStudents";
 import Assignments from "./pages/Assignments";
 import AssignmentSubmit from "./pages/AssignmentSubmit";
+import LecturerClassesAssignments from "./pages/LecturerClassesAssignments";
+import ClassAssignmentsView from "./pages/ClassAssignmentsView";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import Schedule from "./pages/Schedule";
@@ -94,6 +96,24 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                       <AllStudents />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Lecturer Assignment Routes */}
+                <Route
+                  path="/lecturer/assignments"
+                  element={
+                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                      <LecturerClassesAssignments />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lecturer/assignments/:classId"
+                  element={
+                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                      <ClassAssignmentsView />
                     </ProtectedRoute>
                   }
                 />

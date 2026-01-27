@@ -53,5 +53,4 @@ BEGIN
         REFERENCES public.profiles(user_id)
         ON DELETE CASCADE;
     END IF;
-
 END $$;

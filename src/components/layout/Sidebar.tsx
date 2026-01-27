@@ -30,7 +30,7 @@ const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
   { icon: Users, label: "All Students", path: "/all-students" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: FileText, label: "Assignments", path: "/assignments" },
+  { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
