@@ -82,16 +82,26 @@ export function useAssignments() {
                     data = [];
                     mySubmissions = [];
                 } else {
-                    // Get course codes for enrolled classes
+                    // Fetch assignments with class_id (new class-first assignments)
+                    const { data: classAssignments, error: classError } = await supabase
+                        .from('assignments')
+                        .select('*')
+                        .in('class_id', enrolledClassIds)
+                        .or('status.eq.published,status.eq.active')
+                        .order('due_date', { ascending: true });
+
+                    if (classError) {
+                        console.error('Error fetching class assignments:', classError);
+                    }
+
+                    // Also fetch old course-based assignments for backward compatibility
                     const { data: classesData } = await supabase
                         .from('classes')
                         .select('course_code')
                         .in('id', enrolledClassIds);
 
-                    if (!classesData || classesData.length === 0) {
-                        data = [];
-                        mySubmissions = [];
-                    } else {
+                    let courseAssignments: any[] = [];
+                    if (classesData && classesData.length > 0) {
                         const enrolledCourseCodes = classesData.map(c => c.course_code);
 
                         const { data: enrolledCourses } = await supabase
@@ -102,29 +112,33 @@ export function useAssignments() {
                         const enrolledCourseIds = enrolledCourses?.map(c => c.id) || [];
 
                         if (enrolledCourseIds.length > 0) {
-                            // Fetch assignments only for enrolled courses
-                            const { data: assignmentsData, error: fetchError } = await supabase
+                            const { data: oldAssignments, error: fetchError } = await supabase
                                 .from('assignments')
                                 .select('*')
                                 .eq('status', 'published')
                                 .in('course_id', enrolledCourseIds)
+                                .is('class_id', null) // Only old assignments without class_id
                                 .order('due_date', { ascending: true });
 
-                            if (fetchError) throw fetchError;
-                            data = assignmentsData || [];
-                        } else {
-                            data = [];
+                            if (fetchError) {
+                                console.error('Error fetching course assignments:', fetchError);
+                            } else {
+                                courseAssignments = oldAssignments || [];
+                            }
                         }
-
-                        // Fetch My Submissions to determine status
-                        const { data: submissionsData, error: subError } = await supabase
-                            .from('assignment_submissions')
-                            .select('*')
-                            .eq('student_id', user.id);
-
-                        if (subError) throw subError;
-                        mySubmissions = (submissionsData || []) as any[];
                     }
+
+                    // Combine both class-based and course-based assignments
+                    data = [...(classAssignments || []), ...courseAssignments];
+
+                    // Fetch My Submissions to determine status
+                    const { data: submissionsData, error: subError } = await supabase
+                        .from('assignment_submissions')
+                        .select('*')
+                        .eq('student_id', user.id);
+
+                    if (subError) throw subError;
+                    mySubmissions = (submissionsData || []) as any[];
                 }
             }
 
