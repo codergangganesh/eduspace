@@ -24,12 +24,14 @@ import {
     CheckCircle,
     Clock,
     XCircle,
-    Loader2
+    Loader2,
+    Eye
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import * as XLSX from 'xlsx';
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
+import { formatFileSize, getFileExtension, getFileTypeDisplay } from "@/lib/fileUtils";
 
 interface SubmissionDetailsDialogProps {
     open: boolean;
@@ -58,7 +60,7 @@ export function SubmissionDetailsDialog({
     );
 
     const handleDownloadReport = () => {
-        // Prepare data for Excel
+        // Prepare data for Excel with comprehensive file information
         const data = submissions.map(item => ({
             "Assignment Title": assignmentTitle,
             "Class Name": className,
@@ -66,18 +68,39 @@ export function SubmissionDetailsDialog({
             "Register Number": item.register_number,
             "Email": item.email,
             "Status": item.status === 'submitted' ? "Submitted" : "Not Submitted",
-            "Submission Date": item.submitted_at ? format(new Date(item.submitted_at), "yyyy-MM-dd") : "-",
-            "Submission Time": item.submitted_at ? format(new Date(item.submitted_at), "HH:mm:ss") : "-",
-            "File URL": item.file_url || "-"
+            "Submission Date": item.submitted_at ? format(new Date(item.submitted_at), "yyyy-MM-dd") : "",
+            "Submission Time": item.submitted_at ? format(new Date(item.submitted_at), "HH:mm:ss") : "",
+            "File Name": item.file_name || "",
+            "File Type": getFileTypeDisplay(item.file_type) || getFileExtension(item.file_name) || "",
+            "File Size": item.file_size ? formatFileSize(item.file_size) : "",
+            "File Download URL": item.file_url || ""
         }));
 
         // Create worksheet
         const ws = XLSX.utils.json_to_sheet(data);
+
+        // Set column widths for better readability
+        ws['!cols'] = [
+            { wch: 30 }, // Assignment Title
+            { wch: 25 }, // Class Name
+            { wch: 25 }, // Student Name
+            { wch: 15 }, // Register Number
+            { wch: 30 }, // Email
+            { wch: 15 }, // Status
+            { wch: 15 }, // Submission Date
+            { wch: 12 }, // Submission Time
+            { wch: 30 }, // File Name
+            { wch: 15 }, // File Type
+            { wch: 12 }, // File Size
+            { wch: 60 }  // File Download URL
+        ];
+
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Submissions");
 
-        // Download file
-        const fileName = `${assignmentTitle.replace(/[^a-z0-9]/gi, '_')}_Report.xlsx`;
+        // Download file with timestamp
+        const timestamp = format(new Date(), "yyyy-MM-dd_HHmmss");
+        const fileName = `${assignmentTitle.replace(/[^a-z0-9]/gi, '_')}_Submissions_${timestamp}.xlsx`;
         XLSX.writeFile(wb, fileName);
     };
 
@@ -119,13 +142,14 @@ export function SubmissionDetailsDialog({
                                 <TableHead>Register No</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Submitted At</TableHead>
+                                <TableHead>File Details</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         <div className="flex items-center justify-center gap-2">
                                             <Loader2 className="size-4 animate-spin" />
                                             <span>Loading submissions...</span>
@@ -134,7 +158,7 @@ export function SubmissionDetailsDialog({
                                 </TableRow>
                             ) : filteredSubmissions.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                         {searchQuery ? "No students found matching your search." : "No students in this class."}
                                     </TableCell>
                                 </TableRow>
@@ -171,19 +195,53 @@ export function SubmissionDetailsDialog({
                                                 <span className="text-muted-foreground">-</span>
                                             )}
                                         </TableCell>
+                                        <TableCell>
+                                            {student.file_name ? (
+                                                <div className="flex flex-col text-sm max-w-[200px]">
+                                                    <span className="font-medium truncate" title={student.file_name}>
+                                                        {student.file_name}
+                                                    </span>
+                                                    <div className="flex gap-2 text-xs text-muted-foreground">
+                                                        <span className="uppercase font-medium">
+                                                            {getFileTypeDisplay(student.file_type) || getFileExtension(student.file_name)}
+                                                        </span>
+                                                        {student.file_size && (
+                                                            <span>• {formatFileSize(student.file_size)}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground italic">
+                                                    No file uploaded
+                                                </span>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             {student.file_url ? (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="gap-2"
-                                                    asChild
-                                                >
-                                                    <a href={student.file_url} target="_blank" rel="noreferrer">
-                                                        <FileText className="size-4" />
-                                                        View File
-                                                    </a>
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        asChild
+                                                    >
+                                                        <a href={student.file_url} target="_blank" rel="noreferrer">
+                                                            <Eye className="size-4" />
+                                                            View
+                                                        </a>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        asChild
+                                                    >
+                                                        <a href={student.file_url} download={student.file_name} target="_blank" rel="noreferrer">
+                                                            <Download className="size-4" />
+                                                            Download
+                                                        </a>
+                                                    </Button>
+                                                </div>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground italic">
                                                     No file

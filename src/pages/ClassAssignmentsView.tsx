@@ -33,12 +33,13 @@ import {
     ExternalLink,
     CheckCircle,
     XCircle,
+    Eye,
+    Download,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { CreateClassAssignmentDialog } from '@/components/assignments/CreateClassAssignmentDialog';
 import { EditClassAssignmentDialog } from '@/components/assignments/EditClassAssignmentDialog';
 import { ManageSubjectsDialog } from '@/components/assignments/ManageSubjectsDialog';
-import { SubmissionDetailsDialog } from '@/components/assignments/SubmissionDetailsDialog';
 import { ClassAssignment } from '@/hooks/useClassAssignments';
 
 type FilterType = 'all' | 'active' | 'closed';
@@ -52,7 +53,6 @@ export default function ClassAssignmentsView() {
 
     const [filter, setFilter] = useState<FilterType>('all');
     const [editingAssignment, setEditingAssignment] = useState<ClassAssignment | null>(null);
-    const [viewSubmissionAssignment, setViewSubmissionAssignment] = useState<ClassAssignment | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isSubjectsOpen, setIsSubjectsOpen] = useState(false);
 
@@ -316,15 +316,31 @@ export default function ClassAssignmentsView() {
                                             </span>
                                         </div>
                                         {assignment.attachment_url && (
-                                            <a
-                                                href={assignment.attachment_url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="flex items-center gap-2 text-primary hover:underline w-fit"
-                                            >
-                                                <ExternalLink className="size-4" />
-                                                Attachment
-                                            </a>
+                                            <div className="flex items-center gap-2">
+                                                <FileText className="size-4 text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground truncate max-w-[120px]" title={assignment.attachment_name}>
+                                                    {assignment.attachment_name || 'Attachment'}
+                                                </span>
+                                                <a
+                                                    href={assignment.attachment_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-primary hover:text-primary/80"
+                                                    title="View file"
+                                                >
+                                                    <Eye className="size-4" />
+                                                </a>
+                                                <a
+                                                    href={assignment.attachment_url}
+                                                    download={assignment.attachment_name}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-primary hover:text-primary/80"
+                                                    title="Download file"
+                                                >
+                                                    <Download className="size-4" />
+                                                </a>
+                                            </div>
                                         )}
                                     </div>
 
@@ -352,7 +368,7 @@ export default function ClassAssignmentsView() {
                                         <Button
                                             className="w-full"
                                             variant="outline"
-                                            onClick={() => setViewSubmissionAssignment(assignment)}
+                                            onClick={() => navigate(`/lecturer/assignments/${classId}/${assignment.id}/submissions`)}
                                         >
                                             <Users className="size-4 mr-2" />
                                             Submission Details
@@ -379,16 +395,7 @@ export default function ClassAssignmentsView() {
                     classId={classId!}
                 />
 
-                {viewSubmissionAssignment && (
-                    <SubmissionDetailsDialog
-                        open={!!viewSubmissionAssignment}
-                        onOpenChange={(open) => !open && setViewSubmissionAssignment(null)}
-                        assignmentId={viewSubmissionAssignment.id}
-                        classId={classId!}
-                        assignmentTitle={viewSubmissionAssignment.title}
-                        className={currentClass.class_name || currentClass.course_code}
-                    />
-                )}
+
             </div>
         </DashboardLayout>
     );

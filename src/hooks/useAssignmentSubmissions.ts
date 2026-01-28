@@ -10,6 +10,9 @@ export interface AssignmentSubmissionDetail {
     status: 'submitted' | 'pending';
     submitted_at?: string;
     file_url?: string;
+    file_name?: string;
+    file_type?: string;
+    file_size?: number;
     submission_id?: string;
     grade?: string | null;
     feedback?: string | null;
@@ -93,13 +96,16 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                 const submission = submitted?.find(s => s.student_id === student.student_id);
 
                 return {
-                    student_id: student.student_id || student.id, // Fallback if student_id is null (imported but not claimed)
+                    student_id: student.student_id || student.id,
                     student_name: student.student_name,
                     register_number: student.register_number,
                     email: student.email,
                     status: submission ? 'submitted' : 'pending',
-                    submitted_at: submission?.created_at,
-                    file_url: submission?.file_url,
+                    submitted_at: submission?.submitted_at || submission?.created_at,
+                    file_url: submission?.attachment_url, // Use attachment_url from database
+                    file_name: submission?.attachment_name,
+                    file_type: submission?.file_type,
+                    file_size: submission?.file_size,
                     submission_id: submission?.id,
                     grade: submission?.grade,
                     feedback: submission?.feedback

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, FileText, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { uploadAssignmentFile, validateAssignmentFile } from "@/lib/supabaseStorage";
 
 interface SubmitAssignmentDialogProps {
     isOpen: boolean;
@@ -30,12 +31,10 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit }
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
-            if (selectedFile.type !== "application/pdf") {
-                toast.error("Only PDF files are allowed.");
-                return;
-            }
-            if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
-                toast.error("File size must be less than 10MB");
+            // Validate file using Supabase Storage validator
+            const validation = validateAssignmentFile(selectedFile);
+            if (!validation.valid) {
+                toast.error(validation.error || 'Invalid file');
                 return;
             }
             setFile(selectedFile);
@@ -54,42 +53,24 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit }
 
         setSubmitting(true);
         try {
-            // 1. Upload File (Cloudinary or Supabase Storage)
-            // Using Cloudinary as per context from previous prompts (curl check)
-            // But if I don't have the cloud name/preset easily, I should use `uploadFile` util if it existed.
-            // Since we need to be robust, I'll simulate upload or use a direct fetch to the cloudinary url from env var (if accessible).
-            // Actually, best practice: assume Supabase Storage or just base64 if small? No, PDF.
-            // I'll check if there is an existing upload utility.
-
-            // Re-use logic: The previous task mentioned Enable Profile Image Upload which used Cloudinary. I'll stick to a simple upload logic.
-            // For now, I'll assume we have a function or I'll implement a direct upload here.
-
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "eduspace_uploads"); // Fallback
-
-            const uploadRes = await fetch(
-                `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-                {
-                    method: "POST",
-                    body: formData,
-                }
+            // Upload file to Supabase Storage
+            const uploadResult = await uploadAssignmentFile(
+                file,
+                profile?.user_id || 'unknown',
+                assignment.id
             );
-            const uploadData = await uploadRes.json();
 
-            if (!uploadRes.ok) throw new Error(uploadData.error?.message || "Upload failed");
+            if (!uploadResult.success || !uploadResult.url) {
+                throw new Error(uploadResult.error || 'Upload failed');
+            }
 
-
-            // 2. Submit to DB
+            // Submit to DB with file metadata
             const result = await onSubmit(assignment.id, {
                 submission_text: notes,
-                attachment_url: uploadData.secure_url,
+                attachment_url: uploadResult.url,
                 attachment_name: file.name,
-                // store metadata in description or logic?
-                // The requirements asked to SUBMIT name/reg number. 
-                // However, the `assignment_submissions` table doesn't have columns for that (it uses student_id).
-                // We can append it to the content text.
-                content: `Student: ${studentName}\nReg No: ${regNumber}\n\nNotes: ${notes}`
+                file_type: file.type,
+                file_size: file.size,
             });
 
             if (result.success) {

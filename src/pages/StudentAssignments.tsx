@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Calendar, Clock, FileText, CheckCircle, AlertCircle, ChevronRight, TrendingUp, Target, Loader2, Download } from "lucide-react";
+import { Calendar, Clock, FileText, CheckCircle, AlertCircle, ChevronRight, TrendingUp, Target, Loader2, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -293,8 +293,41 @@ export default function StudentAssignments() {
                                                 )}
 
                                                 {(assignment.studentStatus === "submitted" || assignment.studentStatus === "graded") && (
-                                                    <div className="text-xs text-muted-foreground">
-                                                        Submitted on {assignment.submission?.submitted_at ? format(parseISO(assignment.submission.submitted_at), "MMM d") : "Unknown"}
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Submitted on {assignment.submission?.submitted_at ? format(parseISO(assignment.submission.submitted_at), "MMM d, h:mm a") : "Unknown"}
+                                                        </div>
+                                                        {/* Show student's submitted file with View/Download options */}
+                                                        {assignment.submission?.attachment_url && (
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-7 gap-1 text-xs"
+                                                                    asChild
+                                                                >
+                                                                    <a href={assignment.submission.attachment_url} target="_blank" rel="noreferrer">
+                                                                        <Eye className="size-3" />
+                                                                        View
+                                                                    </a>
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-7 gap-1 text-xs"
+                                                                    asChild
+                                                                >
+                                                                    <a href={assignment.submission.attachment_url} download={assignment.submission.attachment_name || "submission"} target="_blank" rel="noreferrer">
+                                                                        <Download className="size-3" />
+                                                                        {assignment.submission.attachment_name ?
+                                                                            (assignment.submission.attachment_name.length > 15 ?
+                                                                                assignment.submission.attachment_name.substring(0, 12) + "..." :
+                                                                                assignment.submission.attachment_name)
+                                                                            : "Download"}
+                                                                    </a>
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

@@ -25,6 +25,7 @@ import Assignments from "./pages/Assignments";
 import AssignmentSubmit from "./pages/AssignmentSubmit";
 import LecturerClassesAssignments from "./pages/LecturerClassesAssignments";
 import ClassAssignmentsView from "./pages/ClassAssignmentsView";
+import SubmissionDetailsPage from "./pages/SubmissionDetailsPage";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import Schedule from "./pages/Schedule";
@@ -114,6 +115,14 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                       <ClassAssignmentsView />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lecturer/assignments/:classId/:assignmentId/submissions"
+                  element={
+                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                      <SubmissionDetailsPage />
                     </ProtectedRoute>
                   }
                 />

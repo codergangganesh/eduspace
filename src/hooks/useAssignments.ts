@@ -411,6 +411,8 @@ export function useAssignments() {
         submission_text?: string;
         attachment_url?: string;
         attachment_name?: string;
+        file_type?: string;
+        file_size?: number;
     }) => {
         if (!user || role !== 'student') return { success: false, error: 'Unauthorized' };
 

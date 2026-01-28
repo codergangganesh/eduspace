@@ -24,9 +24,10 @@ import {
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Upload, X, Plus, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { uploadAssignmentFile, validateAssignmentFile } from '@/lib/supabaseStorage';
 import { useClassAssignments, CreateClassAssignmentDTO } from '@/hooks/useClassAssignments';
 import { Subject } from '@/hooks/useClassSubjects';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -38,6 +39,7 @@ interface Props {
 
 export function CreateClassAssignmentDialog({ classId, subjects, onManageSubjects }: Props) {
     const { createAssignment } = useClassAssignments(classId);
+    const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [date, setDate] = useState<Date>();
@@ -74,8 +76,24 @@ export function CreateClassAssignmentDialog({ classId, subjects, onManageSubject
 
         setLoading(true);
         try {
-            // Upload file to Cloudinary (mandatory)
-            const uploadResult = await uploadToCloudinary(file);
+            // Validate file
+            const validation = validateAssignmentFile(file);
+            if (!validation.valid) {
+                toast.error(validation.error || 'Invalid file');
+                setLoading(false);
+                return;
+            }
+
+            // Upload file to Supabase Storage
+            const uploadResult = await uploadAssignmentFile(
+                file,
+                user?.id || 'unknown',
+                'new-assignment' // Placeholder, will be updated after creation
+            );
+
+            if (!uploadResult.success || !uploadResult.url) {
+                throw new Error(uploadResult.error || 'Upload failed');
+            }
 
             const assignmentData: CreateClassAssignmentDTO = {
                 title: formData.title,
