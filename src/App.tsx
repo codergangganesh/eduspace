@@ -33,6 +33,7 @@ import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import AllStudents from "./pages/AllStudents";
 import CreateClass from "./pages/CreateClass";
+import LecturerTimeTable from "./pages/LecturerTimeTable";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -102,6 +103,14 @@ const App = () => (
                 />
 
                 {/* Lecturer Assignment Routes */}
+                <Route
+                  path="/lecturer/timetable"
+                  element={
+                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                      <LecturerTimeTable />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/lecturer/assignments"
                   element={

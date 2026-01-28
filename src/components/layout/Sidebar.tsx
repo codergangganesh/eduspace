@@ -12,6 +12,7 @@ import {
   Users,
   ChevronDown,
   ChevronRight,
+  Table,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -28,6 +29,7 @@ const studentNavItems = [
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
   { icon: Users, label: "All Students", path: "/all-students" },
+  { icon: Table, label: "Time Table", path: "/lecturer/timetable" }, // New Item
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
