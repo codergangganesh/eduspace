@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Search,
   MessageSquare,
   Paperclip,
@@ -23,16 +31,22 @@ import {
   Loader2,
   Trash2,
   Plus,
-  HelpCircle,
   X,
-  Image as ImageIcon
+  Mic,
+  MoreVertical,
+  Filter,
+  CheckCheck,
+  Clock,
+  LogOut,
+  Settings,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/useMessages";
 import { useInstructors } from "@/hooks/useInstructors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLongPress } from "@/hooks/useLongPress";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { toast } from "sonner";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
@@ -47,24 +61,13 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-interface Message {
-  id: string;
-  content: string;
-  timestamp: string;
-  isOwn: boolean;
-  sender: string;
-  attachment?: {
-    name: string;
-    size: string;
-    type: string;
-    url: string;
-  };
-}
+const getDateLabel = (date: Date) => {
+  if (isToday(date)) return "TODAY";
+  if (isYesterday(date)) return "YESTERDAY";
+  return format(date, "MM/dd/yy");
+};
 
-// ----------------------------------------------------------------------
-// SUB-COMPONENTS
-// ----------------------------------------------------------------------
-
+// Message Bubble Component
 interface MessageBubbleProps {
   message: any;
   setMessageToDelete: (id: string) => void;
@@ -76,117 +79,122 @@ const MessageBubble = ({ message, setMessageToDelete }: MessageBubbleProps) => {
     delay: 500,
   });
 
+  const downloadFile = async (url: string, filename: string) => {
+    try {
+      let downloadUrl = url;
+      if (downloadUrl.includes('cloudinary.com') && downloadUrl.includes('/upload/')) {
+        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    } catch (error) {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <div
       className={cn(
-        "flex gap-3",
-        message.isOwn && "flex-row-reverse"
+        "flex mb-3",
+        message.isOwn ? "justify-end" : "justify-start"
       )}
     >
-      {!message.isOwn && (
-        <Avatar className="size-8 shrink-0">
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-            {message.sender.split(" ").map((n: string) => n[0]).join("")}
-          </AvatarFallback>
-        </Avatar>
-      )}
-      <div className="max-w-[70%] space-y-2">
-        <div
-          {...(message.isOwn ? longPressHandlers : {})}
-          className={cn(
-            "rounded-2xl px-4 py-2.5 transition-all relative group",
-            message.isOwn
-              ? "bg-primary text-primary-foreground cursor-pointer active:scale-95"
-              : "bg-secondary"
-          )}
-        >
-          {!message.isOwn && (
-            <p className="text-xs font-medium text-primary mb-1">{message.sender}</p>
-          )}
-          <p className="text-sm">{message.content}</p>
-          <p
-            className={cn(
-              "text-xs mt-1",
-              message.isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-            )}
-          >
-            {message.timestamp}
-          </p>
-        </div>
+      <div
+        {...(message.isOwn ? longPressHandlers : {})}
+        className={cn(
+          "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm relative group",
+          message.isOwn
+            ? "bg-emerald-100 dark:bg-emerald-900/40 text-foreground rounded-br-md"
+            : "bg-white dark:bg-slate-800 text-foreground rounded-bl-md"
+        )}
+      >
         {message.attachment && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary border border-border">
-            <div className="size-10 rounded-lg bg-destructive/10 flex items-center justify-center overflow-hidden">
-              {message.attachment.type.startsWith('image/') ? (
-                <img src={message.attachment.url} alt="Attachment" className="w-full h-full object-cover" />
-              ) : (
-                <FileText className="size-5 text-destructive" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{message.attachment.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {message.attachment.size}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => {
-                try {
-                  let downloadUrl = message.attachment.url;
-
-                  // Cloudinary Strategy: fl_attachment
-                  if (downloadUrl.includes('cloudinary.com') && downloadUrl.includes('/upload/')) {
-                    downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = message.attachment.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    return;
-                  }
-
-                  // Supabase Strategy: Force Download via fetch/blob for strict control
-                  // Since we made bucket public, simple fetch works.
-                  const downloadFile = async () => {
-                    try {
-                      const response = await fetch(downloadUrl);
-                      if (!response.ok) throw new Error('Network response was not ok');
-                      const blob = await response.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = message.attachment.name;
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      document.body.removeChild(a);
-                    } catch (e) {
-                      // Fallback
-                      window.open(downloadUrl, '_blank');
-                    }
-                  }
-                  downloadFile();
-
-                } catch (error) {
-                  console.error('Download failed:', error);
-                  window.open(message.attachment.url, '_blank');
-                }
-              }}
-            >
-              <Download className="size-4" />
-            </Button>
+          <div className="mb-2">
+            {message.attachment.type?.startsWith('image/') ? (
+              <div className="rounded-lg overflow-hidden mb-2">
+                <img
+                  src={message.attachment.url}
+                  alt="Attachment"
+                  className="max-w-full max-h-64 object-cover rounded-lg cursor-pointer"
+                  onClick={() => window.open(message.attachment.url, '_blank')}
+                />
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-700 cursor-pointer"
+                onClick={() => downloadFile(message.attachment.url, message.attachment.name)}
+              >
+                <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                  <FileText className="size-5 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{message.attachment.name}</p>
+                  <p className="text-xs text-muted-foreground">{message.attachment.size}</p>
+                </div>
+                <Download className="size-4 text-muted-foreground" />
+              </div>
+            )}
           </div>
         )}
+
+        {message.content && (
+          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        )}
+
+        <div className={cn(
+          "flex items-center gap-1 mt-1 justify-end",
+          message.isOwn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+        )}>
+          <span className="text-[10px]">{message.timestamp}</span>
+          {message.isOwn && (
+            <CheckCheck className="size-3" />
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
+// Date Separator Component
+const DateSeparator = ({ date }: { date: string }) => (
+  <div className="flex items-center justify-center my-4">
+    <div className="px-4 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-medium text-muted-foreground shadow-sm">
+      {date}
+    </div>
+  </div>
+);
+
+// Typing Indicator Component
+const TypingIndicator = () => (
+  <div className="flex justify-start mb-3">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+      <div className="flex gap-1">
+        <span className="size-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+        <span className="size-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+        <span className="size-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
+    </div>
+  </div>
+);
+
 export default function Messages() {
-  const { user, role } = useAuth();
+  const { user, role, profile } = useAuth();
   const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
@@ -194,12 +202,51 @@ export default function Messages() {
 
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterMode, setFilterMode] = useState<'all' | 'online' | 'students' | 'lecturers'>('all');
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
-  const [isAskDoubtOpen, setIsAskDoubtOpen] = useState(false);
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Add wallpaper state
+  const [wallpaper, setWallpaper] = useState<string>('');
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
+  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load wallpaper on mount
+  useEffect(() => {
+    if (user?.id) {
+      const saved = localStorage.getItem(`chat_wallpaper_${user.id}`);
+      if (saved) setWallpaper(saved);
+    }
+  }, [user?.id]);
+
+  const handleWallpaperChange = (value: string) => {
+    setWallpaper(value);
+    if (user?.id) {
+      localStorage.setItem(`chat_wallpaper_${user.id}`, value);
+    }
+  }
+
+  const handleWallpaperUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        handleWallpaperChange(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleDeleteMessage = async () => {
     if (!messageToDelete) return;
@@ -221,8 +268,7 @@ export default function Messages() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Basic validation
-      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+      if (file.size > 20 * 1024 * 1024) {
         toast.error("File size must be less than 20MB");
         return;
       }
@@ -249,7 +295,6 @@ export default function Messages() {
         setIsUploading(true);
         try {
           let uploaded;
-          // Hybrid Storage: PDFs -> Supabase, Others -> Cloudinary
           if (selectedFile.type === 'application/pdf') {
             uploaded = await uploadToSupabaseStorage(selectedFile);
           } else {
@@ -262,7 +307,6 @@ export default function Messages() {
             type: uploaded.type,
             size: formatFileSize(selectedFile!.size)
           };
-          console.log('Attachment Data prepared:', attachmentData);
         } catch (uploadError: any) {
           toast.error(`Upload failed: ${uploadError.message}`);
           setIsUploading(false);
@@ -281,67 +325,20 @@ export default function Messages() {
     }
   };
 
-  const handleStartConversation = (instructorId: string) => {
-    // Check if conversation already exists
+  const handleStartNewChat = async (targetId: string) => {
     const existing = conversations.find(c =>
-      (c.participant_1 === user?.id && c.participant_2 === instructorId) ||
-      (c.participant_1 === instructorId && c.participant_2 === user?.id)
+      (c.participant_1 === user?.id && c.participant_2 === targetId) ||
+      (c.participant_1 === targetId && c.participant_2 === user?.id)
     );
 
     if (existing) {
       setSelectedConversationId(existing.id);
-    } else {
-      // Create new conversation logically (UI will update optimistically or waiting for select)
-      // Since useMessages creates on send, we just need to "select" a temporary state or 
-      // simplified: just clear selected and let user type to this instructor?
-      // Better: We need to set a "pending" conversation or just create it immediately?
-      // simpler: We will allow the USER to send a message to this ID.
-      // But `sendMessage` requires a `receiverId` which we usually derive from `selectedConversation`.
-      // We need to handle "New Conversation" state. 
-      // For now, let's just create an empty one or handle it in `useMessages` more robustly?
-      // Actually `useMessages` `sendMessage` creates it if not exists.
-      // So we can just "fake" a selected conversation or handle it.
-      // QUICK FIX: Send a "Hello" message automatically? No that's spammy.
-      // ideal: Set a "draft" conversation.
-      // For this step, I'll send an initial empty message? No.
-      // I'll update `useMessages` to support `createConversation` explicitly or 
-      // just auto-create it now.
-
-      // Let's TRY to find it again, if not, we rely on the `sendMessage` logic.
-      // But we need to switch the UI view to "chatting with Instructor X".
-      // This requires `selectedConversationId`. 
-      // If it doesn't exist, I can't select it.
-      // I will implement `createConversation` in the hook later or just hack it:
-      // I'll send a "Hi" message to initiate? No.
-      // I'll trigger a function to create an empty conversation row?
-      // Let's just assume for now we can't switch until one exists. 
-      // Wait, `sendMessage` handles creation.
-      // Sol: I will create a function `startNewChat(instructorId)` in `useMessages`?
-      // Or just do it here inline if `supabase` client is available?
-      // I'll do it inline here for simplicity since I can't edit hooks easily in parallel.
-      // Actually I should have edited the hook.
-      // I'll handle it below in `handleStartNewChat`.
-    }
-    setIsAskDoubtOpen(false);
-  };
-
-  const handleStartNewChat = async (instructorId: string) => {
-    // Check local existing
-    const existing = conversations.find(c =>
-      (c.participant_1 === user?.id && c.participant_2 === instructorId) ||
-      (c.participant_1 === instructorId && c.participant_2 === user?.id)
-    );
-
-    if (existing) {
-      setSelectedConversationId(existing.id);
-      setIsAskDoubtOpen(false);
+      setIsNewChatOpen(false);
       return;
     }
 
-    // Create new empty conversation using the hook's startConversation function
-    // This creates a conversation record without sending any automatic message
     try {
-      const conversationId = await startConversation(instructorId);
+      const conversationId = await startConversation(targetId);
       if (conversationId) {
         setSelectedConversationId(conversationId);
       }
@@ -349,9 +346,8 @@ export default function Messages() {
       console.error('Error starting conversation:', e);
       toast.error("Failed to start conversation");
     }
-    setIsAskDoubtOpen(false);
-  }
-
+    setIsNewChatOpen(false);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -360,76 +356,85 @@ export default function Messages() {
     }
   };
 
-  /* 
-    MERGE LOGIC: 
-    We want to show:
-    1. Existing conversations (with history)
-    2. Eligible students who DON'T have a conversation yet (as "contacts")
-  */
-
-  // 1. Get IDs of students researchers already have conversations with
-  // Note: For a lecturer, the "other user" is the student.
+  // Merge conversations with eligible contacts
   const existingContactIds = new Set(conversations.map(c =>
     c.participant_1 === user?.id ? c.participant_2 : c.participant_1
   ));
 
-  // 2. Filter eligible students who are NOT in the conversation list
   const studentsWithoutChat = eligibleStudents.filter(s => !existingContactIds.has(s.id));
 
-  // 3. Create "Virtual Conversation" objects for these students for display purposes
   const studentContacts = studentsWithoutChat.map(s => ({
-    id: `new:${s.id}`, // specific prefix to identify as virtual
+    id: `new:${s.id}`,
     participant_1: user?.id || '',
     participant_2: s.id,
     last_message: 'Start a conversation',
-    last_message_at: null, // No date means generic placement
+    last_message_at: null,
     other_user_name: s.full_name,
     other_user_avatar: s.avatar_url,
     other_user_role: 'student',
-    other_user_id: s.id, // Explicitly store ID
-    is_virtual: true     // Flag
+    other_user_id: s.id,
+    is_virtual: true
   }));
 
-  // 4. Combine and Filter by Search
   const allItems = [...conversations, ...studentContacts].filter((item) =>
     (item.other_user_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).filter(item => {
+    if (filterMode === 'all') return true;
+    if (filterMode === 'online') {
+      const realId = 'is_virtual' in item && item.is_virtual ? (item as any).other_user_id : (item.participant_1 === user?.id ? item.participant_2 : item.participant_1);
+      return onlineUsers.has(realId);
+    }
+    // Simplistic role filtering if possible, else just ignore
+    return true;
+  });
 
-  // 5. Sort: Real conversations first (by date), then virtual ones (alphabetical)
   const sortedItems = allItems.sort((a, b) => {
-    // Both real
     if (a.last_message_at && b.last_message_at) {
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     }
-    // A is real, B is virtual -> A first
     if (a.last_message_at) return -1;
-    // B is real, A is virtual -> B first
     if (b.last_message_at) return 1;
-
-    // Both virtual: Sort Alphabetical
     return (a.other_user_name || '').localeCompare(b.other_user_name || '');
   });
 
-  // Transform messages
-  const transformedMessages = messages.map((msg) => ({
-    id: msg.id,
-    content: msg.content,
-    timestamp: format(new Date(msg.created_at), 'h:mm a'),
-    isOwn: msg.sender_id === user?.id,
-    sender: msg.sender_name || 'Unknown',
-    attachment: msg.attachment_name ? {
-      name: msg.attachment_name,
-      size: msg.attachment_size || '',
-      type: msg.attachment_type || '',
-      url: msg.attachment_url || ''
-    } : undefined,
-  }));
+  // Group messages by date
+  const groupedMessages: { date: string; messages: any[] }[] = [];
+  let currentDateLabel = "";
+
+  const filteredMessages = messages.filter(msg =>
+    !messageSearchQuery ||
+    (msg.content && msg.content.toLowerCase().includes(messageSearchQuery.toLowerCase()))
+  );
+
+  filteredMessages.forEach((msg) => {
+    const msgDate = new Date(msg.created_at);
+    const dateLabel = getDateLabel(msgDate);
+
+    if (dateLabel !== currentDateLabel) {
+      currentDateLabel = dateLabel;
+      groupedMessages.push({ date: dateLabel, messages: [] });
+    }
+
+    groupedMessages[groupedMessages.length - 1].messages.push({
+      id: msg.id,
+      content: msg.content,
+      timestamp: format(msgDate, 'h:mm a'),
+      isOwn: msg.sender_id === user?.id,
+      sender: msg.sender_name || 'Unknown',
+      attachment: msg.attachment_name ? {
+        name: msg.attachment_name,
+        size: msg.attachment_size || '',
+        type: msg.attachment_type || '',
+        url: msg.attachment_url || ''
+      } : undefined,
+    });
+  });
 
   if (loading) {
     return (
       <DashboardLayout fullHeight={true}>
         <div className="flex items-center justify-center h-full">
-          <Loader2 className="size-8 animate-spin text-primary" />
+          <Loader2 className="size-8 animate-spin text-emerald-500" />
         </div>
       </DashboardLayout>
     );
@@ -437,200 +442,356 @@ export default function Messages() {
 
   return (
     <DashboardLayout fullHeight={true}>
-      <div className="flex h-full bg-background">
-        {/* Sidebar */}
-        <div className="w-80 border-r border-border flex flex-col bg-surface">
+      <div className="flex h-full bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
+
+        {/* Left Sidebar */}
+        <div className="w-80 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800">
+
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Messages</h2>
-              <p className="text-sm text-muted-foreground">Direct conversations</p>
+          <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-emerald-50 dark:bg-slate-800">
+            <div className="flex items-center gap-3">
+              <Avatar className="size-10 ring-2 ring-emerald-500/20">
+                <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
+                <AvatarFallback className="bg-emerald-500 text-white font-semibold">
+                  {profile?.full_name?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold text-sm">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400">Active Now</p>
+              </div>
             </div>
-            <Button size="icon" variant="ghost" onClick={() => setIsAskDoubtOpen(true)} title={role === 'lecturer' ? "New Message" : "Ask a Doubt"}>
-              <Plus className="size-5" />
-            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-9 text-slate-500 hover:text-emerald-600">
+                  <MoreVertical className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Chat Settings</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-2">
+                  Background Colors
+                </DropdownMenuLabel>
+                <div className="p-2 grid grid-cols-4 gap-2 mb-2">
+                  {[
+                    '#fecaca', // Red
+                    '#fed7aa', // Orange
+                    '#fde68a', // Amber
+                    '#bbf7d0', // Green
+                    '#a5f3fc', // Cyan
+                    '#bfdbfe', // Blue
+                    '#ddd6fe', // Violet
+                    '#fbcfe8'  // Pink
+                  ].map(c => (
+                    <button
+                      key={c}
+                      className="size-8 rounded-lg border shadow-sm transition-transform hover:scale-110"
+                      style={{ backgroundColor: c }}
+                      onClick={() => handleWallpaperChange(c)}
+                      title={c}
+                    />
+                  ))}
+                </div>
+                <DropdownMenuItem onClick={() => handleWallpaperChange('')}>
+                  <span className="text-xs">Reset Default</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => document.getElementById('wallpaper-upload')?.click()}>
+                  <span className="text-xs">Upload Image</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Search */}
-          <div className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Search conversations..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          <div className="p-3 border-b border-slate-100 dark:border-slate-700">
+            <div className="relative flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Input
+                  placeholder="Search or start new chat"
+                  className="pl-9 bg-slate-100 dark:bg-slate-700 border-0 rounded-lg h-9 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className={cn("size-9", filterMode !== 'all' ? "text-emerald-500 bg-emerald-50" : "text-slate-400")}>
+                    <Filter className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter Chats</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setFilterMode('all')}>
+                    All Chats
+                    {filterMode === 'all' && <CheckCheck className="size-3 ml-auto text-emerald-500" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterMode('online')}>
+                    Online Only
+                    {filterMode === 'online' && <CheckCheck className="size-3 ml-auto text-emerald-500" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
           {/* Conversation List */}
           <ScrollArea className="flex-1">
-            <div className="p-2">
-              <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Direct Messages
+            {sortedItems.length === 0 ? (
+              <div className="p-6 text-center">
+                <MessageSquare className="size-12 mx-auto mb-3 text-slate-300" />
+                <p className="text-sm text-slate-500">No conversations yet</p>
               </div>
-              {sortedItems.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <MessageSquare className="size-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">No conversations yet</p>
-                  <Button variant="link" onClick={() => setIsAskDoubtOpen(true)}>
-                    {role === 'lecturer' ? "Start a new conversation" : "Ask a Doubt"}
-                  </Button>
-                </div>
-              ) : (
-                sortedItems.map((item) => {
-                  const isVirtual = 'is_virtual' in item && item.is_virtual;
-                  const realId = isVirtual ? (item as any).other_user_id : item.id;
+            ) : (
+              sortedItems.map((item) => {
+                const isVirtual = 'is_virtual' in item && item.is_virtual;
+                const realId = isVirtual ? (item as any).other_user_id : item.id;
+                const otherUserIdForOnline = isVirtual ? realId : (item.participant_1 === user?.id ? item.participant_2 : item.participant_1);
+                const isOnline = onlineUsers.has(otherUserIdForOnline);
+                const isTyping = typingUsers.has(otherUserIdForOnline);
 
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => isVirtual ? handleStartNewChat(realId) : setSelectedConversationId(item.id)}
-                      className={cn(
-                        "w-full flex items-start gap-3 p-3 rounded-lg text-left transition-colors",
-                        selectedConversationId === item.id
-                          ? "bg-primary/10"
-                          : "hover:bg-secondary"
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => isVirtual ? handleStartNewChat(realId) : setSelectedConversationId(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-50 dark:border-slate-700/50",
+                      selectedConversationId === item.id
+                        ? "bg-emerald-50 dark:bg-emerald-900/20"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                    )}
+                  >
+                    <div className="relative">
+                      <Avatar className="size-12">
+                        <AvatarImage src={item.other_user_avatar} />
+                        <AvatarFallback className="bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
+                          {(item.other_user_name || 'U').split(" ").map((n: string) => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isOnline && (
+                        <span className="absolute bottom-0 right-0 size-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800" />
                       )}
-                    >
-                      <div className="relative">
-                        <Avatar className="size-10">
-                          <AvatarImage src={item.other_user_avatar} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {(item.other_user_name || 'U').split(" ").map((n: string) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        {/* Online Status for Real & Virtual */}
-                        {onlineUsers.has(isVirtual ? realId : (item.participant_1 === user?.id ? item.participant_2 : item.participant_1)) && (
-                          <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full border-2 border-surface" />
-                        )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm truncate">{item.other_user_name || 'Unknown User'}</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 shrink-0">
+                          {item.last_message_at ? format(new Date(item.last_message_at), 'h:mm a') : ''}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium truncate">{item.other_user_name || 'Unknown User'}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {item.last_message_at ? format(new Date(item.last_message_at), 'MMM d') : ''}
-                          </span>
-                        </div>
-                        <p className={cn("text-sm truncate", isVirtual ? "text-primary/70 italic" : "text-muted-foreground")}>
-                          {item.last_message || 'No messages yet'}
-                        </p>
+                      <p className={cn(
+                        "text-xs truncate mt-0.5",
+                        isTyping ? "text-emerald-600 dark:text-emerald-400 italic" : "text-slate-500"
+                      )}>
+                        {isTyping ? "typing..." : (item.last_message || 'No messages yet')}
+                      </p>
+                    </div>
+                    {isVirtual && (
+                      <div className="size-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                        <Plus className="size-3 text-white" />
                       </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+                    )}
+                  </button>
+                );
+              })
+            )}
           </ScrollArea>
+
+          {/* New Chat Button */}
+          <div className="p-3 border-t border-slate-100 dark:border-slate-700">
+            <Button
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white gap-2 rounded-xl h-11"
+              onClick={() => setIsNewChatOpen(true)}
+            >
+              <MessageSquare className="size-4" />
+              New Chat
+            </Button>
+          </div>
         </div>
 
         {/* Chat Area */}
         {selectedConversation ? (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col bg-slate-100 dark:bg-slate-900"
+            style={{
+              backgroundImage: wallpaper.startsWith('data:') || wallpaper.startsWith('http') ? `url(${wallpaper})` : undefined,
+              backgroundColor: !wallpaper.startsWith('data:') && !wallpaper.startsWith('http') ? wallpaper : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
+
             {/* Chat Header */}
-            <div className="h-16 px-6 flex items-center justify-between border-b border-border bg-surface">
-              <div className="flex items-center gap-3">
-                <Avatar className="size-10">
-                  <AvatarImage src={selectedConversation.other_user_avatar} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {(selectedConversation.other_user_name || 'U').split(" ").map((n) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold">{selectedConversation.other_user_name || 'Unknown User'}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedConversation.other_user_role || 'User'}
-                    {isOtherUserOnline ? <span className="text-green-500 ml-2 text-xs font-medium">● Online</span> : <span className="ml-2 text-xs">Offline</span>}
-                    {isOtherUserTyping && <span className="ml-2 text-muted-foreground animate-pulse">Typing...</span>}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-6">
-              <div className="space-y-6">
-                {/* Messages Mapping */}
-                {transformedMessages.map((message) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    setMessageToDelete={setMessageToDelete}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Message Input */}
-            <div className="p-4 border-t border-border bg-surface">
-              {selectedFile && (
-                <div className="mb-2 p-2 bg-secondary rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <Badge variant="outline" className="shrink-0">Attachment</Badge>
-                    <span className="text-xs truncate">{selectedFile.name}</span>
-                    <span className="text-xs text-muted-foreground">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={clearSelectedFile}>
-                    <X className="size-3" />
-                  </Button>
-                </div>
-              )}
-              {/* Input Area */}
-              <div className="flex items-end gap-2">
-                <div className="flex-1 relative">
-                  <textarea
-                    value={messageInput}
-                    onChange={(e) => {
-                      setMessageInput(e.target.value);
-                      // Throttle typing events
-                      if (e.target.value.length % 5 === 0) sendTyping();
+            <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+              {isMessageSearchOpen ? (
+                <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-top-2 duration-200">
+                  <Search className="size-4 text-slate-400" />
+                  <Input
+                    autoFocus
+                    placeholder="Search in conversation..."
+                    className="border-none shadow-none focus-visible:ring-0 bg-transparent h-9 px-0"
+                    value={messageSearchQuery}
+                    onChange={(e) => setMessageSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setIsMessageSearchOpen(false);
+                        setMessageSearchQuery("");
+                      }
                     }}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Type a message..."
-                    className="w-full min-h-[44px] max-h-32 px-4 py-3 rounded-xl bg-secondary border-0 resize-none text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    rows={1}
-                  />
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    accept="*"
                   />
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                    className={selectedFile ? "text-primary" : ""}
+                    className="size-8 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
+                    onClick={() => {
+                      setIsMessageSearchOpen(false);
+                      setMessageSearchQuery("");
+                    }}
                   >
-                    <Paperclip className="size-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon">
-                    <Smile className="size-5" />
-                  </Button>
-                  <Button size="icon" onClick={handleSendMessage} disabled={(!messageInput.trim() && !selectedFile) || isUploading}>
-                    {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                    <X className="size-4" />
                   </Button>
                 </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-10">
+                      <AvatarImage src={selectedConversation.other_user_avatar} />
+                      <AvatarFallback className="bg-slate-200 dark:bg-slate-600">
+                        {(selectedConversation.other_user_name || 'U').split(" ").map((n) => n[0]).join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-sm">{selectedConversation.other_user_name || 'Unknown User'}</h3>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                        {isOtherUserOnline ? 'Online' : 'Offline'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-9 text-slate-500 hover:text-emerald-600"
+                      onClick={() => setIsMessageSearchOpen(true)}
+                    >
+                      <Search className="size-5" />
+                    </Button>
+                    <input
+                      id="wallpaper-upload"
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleWallpaperUpload}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Messages Area */}
+            <ScrollArea className="flex-1 px-6 py-4">
+              <div className="max-w-3xl mx-auto">
+                {groupedMessages.map((group, groupIndex) => (
+                  <div key={groupIndex}>
+                    <DateSeparator date={group.date} />
+                    {group.messages.map((message) => (
+                      <MessageBubble
+                        key={message.id}
+                        message={message}
+                        setMessageToDelete={setMessageToDelete}
+                      />
+                    ))}
+                  </div>
+                ))}
+                {isOtherUserTyping && <TypingIndicator />}
+                <div ref={messagesEndRef} />
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Press Enter to send, Shift + Enter for new line
-              </p>
+            </ScrollArea>
+
+            {/* Message Input */}
+            <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+              {selectedFile && (
+                <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                      <FileText className="size-5 text-emerald-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-slate-500">{formatFileSize(selectedFile.size)}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="size-8" onClick={clearSelectedFile}>
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {/* Removed emoji button */}
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept="*"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("size-10 shrink-0", selectedFile ? "text-emerald-600" : "text-slate-500 hover:text-emerald-600")}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="size-5" />
+                </Button>
+
+                <div className="flex-1">
+                  <Input
+                    value={messageInput}
+                    onChange={(e) => {
+                      setMessageInput(e.target.value);
+                      if (e.target.value.length % 5 === 0) sendTyping();
+                    }}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type a message"
+                    className="bg-slate-100 dark:bg-slate-700 border-0 rounded-xl h-11 text-sm"
+                  />
+                </div>
+
+                <Button variant="ghost" size="icon" className="size-10 text-slate-500 hover:text-emerald-600 shrink-0">
+                  <Mic className="size-5" />
+                </Button>
+
+                <Button
+                  size="icon"
+                  className="size-10 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shrink-0"
+                  onClick={handleSendMessage}
+                  disabled={(!messageInput.trim() && !selectedFile) || isUploading}
+                >
+                  {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-background">
-            <div className="text-center">
-              <MessageSquare className="size-16 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-medium mb-1">Select a conversation</h3>
-              <p className="text-sm text-muted-foreground">
-                Choose a conversation from the sidebar or ask a doubt to a lecturer.
+          <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-900">
+            <div className="text-center max-w-md">
+              <div className="size-24 mx-auto mb-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <MessageSquare className="size-12 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Welcome to Messages</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                Select a conversation from the sidebar or start a new chat to begin messaging.
               </p>
-              <Button onClick={() => setIsAskDoubtOpen(true)} className="mt-4">
-                {role === 'lecturer' ? "New Message" : "Ask a Doubt"}
+              <Button
+                className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2 rounded-xl"
+                onClick={() => setIsNewChatOpen(true)}
+              >
+                <Plus className="size-4" />
+                Start New Chat
               </Button>
             </div>
           </div>
@@ -657,8 +818,9 @@ export default function Messages() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isAskDoubtOpen} onOpenChange={setIsAskDoubtOpen}>
-          <DialogContent>
+        {/* New Chat Dialog */}
+        <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>{role === 'lecturer' ? "New Message" : "Ask a Doubt"}</DialogTitle>
               <DialogDescription>
@@ -667,64 +829,66 @@ export default function Messages() {
                   : "Select a lecturer to start a conversation."}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="py-4">
               {role === 'lecturer' ? (
-                // Lecturer View: List Eligible Students
                 studentsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="size-8 animate-spin text-primary" />
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="size-8 animate-spin text-emerald-500" />
                   </div>
                 ) : eligibleStudents.length === 0 ? (
-                  <p className="text-center text-muted-foreground">No eligible students found.</p>
+                  <p className="text-center text-slate-500 py-8">No eligible students found.</p>
                 ) : (
-                  <ScrollArea className="h-[300px] pr-4">
-                    <div className="space-y-2">
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-1">
                       {eligibleStudents.map(student => (
                         <button
                           key={student.id}
                           onClick={() => handleStartNewChat(student.id)}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors text-left"
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
                         >
-                          <Avatar>
+                          <Avatar className="size-10">
                             <AvatarImage src={student.avatar_url || ''} />
-                            <AvatarFallback>{(student.full_name || 'S').charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                              {(student.full_name || 'S').charAt(0)}
+                            </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium">{student.full_name}</p>
-                            <p className="text-xs text-muted-foreground">{student.email}</p>
-                            {student.class_name && (
-                              <Badge variant="outline" className="mt-1 text-xs">{student.class_name}</Badge>
-                            )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{student.full_name}</p>
+                            <p className="text-xs text-slate-500 truncate">{student.email}</p>
                           </div>
+                          {student.class_name && (
+                            <Badge variant="secondary" className="text-xs shrink-0">{student.class_name}</Badge>
+                          )}
                         </button>
                       ))}
                     </div>
                   </ScrollArea>
                 )
               ) : (
-                // Student View: List Instructors
                 instructorsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="size-8 animate-spin text-primary" />
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="size-8 animate-spin text-emerald-500" />
                   </div>
                 ) : instructors.length === 0 ? (
-                  <p className="text-center text-muted-foreground">No lecturers found.</p>
+                  <p className="text-center text-slate-500 py-8">No lecturers found.</p>
                 ) : (
-                  <ScrollArea className="h-[300px] pr-4">
-                    <div className="space-y-2">
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-1">
                       {instructors.map(inst => (
                         <button
                           key={inst.id}
                           onClick={() => handleStartNewChat(inst.id)}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors text-left"
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
                         >
-                          <Avatar>
+                          <Avatar className="size-10">
                             <AvatarImage src={inst.avatar_url || ''} />
-                            <AvatarFallback>{(inst.full_name || 'L').charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                              {(inst.full_name || 'L').charAt(0)}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{inst.full_name}</p>
-                            <Badge variant="secondary" className="text-xs">Lecturer</Badge>
+                            <p className="font-medium text-sm">{inst.full_name}</p>
+                            <Badge variant="secondary" className="text-xs mt-1">Lecturer</Badge>
                           </div>
                         </button>
                       ))}
@@ -735,7 +899,6 @@ export default function Messages() {
             </div>
           </DialogContent>
         </Dialog>
-
       </div>
     </DashboardLayout>
   );

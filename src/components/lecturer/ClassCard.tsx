@@ -92,12 +92,12 @@ export function ClassCard({ classData }: ClassCardProps) {
     return (
         <>
             <Card
-                className="bg-card border-border hover:border-primary/50 transition-all cursor-pointer group relative overflow-hidden"
+                className="bg-card border-border shadow-sm hover:shadow-md hover:border-primary/25 transition-all duration-200 cursor-pointer group relative overflow-hidden"
                 onClick={handleViewStudents}
             >
                 {classImageUrl && (
                     <div
-                        className="absolute inset-0 bg-cover bg-center opacity-20"
+                        className="absolute inset-0 bg-cover bg-center opacity-10 dark:opacity-5"
                         style={{ backgroundImage: `url(${classImageUrl})` }}
                     />
                 )}
@@ -190,17 +190,29 @@ export function ClassCard({ classData }: ClassCardProps) {
 
                         <div className="flex items-center gap-2 pt-2 border-t border-border">
                             <div className="flex items-center gap-2 text-sm">
-                                <div className="p-2 bg-primary/10 rounded-lg">
-                                    <Users className="size-4 text-primary" />
+                                <div className="p-2 bg-violet-500/10 rounded-lg">
+                                    <Users className="size-4 text-violet-500" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-semibold text-foreground">
                                         {classData.student_count || 0}
                                     </span>
-                                    <span className="text-xs text-muted-foreground">Students</span>
+                                    <span className="text-xs text-muted-foreground">Students enrolled</span>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Action Button */}
+                        <Button
+                            className="w-full gap-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewStudents();
+                            }}
+                        >
+                            <Users className="size-4" />
+                            View Students
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

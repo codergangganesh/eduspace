@@ -6,21 +6,71 @@ import {
     Users,
     Plus,
     BookOpen,
-    TrendingUp,
     GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CreateClassModal } from "@/components/lecturer/CreateClassModal";
-import { ClassCard } from "@/components/lecturer/ClassCard";
+import { EditClassModal } from "@/components/lecturer/EditClassModal";
+import { SectionClassCard } from "@/components/common/SectionClassCard";
+import { useToast } from "@/hooks/use-toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function CreateClass() {
-    const { classes, loading } = useClasses();
+    const navigate = useNavigate();
+    const { classes, loading, deleteClass } = useClasses();
+    const { toast } = useToast();
+
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [classToEdit, setClassToEdit] = useState<any>(null);
+    const [classToDelete, setClassToDelete] = useState<any>(null);
 
     // Calculate stats
     const totalClasses = classes.length;
     const totalStudents = classes.reduce((sum, cls) => sum + (cls.student_count || 0), 0);
     const activeClasses = classes.filter(cls => cls.is_active).length;
+
+    const handleViewStudents = (classId: string) => {
+        navigate(`/classes/${classId}/students`);
+    };
+
+    const handleEditClass = (classData: any) => {
+        setClassToEdit(classData);
+        setIsEditModalOpen(true);
+    };
+
+    const handleDeleteClass = (classData: any) => {
+        setClassToDelete(classData);
+    };
+
+    const confirmDelete = async () => {
+        if (!classToDelete) return;
+        try {
+            await deleteClass(classToDelete.id);
+            toast({
+                title: "Class Deleted",
+                description: `${classToDelete.course_code} has been successfully deleted`,
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to delete class",
+                variant: "destructive",
+            });
+        } finally {
+            setClassToDelete(null);
+        }
+    };
 
     return (
         <DashboardLayout>
@@ -28,8 +78,8 @@ export default function CreateClass() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Class Management</h1>
-                        <p className="text-sm text-muted-foreground">Create and manage your classes</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Student Management</h1>
+                        <p className="text-sm text-muted-foreground">Manage students across your classes</p>
                     </div>
                     <Button
                         onClick={() => setIsCreateModalOpen(true)}
@@ -40,54 +90,54 @@ export default function CreateClass() {
                     </Button>
                 </div>
 
-                {/* Stats Cards */}
+                {/* Stats Cards - Dark Glass Design */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Total Classes</p>
-                                    <p className="text-3xl font-bold text-foreground">{totalClasses}</p>
-                                    <div className="flex items-center gap-1 text-xs text-emerald-500 mt-1">
-                                        <TrendingUp className="size-3" />
-                                        <span>{activeClasses} active</span>
-                                    </div>
-                                </div>
-                                <div className="p-3 bg-blue-500/10 rounded-lg">
-                                    <BookOpen className="size-6 text-blue-500" />
-                                </div>
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
+                        <CardContent className="p-5 flex items-center gap-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+                            <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/20 relative z-10">
+                                <BookOpen className="size-6 text-blue-400" />
+                            </div>
+                            <div className="relative z-10">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                                    Total Classes
+                                </p>
+                                <p className="text-2xl font-bold text-white">{totalClasses}</p>
+                                <p className="text-xs text-emerald-400 mt-0.5">{activeClasses} active</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Total Students</p>
-                                    <p className="text-3xl font-bold text-foreground">{totalStudents}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Across all classes</p>
-                                </div>
-                                <div className="p-3 bg-purple-500/10 rounded-lg">
-                                    <Users className="size-6 text-purple-500" />
-                                </div>
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
+                        <CardContent className="p-5 flex items-center gap-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                            <div className="p-3 bg-violet-500/20 rounded-xl border border-violet-500/20 relative z-10">
+                                <Users className="size-6 text-violet-400" />
+                            </div>
+                            <div className="relative z-10">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                                    Total Students
+                                </p>
+                                <p className="text-2xl font-bold text-white">{totalStudents}</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Across all classes</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Avg. Class Size</p>
-                                    <p className="text-3xl font-bold text-foreground">
-                                        {totalClasses > 0 ? Math.round(totalStudents / totalClasses) : 0}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">Students per class</p>
-                                </div>
-                                <div className="p-3 bg-emerald-500/10 rounded-lg">
-                                    <GraduationCap className="size-6 text-emerald-500" />
-                                </div>
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
+                        <CardContent className="p-5 flex items-center gap-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+                            <div className="p-3 bg-emerald-500/20 rounded-xl border border-emerald-500/20 relative z-10">
+                                <GraduationCap className="size-6 text-emerald-400" />
+                            </div>
+                            <div className="relative z-10">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                                    Avg. Class Size
+                                </p>
+                                <p className="text-2xl font-bold text-white">
+                                    {totalClasses > 0 ? Math.round(totalStudents / totalClasses) : 0}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">Students per class</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -95,15 +145,15 @@ export default function CreateClass() {
 
                 {/* Classes Grid */}
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[1, 2, 3].map((i) => (
-                            <Card key={i} className="bg-card border-border">
+                            <Card key={i} className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 rounded-2xl">
                                 <CardContent className="p-6">
                                     <div className="animate-pulse space-y-4">
-                                        <div className="h-12 w-12 bg-secondary rounded-full"></div>
+                                        <div className="h-24 bg-slate-800 rounded-xl"></div>
                                         <div className="space-y-2">
-                                            <div className="h-4 bg-secondary rounded w-3/4"></div>
-                                            <div className="h-3 bg-secondary rounded w-1/2"></div>
+                                            <div className="h-4 bg-slate-800 rounded w-3/4"></div>
+                                            <div className="h-3 bg-slate-800 rounded w-1/2"></div>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -111,15 +161,15 @@ export default function CreateClass() {
                         ))}
                     </div>
                 ) : classes.length === 0 ? (
-                    <Card className="bg-card border-border">
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl">
                         <CardContent className="p-12">
                             <div className="flex flex-col items-center justify-center text-center gap-4">
-                                <div className="p-4 bg-secondary rounded-full">
-                                    <BookOpen className="size-8 text-muted-foreground" />
+                                <div className="p-4 bg-slate-800 rounded-full">
+                                    <BookOpen className="size-8 text-slate-400" />
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <h3 className="text-lg font-semibold text-foreground">No classes yet</h3>
-                                    <p className="text-sm text-muted-foreground max-w-sm">
+                                    <h3 className="text-lg font-semibold text-white">No classes yet</h3>
+                                    <p className="text-sm text-slate-400 max-w-sm">
                                         Get started by creating your first class. You can then add students and manage course materials.
                                     </p>
                                 </div>
@@ -134,9 +184,17 @@ export default function CreateClass() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {classes.map((classItem) => (
-                            <ClassCard key={classItem.id} classData={classItem} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {classes.map((classItem, index) => (
+                            <SectionClassCard
+                                key={classItem.id}
+                                classData={classItem}
+                                variant="students"
+                                onAction={handleViewStudents}
+                                index={index}
+                                onEdit={handleEditClass}
+                                onDelete={handleDeleteClass}
+                            />
                         ))}
                     </div>
                 )}
@@ -147,6 +205,36 @@ export default function CreateClass() {
                 open={isCreateModalOpen}
                 onOpenChange={setIsCreateModalOpen}
             />
+
+            {/* Edit Class Modal */}
+            <EditClassModal
+                open={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                classData={classToEdit}
+            />
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!classToDelete} onOpenChange={() => setClassToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the class
+                            <span className="font-semibold text-foreground"> {classToDelete?.course_code} </span>
+                            and all associated data.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </DashboardLayout>
     );
 }

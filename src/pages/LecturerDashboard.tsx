@@ -1,7 +1,6 @@
 // Imports
-import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus } from "lucide-react";
+import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { StatsCard } from "@/components/dashboard/StatsCard";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLecturerData } from "@/hooks/useLecturerData";
@@ -10,6 +9,8 @@ import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRealtimeRejections } from "@/hooks/useRealtimeRejections";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
@@ -27,9 +28,36 @@ export default function LecturerDashboard() {
     : `Dr. ${displayName.split(" ").pop()}`;
 
   const stats = [
-    { title: "Enrolled Students", value: dataStats.enrolledStudents, subtitle: "Total students in your courses", icon: Users },
-    { title: "Submissions Received", value: dataStats.submissionsReceived, subtitle: "Students who submitted", icon: CheckCircle },
-    { title: "Pending Submissions", value: dataStats.pendingSubmissions, subtitle: "Awaiting submission", icon: Clock },
+    {
+      title: "Total Students",
+      value: dataStats.enrolledStudents,
+      label: "Enrolled across all courses",
+      icon: Users,
+      color: "bg-blue-500",
+      lightColor: "bg-blue-500/10 text-blue-600",
+      gradient: "from-blue-500/20 to-blue-600/5",
+      borderColor: "border-blue-200 dark:border-blue-800"
+    },
+    {
+      title: "Submissions",
+      value: dataStats.submissionsReceived,
+      label: "Total received",
+      icon: FileText,
+      color: "bg-purple-500",
+      lightColor: "bg-purple-500/10 text-purple-600",
+      gradient: "from-purple-500/20 to-purple-600/5",
+      borderColor: "border-purple-200 dark:border-purple-800"
+    },
+    {
+      title: "Pending Review",
+      value: dataStats.pendingSubmissions,
+      label: "Needs grading",
+      icon: AlertCircle,
+      color: "bg-amber-500",
+      lightColor: "bg-amber-500/10 text-amber-600",
+      gradient: "from-amber-500/20 to-amber-600/5",
+      borderColor: "border-amber-200 dark:border-amber-800"
+    },
   ];
 
   if (loading) {
@@ -49,193 +77,243 @@ export default function LecturerDashboard() {
           variant="default"
           size="sm"
           onClick={() => setInviteDialogOpen(true)}
-          className="gap-2"
+          className="gap-2 shadow-sm"
         >
           <UserPlus className="size-4" />
-          <span className="hidden sm:inline">Invite User</span>
+          <span className="hidden sm:inline">Invite Student</span>
         </Button>
       }
     >
-      <div className="flex flex-col gap-6">
-        {/* Welcome Section */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            Welcome back, {title}! 👋
-          </h1>
-          <p className="text-muted-foreground">
-            Here's an overview of your courses and student activity.
-          </p>
+      <div className="flex flex-col gap-8 pb-8">
+
+        {/* Modern Hero Section */}
+        <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
+          {/* Abstract Background Shapes */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 size-[500px] rounded-full bg-indigo-500/30 blur-3xl opacity-50 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-[400px] rounded-full bg-emerald-500/20 blur-3xl opacity-50 pointer-events-none" />
+
+          <div className="relative z-10 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-emerald-300">
+                <span className="relative flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+                </span>
+                Academic Dashboard
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 to-cyan-200">{title}</span>
+              </h1>
+              <p className="text-slate-300 text-base max-w-lg">
+                Your daily overview of student progress upcoming classes.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {stats.map((stat) => (
-            <StatsCard key={stat.title} {...stat} />
+        {/* Stats Grid - Premium Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {stats.map((stat, i) => (
+            <div
+              key={stat.title}
+              className={cn(
+                "group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1",
+                stat.borderColor
+              )}
+            >
+              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", stat.gradient)} />
+              <div className="relative z-10 flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                  <h3 className="mt-2 text-3xl font-bold tracking-tight text-foreground">{stat.value}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+                <div className={cn("rounded-xl p-3", stat.lightColor)}>
+                  <stat.icon className="size-6" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Recent Submissions */}
-          <div className="xl:col-span-2 flex flex-col gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Recent Submissions - Left Column (2/3) */}
+          <div className="xl:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Recent Submissions</h2>
-              <a href="/lecturer/assignments" className="text-sm text-primary hover:underline font-medium">
-                View All
-              </a>
+              <div className="space-y-1">
+                <h2 className="text-xl font-bold text-foreground">Recent Activity</h2>
+                <p className="text-sm text-muted-foreground">Latest student submissions needing review</p>
+              </div>
+              <Button variant="ghost" className="text-primary hover:text-primary/80" onClick={() => navigate('/lecturer/assignments')}>
+                View All <ArrowRight className="size-4 ml-1" />
+              </Button>
             </div>
-            <div className="bg-surface rounded-xl border border-border overflow-hidden">
-              {recentSubmissions.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/30">
-                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Student</th>
-                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Assignment</th>
-                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Course</th>
-                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Submitted</th>
-                        <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentSubmissions.map((submission) => (
-                        <tr key={submission.id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
-                          <td className="px-4 py-3">
-                            <span className="font-medium text-foreground">{submission.studentName}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-foreground">{submission.assignmentTitle}</span>
-                          </td>
-                          <td className="px-4 py-3 hidden sm:table-cell">
-                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
+
+            <Card className="border-border/50 shadow-sm bg-surface/50 backdrop-blur-sm">
+              <CardContent className="p-0">
+                {recentSubmissions.length > 0 ? (
+                  <div className="divide-y divide-border/50">
+                    {recentSubmissions.map((submission) => (
+                      <div
+                        key={submission.id}
+                        className="flex flex-col sm:flex-row sm:items-center p-5 hover:bg-muted/30 transition-colors group cursor-pointer"
+                        onClick={() => {
+                          if (submission.classId && submission.assignmentId) {
+                            navigate(`/lecturer/assignments/${submission.classId}/${submission.assignmentId}/submissions`);
+                          } else {
+                            navigate('/lecturer/assignments');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="size-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-sm">
+                            {submission.studentName.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{submission.studentName}</h4>
+                            <p className="text-xs text-muted-foreground">submitted <span className="font-medium text-foreground">{submission.assignmentTitle}</span></p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 mt-3 sm:mt-0 pl-14 sm:pl-0">
+                          <div className="hidden sm:block">
+                            <Badge variant="outline" className="bg-background/50 font-normal">
                               {submission.courseCode}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 hidden md:table-cell">
-                            <span className="text-sm text-muted-foreground">{submission.submittedAt}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {submission.status === "pending" ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-md">
-                                <AlertCircle className="size-3" />
-                                Pending
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-md">
-                                <CheckCircle className="size-3" />
-                                {submission.grade}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground text-sm">
-                  No recent submissions found.
-                </div>
-              )}
-            </div>
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="size-3.5 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">{submission.submittedAt}</span>
+                          </div>
+                          <div className="w-24 flex justify-end">
+                            <Badge
+                              className={cn(
+                                "capitalize",
+                                submission.status === 'pending'
+                                  ? "bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900"
+                                  : "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900"
+                              )}
+                            >
+                              {submission.status === 'pending' ? 'To Grade' : 'Graded'}
+                            </Badge>
+                          </div>
+                          <ChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity -mr-2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                      <FileText className="size-8 text-muted-foreground/50" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground">No recent submissions</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs mt-1">
+                      When students submit assignments, they will appear here for your review.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Sidebar Content */}
-          <div className="flex flex-col gap-6">
-            {/* Upcoming Classes */}
-            <div className="flex flex-col gap-4">
+          {/* Right Sidebar (1/3) */}
+          <div className="space-y-6">
+
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => navigate('/schedule')}
+                className="flex flex-col gap-3 p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-indigo-100 dark:border-indigo-900/50 hover:shadow-md transition-all text-left group"
+              >
+                <div className="size-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                  <Calendar className="size-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-indigo-900 dark:text-indigo-100">Schedule</h3>
+                  <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80">Manage classes</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/all-students')}
+                className="flex flex-col gap-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-100 dark:border-emerald-900/50 hover:shadow-md transition-all text-left group"
+              >
+                <div className="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                  <GraduationCap className="size-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">Students</h3>
+                  <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">View directory</p>
+                </div>
+              </button>
+            </div>
+
+            {/* Upcoming Classes - Timeline Style */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground">Upcoming Classes</h2>
-                <a href="/schedule" className="text-sm text-primary hover:underline font-medium">
-                  Full Schedule
-                </a>
+                <h2 className="text-lg font-bold text-foreground">Upcoming Classes</h2>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => navigate('/schedule')}>See all</Button>
               </div>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3">
+
+              <Card className="border-border/50 shadow-sm">
+                <CardContent className="p-0">
                   {upcomingClasses.length > 0 ? (
-                    upcomingClasses.map((classItem) => (
-                      <div
-                        key={classItem.id}
-                        className={cn(
-                          "p-4 rounded-lg border transition-all",
-                          classItem.isToday
-                            ? "border-primary/50 bg-primary/5"
-                            : "border-border bg-surface"
-                        )}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={cn(
-                            "size-10 rounded-lg flex items-center justify-center shrink-0",
-                            classItem.isToday ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                          )}>
-                            <Calendar className="size-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-primary">{classItem.courseCode}</span>
-                              {classItem.isToday && (
-                                <span className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                  Today
-                                </span>
-                              )}
+                    <div className="relative">
+                      {/* Timeline Line */}
+                      <div className="absolute left-6 top-4 bottom-4 w-px bg-border/60" />
+
+                      <div className="flex flex-col">
+                        {upcomingClasses.map((classItem, idx) => (
+                          <div
+                            key={classItem.id}
+                            className="relative pl-12 pr-4 py-4 border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors cursor-pointer group"
+                            onClick={() => {
+                              if (classItem.classId) {
+                                navigate(`/schedule?classId=${classItem.classId}`);
+                              } else {
+                                navigate('/schedule');
+                              }
+                            }}
+                          >
+                            {/* Timeline Dot */}
+                            <div className={cn(
+                              "absolute left-[21px] top-6 size-2.5 rounded-full border-2 border-background z-10 transition-colors",
+                              classItem.isToday ? "bg-emerald-500 ring-2 ring-emerald-500/20 group-hover:ring-emerald-500/40" : "bg-slate-300 dark:bg-slate-600 group-hover:bg-primary"
+                            )} />
+
+                            <div className="flex justify-between items-start mb-1">
+                              <span className={cn(
+                                "text-xs font-bold px-2 py-0.5 rounded",
+                                classItem.isToday ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-secondary text-secondary-foreground"
+                              )}>
+                                {classItem.courseCode}
+                              </span>
+                              <span className="text-xs font-mono text-muted-foreground">{classItem.time}</span>
                             </div>
-                            <h4 className="font-medium text-foreground text-sm mt-1 line-clamp-1">
-                              {classItem.title}
-                            </h4>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Clock className="size-3.5" />
-                                <span>{classItem.time}</span>
-                              </div>
+
+                            <h4 className="font-semibold text-sm text-foreground line-clamp-1 mb-1 group-hover:text-primary transition-colors">{classItem.title}</h4>
+
+                            <div className="flex items-center text-xs text-muted-foreground gap-1">
+                              <Clock className="size-3" />
                               <span>{classItem.room}</span>
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    ))
+                    </div>
                   ) : (
-                    <div className="text-center p-4 text-sm text-muted-foreground">
-                      No upcoming classes.
+                    <div className="p-8 text-center text-muted-foreground">
+                      <p className="text-sm">No upcoming classes scheduled.</p>
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/schedule')}>
+                        Schedule Class
+                      </Button>
                     </div>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex flex-col gap-4">
-              <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <button
-                  onClick={() => navigate('/lecturer/assignments')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
-                >
-                  <FileText className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground text-center">Create Assignment</span>
-                </button>
-                <button
-                  onClick={() => navigate('/schedule')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
-                >
-                  <Calendar className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground text-center">Schedule Class</span>
-                </button>
-                <button
-                  onClick={() => navigate('/all-students')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
-                >
-                  <Users className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground text-center">View Students</span>
-                </button>
-                <button
-                  onClick={() => setInviteDialogOpen(true)}
-                  className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-surface hover:bg-secondary/50 hover:border-primary/50 transition-all cursor-pointer"
-                >
-                  <UserPlus className="size-5 text-primary" />
-                  <span className="text-xs font-medium text-foreground text-center">Invite User</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -247,6 +325,6 @@ export default function LecturerDashboard() {
         lecturerName={profile?.full_name || "Lecturer"}
         lecturerEmail={profile?.email || ""}
       />
-    </DashboardLayout >
+    </DashboardLayout>
   );
 }

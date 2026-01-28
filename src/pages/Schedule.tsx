@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -37,6 +38,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSchedule, Schedule as ScheduleType } from "@/hooks/useSchedule";
 import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
+import { SectionClassCard } from "@/components/common/SectionClassCard";
 
 interface ClassEvent {
   id: string;
@@ -91,8 +93,22 @@ const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 
 export default function Schedule() {
   const { role, profile, user } = useAuth();
-  // Lecturer State: Selected Class ID
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Lecturer State: Selected Class ID, initialized from URL if present
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(searchParams.get("classId"));
+
+  // Sync URL with selectedClassId
+  useEffect(() => {
+    if (role === 'lecturer') {
+      if (selectedClassId) {
+        setSearchParams({ classId: selectedClassId });
+      } else {
+        searchParams.delete("classId");
+        setSearchParams(searchParams);
+      }
+    }
+  }, [selectedClassId, role, setSearchParams, searchParams]);
 
   // Hooks
   const { classes, loading: classesLoading } = useClasses();
@@ -404,25 +420,12 @@ export default function Schedule() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {classes.map((cls) => (
-              <Card
+              <SectionClassCard
                 key={cls.id}
-                className="hover:border-primary/50 cursor-pointer transition-colors group"
-                onClick={() => setSelectedClassId(cls.id)}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    {cls.course_code}
-                    <Clock className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </CardTitle>
-                  <CardDescription>{cls.class_name || 'No class name'}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{cls.student_count || 0} Students</span>
-                  </div>
-                </CardContent>
-              </Card>
+                classData={cls}
+                variant="schedule"
+                onAction={(classId) => setSelectedClassId(classId)}
+              />
             ))}
             {classes.length === 0 && (
               <div className="col-span-full text-center py-12 text-muted-foreground">

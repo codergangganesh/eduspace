@@ -152,3 +152,90 @@
     color: white;
   }
 }
+
+/* Card Design System */
+@layer components {
+  /* Base card with subtle styling */
+  .card-base {
+    @apply bg-card rounded-xl border border-border shadow-sm;
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .card-base:hover {
+    @apply shadow border-border/80;
+  }
+
+  /* Interactive card with gentle hover */
+  .card-interactive {
+    @apply card-base cursor-pointer;
+  }
+  
+  .card-interactive:hover {
+    @apply shadow-md border-primary/30;
+    transform: translateY(-1px);
+  }
+
+  /* Status accent borders (left) */
+  .card-accent-primary {
+    @apply border-l-[3px] border-l-primary;
+  }
+  
+  .card-accent-success {
+    @apply border-l-[3px] border-l-emerald-500;
+  }
+  
+  .card-accent-warning {
+    @apply border-l-[3px] border-l-amber-500;
+  }
+  
+  .card-accent-danger {
+    @apply border-l-[3px] border-l-rose-500;
+  }
+  
+  .card-accent-info {
+    @apply border-l-[3px] border-l-sky-500;
+  }
+
+  /* Soft icon backgrounds */
+  .icon-box {
+    @apply p-2.5 rounded-lg;
+  }
+  
+  .icon-box-primary {
+    @apply icon-box bg-primary/8 text-primary;
+  }
+  
+  .icon-box-success {
+    @apply icon-box bg-emerald-500/10 text-emerald-600 dark:text-emerald-400;
+  }
+  
+  .icon-box-warning {
+    @apply icon-box bg-amber-500/10 text-amber-600 dark:text-amber-400;
+  }
+  
+  .icon-box-danger {
+    @apply icon-box bg-rose-500/10 text-rose-600 dark:text-rose-400;
+  }
+  
+  .icon-box-info {
+    @apply icon-box bg-sky-500/10 text-sky-600 dark:text-sky-400;
+  }
+
+  /* Card content spacing */
+  .card-body {
+    @apply p-4 sm:p-5;
+  }
+  
+  .card-body-compact {
+    @apply p-3 sm:p-4;
+  }
+
+  /* Subtle stat display */
+  .stat-value {
+    @apply text-2xl font-bold text-foreground;
+  }
+  
+  .stat-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+}

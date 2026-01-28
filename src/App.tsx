@@ -128,9 +128,25 @@ const App = () => (
                 />
 
                 {/* Protected Common Routes */}
-                {/* Assignments Route Removed */}
+                {/* Assignments Route */}
                 <Route
-                  path="/assignments/:id/submit"
+                  path="/assignments"
+                  element={
+                    <ProtectedRoute>
+                      <Assignments />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/assignments/:id/submit" // Keep legacy route if needed
+                  element={
+                    <ProtectedRoute>
+                      <AssignmentSubmit />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/assignments/:id" // New route matching StudentAssignments.tsx
                   element={
                     <ProtectedRoute>
                       <AssignmentSubmit />

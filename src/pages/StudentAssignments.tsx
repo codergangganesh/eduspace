@@ -1,5 +1,7 @@
+
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
+import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Calendar, Clock, FileText, CheckCircle, AlertCircle, ChevronRight, TrendingUp, Target, Loader2, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +41,7 @@ const statusConfig: any = {
 };
 
 export default function StudentAssignments() {
+    const navigate = useNavigate();
     const { assignments, loading, submitAssignment } = useAssignments();
     const [filter, setFilter] = useState<FilterType>("all");
     const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
@@ -90,58 +93,50 @@ export default function StudentAssignments() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="border-l-4 border-l-blue-500">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground font-medium">Total</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{counts.all}</p>
-                                </div>
-                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                    <FileText className="size-6 text-blue-600 dark:text-blue-400" />
-                                </div>
+                    <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center justify-between relative z-10">
+                            <div>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Total</p>
+                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">{counts.all}</p>
+                            </div>
+                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                <FileText className="size-6 text-blue-600 dark:text-blue-400" />
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-l-4 border-l-amber-500">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground font-medium">Pending</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{counts.pending}</p>
-                                </div>
-                                <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                                    <AlertCircle className="size-6 text-amber-600 dark:text-amber-400" />
-                                </div>
+                    <Card className="relative overflow-hidden border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center justify-between relative z-10">
+                            <div>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Pending</p>
+                                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{counts.pending}</p>
+                            </div>
+                            <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                                <AlertCircle className="size-6 text-amber-600 dark:text-amber-400" />
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-l-4 border-l-green-500">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground font-medium">Completed</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{counts.graded + counts.submitted}</p>
-                                </div>
-                                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                                    <CheckCircle className="size-6 text-green-600 dark:text-green-400" />
-                                </div>
+                    <Card className="relative overflow-hidden border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center justify-between relative z-10">
+                            <div>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Completed</p>
+                                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">{counts.graded + counts.submitted}</p>
+                            </div>
+                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                <CheckCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-l-4 border-l-purple-500">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground font-medium">Avg. Grade</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{averageGrade}%</p>
-                                </div>
-                                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                                    <TrendingUp className="size-6 text-purple-600 dark:text-purple-400" />
-                                </div>
+                    <Card className="relative overflow-hidden border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center justify-between relative z-10">
+                            <div>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Avg. Grade</p>
+                                <p className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">{averageGrade}%</p>
+                            </div>
+                            <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                                <TrendingUp className="size-6 text-purple-600 dark:text-purple-400" />
                             </div>
                         </CardContent>
                     </Card>
@@ -188,154 +183,22 @@ export default function StudentAssignments() {
                             </CardContent>
                         </Card>
                     ) : (
-                        filteredAssignments.map((assignment) => {
-                            const config = statusConfig[assignment.studentStatus || 'pending'];
-                            const StatusIcon = config.icon;
-                            const formattedDate = assignment.due_date ? format(parseISO(assignment.due_date), "MMM d, yyyy") : "No Date";
-                            const formattedTime = assignment.due_date ? format(parseISO(assignment.due_date), "h:mm a") : "";
-
-                            return (
-                                <Card
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredAssignments.map((assignment, index) => (
+                                <AssignmentCard
                                     key={assignment.id}
-                                    className={cn(
-                                        "border-l-4",
-                                        assignment.studentStatus === "overdue" && "border-l-red-500",
-                                        assignment.studentStatus === "pending" && "border-l-amber-500",
-                                        assignment.studentStatus === "submitted" && "border-l-blue-500",
-                                        assignment.studentStatus === "graded" && "border-l-green-500"
-                                    )}
-                                >
-                                    <CardContent className="p-5">
-                                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                                            {/* Left Section */}
-                                            <div className="flex-1 min-w-0 space-y-3">
-                                                {/* Title and Type */}
-                                                <div className="flex items-start gap-3 flex-wrap">
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="font-bold text-lg text-foreground">{assignment.title}</h3>
-                                                        <div className="flex items-center gap-2 mt-1.5">
-                                                            <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md">
-                                                                {assignment.course_code || "GEN"}
-                                                            </span>
-                                                            <span className="text-sm text-muted-foreground">{assignment.course_title}</span>
-                                                            {assignment.lecturer_name && (
-                                                                <>
-                                                                    <span className="text-muted-foreground">•</span>
-                                                                    <span className="text-sm text-muted-foreground"> {assignment.lecturer_name}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Description */}
-                                                {assignment.description && (
-                                                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                                                        {assignment.description}
-                                                    </p>
-                                                )}
-
-                                                {/* Attachments */}
-                                                {assignment.attachment_url && (
-                                                    <div>
-                                                        <a href={assignment.attachment_url} target="_blank" rel="noopener noreferrer">
-                                                            <Button variant="outline" size="sm" className="h-8 gap-2">
-                                                                <Download className="size-3.5" />
-                                                                {assignment.attachment_name || "Attachment"}
-                                                            </Button>
-                                                        </a>
-                                                    </div>
-                                                )}
-
-                                                {/* Meta Info */}
-                                                <div className="flex flex-wrap items-center gap-4 text-sm">
-                                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                        <Calendar className="size-4" />
-                                                        <span className="font-medium">{formattedDate}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                        <Clock className="size-4" />
-                                                        <span className="font-medium">{formattedTime}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                        <Target className="size-4" />
-                                                        <span className="font-medium">
-                                                            {assignment.grade !== undefined
-                                                                ? `${assignment.grade}/${assignment.max_points} pts`
-                                                                : `${assignment.max_points} pts`}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Right Section - Status and Action */}
-                                            <div className="flex lg:flex-col items-center lg:items-end gap-3">
-                                                {/* Status Badge */}
-                                                <div className={cn(
-                                                    "flex items-center gap-2 px-3 py-2 rounded-lg border",
-                                                    config.bg,
-                                                    config.color
-                                                )}>
-                                                    <StatusIcon className="size-4" />
-                                                    <span className="font-semibold text-sm">{config.label}</span>
-                                                </div>
-
-                                                {/* Action Button */}
-                                                {(assignment.studentStatus === "pending" || assignment.studentStatus === "overdue") && (
-                                                    <Button
-                                                        className="gap-2"
-                                                        variant={assignment.studentStatus === "overdue" ? "destructive" : "default"}
-                                                        onClick={() => handleSubmitClick(assignment)}
-                                                    >
-                                                        {assignment.studentStatus === "overdue" ? "Late Submit" : "Submit Now"}
-                                                        <ChevronRight className="size-4" />
-                                                    </Button>
-                                                )}
-
-                                                {(assignment.studentStatus === "submitted" || assignment.studentStatus === "graded") && (
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        <div className="text-xs text-muted-foreground">
-                                                            Submitted on {assignment.submission?.submitted_at ? format(parseISO(assignment.submission.submitted_at), "MMM d, h:mm a") : "Unknown"}
-                                                        </div>
-                                                        {/* Show student's submitted file with View/Download options */}
-                                                        {assignment.submission?.attachment_url && (
-                                                            <div className="flex items-center gap-2">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-7 gap-1 text-xs"
-                                                                    asChild
-                                                                >
-                                                                    <a href={assignment.submission.attachment_url} target="_blank" rel="noreferrer">
-                                                                        <Eye className="size-3" />
-                                                                        View
-                                                                    </a>
-                                                                </Button>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-7 gap-1 text-xs"
-                                                                    asChild
-                                                                >
-                                                                    <a href={assignment.submission.attachment_url} download={assignment.submission.attachment_name || "submission"} target="_blank" rel="noreferrer">
-                                                                        <Download className="size-3" />
-                                                                        {assignment.submission.attachment_name ?
-                                                                            (assignment.submission.attachment_name.length > 15 ?
-                                                                                assignment.submission.attachment_name.substring(0, 12) + "..." :
-                                                                                assignment.submission.attachment_name)
-                                                                            : "Download"}
-                                                                    </a>
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })
+                                    assignment={{
+                                        ...assignment,
+                                        status: assignment.studentStatus || assignment.status || 'pending',
+                                        points: assignment.max_points
+                                    }}
+                                    role="student"
+                                    onView={(id) => navigate(`/student/assignments/${id}`)}
+                                    onSubmit={handleSubmitClick}
+                                    index={index}
+                                />
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

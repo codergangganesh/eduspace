@@ -170,10 +170,10 @@ export default function SubmissionDetailsPage() {
                             {assignment?.status && (
                                 <Badge
                                     className={`mt-2 ${assignment.status === 'completed'
-                                            ? 'bg-blue-600'
-                                            : assignment.status === 'active'
-                                                ? 'bg-green-600'
-                                                : ''
+                                        ? 'bg-blue-600'
+                                        : assignment.status === 'active'
+                                            ? 'bg-green-600'
+                                            : ''
                                         }`}
                                 >
                                     {assignment.status === 'completed' ? 'Completed' : assignment.status}
@@ -190,38 +190,38 @@ export default function SubmissionDetailsPage() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 rounded-lg">
-                                <Users className="size-6 text-primary" />
+                    <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                <Users className="size-6 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground font-medium">Total Students</p>
-                                <p className="text-2xl font-bold">{submissions.length}</p>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Total Students</p>
+                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{submissions.length}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-green-500/10 rounded-lg">
-                                <CheckCircle className="size-6 text-green-500" />
+                    <Card className="relative overflow-hidden border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                <CheckCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground font-medium">Submitted</p>
-                                <p className="text-2xl font-bold text-green-600">{submittedCount}</p>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Submitted</p>
+                                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{submittedCount}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-orange-500/10 rounded-lg">
-                                <Clock className="size-6 text-orange-500" />
+                    <Card className="relative overflow-hidden border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-orange-500/10 rounded-xl border border-orange-500/20">
+                                <Clock className="size-6 text-orange-600 dark:text-orange-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground font-medium">Pending</p>
-                                <p className="text-2xl font-bold text-orange-600">{pendingCount}</p>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Pending</p>
+                                <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{pendingCount}</p>
                             </div>
                         </CardContent>
                     </Card>

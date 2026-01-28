@@ -2,17 +2,15 @@ import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useClasses } from '@/hooks/useClasses';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     BookOpen,
     Users,
-    Calendar,
-    GraduationCap,
     Search,
-    FileText,
+    CheckCircle,
 } from 'lucide-react';
 import { useState } from 'react';
+import { SectionClassCard } from '@/components/common/SectionClassCard';
 
 export default function LecturerClassesAssignments() {
     const navigate = useNavigate();
@@ -26,6 +24,10 @@ export default function LecturerClassesAssignments() {
             classItem.lecturer_department?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const handleViewAssignments = (classId: string) => {
+        navigate(`/lecturer/assignments/${classId}`);
+    };
+
     return (
         <DashboardLayout>
             <div className="flex flex-col gap-6">
@@ -33,10 +35,10 @@ export default function LecturerClassesAssignments() {
                 <div className="flex flex-col gap-4">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                            Assignment Management
+                            Academic Courses
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Select a class to view and manage assignments
+                            Manage your active classroom sessions
                         </p>
                     </div>
 
@@ -52,49 +54,52 @@ export default function LecturerClassesAssignments() {
                     </div>
                 </div>
 
-                {/* Stats Overview */}
+                {/* Stats Overview - Dark Glass Design */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 rounded-lg">
-                                <BookOpen className="size-6 text-primary" />
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
+                        <CardContent className="p-5 flex items-center gap-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+                            <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/20 relative z-10">
+                                <BookOpen className="size-6 text-blue-400" />
                             </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium">
+                            <div className="relative z-10">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                                     Total Classes
                                 </p>
-                                <p className="text-2xl font-bold">{classes.length}</p>
+                                <p className="text-2xl font-bold text-white">{classes.length}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-lg">
-                                <Users className="size-6 text-blue-500" />
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
+                        <CardContent className="p-5 flex items-center gap-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                            <div className="p-3 bg-violet-500/20 rounded-xl border border-violet-500/20 relative z-10">
+                                <Users className="size-6 text-violet-400" />
                             </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium">
+                            <div className="relative z-10">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                                     Total Students
                                 </p>
-                                <p className="text-2xl font-bold">
+                                <p className="text-2xl font-bold text-white">
                                     {classes.reduce((sum, c) => sum + (c.student_count || 0), 0)}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-green-500/10 rounded-lg">
-                                <FileText className="size-6 text-green-500" />
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
+                        <CardContent className="p-5 flex items-center gap-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+                            <div className="p-3 bg-emerald-500/20 rounded-xl border border-emerald-500/20 relative z-10">
+                                <CheckCircle className="size-6 text-emerald-400" />
                             </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium">
-                                    Active Classes
+                            <div className="relative z-10">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                                    Active Status
                                 </p>
-                                <p className="text-2xl font-bold">
-                                    {classes.filter((c) => c.is_active).length}
+                                <p className="text-2xl font-bold text-white">
+                                    {classes.length > 0 ? Math.round((classes.filter((c) => c.is_active).length / classes.length) * 100) : 0}%
                                 </p>
                             </div>
                         </CardContent>
@@ -107,13 +112,15 @@ export default function LecturerClassesAssignments() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : filteredClasses.length === 0 ? (
-                    <Card>
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl">
                         <CardContent className="p-12 text-center">
-                            <BookOpen className="size-12 text-muted-foreground mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">
+                            <div className="p-4 bg-slate-800 rounded-full w-fit mx-auto mb-4">
+                                <BookOpen className="size-8 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2 text-white">
                                 {searchQuery ? 'No classes found' : 'No classes yet'}
                             </h3>
-                            <p className="text-muted-foreground">
+                            <p className="text-slate-400">
                                 {searchQuery
                                     ? 'Try adjusting your search query'
                                     : 'Create a class to start managing assignments'}
@@ -121,82 +128,14 @@ export default function LecturerClassesAssignments() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredClasses.map((classItem) => (
-                            <Card
+                            <SectionClassCard
                                 key={classItem.id}
-                                className="hover:shadow-lg transition-shadow cursor-pointer group"
-                            >
-                                <CardContent className="p-6">
-                                    {/* Class Image/Icon */}
-                                    <div className="mb-4">
-                                        {classItem.class_image_url ? (
-                                            <img
-                                                src={classItem.class_image_url}
-                                                alt={classItem.class_name || classItem.course_code}
-                                                className="w-full h-32 object-cover rounded-lg"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-32 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center">
-                                                <GraduationCap className="size-12 text-primary" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Class Info */}
-                                    <div className="space-y-3">
-                                        <div>
-                                            <h3 className="font-bold text-lg text-foreground line-clamp-1">
-                                                {classItem.class_name || classItem.course_code}
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                {classItem.course_code}
-                                            </p>
-                                        </div>
-
-                                        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                                            {classItem.lecturer_department && (
-                                                <div className="flex items-center gap-2">
-                                                    <BookOpen className="size-4" />
-                                                    <span className="line-clamp-1">
-                                                        {classItem.lecturer_department}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {(classItem.semester || classItem.academic_year) && (
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="size-4" />
-                                                    <span>
-                                                        {[classItem.semester, classItem.academic_year]
-                                                            .filter(Boolean)
-                                                            .join(' • ')}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            <div className="flex items-center gap-2">
-                                                <Users className="size-4" />
-                                                <span>
-                                                    {classItem.student_count || 0} student
-                                                    {classItem.student_count !== 1 ? 's' : ''}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Action Button */}
-                                        <Button
-                                            className="w-full mt-4 gap-2"
-                                            onClick={() =>
-                                                navigate(`/lecturer/assignments/${classItem.id}`)
-                                            }
-                                        >
-                                            <FileText className="size-4" />
-                                            View Assignments
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                classData={classItem}
+                                variant="assignments"
+                                onAction={handleViewAssignments}
+                            />
                         ))}
                     </div>
                 )}

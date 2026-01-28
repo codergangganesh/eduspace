@@ -17,7 +17,11 @@ export interface RecentSubmission {
     submittedAt: string;
     status: "pending" | "graded";
     grade: string | null;
+    classId?: string; // Added for navigation
+    assignmentId?: string; // Added for navigation
 }
+// ... (keep existing code until line 170)
+
 
 export interface UpcomingClass {
     id: string;
@@ -28,6 +32,7 @@ export interface UpcomingClass {
     room: string;
     isToday: boolean;
     day: string;
+    classId?: string;
 }
 
 export function useLecturerData() {
@@ -163,9 +168,12 @@ export function useLecturerData() {
                     if (assignmentClassId && classesMap.has(assignmentClassId)) {
                         courseCode = classesMap.get(assignmentClassId)?.course_code || "N/A";
                     } else if (assignmentClassId) {
-                        // Fetch if not in active list (maybe archived?)
-                        const { data: cls } = await supabase.from('classes').select('course_code').eq('id', assignmentClassId).single();
-                        if (cls) courseCode = cls.course_code;
+                        try {
+                            const { data: cls } = await supabase.from('classes').select('course_code').eq('id', assignmentClassId).single();
+                            if (cls) courseCode = cls.course_code;
+                        } catch (e) {
+                            // ignore error
+                        }
                     }
 
                     formattedSubmissions.push({
@@ -175,7 +183,9 @@ export function useLecturerData() {
                         courseCode: courseCode,
                         submittedAt: format(new Date(sub.submitted_at), "MMM d, h:mm a"),
                         status: sub.status === "graded" ? "graded" : "pending",
-                        grade: sub.grade ? sub.grade.toString() : null
+                        grade: sub.grade ? sub.grade.toString() : null,
+                        classId: assignmentClassId,
+                        assignmentId: (sub.assignment as any)?.id || (sub as any).assignment_id
                     });
                 }
                 setRecentSubmissions(formattedSubmissions);
@@ -219,7 +229,8 @@ export function useLecturerData() {
                             time: s.start_time.slice(0, 5),
                             room: s.location || "Online",
                             isToday: isTodayEffective,
-                            day: days[s.day_of_week]
+                            day: days[s.day_of_week],
+                            classId: s.class_id // Populate classId
                         };
                     })
                     .sort((a, b) => {

@@ -41,6 +41,7 @@ import { CreateClassAssignmentDialog } from '@/components/assignments/CreateClas
 import { EditClassAssignmentDialog } from '@/components/assignments/EditClassAssignmentDialog';
 import { ManageSubjectsDialog } from '@/components/assignments/ManageSubjectsDialog';
 import { ClassAssignment } from '@/hooks/useClassAssignments';
+import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 
 type FilterType = 'all' | 'active' | 'closed';
 
@@ -134,57 +135,43 @@ export default function ClassAssignmentsView() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 rounded-lg">
-                                <FileText className="size-6 text-primary" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Card className="relative overflow-hidden border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                <CheckCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground font-medium">
-                                    Total Assignments
-                                </p>
-                                <p className="text-2xl font-bold">{assignments.length}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-green-500/10 rounded-lg">
-                                <CheckCircle className="size-6 text-green-500" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium">Active</p>
-                                <p className="text-2xl font-bold">
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Active</p>
+                                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
                                     {assignments.filter((a) => a.status === 'active').length}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-gray-500/10 rounded-lg">
-                                <XCircle className="size-6 text-gray-500" />
+                    <Card className="relative overflow-hidden border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-slate-500/10 rounded-xl border border-slate-500/20">
+                                <XCircle className="size-6 text-slate-600 dark:text-slate-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground font-medium">Closed</p>
-                                <p className="text-2xl font-bold">
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Closed</p>
+                                <p className="text-2xl font-bold text-slate-700 dark:text-slate-400">
                                     {assignments.filter((a) => a.status === 'closed').length}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-lg">
-                                <Users className="size-6 text-blue-500" />
+                    <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
+                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                <Users className="size-6 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground font-medium">Students</p>
-                                <p className="text-2xl font-bold">{currentClass.student_count || 0}</p>
+                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Students</p>
+                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{currentClass.student_count || 0}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -196,6 +183,7 @@ export default function ClassAssignmentsView() {
                         variant={filter === 'all' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilter('all')}
+                        className="rounded-lg"
                     >
                         All
                     </Button>
@@ -203,6 +191,7 @@ export default function ClassAssignmentsView() {
                         variant={filter === 'active' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilter('active')}
+                        className="rounded-lg"
                     >
                         Active
                     </Button>
@@ -210,6 +199,7 @@ export default function ClassAssignmentsView() {
                         variant={filter === 'closed' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilter('closed')}
+                        className="rounded-lg"
                     >
                         Past / Closed
                     </Button>
@@ -221,13 +211,13 @@ export default function ClassAssignmentsView() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : filteredAssignments.length === 0 ? (
-                    <Card>
+                    <Card className="border-dashed bg-transparent shadow-none">
                         <CardContent className="p-12 text-center">
-                            <FileText className="size-12 text-muted-foreground mx-auto mb-4" />
+                            <FileText className="size-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                             <h3 className="text-lg font-semibold mb-2">
                                 {filter === 'all' ? 'No assignments created yet' : `No ${filter} assignments`}
                             </h3>
-                            <p className="text-muted-foreground">
+                            <p className="text-muted-foreground max-w-sm mx-auto">
                                 {filter === 'all'
                                     ? 'Create an assignment to get started'
                                     : 'Try adjusting your filters'}
@@ -236,148 +226,18 @@ export default function ClassAssignmentsView() {
                     </Card>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredAssignments.map((assignment) => (
-                            <Card key={assignment.id} className="flex flex-col h-full hover:shadow-md transition-shadow">
-                                <CardContent className="p-6 flex flex-col h-full gap-4">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="space-y-1">
-                                            <h3 className="font-semibold text-lg line-clamp-2" title={assignment.title}>
-                                                {assignment.title}
-                                            </h3>
-                                            <div className="flex flex-wrap gap-2 text-xs">
-                                                <Badge
-                                                    variant={
-                                                        assignment.status === 'active'
-                                                            ? 'default'
-                                                            : assignment.status === 'completed'
-                                                                ? 'default' // usage of a success color would be better, but default is fine or custom class
-                                                                : 'secondary'
-                                                    }
-                                                    className={
-                                                        assignment.status === 'active'
-                                                            ? 'bg-green-600 hover:bg-green-700'
-                                                            : assignment.status === 'completed'
-                                                                ? 'bg-blue-600 hover:bg-blue-700'
-                                                                : ''
-                                                    }
-                                                >
-                                                    {assignment.status === 'completed' ? 'Completed' : assignment.status}
-                                                </Badge>
-                                                {assignment.subject_name && (
-                                                    <Badge variant="outline">{assignment.subject_name}</Badge>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
-                                                    <MoreVertical className="size-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEditClick(assignment)}>
-                                                    <Edit className="size-4 mr-2" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleStatusToggle(assignment.id, assignment.status)}
-                                                >
-                                                    {assignment.status === 'active' ? (
-                                                        <>
-                                                            <XCircle className="size-4 mr-2" />
-                                                            Close
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <CheckCircle className="size-4 mr-2" />
-                                                            Activate
-                                                        </>
-                                                    )}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive"
-                                                    onClick={() => handleDeleteClick(assignment.id)}
-                                                >
-                                                    <Trash2 className="size-4 mr-2" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-
-                                    <div className="space-y-2 text-sm text-muted-foreground flex-1">
-                                        {assignment.topic && (
-                                            <p className="line-clamp-2">Topic: {assignment.topic}</p>
-                                        )}
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="size-4" />
-                                            <span>
-                                                Due: {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, yyyy") : "No due date"}
-                                            </span>
-                                        </div>
-                                        {assignment.attachment_url && (
-                                            <div className="flex items-center gap-2">
-                                                <FileText className="size-4 text-muted-foreground" />
-                                                <span className="text-sm text-muted-foreground truncate max-w-[120px]" title={assignment.attachment_name}>
-                                                    {assignment.attachment_name || 'Attachment'}
-                                                </span>
-                                                <a
-                                                    href={assignment.attachment_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-primary hover:text-primary/80"
-                                                    title="View file"
-                                                >
-                                                    <Eye className="size-4" />
-                                                </a>
-                                                <a
-                                                    href={assignment.attachment_url}
-                                                    download={assignment.attachment_name}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-primary hover:text-primary/80"
-                                                    title="Download file"
-                                                >
-                                                    <Download className="size-4" />
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="pt-4 border-t space-y-4">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center gap-2 text-muted-foreground">
-                                                <Users className="size-4" />
-                                                <span>Submissions</span>
-                                            </div>
-                                            <span className="font-medium">
-                                                {assignment.submission_count || 0} / {assignment.total_students || 0}
-                                            </span>
-                                        </div>
-
-                                        {/* Progress Bar could go here */}
-                                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-primary transition-all duration-500"
-                                                style={{
-                                                    width: `${Math.min(100, ((assignment.submission_count || 0) / (assignment.total_students || 1)) * 100)}%`
-                                                }}
-                                            />
-                                        </div>
-
-                                        <Button
-                                            className="w-full"
-                                            variant="outline"
-                                            onClick={() => navigate(`/lecturer/assignments/${classId}/${assignment.id}/submissions`)}
-                                        >
-                                            <Users className="size-4 mr-2" />
-                                            Submission Details
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        {filteredAssignments.map((assignment, index) => (
+                            <AssignmentCard
+                                key={assignment.id}
+                                assignment={assignment}
+                                onView={(id) => navigate(`/lecturer/assignments/${classId}/${id}/submissions`)}
+                                onEdit={handleEditClick}
+                                onDelete={handleDeleteClick}
+                                role="lecturer"
+                                index={index}
+                            />
                         ))}
-                    </div>
+                    </div >
                 )}
 
                 {/* Dialogs */}
@@ -396,7 +256,7 @@ export default function ClassAssignmentsView() {
                 />
 
 
-            </div>
-        </DashboardLayout>
+            </div >
+        </DashboardLayout >
     );
 }

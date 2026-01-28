@@ -19,8 +19,8 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, className
     <div
       onClick={onClick}
       className={cn(
-        "bg-surface rounded-xl border border-border p-5 transition-all hover:shadow-md",
-        onClick && "cursor-pointer hover:bg-accent/50",
+        "bg-card rounded-xl border border-border p-5 shadow-sm transition-all duration-200",
+        onClick && "cursor-pointer hover:shadow-md hover:border-primary/20",
         className
       )}
     >
@@ -34,13 +34,13 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, className
           {trend && (
             <span className={cn(
               "text-xs font-medium",
-              trend.isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+              trend.isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
             )}>
               {trend.isPositive ? "+" : ""}{trend.value}% from last week
             </span>
           )}
         </div>
-        <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+        <div className="size-11 rounded-xl bg-primary/8 flex items-center justify-center text-primary">
           <Icon className="size-5" />
         </div>
       </div>
