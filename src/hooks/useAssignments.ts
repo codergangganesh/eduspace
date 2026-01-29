@@ -57,11 +57,18 @@ export function useAssignments() {
     const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-    const fetchAssignments = useCallback(async () => {
+    // silentRefresh: when true, don't trigger loading state (for real-time updates)
+    const fetchAssignments = useCallback(async (silentRefresh = false) => {
         if (!user) return;
 
         try {
+            // Only show loading spinner on initial load, not on real-time updates
+            if (!silentRefresh && isInitialLoad) {
+                setLoading(true);
+            }
+
             let data: any[] = [];
             let mySubmissions: AssignmentSubmission[] = [];
 
@@ -223,12 +230,16 @@ export function useAssignments() {
             setError(null);
         } catch (err) {
             console.error('Error fetching assignments:', err);
-            setAssignments([]);
+            // Don't clear assignments on error during refresh - keep existing data
+            if (isInitialLoad) {
+                setAssignments([]);
+            }
             setError(null); // Don't show error to user, just log it
         } finally {
             setLoading(false);
+            setIsInitialLoad(false);
         }
-    }, [user, role]);
+    }, [user, role, isInitialLoad]);
 
     useEffect(() => {
         if (!user) {
@@ -249,7 +260,8 @@ export function useAssignments() {
                     table: 'assignments',
                 },
                 () => {
-                    fetchAssignments();
+                    // Silent refresh - don't show loading indicator
+                    fetchAssignments(true);
                 }
             )
             .subscribe();
@@ -267,8 +279,8 @@ export function useAssignments() {
                     filter: role === 'student' ? `student_id=eq.${user.id}` : undefined,
                 },
                 () => {
-                    // Refetch assignments to update submission status
-                    fetchAssignments();
+                    // Silent refresh for submission updates
+                    fetchAssignments(true);
                 }
             )
             .subscribe();
@@ -286,8 +298,8 @@ export function useAssignments() {
                     filter: `student_id=eq.${user.id}`,
                 },
                 () => {
-                    // Refetch assignments when enrollment status changes
-                    fetchAssignments();
+                    // Silent refresh for enrollment changes
+                    fetchAssignments(true);
                 }
             )
             .subscribe() : null;

@@ -48,12 +48,17 @@ export function useLecturerData() {
     const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
     const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-    const fetchData = async () => {
+    // silentRefresh: when true, don't trigger loading state (for real-time updates)
+    const fetchData = async (silentRefresh = false) => {
         if (!user) return;
 
         try {
-            setLoading(true);
+            // Only show loading spinner on initial load, not on real-time updates
+            if (!silentRefresh && isInitialLoad) {
+                setLoading(true);
+            }
 
             // 1. Fetch Lecturer's Active Classes
             const { data: classes, error: classesError } = await supabase
@@ -94,42 +99,53 @@ export function useLecturerData() {
                 });
 
                 // B. Assignments & Submissions
-                // Fetch assignments created by this lecturer (or linked to these classes)
-                const { data: assignments } = await supabase
+                // Fetch assignments by lecturer_id OR by class_id for the lecturer's classes
+                let allAssignmentIds: string[] = [];
+
+                // Get assignments by lecturer_id
+                const { data: directAssignments } = await supabase
                     .from("assignments")
-                    .select("id")
+                    .select("id, class_id")
                     .eq("lecturer_id", user.id)
-                    .eq("status", "published");
+                    .or("status.eq.published,status.eq.active");
 
-                if (assignments && assignments.length > 0) {
-                    const assignmentIds = assignments.map(a => a.id);
+                if (directAssignments) {
+                    allAssignmentIds = directAssignments.map(a => a.id);
+                }
 
+                // Also get assignments from lecturer's classes (in case lecturer_id wasn't set)
+                const { data: classAssignments } = await supabase
+                    .from("assignments")
+                    .select("id, class_id")
+                    .in("class_id", classIds)
+                    .or("status.eq.published,status.eq.active");
+
+                if (classAssignments) {
+                    const classAssignmentIds = classAssignments.map(a => a.id);
+                    // Merge and deduplicate
+                    allAssignmentIds = [...new Set([...allAssignmentIds, ...classAssignmentIds])];
+                }
+
+                // All assignments for calculating expected submissions
+                const allAssignmentsWithClass = [...(directAssignments || []), ...(classAssignments || [])];
+                // Deduplicate by id
+                const uniqueAssignments = Array.from(
+                    new Map(allAssignmentsWithClass.map(a => [a.id, a])).values()
+                );
+
+                if (allAssignmentIds.length > 0) {
                     // Count total submissions
                     const { count: submissionCount } = await supabase
                         .from("assignment_submissions")
                         .select("*", { count: 'exact', head: true })
-                        .in("assignment_id", assignmentIds);
+                        .in("assignment_id", allAssignmentIds);
 
                     submissionsReceived = submissionCount || 0;
 
-                    // Estimate pending: (Total Enrollments * Total Assignments) is rough. 
-                    // Better: Sum of (Students in Class X * Assignments in Class X).
-                    // For now, let's use a simpler heuristic or the global count if assignments are not strictly class-scoped in the DB yet?
-                    // Given the migration "migrate_assignments_to_classes", assignments should have class_id.
-
-                    // Let's try to get more accurate pending count by fetching assignments with class_id
-                    const { data: assignmentsWithClass } = await supabase
-                        .from("assignments")
-                        .select("id, class_id")
-                        .eq("lecturer_id", user.id)
-                        .eq("status", "published");
-
-                    // Calculate total expected submissions using pre-fetched class student counts
-                    if (assignmentsWithClass) {
-                        for (const assign of assignmentsWithClass) {
-                            if (assign.class_id && classStudentCounts.has(assign.class_id)) {
-                                totalExpectedSubmissions += classStudentCounts.get(assign.class_id) || 0;
-                            }
+                    // Calculate total expected submissions using class student counts
+                    for (const assign of uniqueAssignments) {
+                        if (assign.class_id && classStudentCounts.has(assign.class_id)) {
+                            totalExpectedSubmissions += classStudentCounts.get(assign.class_id) || 0;
                         }
                     }
 
@@ -144,65 +160,92 @@ export function useLecturerData() {
                 totalExpectedSubmissions
             });
 
-            // 2. Fetch Recent Submissions
-            // We fetch the most recent submissions for assignments owned by this lecturer
-            const { data: submissions, error: submissionsError } = await supabase
-                .from("assignment_submissions")
-                .select(`
-                    id,
-                    submitted_at,
-                    status,
-                    grade,
-                    student:profiles!student_id(full_name),
-                    assignment:assignments!assignment_id(title, class_id)
-                `)
-                .order("submitted_at", { ascending: false })
-                .limit(5);
-            // Note: We should filter by lecturer's assignments, but RLS might handle it?
-            // RLS on assignment_submissions usually allows lecturer to see submissions for their assignments.
-            // Assuming RLS is set up. If not, we need .in('assignment_id', myAssignmentIds)
+            // 2. Fetch Recent Submissions - Only for THIS lecturer's assignments
+            // Get assignments either directly owned by lecturer OR belonging to lecturer's classes
+            let lecturerAssignmentIds: string[] = [];
 
-            if (!submissionsError && submissions) {
-                // Filter client-side if needed, or trust RLS. Let's filter to be safe if we have assignment list
-                // Actually, let's trust RLS for efficiency or assume the query is safe.
-                // We need to fetch class details for these submissions to show Course Code
+            // Get assignments by lecturer_id
+            const { data: directAssignments } = await supabase
+                .from("assignments")
+                .select("id")
+                .eq("lecturer_id", user.id);
 
-                const formattedSubmissions: RecentSubmission[] = [];
-                for (const sub of submissions) {
-                    const assignmentClassId = (sub.assignment as any)?.class_id;
-                    let courseCode = "N/A";
-                    let className = "Unknown Class";
+            if (directAssignments) {
+                lecturerAssignmentIds = directAssignments.map(a => a.id);
+            }
 
-                    if (assignmentClassId && classesMap.has(assignmentClassId)) {
-                        const classInfo = classesMap.get(assignmentClassId);
-                        courseCode = classInfo?.course_code || "N/A";
-                        className = classInfo?.class_name || "Unknown Class";
-                    } else if (assignmentClassId) {
-                        try {
-                            const { data: cls } = await supabase.from('classes').select('course_code, class_name').eq('id', assignmentClassId).single();
-                            if (cls) {
-                                courseCode = cls.course_code;
-                                className = cls.class_name || "Unknown Class";
-                            }
-                        } catch (e) {
-                            // ignore error
-                        }
-                    }
+            // Also get assignments from lecturer's classes (in case lecturer_id wasn't set)
+            if (classIds.length > 0) {
+                const { data: classAssignments } = await supabase
+                    .from("assignments")
+                    .select("id")
+                    .in("class_id", classIds);
 
-                    formattedSubmissions.push({
-                        id: sub.id,
-                        studentName: (sub.student as any)?.full_name || "Unknown Student",
-                        assignmentTitle: (sub.assignment as any)?.title || "Untitled",
-                        courseCode: courseCode,
-                        className: className,
-                        submittedAt: format(new Date(sub.submitted_at), "MMM d, h:mm a"),
-                        status: sub.status === "graded" ? "graded" : "pending",
-                        grade: sub.grade ? sub.grade.toString() : null,
-                        classId: assignmentClassId,
-                        assignmentId: (sub.assignment as any)?.id || (sub as any).assignment_id
-                    });
+                if (classAssignments) {
+                    const classAssignmentIds = classAssignments.map(a => a.id);
+                    // Merge and deduplicate
+                    lecturerAssignmentIds = [...new Set([...lecturerAssignmentIds, ...classAssignmentIds])];
                 }
-                setRecentSubmissions(formattedSubmissions);
+            }
+
+            if (lecturerAssignmentIds.length > 0) {
+                const { data: submissions, error: submissionsError } = await supabase
+                    .from("assignment_submissions")
+                    .select(`
+                        id,
+                        assignment_id,
+                        submitted_at,
+                        status,
+                        grade,
+                        student:profiles!student_id(full_name),
+                        assignment:assignments!assignment_id(id, title, class_id)
+                    `)
+                    .in("assignment_id", lecturerAssignmentIds)
+                    .order("submitted_at", { ascending: false })
+                    .limit(10);
+
+                if (!submissionsError && submissions) {
+                    const formattedSubmissions: RecentSubmission[] = [];
+                    for (const sub of submissions) {
+                        const assignmentData = sub.assignment as any;
+                        const assignmentClassId = assignmentData?.class_id;
+                        const assignmentId = assignmentData?.id || sub.assignment_id;
+                        let courseCode = "N/A";
+                        let className = "Unknown Class";
+
+                        if (assignmentClassId && classesMap.has(assignmentClassId)) {
+                            const classInfo = classesMap.get(assignmentClassId);
+                            courseCode = classInfo?.course_code || "N/A";
+                            className = classInfo?.class_name || "Unknown Class";
+                        } else if (assignmentClassId) {
+                            try {
+                                const { data: cls } = await supabase.from('classes').select('course_code, class_name').eq('id', assignmentClassId).single();
+                                if (cls) {
+                                    courseCode = cls.course_code;
+                                    className = cls.class_name || "Unknown Class";
+                                }
+                            } catch (e) {
+                                // ignore error
+                            }
+                        }
+
+                        formattedSubmissions.push({
+                            id: sub.id,
+                            studentName: (sub.student as any)?.full_name || "Unknown Student",
+                            assignmentTitle: assignmentData?.title || "Untitled",
+                            courseCode: courseCode,
+                            className: className,
+                            submittedAt: format(new Date(sub.submitted_at), "MMM d, h:mm a"),
+                            status: sub.status === "graded" ? "graded" : "pending",
+                            grade: sub.grade ? sub.grade.toString() : null,
+                            classId: assignmentClassId,
+                            assignmentId: assignmentId
+                        });
+                    }
+                    setRecentSubmissions(formattedSubmissions);
+                }
+            } else {
+                setRecentSubmissions([]);
             }
 
             // 3. Fetch Upcoming Classes (Schedules)
@@ -264,19 +307,21 @@ export function useLecturerData() {
             console.error("Error fetching lecturer data:", error);
         } finally {
             setLoading(false);
+            setIsInitialLoad(false);
         }
     };
 
     useEffect(() => {
         fetchData();
 
-        // Subscriptions
+        // Subscriptions - use silent refresh to avoid UI flicker
+        const silentFetch = () => fetchData(true);
         const subs = [
-            supabase.channel('dashboard_submissions').on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_submissions' }, fetchData).subscribe(),
-            supabase.channel('dashboard_class_students').on('postgres_changes', { event: '*', schema: 'public', table: 'class_students' }, fetchData).subscribe(),
-            supabase.channel('dashboard_classes').on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, fetchData).subscribe(),
-            supabase.channel('dashboard_schedules').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, fetchData).subscribe(),
-            supabase.channel('dashboard_access_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'access_requests' }, fetchData).subscribe()
+            supabase.channel('dashboard_submissions').on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_submissions' }, silentFetch).subscribe(),
+            supabase.channel('dashboard_class_students').on('postgres_changes', { event: '*', schema: 'public', table: 'class_students' }, silentFetch).subscribe(),
+            supabase.channel('dashboard_classes').on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, silentFetch).subscribe(),
+            supabase.channel('dashboard_schedules').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, silentFetch).subscribe(),
+            supabase.channel('dashboard_access_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'access_requests' }, silentFetch).subscribe()
         ];
 
         return () => {

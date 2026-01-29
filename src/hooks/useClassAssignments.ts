@@ -36,8 +36,10 @@ export function useClassAssignments(classId: string | null) {
     const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-    const fetchAssignments = useCallback(async () => {
+    // silentRefresh: when true, don't trigger loading state (for real-time updates)
+    const fetchAssignments = useCallback(async (silentRefresh = false) => {
         if (!classId || !user) {
             setAssignments([]);
             setLoading(false);
@@ -45,7 +47,10 @@ export function useClassAssignments(classId: string | null) {
         }
 
         try {
-            setLoading(true);
+            // Only show loading spinner on initial load, not on real-time updates
+            if (!silentRefresh && isInitialLoad) {
+                setLoading(true);
+            }
 
             // Fetch assignments for the class
             const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -126,11 +131,15 @@ export function useClassAssignments(classId: string | null) {
             console.error('Error fetching class assignments:', err);
             setError(err as Error);
             toast.error('Failed to load assignments');
-            setAssignments([]);
+            // Don't clear assignments on error during refresh - keep existing data
+            if (isInitialLoad) {
+                setAssignments([]);
+            }
         } finally {
             setLoading(false);
+            setIsInitialLoad(false);
         }
-    }, [classId, user]);
+    }, [classId, user, isInitialLoad]);
 
     useEffect(() => {
         fetchAssignments();
@@ -149,7 +158,8 @@ export function useClassAssignments(classId: string | null) {
                     filter: `class_id=eq.${classId}`,
                 },
                 () => {
-                    fetchAssignments();
+                    // Silent refresh - don't show loading indicator
+                    fetchAssignments(true);
                 }
             )
             .subscribe();
@@ -172,12 +182,12 @@ export function useClassAssignments(classId: string | null) {
                         const isRelevant = assignments.some(a => a.id === assignmentId);
 
                         if (isRelevant) {
-                            // Refetch to update submission counts
-                            fetchAssignments();
+                            // Silent refresh to update submission counts
+                            fetchAssignments(true);
                         }
                     } else {
-                        // For DELETE events, refetch to be safe
-                        fetchAssignments();
+                        // For DELETE events, silent refresh to be safe
+                        fetchAssignments(true);
                     }
                 }
             )
@@ -196,7 +206,8 @@ export function useClassAssignments(classId: string | null) {
                     filter: `class_id=eq.${classId}`,
                 },
                 () => {
-                    fetchAssignments();
+                    // Silent refresh for enrollment changes
+                    fetchAssignments(true);
                 }
             )
             .subscribe();
