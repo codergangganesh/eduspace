@@ -314,10 +314,84 @@ export function useLecturerData() {
     useEffect(() => {
         fetchData();
 
-        // Subscriptions - use silent refresh to avoid UI flicker
+        // Silent refresh function for less critical updates
         const silentFetch = () => fetchData(true);
+
+        // Intelligent handler for submissions - update counts and recent activity immediately
+        const submissionChannel = supabase
+            .channel('dashboard_submissions')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'assignment_submissions' },
+                async (payload) => {
+                    console.log('[useLecturerData] New submission detected:', payload);
+                    const submission = payload.new as any;
+
+                    // Immediately update the submission count
+                    setStats(prev => ({
+                        ...prev,
+                        submissionsReceived: prev.submissionsReceived + 1,
+                        pendingSubmissions: Math.max(0, prev.pendingSubmissions - 1),
+                    }));
+
+                    // Fetch the student and assignment info for recent activity
+                    try {
+                        const { data: studentData } = await supabase
+                            .from('profiles')
+                            .select('full_name')
+                            .eq('user_id', submission.student_id)
+                            .single();
+
+                        const { data: assignmentData } = await supabase
+                            .from('assignments')
+                            .select('title, class_id')
+                            .eq('id', submission.assignment_id)
+                            .single();
+
+                        if (assignmentData) {
+                            const { data: classData } = await supabase
+                                .from('classes')
+                                .select('name')
+                                .eq('id', assignmentData.class_id)
+                                .single();
+
+                            const newActivity: RecentSubmission = {
+                                id: submission.id,
+                                studentName: studentData?.full_name || 'Unknown Student',
+                                assignmentTitle: assignmentData?.title || 'Unknown Assignment',
+                                courseCode: classData?.name || 'Unknown Class',
+                                className: classData?.name || 'Unknown Class',
+                                submittedAt: submission.submitted_at,
+                                status: submission.status,
+                                grade: submission.grade,
+                                assignmentId: submission.assignment_id,
+                            };
+
+                            // Add to recent activity at the top
+                            setRecentSubmissions(prev => [newActivity, ...prev.slice(0, 9)]);
+                            console.log('[useLecturerData] Added to recent activity:', newActivity.studentName, newActivity.assignmentTitle);
+                        }
+                    } catch (err) {
+                        console.error('Error enriching submission data:', err);
+                        // Fall back to silent refresh
+                        fetchData(true);
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'assignment_submissions' },
+                silentFetch
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'assignment_submissions' },
+                silentFetch
+            )
+            .subscribe();
+
+        // Other subscriptions use full silent refresh
         const subs = [
-            supabase.channel('dashboard_submissions').on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_submissions' }, silentFetch).subscribe(),
             supabase.channel('dashboard_class_students').on('postgres_changes', { event: '*', schema: 'public', table: 'class_students' }, silentFetch).subscribe(),
             supabase.channel('dashboard_classes').on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, silentFetch).subscribe(),
             supabase.channel('dashboard_schedules').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, silentFetch).subscribe(),
@@ -325,6 +399,7 @@ export function useLecturerData() {
         ];
 
         return () => {
+            submissionChannel.unsubscribe();
             subs.forEach(s => s.unsubscribe());
         };
     }, [user]);

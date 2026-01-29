@@ -175,18 +175,42 @@ export function useClassAssignments(classId: string | null) {
                     schema: 'public',
                     table: 'assignment_submissions',
                 },
-                async (payload) => {
-                    // Check if this submission is for an assignment in this class
-                    if (payload.new && 'assignment_id' in payload.new) {
-                        const assignmentId = payload.new.assignment_id;
-                        const isRelevant = assignments.some(a => a.id === assignmentId);
+                (payload) => {
+                    console.log('[useClassAssignments] Submission change detected:', payload.eventType, payload);
 
-                        if (isRelevant) {
-                            // Silent refresh to update submission counts
-                            fetchAssignments(true);
-                        }
-                    } else {
-                        // For DELETE events, silent refresh to be safe
+                    if (payload.eventType === 'INSERT') {
+                        // Increment submission count for the affected assignment
+                        const submission = payload.new as any;
+                        setAssignments(prev => prev.map(a => {
+                            if (a.id === submission.assignment_id) {
+                                const newCount = (a.submission_count || 0) + 1;
+                                console.log(`[useClassAssignments] Incrementing ${a.title} submission count to ${newCount}`);
+                                return {
+                                    ...a,
+                                    submission_count: newCount,
+                                    // Auto-complete if all students have submitted
+                                    status: (newCount >= (a.total_students || 0) && a.total_students && a.total_students > 0) ? 'completed' : a.status,
+                                };
+                            }
+                            return a;
+                        }));
+                    } else if (payload.eventType === 'DELETE') {
+                        // Decrement submission count for the affected assignment
+                        const submission = payload.old as any;
+                        setAssignments(prev => prev.map(a => {
+                            if (a.id === submission.assignment_id) {
+                                const newCount = Math.max(0, (a.submission_count || 0) - 1);
+                                return {
+                                    ...a,
+                                    submission_count: newCount,
+                                    status: a.status === 'completed' ? 'active' : a.status, // Revert from completed if needed
+                                };
+                            }
+                            return a;
+                        }));
+                    } else if (payload.eventType === 'UPDATE') {
+                        // No count change needed for updates (e.g., grading)
+                        // Just trigger a silent refresh in case other data needs updating
                         fetchAssignments(true);
                     }
                 }

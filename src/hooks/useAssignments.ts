@@ -101,6 +101,9 @@ export function useAssignments() {
                         .or('status.eq.published,status.eq.active')
                         .order('due_date', { ascending: true });
 
+                    console.log('[useAssignments] Enrolled class IDs:', enrolledClassIds);
+                    console.log('[useAssignments] Class assignments fetched:', classAssignments?.length || 0, classAssignments);
+
                     if (classError) {
                         console.error('Error fetching class assignments:', classError);
                     }
@@ -144,6 +147,7 @@ export function useAssignments() {
 
                     // Combine both class-based and course-based assignments
                     const allAssignments = [...(classAssignments || []), ...courseAssignments];
+                    console.log('[useAssignments] Total combined assignments:', allAssignments.length);
 
                     // Fetch related data for enrichment
                     // Get unique subject IDs and lecturer IDs
@@ -186,6 +190,7 @@ export function useAssignments() {
 
                     if (subError) throw subError;
                     mySubmissions = (submissionsData || []) as any[];
+                    console.log('[useAssignments] My submissions fetched:', mySubmissions.length, mySubmissions.map(s => ({ id: s.id, assignment_id: s.assignment_id, status: s.status })));
                 }
             }
 
@@ -226,6 +231,7 @@ export function useAssignments() {
                 return base;
             });
 
+            console.log('[useAssignments] Final formatted assignments:', formattedAssignments.length, formattedAssignments.map(a => ({ id: a.id, title: a.title, studentStatus: a.studentStatus })));
             setAssignments(formattedAssignments);
             setError(null);
         } catch (err) {
@@ -241,12 +247,46 @@ export function useAssignments() {
         }
     }, [user, role, isInitialLoad]);
 
+    // Helper function to merge new assignments with existing ones, preserving submission states
+    const mergeAssignmentsWithSubmissions = useCallback((
+        newAssignments: Assignment[],
+        existingAssignments: Assignment[]
+    ): Assignment[] => {
+        const mergedMap = new Map<string, Assignment>();
+
+        // Start with existing assignments (to preserve submission states)
+        existingAssignments.forEach(a => {
+            mergedMap.set(a.id, a);
+        });
+
+        // Merge in new/updated assignments, preserving submission data from existing
+        newAssignments.forEach(newAssignment => {
+            const existing = mergedMap.get(newAssignment.id);
+            if (existing) {
+                // Update assignment but preserve submission-related fields if they exist
+                mergedMap.set(newAssignment.id, {
+                    ...newAssignment,
+                    studentStatus: newAssignment.studentStatus || existing.studentStatus,
+                    submission: newAssignment.submission || existing.submission,
+                    grade: newAssignment.grade !== undefined ? newAssignment.grade : existing.grade,
+                    earnedPoints: newAssignment.earnedPoints !== undefined ? newAssignment.earnedPoints : existing.earnedPoints,
+                });
+            } else {
+                // New assignment - add it
+                mergedMap.set(newAssignment.id, newAssignment);
+            }
+        });
+
+        return Array.from(mergedMap.values());
+    }, []);
+
     useEffect(() => {
         if (!user) {
             setLoading(false);
             return;
         }
 
+        // Initial fetch
         fetchAssignments();
 
         // Real-time subscription for assignments table
@@ -259,9 +299,57 @@ export function useAssignments() {
                     schema: 'public',
                     table: 'assignments',
                 },
-                () => {
-                    // Silent refresh - don't show loading indicator
-                    fetchAssignments(true);
+                async (payload) => {
+                    console.log('[useAssignments] Assignment change detected:', payload.eventType, payload);
+
+                    if (payload.eventType === 'INSERT') {
+                        // For new assignments, check if it's relevant to this user and add it
+                        const newAssignment = payload.new as any;
+
+                        if (role === 'student') {
+                            // Check if student is enrolled in this class
+                            const enrolledClassIds = await getEnrolledClassIds(user.id);
+                            if (newAssignment.class_id && enrolledClassIds.includes(newAssignment.class_id)) {
+                                // Add the new assignment with pending status
+                                setAssignments(prev => {
+                                    // Check if already exists
+                                    if (prev.some(a => a.id === newAssignment.id)) {
+                                        return prev;
+                                    }
+                                    const enrichedAssignment: Assignment = {
+                                        ...newAssignment,
+                                        studentStatus: 'pending' as const,
+                                        submission: undefined,
+                                        grade: undefined,
+                                        earnedPoints: undefined,
+                                    };
+                                    console.log('[useAssignments] Adding new assignment to list:', enrichedAssignment.title);
+                                    return [...prev, enrichedAssignment];
+                                });
+                            }
+                        } else {
+                            // Lecturer: add if they own it
+                            if (newAssignment.lecturer_id === user.id) {
+                                setAssignments(prev => {
+                                    if (prev.some(a => a.id === newAssignment.id)) {
+                                        return prev;
+                                    }
+                                    return [newAssignment, ...prev];
+                                });
+                            }
+                        }
+                    } else if (payload.eventType === 'UPDATE') {
+                        // Update existing assignment without losing submission data
+                        const updatedAssignment = payload.new as any;
+                        setAssignments(prev => prev.map(a =>
+                            a.id === updatedAssignment.id
+                                ? { ...updatedAssignment, studentStatus: a.studentStatus, submission: a.submission, grade: a.grade, earnedPoints: a.earnedPoints }
+                                : a
+                        ));
+                    } else if (payload.eventType === 'DELETE') {
+                        const deletedId = (payload.old as any).id;
+                        setAssignments(prev => prev.filter(a => a.id !== deletedId));
+                    }
                 }
             )
             .subscribe();
@@ -278,9 +366,42 @@ export function useAssignments() {
                     table: 'assignment_submissions',
                     filter: role === 'student' ? `student_id=eq.${user.id}` : undefined,
                 },
-                () => {
-                    // Silent refresh for submission updates
-                    fetchAssignments(true);
+                (payload) => {
+                    console.log('[useAssignments] Submission change detected:', payload.eventType, payload);
+
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                        const submission = payload.new as AssignmentSubmission;
+                        // Update only the affected assignment's submission status
+                        setAssignments(prev => prev.map(a => {
+                            if (a.id === submission.assignment_id) {
+                                const studentStatus = submission.status === 'graded' ? 'graded' : 'submitted';
+                                console.log(`[useAssignments] Updating assignment ${a.title} status to ${studentStatus}`);
+                                return {
+                                    ...a,
+                                    studentStatus: studentStatus as 'pending' | 'submitted' | 'graded' | 'overdue',
+                                    submission: submission,
+                                    grade: submission.grade ?? a.grade,
+                                    earnedPoints: submission.grade ?? a.earnedPoints,
+                                };
+                            }
+                            return a;
+                        }));
+                    } else if (payload.eventType === 'DELETE') {
+                        // Submission deleted - reset to pending status
+                        const deletedSubmission = payload.old as any;
+                        setAssignments(prev => prev.map(a => {
+                            if (a.id === deletedSubmission.assignment_id) {
+                                return {
+                                    ...a,
+                                    studentStatus: 'pending' as const,
+                                    submission: undefined,
+                                    grade: undefined,
+                                    earnedPoints: undefined,
+                                };
+                            }
+                            return a;
+                        }));
+                    }
                 }
             )
             .subscribe();
@@ -298,7 +419,7 @@ export function useAssignments() {
                     filter: `student_id=eq.${user.id}`,
                 },
                 () => {
-                    // Silent refresh for enrollment changes
+                    // For enrollment changes, do a full refresh to get new class assignments
                     fetchAssignments(true);
                 }
             )
@@ -309,7 +430,7 @@ export function useAssignments() {
             submissionsSubscription.unsubscribe();
             enrollmentSubscription?.unsubscribe();
         };
-    }, [user, fetchAssignments, role]);
+    }, [user, fetchAssignments, role, mergeAssignmentsWithSubmissions]);
 
     // Create assignment (lecturer only)
     const createAssignment = async (data: {
