@@ -16,7 +16,7 @@ interface Assignment {
     max_points: number;
     attachment_url: string | null;
     attachment_name: string | null;
-    status: 'draft' | 'published' | 'closed' | 'active';
+    status: 'draft' | 'published' | 'closed' | 'active' | 'completed';
     created_at: string;
     updated_at: string;
     course_title?: string;
@@ -98,7 +98,7 @@ export function useAssignments() {
                         .from('assignments')
                         .select('*')
                         .in('class_id', enrolledClassIds)
-                        .or('status.eq.published,status.eq.active')
+                        .or('status.eq.published,status.eq.active,status.eq.completed,status.eq.closed')
                         .order('due_date', { ascending: true });
 
                     console.log('[useAssignments] Enrolled class IDs:', enrolledClassIds);
@@ -132,8 +132,8 @@ export function useAssignments() {
                             const { data: oldAssignments, error: fetchError } = await supabase
                                 .from('assignments')
                                 .select('*')
-                                .eq('status', 'published')
                                 .in('course_id', enrolledCourseIds)
+                                .eq('status', 'published') // Old courses might only use 'published'
                                 .is('class_id', null) // Only old assignments without class_id
                                 .order('due_date', { ascending: true });
 

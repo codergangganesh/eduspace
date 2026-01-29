@@ -107,7 +107,7 @@ export function useLecturerData() {
                     .from("assignments")
                     .select("id, class_id")
                     .eq("lecturer_id", user.id)
-                    .or("status.eq.published,status.eq.active");
+                    .or("status.eq.published,status.eq.active,status.eq.completed,status.eq.closed");
 
                 if (directAssignments) {
                     allAssignmentIds = directAssignments.map(a => a.id);
@@ -118,7 +118,7 @@ export function useLecturerData() {
                     .from("assignments")
                     .select("id, class_id")
                     .in("class_id", classIds)
-                    .or("status.eq.published,status.eq.active");
+                    .or("status.eq.published,status.eq.active,status.eq.completed,status.eq.closed");
 
                 if (classAssignments) {
                     const classAssignmentIds = classAssignments.map(a => a.id);
