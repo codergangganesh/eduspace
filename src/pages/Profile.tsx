@@ -99,6 +99,7 @@ export default function Profile() {
     push_notifications: true,
     sms_notifications: false,
     assignment_reminders: true,
+    message_notifications: true, // Added
     grade_updates: true,
     course_announcements: true,
     weekly_digest: false,
@@ -149,6 +150,7 @@ export default function Profile() {
         push_notifications: profile.push_notifications ?? true,
         sms_notifications: profile.sms_notifications ?? false,
         assignment_reminders: profile.assignment_reminders ?? true,
+        message_notifications: profile.message_notifications ?? true, // Added
         grade_updates: profile.grade_updates ?? true,
         course_announcements: profile.course_announcements ?? true,
         weekly_digest: profile.weekly_digest ?? false,
@@ -231,8 +233,20 @@ export default function Profile() {
     return null;
   }
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = async (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Auto-save notification preferences
+    if (typeof value === 'boolean') {
+      const result = await updateProfile({ [field]: value } as Partial<ProfileType>);
+      if (result.success) {
+        toast.success("Preference saved");
+      } else {
+        toast.error("Failed to save preference");
+        // Revert on failure
+        setFormData((prev) => ({ ...prev, [field]: !value }));
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -261,11 +275,11 @@ export default function Profile() {
       push_notifications: formData.push_notifications,
       sms_notifications: formData.sms_notifications,
       assignment_reminders: formData.assignment_reminders,
+      message_notifications: formData.message_notifications, // Added
       grade_updates: formData.grade_updates,
       course_announcements: formData.course_announcements,
       weekly_digest: formData.weekly_digest,
       language: formData.language,
-      timezone: formData.timezone,
       timezone: formData.timezone,
       theme: formData.theme,
       batch: formData.batch,
@@ -870,11 +884,23 @@ export default function Profile() {
               <h2 className="text-lg font-semibold text-foreground mb-6">Notification Preferences</h2>
 
               <div className="space-y-6">
+                {/* Message Notifications */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">Message Notifications</p>
+                    <p className="text-sm text-muted-foreground">Receive alerts for new messages</p>
+                  </div>
+                  <Switch
+                    checked={formData.message_notifications}
+                    onCheckedChange={(checked) => handleInputChange("message_notifications", checked)}
+                  />
+                </div>
+
                 {/* Assignment Reminders */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Assignment Reminders</p>
-                    <p className="text-sm text-muted-foreground">Get reminded about upcoming deadlines</p>
+                    <p className="font-medium text-foreground">Assignment Reminders</p>
+                    <p className="text-sm text-muted-foreground">Get reminded about upcoming due dates</p>
                   </div>
                   <Switch
                     checked={formData.assignment_reminders}

@@ -95,9 +95,9 @@ export function InviteUserDialog({
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Invite User to EduSpace</DialogTitle>
+                    <DialogTitle>Invite User to Eduspace</DialogTitle>
                     <DialogDescription>
-                        Send an invitation email to invite someone to join the EduSpace platform.
+                        Send an invitation email to invite someone to join the Eduspace platform.
                     </DialogDescription>
                 </DialogHeader>
 

@@ -63,7 +63,7 @@ export default function StudentRegister() {
         const result = await signUp(formData.email, formData.password, formData.fullName, "student");
 
         if (result.success) {
-            toast.success("Account created successfully! Welcome to EduSpace.");
+            toast.success("Account created successfully! Welcome to Eduspace.");
             navigate("/dashboard");
         } else {
             toast.error(result.error || "Registration failed");
@@ -97,7 +97,7 @@ export default function StudentRegister() {
     };
 
     return (
-        <AuthLayout title="Student Registration" subtitle="Join EduSpace and start your learning journey">
+        <AuthLayout title="Student Registration" subtitle="Join Eduspace and start your learning journey">
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}
                 <form className="space-y-5" onSubmit={handleSubmit}>

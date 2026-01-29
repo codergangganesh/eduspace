@@ -166,12 +166,14 @@ export default function LandingPage() {
                         <div className="flex items-center justify-between h-16">
                             {/* Logo */}
                             <div className="flex items-center gap-2">
-                                <div className="p-1.5 rounded-lg bg-blue-600">
-                                    <GraduationCap className="size-5 text-white" />
-                                </div>
-                                <span className="text-lg font-semibold text-white dark:text-white">
-                                    EduSpace
-                                </span>
+                                <Link to="/" className="flex items-center gap-2">
+                                    <div className="size-8 rounded-lg overflow-hidden border border-white/20">
+                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                    </div>
+                                    <span className="text-xl font-bold text-white dark:text-white">
+                                        Eduspace
+                                    </span>
+                                </Link>
                             </div>
 
                             {/* Navigation Links */}
@@ -670,7 +672,7 @@ export default function LandingPage() {
                                 What Our Users Say
                             </h2>
                             <p className="text-lg text-slate-200 dark:text-slate-400 max-w-2xl mx-auto">
-                                Real experiences from students and lecturers using EduSpace
+                                Real experiences from students and lecturers using Eduspace
                             </p>
                         </div>
 
@@ -836,7 +838,7 @@ export default function LandingPage() {
                                 <div className="mb-10">
                                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium mb-6">
                                         <Award className="size-4" />
-                                        Why EduSpace
+                                        Why Eduspace
                                     </div>
                                     <h2 className="text-3xl lg:text-4xl font-bold text-white dark:text-white mb-6 leading-tight">
                                         Everything you need to run your institution efficiently
@@ -903,7 +905,7 @@ export default function LandingPage() {
                                 Ready to Transform Your Educational Experience?
                             </h2>
                             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-                                Join thousands of students and lecturers already using EduSpace to achieve their goals
+                                Join thousands of students and lecturers already using Eduspace to achieve their goals
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <Button
@@ -934,11 +936,11 @@ export default function LandingPage() {
                             {/* Brand Column */}
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-1.5 rounded-lg bg-blue-600">
-                                        <GraduationCap className="size-5 text-white" />
+                                    <div className="size-8 rounded-lg overflow-hidden border border-white/20">
+                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                                     </div>
                                     <span className="text-lg font-semibold text-white dark:text-white">
-                                        EduSpace
+                                        Eduspace
                                     </span>
                                 </div>
                                 <p className="text-sm text-slate-200 dark:text-slate-400">
@@ -1082,7 +1084,7 @@ export default function LandingPage() {
                         <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
                             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                                 <p className="text-sm text-slate-300 dark:text-slate-400">
-                                    © 2024 EduSpace. All rights reserved.
+                                    © 2024 Eduspace. All rights reserved.
                                 </p>
                                 <p className="text-sm text-slate-300 dark:text-slate-400">
                                     Made with ❤️ for Education

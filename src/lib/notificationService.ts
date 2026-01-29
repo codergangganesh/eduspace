@@ -221,14 +221,24 @@ export async function notifyNewMessage(
     conversationId: string,
     senderId: string
 ) {
-    // Check if recipient has push_notifications enabled
+    // Check if recipient has message_notifications enabled
     const { data } = await supabase
         .from("profiles")
-        .select("push_notifications")
+        .select("message_notifications, push_notifications")
         .eq("user_id", recipientId)
         .single();
 
-    if (!data?.push_notifications) return { success: true };
+    // Use message_notifications if available, otherwise fall back to push_notifications (or default to true if both missing/null logic implies enabled by default usually, but here we strictly check preference)
+    // Actually, for backward compatibility, if message_notifications is null, we can check push_notifications logic or default to true.
+    // The previous logic was: if (!data?.push_notifications) return...
+
+    // New logic: 
+    // If message_notifications is explicitly false, return.
+    // If message_notifications is null, check push_notifications.
+
+    const messageEnabled = data?.message_notifications ?? data?.push_notifications ?? true;
+
+    if (!messageEnabled) return { success: true };
 
     return createNotification({
         userId: recipientId,

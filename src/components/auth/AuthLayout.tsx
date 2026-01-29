@@ -38,17 +38,17 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
                             <div className="relative z-10">
                                 <Link to="/" className="flex items-center gap-3 w-fit">
-                                    <div className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
-                                        <GraduationCap className="size-8 text-white" />
+                                    <div className="size-12 rounded-xl overflow-hidden border border-white/20 shadow-xl">
+                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                                     </div>
-                                    <span className="text-2xl font-bold text-white tracking-tight">EduSpace</span>
+                                    <span className="text-2xl font-bold text-white tracking-tight">Eduspace</span>
                                 </Link>
                             </div>
 
                             <div className="relative z-10 py-12 lg:py-0">
                                 <h1 className="text-4xl lg:text-5xl font-black mb-6 leading-tight tracking-tight">
                                     Welcome to <br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">EduSpace</span>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Eduspace</span>
                                 </h1>
                                 <p className="text-lg text-white/80 leading-relaxed font-medium">
                                     Your comprehensive academic platform. Connect with your courses, manage assignments, and collaborate effortlessly.
@@ -56,7 +56,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                             </div>
 
                             <div className="relative z-10 hidden lg:block text-xs text-white/50">
-                                Protected by EduSpace Security
+                                Protected by Eduspace Security
                             </div>
                         </div>
 

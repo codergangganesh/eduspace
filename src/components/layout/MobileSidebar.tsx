@@ -57,10 +57,10 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           {/* Header */}
           <div className="flex items-center justify-between px-3 mb-8">
             <Link to={role === "lecturer" ? "/lecturer-dashboard" : "/dashboard"} className="flex items-center gap-3" onClick={onClose}>
-              <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-                <GraduationCap className="size-5" />
+              <div className="size-8 rounded-lg overflow-hidden border border-border">
+                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
               </div>
-              <span className="text-xl font-bold tracking-tight">EduSpace</span>
+              <span className="text-xl font-bold tracking-tight">Eduspace</span>
             </Link>
             <button
               onClick={onClose}

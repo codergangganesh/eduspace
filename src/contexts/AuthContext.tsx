@@ -33,6 +33,7 @@ export interface Profile {
   push_notifications: boolean | null;
   sms_notifications: boolean | null;
   assignment_reminders: boolean | null;
+  message_notifications: boolean | null; // Added
   grade_updates: boolean | null;
   course_announcements: boolean | null;
   weekly_digest: boolean | null;

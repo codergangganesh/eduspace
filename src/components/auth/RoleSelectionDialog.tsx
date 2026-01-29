@@ -77,7 +77,7 @@ export function RoleSelectionDialog({ open, onOpenChange }: RoleSelectionDialogP
                 {/* Footer Message */}
                 <div className="bg-muted/30 p-4 text-center border-t border-border/50">
                     <p className="text-xs text-muted-foreground">
-                        Protected by EduSpace Security • <span className="hover:underline cursor-pointer">Privacy Policy</span>
+                        Protected by Eduspace Security • <span className="hover:underline cursor-pointer">Privacy Policy</span>
                     </p>
                 </div>
             </DialogContent>

@@ -73,11 +73,11 @@ export function Sidebar() {
           {/* Logo/Brand */}
           <div className="flex items-center justify-between px-3">
             <Link to={dashboardPath} className="flex items-center gap-3">
-              <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shrink-0">
-                <GraduationCap className="size-5" />
+              <div className="size-8 rounded-lg overflow-hidden shrink-0 border border-border">
+                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
               </div>
               {!isCollapsed && (
-                <span className="text-xl font-bold tracking-tight">EduSpace</span>
+                <span className="text-xl font-bold tracking-tight">Eduspace</span>
               )}
             </Link>
             <button
