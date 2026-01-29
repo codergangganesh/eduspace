@@ -17,10 +17,11 @@ export interface RecentSubmission {
     courseCode: string;
     className: string; // Added for activity display
     submittedAt: string;
-    status: "pending" | "graded";
+    status: "pending" | "graded" | "submitted";
     grade: string | null;
     classId?: string; // Added for navigation
     assignmentId?: string; // Added for navigation
+    action?: 'submitted' | 'updated' | 'deleted'; // Added for activity tracking
 }
 // ... (keep existing code until line 170)
 
@@ -355,21 +356,23 @@ export function useLecturerData() {
                                 .eq('id', assignmentData.class_id)
                                 .single();
 
+
                             const newActivity: RecentSubmission = {
                                 id: submission.id,
                                 studentName: studentData?.full_name || 'Unknown Student',
                                 assignmentTitle: assignmentData?.title || 'Unknown Assignment',
                                 courseCode: classData?.name || 'Unknown Class',
                                 className: classData?.name || 'Unknown Class',
-                                submittedAt: submission.submitted_at,
+                                submittedAt: new Date().toISOString(), // Use current time for activity log
                                 status: submission.status,
                                 grade: submission.grade,
                                 assignmentId: submission.assignment_id,
+                                action: 'submitted'
                             };
 
                             // Add to recent activity at the top
                             setRecentSubmissions(prev => [newActivity, ...prev.slice(0, 9)]);
-                            console.log('[useLecturerData] Added to recent activity:', newActivity.studentName, newActivity.assignmentTitle);
+                            console.log('[useLecturerData] Added to recent activity (Submitted):', newActivity.studentName, newActivity.assignmentTitle);
                         }
                     } catch (err) {
                         console.error('Error enriching submission data:', err);
@@ -381,12 +384,70 @@ export function useLecturerData() {
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'assignment_submissions' },
-                silentFetch
+                async (payload) => {
+                    // Log update activity
+                    const submission = payload.new as any;
+                    try {
+                        const { data: studentData } = await supabase.from('profiles').select('full_name').eq('user_id', submission.student_id).single();
+                        const { data: assignmentData } = await supabase.from('assignments').select('title, class_id').eq('id', submission.assignment_id).single();
+
+                        if (assignmentData) {
+                            const { data: classData } = await supabase.from('classes').select('name').eq('id', assignmentData.class_id).single();
+                            const newActivity: RecentSubmission = {
+                                id: submission.id,
+                                studentName: studentData?.full_name || 'Unknown Student',
+                                assignmentTitle: assignmentData?.title || 'Unknown Assignment',
+                                courseCode: classData?.name || 'Unknown Class',
+                                className: classData?.name || 'Unknown Class',
+                                submittedAt: new Date().toISOString(),
+                                status: submission.status,
+                                grade: submission.grade,
+                                assignmentId: submission.assignment_id,
+                                action: 'updated'
+                            };
+                            setRecentSubmissions(prev => [newActivity, ...prev.slice(0, 9)]);
+                            console.log('[useLecturerData] Added to recent activity (Updated):', newActivity);
+                        }
+                    } catch (e) { console.error(e); fetchData(true); }
+                }
             )
             .on(
                 'postgres_changes',
                 { event: 'DELETE', schema: 'public', table: 'assignment_submissions' },
-                silentFetch
+                async (payload) => {
+                    console.log('[useLecturerData] Submission deleted:', payload);
+                    const submission = payload.old as any;
+
+                    // Immediately decrement submission count
+                    setStats(prev => ({
+                        ...prev,
+                        submissionsReceived: Math.max(0, prev.submissionsReceived - 1),
+                        pendingSubmissions: prev.pendingSubmissions + 1,
+                    }));
+
+                    // Log delete activity (we might not have full details, but we can try fetching or just show generic)
+                    // Since it's deleted, we can't query it. We rely on the ID to potentially match existing activity or just generic msg.
+                    // Ideally we'd have the assignment_id to fetch assignment title. But 'old' payload might only have ID.
+                    // If replica identity is full, we get more. Assuming standard config, maybe just ID.
+                    // Let's assume we can get basic info or skip exact details if missing.
+                    // NOTE: Without REPLICA IDENTITY FULL, 'old' only contains 'id'.
+                    // So for now, we just decrement stats. If we want detailed log, we need to know what was deleted.
+                    // We can try to finding it in recentSubmissions to get names.
+
+                    setRecentSubmissions(prev => {
+                        const found = prev.find(s => s.id === submission.id);
+                        if (found) {
+                            const deleteActivity: RecentSubmission = {
+                                ...found,
+                                submittedAt: new Date().toISOString(),
+                                action: 'deleted',
+                                status: 'pending' as const
+                            };
+                            return [deleteActivity, ...prev.slice(0, 9)];
+                        }
+                        return prev;
+                    });
+                }
             )
             .subscribe();
 

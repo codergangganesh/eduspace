@@ -1,6 +1,8 @@
 
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Calendar, Clock, FileText, CheckCircle, AlertCircle, ChevronRight, TrendingUp, Target, Loader2, Download, Eye } from "lucide-react";
@@ -42,7 +44,14 @@ const statusConfig: any = {
 
 export default function StudentAssignments() {
     const navigate = useNavigate();
-    const { assignments, loading, submitAssignment } = useAssignments();
+    const { role } = useAuth();
+    const {
+        assignments,
+        loading,
+        submitAssignment,
+        deleteSubmission, // Destructure deleteSubmission
+        refreshAssignments
+    } = useAssignments();
     const [filter, setFilter] = useState<FilterType>("all");
     const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
     const [isSubmitOpen, setIsSubmitOpen] = useState(false);
@@ -70,6 +79,30 @@ export default function StudentAssignments() {
     const handleSubmitClick = (assignment: any) => {
         setSelectedAssignment(assignment);
         setIsSubmitOpen(true);
+    };
+
+    const handleEditSubmission = (assignment: any) => {
+        console.log("Editing submission for:", assignment.title);
+        setSelectedAssignment(assignment);
+        setIsSubmitOpen(true);
+    };
+
+    const handleDeleteSubmission = async (assignmentId: string) => {
+        if (confirm("Are you sure you want to delete this submission?")) {
+            console.log("Deleting submission for assignment:", assignmentId);
+            // Find submission ID
+            const assignment = assignments.find(a => a.id === assignmentId);
+            if (assignment?.submission?.id) {
+                const { success, error } = await deleteSubmission(assignment.submission.id);
+                if (success) {
+                    toast.success("Submission deleted successfully");
+                    // Status update is handled by real-time subscription
+                } else {
+                    toast.error("Failed to delete submission");
+                    console.error(error);
+                }
+            }
+        }
     };
 
     if (loading) {
@@ -198,6 +231,8 @@ export default function StudentAssignments() {
                                     role="student"
                                     onView={(id) => navigate(`/student/assignments/${id}`)}
                                     onSubmit={handleSubmitClick}
+                                    onEdit={assignment.studentStatus === 'submitted' ? handleEditSubmission : undefined}
+                                    onDelete={assignment.studentStatus === 'submitted' ? handleDeleteSubmission : undefined}
                                     index={index}
                                 />
                             ))}

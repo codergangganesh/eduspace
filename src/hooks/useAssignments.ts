@@ -588,14 +588,34 @@ export function useAssignments() {
                         );
                     }
                 }
-            } catch (notifError) {
-                console.warn('Failed to send grade notification:', notifError);
+            } catch (notifyErr) {
+                console.error("Error sending grade notification:", notifyErr);
+                // Non-blocking error
             }
 
             return { success: true };
-        } catch (err: any) {
-            console.error('Error grading submission:', err);
-            return { success: false, error: err.message };
+        } catch (error) {
+            console.error('Error grading submission:', error);
+            return { success: false, error };
+        }
+    };
+
+    // Delete submission (student only)
+    const deleteSubmission = async (submissionId: string) => {
+        if (!user) return { success: false, error: 'Not authenticated' };
+
+        try {
+            const { error } = await supabase
+                .from('assignment_submissions')
+                .delete()
+                .eq('id', submissionId)
+                .eq('student_id', user.id); // Security check
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting submission:', error);
+            return { success: false, error };
         }
     };
 

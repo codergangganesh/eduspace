@@ -142,14 +142,14 @@ export function AssignmentCard({
                             </div>
                         </div>
 
-                        {/* Actions Dropdown for Lecturer */}
-                        {role === 'lecturer' && (onEdit || onDelete) && (
+                        {/* Actions Dropdown */}
+                        {(onEdit || onDelete) && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 -mt-1 -mr-2 text-muted-foreground hover:text-foreground"
+                                        className="h-8 w-8 -mt-1 -mr-2 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <MoreVertical className="size-4" />
