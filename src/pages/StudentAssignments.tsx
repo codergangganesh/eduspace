@@ -190,7 +190,10 @@ export default function StudentAssignments() {
                                     assignment={{
                                         ...assignment,
                                         status: assignment.studentStatus || assignment.status || 'pending',
-                                        points: assignment.max_points
+                                        points: assignment.max_points,
+                                        class_name: assignment.class_name,
+                                        subject_name: assignment.subject_name,
+                                        lecturer_name: assignment.lecturer_name
                                     }}
                                     role="student"
                                     onView={(id) => navigate(`/student/assignments/${id}`)}

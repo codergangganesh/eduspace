@@ -7,6 +7,7 @@ export interface DashboardStats {
     enrolledStudents: number;
     submissionsReceived: number;
     pendingSubmissions: number;
+    totalExpectedSubmissions: number; // For "X / Y" format display
 }
 
 export interface RecentSubmission {
@@ -14,6 +15,7 @@ export interface RecentSubmission {
     studentName: string;
     assignmentTitle: string;
     courseCode: string;
+    className: string; // Added for activity display
     submittedAt: string;
     status: "pending" | "graded";
     grade: string | null;
@@ -41,6 +43,7 @@ export function useLecturerData() {
         enrolledStudents: 0,
         submissionsReceived: 0,
         pendingSubmissions: 0,
+        totalExpectedSubmissions: 0,
     });
     const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
     const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
@@ -67,18 +70,28 @@ export function useLecturerData() {
             let enrolledStudents = 0;
             let submissionsReceived = 0;
             let pendingSubmissions = 0;
+            let totalExpectedSubmissions = 0;
 
             if (classIds.length > 0) {
-                // A. Enrolled Students: Count unique students across all classes
-                // We use class_students table which links students to classes
-                const { data: enrollments } = await supabase
-                    .from("class_students")
-                    .select("student_id")
-                    .in("class_id", classIds);
+                // A. Enrolled Students: Count unique ACCEPTED students across all classes
+                // Use access_requests table with status='accepted' for accurate counts
+                const { data: acceptedEnrollments } = await supabase
+                    .from("access_requests")
+                    .select("student_id, class_id")
+                    .in("class_id", classIds)
+                    .eq("status", "accepted");
 
                 // Count unique students (a student might be in multiple classes)
-                const uniqueStudents = new Set(enrollments?.map(e => e.student_id));
+                const uniqueStudents = new Set(acceptedEnrollments?.map(e => e.student_id));
                 enrolledStudents = uniqueStudents.size;
+
+                // Create a map of class_id -> accepted student count for submissions calculation
+                const classStudentCounts = new Map<string, number>();
+                acceptedEnrollments?.forEach(e => {
+                    if (e.class_id) {
+                        classStudentCounts.set(e.class_id, (classStudentCounts.get(e.class_id) || 0) + 1);
+                    }
+                });
 
                 // B. Assignments & Submissions
                 // Fetch assignments created by this lecturer (or linked to these classes)
@@ -111,30 +124,24 @@ export function useLecturerData() {
                         .eq("lecturer_id", user.id)
                         .eq("status", "published");
 
-                    let totalExpected = 0;
+                    // Calculate total expected submissions using pre-fetched class student counts
                     if (assignmentsWithClass) {
                         for (const assign of assignmentsWithClass) {
-                            if (assign.class_id) {
-                                // Count students in this class
-                                const { count: studentCount } = await supabase
-                                    .from("class_students")
-                                    .select("*", { count: 'exact', head: true })
-                                    .eq("class_id", assign.class_id);
-                                totalExpected += (studentCount || 0);
-                            } else {
-                                // Fallback: add total unique students? No, safe to ignore or assume 0 for legacy
+                            if (assign.class_id && classStudentCounts.has(assign.class_id)) {
+                                totalExpectedSubmissions += classStudentCounts.get(assign.class_id) || 0;
                             }
                         }
                     }
 
-                    pendingSubmissions = Math.max(0, totalExpected - submissionsReceived);
+                    pendingSubmissions = Math.max(0, totalExpectedSubmissions - submissionsReceived);
                 }
             }
 
             setStats({
                 enrolledStudents,
                 submissionsReceived,
-                pendingSubmissions
+                pendingSubmissions,
+                totalExpectedSubmissions
             });
 
             // 2. Fetch Recent Submissions
@@ -164,13 +171,19 @@ export function useLecturerData() {
                 for (const sub of submissions) {
                     const assignmentClassId = (sub.assignment as any)?.class_id;
                     let courseCode = "N/A";
+                    let className = "Unknown Class";
 
                     if (assignmentClassId && classesMap.has(assignmentClassId)) {
-                        courseCode = classesMap.get(assignmentClassId)?.course_code || "N/A";
+                        const classInfo = classesMap.get(assignmentClassId);
+                        courseCode = classInfo?.course_code || "N/A";
+                        className = classInfo?.class_name || "Unknown Class";
                     } else if (assignmentClassId) {
                         try {
-                            const { data: cls } = await supabase.from('classes').select('course_code').eq('id', assignmentClassId).single();
-                            if (cls) courseCode = cls.course_code;
+                            const { data: cls } = await supabase.from('classes').select('course_code, class_name').eq('id', assignmentClassId).single();
+                            if (cls) {
+                                courseCode = cls.course_code;
+                                className = cls.class_name || "Unknown Class";
+                            }
                         } catch (e) {
                             // ignore error
                         }
@@ -181,6 +194,7 @@ export function useLecturerData() {
                         studentName: (sub.student as any)?.full_name || "Unknown Student",
                         assignmentTitle: (sub.assignment as any)?.title || "Untitled",
                         courseCode: courseCode,
+                        className: className,
                         submittedAt: format(new Date(sub.submitted_at), "MMM d, h:mm a"),
                         status: sub.status === "graded" ? "graded" : "pending",
                         grade: sub.grade ? sub.grade.toString() : null,
@@ -261,7 +275,8 @@ export function useLecturerData() {
             supabase.channel('dashboard_submissions').on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_submissions' }, fetchData).subscribe(),
             supabase.channel('dashboard_class_students').on('postgres_changes', { event: '*', schema: 'public', table: 'class_students' }, fetchData).subscribe(),
             supabase.channel('dashboard_classes').on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, fetchData).subscribe(),
-            supabase.channel('dashboard_schedules').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, fetchData).subscribe()
+            supabase.channel('dashboard_schedules').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, fetchData).subscribe(),
+            supabase.channel('dashboard_access_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'access_requests' }, fetchData).subscribe()
         ];
 
         return () => {

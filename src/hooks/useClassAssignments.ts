@@ -61,11 +61,12 @@ export function useClassAssignments(classId: string | null) {
 
             console.log('Fetched assignments:', assignmentsData);
 
-            // Get total students in class
+            // Get total accepted students in class (students who have accepted the class invitation)
             const { count: totalStudents } = await supabase
-                .from('class_students')
+                .from('access_requests')
                 .select('*', { count: 'exact', head: true })
-                .eq('class_id', classId);
+                .eq('class_id', classId)
+                .eq('status', 'accepted');
 
             // Fetch submission counts and subject names for each assignment
             const assignmentsWithStats = await Promise.all(
@@ -182,9 +183,28 @@ export function useClassAssignments(classId: string | null) {
             )
             .subscribe();
 
+        // Real-time subscription for access_requests (enrollment changes)
+        // This ensures total student counts update when students accept/reject invitations
+        const enrollmentSubscription = supabase
+            .channel(`enrollments_${classId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'access_requests',
+                    filter: `class_id=eq.${classId}`,
+                },
+                () => {
+                    fetchAssignments();
+                }
+            )
+            .subscribe();
+
         return () => {
             assignmentsSubscription.unsubscribe();
             submissionsSubscription.unsubscribe();
+            enrollmentSubscription.unsubscribe();
         };
     }, [classId, user, fetchAssignments]);
 

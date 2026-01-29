@@ -38,6 +38,8 @@ interface Assignment {
     submission_count?: number;
     total_students?: number;
     course_code?: string;
+    class_name?: string;
+    subject_name?: string;
     lecturer_name?: string;
     submission?: {
         submitted_at?: string;
@@ -177,10 +179,20 @@ export function AssignmentCard({
                         )}
                     </div>
 
-                    {/* Course Context (for Student View mainly) */}
-                    {(assignment.course_code || assignment.lecturer_name) && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {assignment.course_code && (
+                    {/* Course/Class Context (for Student View mainly) */}
+                    {(assignment.class_name || assignment.subject_name || assignment.course_code || assignment.lecturer_name) && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                            {assignment.class_name && (
+                                <Badge variant="secondary" className="text-[10px] h-5 rounded-md px-1.5 font-bold">
+                                    {assignment.class_name}
+                                </Badge>
+                            )}
+                            {assignment.subject_name && (
+                                <Badge variant="outline" className="text-[10px] h-5 rounded-md px-1.5">
+                                    {assignment.subject_name}
+                                </Badge>
+                            )}
+                            {!assignment.class_name && assignment.course_code && (
                                 <Badge variant="secondary" className="text-[10px] h-5 rounded-md px-1.5 font-bold">
                                     {assignment.course_code}
                                 </Badge>

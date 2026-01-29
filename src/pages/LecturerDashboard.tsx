@@ -31,7 +31,7 @@ export default function LecturerDashboard() {
     {
       title: "Total Students",
       value: dataStats.enrolledStudents,
-      label: "Enrolled across all courses",
+      label: "Unique students enrolled",
       icon: Users,
       color: "bg-blue-500",
       lightColor: "bg-blue-500/10 text-blue-600",
@@ -40,8 +40,8 @@ export default function LecturerDashboard() {
     },
     {
       title: "Submissions",
-      value: dataStats.submissionsReceived,
-      label: "Total received",
+      value: `${dataStats.submissionsReceived} / ${dataStats.totalExpectedSubmissions}`,
+      label: "Students submitted",
       icon: FileText,
       color: "bg-purple-500",
       lightColor: "bg-purple-500/10 text-purple-600",
@@ -49,9 +49,9 @@ export default function LecturerDashboard() {
       borderColor: "border-purple-200 dark:border-purple-800"
     },
     {
-      title: "Pending Review",
+      title: "Pending Submissions",
       value: dataStats.pendingSubmissions,
-      label: "Needs grading",
+      label: "Students yet to submit",
       icon: AlertCircle,
       color: "bg-amber-500",
       lightColor: "bg-amber-500/10 text-amber-600",
@@ -171,7 +171,11 @@ export default function LecturerDashboard() {
                           </div>
                           <div>
                             <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{submission.studentName}</h4>
-                            <p className="text-xs text-muted-foreground">submitted <span className="font-medium text-foreground">{submission.assignmentTitle}</span></p>
+                            <p className="text-xs text-muted-foreground">
+                              submitted <span className="font-medium text-foreground">{submission.assignmentTitle}</span>
+                              <span className="text-muted-foreground"> in </span>
+                              <span className="font-medium text-foreground">{submission.className}</span>
+                            </p>
                           </div>
                         </div>
 

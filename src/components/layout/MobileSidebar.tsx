@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
+  { icon: FileText, label: "Assignments", path: "/student/assignments" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

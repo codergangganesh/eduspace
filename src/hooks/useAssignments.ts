@@ -6,6 +6,8 @@ import { getEnrolledClassIds } from '@/lib/studentUtils';
 interface Assignment {
     id: string;
     course_id: string;
+    class_id?: string;
+    subject_id?: string;
     lecturer_id: string;
     title: string;
     description: string | null;
@@ -14,11 +16,13 @@ interface Assignment {
     max_points: number;
     attachment_url: string | null;
     attachment_name: string | null;
-    status: 'draft' | 'published' | 'closed';
+    status: 'draft' | 'published' | 'closed' | 'active';
     created_at: string;
     updated_at: string;
     course_title?: string;
     course_code?: string;
+    class_name?: string;
+    subject_name?: string;
     lecturer_name?: string;
     studentStatus?: 'pending' | 'submitted' | 'graded' | 'overdue';
     submission?: AssignmentSubmission;
@@ -97,8 +101,11 @@ export function useAssignments() {
                     // Also fetch old course-based assignments for backward compatibility
                     const { data: classesData } = await supabase
                         .from('classes')
-                        .select('course_code')
+                        .select('id, name, course_code')
                         .in('id', enrolledClassIds);
+
+                    // Create a map for quick class lookup
+                    const classMap = new Map(classesData?.map(c => [c.id, c]) || []);
 
                     let courseAssignments: any[] = [];
                     if (classesData && classesData.length > 0) {
@@ -129,7 +136,40 @@ export function useAssignments() {
                     }
 
                     // Combine both class-based and course-based assignments
-                    data = [...(classAssignments || []), ...courseAssignments];
+                    const allAssignments = [...(classAssignments || []), ...courseAssignments];
+
+                    // Fetch related data for enrichment
+                    // Get unique subject IDs and lecturer IDs
+                    const subjectIds = [...new Set(allAssignments.map(a => a.subject_id).filter(Boolean))];
+                    const lecturerIds = [...new Set(allAssignments.map(a => a.lecturer_id).filter(Boolean))];
+
+                    // Fetch subject names
+                    let subjectMap = new Map<string, string>();
+                    if (subjectIds.length > 0) {
+                        const { data: subjects } = await supabase
+                            .from('subjects')
+                            .select('id, name')
+                            .in('id', subjectIds);
+                        subjectMap = new Map(subjects?.map(s => [s.id, s.name]) || []);
+                    }
+
+                    // Fetch lecturer names
+                    let lecturerMap = new Map<string, string>();
+                    if (lecturerIds.length > 0) {
+                        const { data: lecturers } = await supabase
+                            .from('profiles')
+                            .select('user_id, full_name')
+                            .in('user_id', lecturerIds);
+                        lecturerMap = new Map(lecturers?.map(l => [l.user_id, l.full_name]) || []);
+                    }
+
+                    // Enrich assignments with class, subject, and lecturer names
+                    data = allAssignments.map(a => ({
+                        ...a,
+                        class_name: classMap.get(a.class_id)?.name || null,
+                        subject_name: subjectMap.get(a.subject_id) || null,
+                        lecturer_name: lecturerMap.get(a.lecturer_id) || null,
+                    }));
 
                     // Fetch My Submissions to determine status
                     const { data: submissionsData, error: subError } = await supabase
@@ -233,9 +273,29 @@ export function useAssignments() {
             )
             .subscribe();
 
+        // Real-time subscription for access_requests (enrollment changes)
+        // This ensures students see assignments from newly accepted classes immediately
+        const enrollmentSubscription = role === 'student' ? supabase
+            .channel(`enrollment_changes_${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'access_requests',
+                    filter: `student_id=eq.${user.id}`,
+                },
+                () => {
+                    // Refetch assignments when enrollment status changes
+                    fetchAssignments();
+                }
+            )
+            .subscribe() : null;
+
         return () => {
             assignmentsSubscription.unsubscribe();
             submissionsSubscription.unsubscribe();
+            enrollmentSubscription?.unsubscribe();
         };
     }, [user, fetchAssignments, role]);
 

@@ -146,8 +146,28 @@ export function useSchedule(classId?: string) {
             )
             .subscribe();
 
+        // Real-time subscription for access_requests (enrollment changes)
+        // This ensures students see schedules from newly accepted classes immediately
+        const enrollmentChannel = role === 'student' ? supabase
+            .channel(`schedule_enrollment_${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'access_requests',
+                    filter: `student_id=eq.${user.id}`,
+                },
+                async () => {
+                    // Refetch schedules when enrollment status changes
+                    await fetchSchedules();
+                }
+            )
+            .subscribe() : null;
+
         return () => {
             supabase.removeChannel(channel);
+            if (enrollmentChannel) supabase.removeChannel(enrollmentChannel);
         };
     }, [fetchSchedules, user, role, classId]);
 

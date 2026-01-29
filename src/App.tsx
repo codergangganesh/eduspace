@@ -34,6 +34,8 @@ import Settings from "./pages/Settings";
 import AllStudents from "./pages/AllStudents";
 import CreateClass from "./pages/CreateClass";
 import LecturerTimeTable from "./pages/LecturerTimeTable";
+import StudentAssignmentDetail from "./pages/StudentAssignmentDetail";
+import StudentAssignments from "./pages/StudentAssignments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +73,22 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={["student", "admin"]}>
                       <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/assignments"
+                  element={
+                    <ProtectedRoute allowedRoles={["student", "admin"]}>
+                      <StudentAssignments />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/assignments/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["student", "admin"]}>
+                      <StudentAssignmentDetail />
                     </ProtectedRoute>
                   }
                 />
