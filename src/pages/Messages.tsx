@@ -563,9 +563,7 @@ export default function Messages() {
   if (loading) {
     return (
       <DashboardLayout fullHeight={true}>
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="size-8 animate-spin text-emerald-500" />
-        </div>
+        <ChatSkeleton />
       </DashboardLayout>
     );
   }
