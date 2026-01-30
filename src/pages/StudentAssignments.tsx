@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAssignments } from "@/hooks/useAssignments";
 import { format, parseISO } from "date-fns";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 
 type FilterType = "all" | "pending" | "submitted" | "graded" | "overdue";
 
@@ -105,12 +106,11 @@ export default function StudentAssignments() {
         }
     };
 
+    // ...
     if (loading) {
         return (
             <DashboardLayout>
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="size-8 animate-spin text-primary" />
-                </div>
+                <DashboardSkeleton />
             </DashboardLayout>
         );
     }

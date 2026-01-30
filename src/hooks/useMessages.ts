@@ -49,6 +49,11 @@ export function useMessages() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+
+    // Pagination state
+    const [hasMore, setHasMore] = useState(false);
+    const [page, setPage] = useState(0);
+    const PAGE_SIZE = 20;
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
     const fetchConversations = useCallback(async () => {
@@ -138,44 +143,71 @@ export function useMessages() {
         };
     }, [user, fetchConversations]);
 
+    // Mark messages as read (moved up for use in useEffect)
+    const markMessagesAsRead = useCallback(async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            await supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('conversation_id', conversationId)
+                .eq('receiver_id', user.id)
+                .eq('is_read', false);
+        } catch (err) {
+            console.error('Error marking messages as read:', err);
+        }
+    }, [user]);
+
     // Fetch messages for selected conversation
     useEffect(() => {
         if (!selectedConversationId || !user) return;
 
-        const fetchMessages = async () => {
+        const fetchMessages = async (isLoadMore = false) => {
             try {
+                const currentLength = isLoadMore ? messages.length : 0;
+                const from = currentLength;
+                const to = from + PAGE_SIZE - 1;
+
                 const { data, error: fetchError } = await supabase
                     .from('messages')
                     .select('*')
                     .eq('conversation_id', selectedConversationId)
-                    .order('created_at', { ascending: true });
+                    .order('created_at', { ascending: false }) // Get newest first
+                    .range(from, to);
 
                 if (fetchError) {
-                    console.warn('Error fetching messages:', fetchError);
-                    setMessages([]);
-                } else {
-                    const currentConv = conversations.find(c => c.id === selectedConversationId);
-                    let filteredData = data || [];
-
-                    // Filter messages based on cleared_at
-                    if (currentConv?.cleared_at && currentConv.cleared_at[user.id]) {
-                        const clearedTime = new Date(currentConv.cleared_at[user.id]).getTime();
-                        filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
-                    }
-
-                    setMessages(filteredData as Message[]);
+                    console.error('Error fetching messages:', fetchError);
+                    return;
                 }
+
+                // Filter messages based on cleared_at
+                let filteredData = data || [];
+                const currentConv = conversations.find(c => c.id === selectedConversationId);
+
+                if (currentConv?.cleared_at && currentConv.cleared_at[user.id]) {
+                    const clearedTime = new Date(currentConv.cleared_at[user.id]).getTime();
+                    filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
+                }
+
+                // Reverse to display chronologically (oldest at top)
+                const newMessages = [...filteredData].reverse();
+
+                if (isLoadMore) {
+                    setMessages(prev => [...newMessages, ...prev]);
+                } else {
+                    setMessages(newMessages);
+                }
+
+                // If we got fewer messages than requested, we've reached the end
+                setHasMore(filteredData.length === PAGE_SIZE);
+
             } catch (err) {
-                console.error('Error fetching messages:', err);
-                setMessages([]);
+                console.error('Error in fetchMessages:', err);
             }
         };
 
         fetchMessages();
-
-
-        fetchMessages();
-
 
         // Real-time subscription for messages and typing indicators
         const channel = supabase.channel(`messages_${selectedConversationId}`, {
@@ -194,14 +226,13 @@ export function useMessages() {
                     filter: `conversation_id=eq.${selectedConversationId}`,
                 },
                 (payload) => {
+                    // Handle new message - append to end
                     const newMessage = payload.new as Message;
-                    // Deduplicate: Check if message already exists
-                    setMessages((prev) => {
-                        if (prev.some(m => m.id === newMessage.id)) {
-                            return prev;
-                        }
-                        return [...prev, newMessage];
-                    });
+                    setMessages((prev) => [...prev, newMessage]);
+                    // Also mark as read immediately if it's the current chat
+                    if (newMessage.sender_id !== user.id) {
+                        markMessagesAsRead(selectedConversationId);
+                    }
                 }
             )
             .on(
@@ -244,22 +275,6 @@ export function useMessages() {
                     }
                 }
             )
-            .on(
-                'broadcast',
-                { event: 'new_message' },
-                (payload) => {
-                    const newMessage = payload.payload as Message;
-                    // Only process if it belongs to current conversation (safety check)
-                    if (newMessage && newMessage.conversation_id === selectedConversationId) {
-                        setMessages((prev) => {
-                            if (prev.some(m => m.id === newMessage.id)) {
-                                return prev; // Avoid duplicates
-                            }
-                            return [...prev, newMessage];
-                        });
-                    }
-                }
-            )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
                     // console.log('Subscribed to messages channel:', selectedConversationId);
@@ -272,10 +287,10 @@ export function useMessages() {
         channelRef.current = channel;
 
         return () => {
-            channel.unsubscribe();
+            supabase.removeChannel(channel); // Changed from channel.unsubscribe()
             channelRef.current = null;
         };
-    }, [selectedConversationId, user]);
+    }, [selectedConversationId, user, conversations, markMessagesAsRead]); // Removed messages.length to prevent infinite loop
 
     const sendTyping = async () => {
         if (!channelRef.current || !user) return;
@@ -370,14 +385,14 @@ export function useMessages() {
                 optimisticMessage.conversation_id = conversationId;
             }
 
-            // BROADCAST MESSAGE IMMEDIATELY (Instant Delivery)
-            if (channelRef.current && conversationId === selectedConversationId) {
-                await channelRef.current.send({
-                    type: 'broadcast',
-                    event: 'new_message',
-                    payload: optimisticMessage
-                });
-            }
+            // BROADCAST MESSAGE IMMEDIATELY (Instant Delivery) - Removed as postgres_changes handles this now
+            // if (channelRef.current && conversationId === selectedConversationId) {
+            //     await channelRef.current.send({
+            //         type: 'broadcast',
+            //         event: 'new_message',
+            //         payload: optimisticMessage
+            //     });
+            // }
 
             // Insert message
             const { error: messageError } = await supabase
@@ -726,19 +741,42 @@ export function useMessages() {
         await clearChat(conversationId);
     };
 
-    // Mark messages as read
-    const markMessagesAsRead = async (conversationId: string) => {
-        if (!user) return;
+    // Load more messages function
+    const loadMoreMessages = async () => {
+        if (!selectedConversationId || !hasMore) return;
+
+        const currentLength = messages.length;
+        const from = currentLength;
+        const to = from + PAGE_SIZE - 1;
 
         try {
-            await supabase
+            const { data, error: fetchError } = await supabase
                 .from('messages')
-                .update({ is_read: true })
-                .eq('conversation_id', conversationId)
-                .eq('receiver_id', user.id)
-                .eq('is_read', false);
-        } catch (err) {
-            console.error('Error marking messages as read:', err);
+                .select('*')
+                .eq('conversation_id', selectedConversationId)
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (fetchError) {
+                console.error('Error loading more messages:', fetchError);
+                return;
+            }
+
+            let filteredData = data || [];
+            const currentConv = conversations.find(c => c.id === selectedConversationId);
+
+            if (currentConv?.cleared_at && currentConv.cleared_at[user.id]) {
+                const clearedTime = new Date(currentConv.cleared_at[user.id]).getTime();
+                filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
+            }
+
+            const newMessages = [...filteredData].reverse();
+            setMessages(prev => [...newMessages, ...prev]);
+
+            setHasMore(filteredData.length === PAGE_SIZE);
+
+        } catch (error) {
+            console.error("Error in loadMoreMessages:", error);
         }
     };
 
@@ -761,6 +799,8 @@ export function useMessages() {
         hideChat,
         unhideChat,
         finalizeDeleteChat,
-        editMessage
+        editMessage,
+        hasMore, // Added hasMore
+        loadMoreMessages
     };
 }

@@ -8,37 +8,54 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import StudentLogin from "./pages/StudentLogin";
-import StudentRegister from "./pages/StudentRegister";
-import LecturerLogin from "./pages/LecturerLogin";
-import LecturerRegister from "./pages/LecturerRegister";
-import ForgotPassword from "./pages/ForgotPassword";
-import UpdatePassword from "./pages/UpdatePassword";
-import AuthCallback from "./pages/AuthCallback";
-import Dashboard from "./pages/Dashboard";
-import LecturerDashboard from "./pages/LecturerDashboard";
-import LecturerStudents from "./pages/LecturerStudents";
-import Assignments from "./pages/Assignments";
-import AssignmentSubmit from "./pages/AssignmentSubmit";
-import LecturerClassesAssignments from "./pages/LecturerClassesAssignments";
-import ClassAssignmentsView from "./pages/ClassAssignmentsView";
-import SubmissionDetailsPage from "./pages/SubmissionDetailsPage";
-import Profile from "./pages/Profile";
-import Messages from "./pages/Messages";
-import Schedule from "./pages/Schedule";
-import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
-import AllStudents from "./pages/AllStudents";
-import CreateClass from "./pages/CreateClass";
-import LecturerTimeTable from "./pages/LecturerTimeTable";
-import StudentAssignmentDetail from "./pages/StudentAssignmentDetail";
-import StudentAssignments from "./pages/StudentAssignments";
-import NotFound from "./pages/NotFound";
+import { Suspense, lazy } from "react";
+import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient();
+// Lazy load pages
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const StudentLogin = lazy(() => import("./pages/StudentLogin"));
+const StudentRegister = lazy(() => import("./pages/StudentRegister"));
+const LecturerLogin = lazy(() => import("./pages/LecturerLogin"));
+const LecturerRegister = lazy(() => import("./pages/LecturerRegister"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const LecturerDashboard = lazy(() => import("./pages/LecturerDashboard"));
+const LecturerStudents = lazy(() => import("./pages/LecturerStudents"));
+const Assignments = lazy(() => import("./pages/Assignments"));
+const AssignmentSubmit = lazy(() => import("./pages/AssignmentSubmit"));
+const LecturerClassesAssignments = lazy(() => import("./pages/LecturerClassesAssignments"));
+const ClassAssignmentsView = lazy(() => import("./pages/ClassAssignmentsView"));
+const SubmissionDetailsPage = lazy(() => import("./pages/SubmissionDetailsPage"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Schedule = lazy(() => import("./pages/Schedule"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Settings = lazy(() => import("./pages/Settings"));
+const AllStudents = lazy(() => import("./pages/AllStudents"));
+const CreateClass = lazy(() => import("./pages/CreateClass"));
+const LecturerTimeTable = lazy(() => import("./pages/LecturerTimeTable"));
+const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDetail"));
+const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const LoadingFallback = () => (
+  <div className="flex h-screen w-full items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -49,181 +66,183 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Index />} />
 
-                {/* Role-specific Auth Routes */}
-                <Route path="/student/login" element={<StudentLogin />} />
-                <Route path="/student/register" element={<StudentRegister />} />
-                <Route path="/lecturer/login" element={<LecturerLogin />} />
-                <Route path="/lecturer/register" element={<LecturerRegister />} />
+                  {/* Role-specific Auth Routes */}
+                  <Route path="/student/login" element={<StudentLogin />} />
+                  <Route path="/student/register" element={<StudentRegister />} />
+                  <Route path="/lecturer/login" element={<LecturerLogin />} />
+                  <Route path="/lecturer/register" element={<LecturerRegister />} />
 
-                {/* Legacy Auth Routes (for backward compatibility) */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+                  {/* Legacy Auth Routes (for backward compatibility) */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
 
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/update-password" element={<UpdatePassword />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/update-password" element={<UpdatePassword />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
 
-                {/* Protected Student Routes */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "admin"]}>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/student/assignments"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "admin"]}>
-                      <StudentAssignments />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/student/assignments/:id"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "admin"]}>
-                      <StudentAssignmentDetail />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Protected Student Routes */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/assignments"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <StudentAssignments />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/assignments/:id"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <StudentAssignmentDetail />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Protected Lecturer Routes */}
-                <Route
-                  path="/lecturer-dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <LecturerDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                { }
-                <Route
-                  path="/all-students"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <CreateClass />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/classes/:classId/students"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <AllStudents />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Protected Lecturer Routes */}
+                  <Route
+                    path="/lecturer-dashboard"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <LecturerDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  { }
+                  <Route
+                    path="/all-students"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <CreateClass />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/classes/:classId/students"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <AllStudents />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Lecturer Assignment Routes */}
-                <Route
-                  path="/lecturer/timetable"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <LecturerTimeTable />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/lecturer/assignments"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <LecturerClassesAssignments />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/lecturer/assignments/:classId"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <ClassAssignmentsView />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/lecturer/assignments/:classId/:assignmentId/submissions"
-                  element={
-                    <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                      <SubmissionDetailsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Lecturer Assignment Routes */}
+                  <Route
+                    path="/lecturer/timetable"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <LecturerTimeTable />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/assignments"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <LecturerClassesAssignments />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/assignments/:classId"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <ClassAssignmentsView />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/assignments/:classId/:assignmentId/submissions"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <SubmissionDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Protected Common Routes */}
-                {/* Assignments Route */}
-                <Route
-                  path="/assignments"
-                  element={
-                    <ProtectedRoute>
-                      <Assignments />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/assignments/:id/submit" // Keep legacy route if needed
-                  element={
-                    <ProtectedRoute>
-                      <AssignmentSubmit />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/student/assignments/:id" // New route matching StudentAssignments.tsx
-                  element={
-                    <ProtectedRoute>
-                      <AssignmentSubmit />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/messages"
-                  element={
-                    <ProtectedRoute>
-                      <Messages />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/schedule"
-                  element={
-                    <ProtectedRoute>
-                      <Schedule />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/notifications"
-                  element={
-                    <ProtectedRoute>
-                      <Notifications />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Protected Common Routes */}
+                  {/* Assignments Route */}
+                  <Route
+                    path="/assignments"
+                    element={
+                      <ProtectedRoute>
+                        <Assignments />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/assignments/:id/submit" // Keep legacy route if needed
+                    element={
+                      <ProtectedRoute>
+                        <AssignmentSubmit />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/assignments/:id" // New route matching StudentAssignments.tsx
+                    element={
+                      <ProtectedRoute>
+                        <AssignmentSubmit />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/messages"
+                    element={
+                      <ProtectedRoute>
+                        <Messages />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/schedule"
+                    element={
+                      <ProtectedRoute>
+                        <Schedule />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/notifications"
+                    element={
+                      <ProtectedRoute>
+                        <Notifications />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <ProtectedRoute>
+                        <Settings />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  {/* Catch-all */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </ThemeProvider>

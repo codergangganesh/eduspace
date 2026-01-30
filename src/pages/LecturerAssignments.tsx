@@ -28,16 +28,65 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 
 export default function LecturerAssignments() {
     const { assignments, courses, loading, createAssignment, updateAssignment, deleteAssignment, fetchSubjects } = useLecturerAssignments();
     const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    // ...
+
     const handleEditClick = (assignment: Assignment) => {
         setEditingAssignment(assignment);
         setIsEditOpen(true);
     };
+
+    if (loading) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-2">
+                            <Skeleton className="h-8 w-64" />
+                            <Skeleton className="h-4 w-48" />
+                        </div>
+                        <Skeleton className="h-10 w-32" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Card>
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <Skeleton className="size-12 rounded-lg" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-8 w-16" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Subject</TableHead>
+                                        <TableHead>Due Date</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableSkeleton columns={5} rows={5} />
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>

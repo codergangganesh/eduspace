@@ -52,6 +52,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { useEligibleStudents } from "@/hooks/useEligibleStudents";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
+import { ChatSkeleton } from "@/components/skeletons/ChatSkeleton";
 
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -238,7 +239,7 @@ const TypingIndicator = () => (
 
 export default function Messages() {
   const { user, role, profile } = useAuth();
-  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage } = useMessages();
+  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage, hasMore, loadMoreMessages } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
@@ -304,6 +305,43 @@ export default function Messages() {
       setMessageToDelete(null);
     }
   };
+
+  // Infinite Scroll & Scroll Restoration
+  const [loadingMore, setLoadingMore] = useState(false);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    // Trigger load more when near top (e.g. < 50px)
+    if (target.scrollTop < 50 && hasMore && !loadingMore) {
+      setLoadingMore(true);
+      prevScrollHeightRef.current = target.scrollHeight;
+      await loadMoreMessages();
+      setLoadingMore(false);
+    }
+  };
+
+  // Restore scroll position after loading more messages
+  useEffect(() => {
+    if (prevScrollHeightRef.current > 0 && scrollViewportRef.current) {
+      const newScrollHeight = scrollViewportRef.current.scrollHeight;
+      const diff = newScrollHeight - prevScrollHeightRef.current;
+      if (diff > 0) {
+        scrollViewportRef.current.scrollTop = diff;
+      }
+      prevScrollHeightRef.current = 0;
+    }
+  }, [messages]);
+
+  // Scroll to bottom on initial load or new message (if near bottom)
+  useEffect(() => {
+    // Only scroll to bottom if WE send a message or it's the initial load (prevScrollHeight is 0)
+    // If we just loaded old messages (prevScrollHeight > 0), DO NOT scroll to bottom.
+    if (prevScrollHeightRef.current === 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, selectedConversationId]);
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
   const otherUserId = selectedConversation ? (selectedConversation.participant_1 === user?.id ? selectedConversation.participant_2 : selectedConversation.participant_1) : null;
@@ -552,7 +590,7 @@ export default function Messages() {
                 <p className="font-semibold text-sm">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400">Active Now</p>
               </div>
-            </div>
+            </div >
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -810,23 +848,38 @@ export default function Messages() {
             </div>
 
             {/* Messages Area */}
-            <ScrollArea className="flex-1 px-6 py-4">
+            <ScrollArea
+              className="flex-1 px-6 py-4"
+              viewportRef={scrollViewportRef}
+              onScroll={handleScroll}
+            >
               <div className="max-w-3xl mx-auto">
-                {groupedMessages.map((group, groupIndex) => (
-                  <div key={groupIndex}>
-                    <DateSeparator date={group.date} />
-                    {group.messages.map((message) => (
-                      <MessageBubble
-                        key={message.id}
-                        message={message}
-                        setMessageToDelete={setMessageToDelete}
-                        onEdit={editMessage}
-                      />
+                {loading && !loadingMore ? (
+                  <ChatSkeleton />
+                ) : (
+                  <>
+                    {loadingMore && (
+                      <div className="flex justify-center py-2 h-8">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                    {groupedMessages.map((group, groupIndex) => (
+                      <div key={groupIndex}>
+                        <DateSeparator date={group.date} />
+                        {group.messages.map((message) => (
+                          <MessageBubble
+                            key={message.id}
+                            message={message}
+                            setMessageToDelete={setMessageToDelete}
+                            onEdit={editMessage}
+                          />
+                        ))}
+                      </div>
                     ))}
-                  </div>
-                ))}
-                {isOtherUserTyping && <TypingIndicator />}
-                <div ref={messagesEndRef} />
+                    {isOtherUserTyping && <TypingIndicator />}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
               </div>
             </ScrollArea>
 

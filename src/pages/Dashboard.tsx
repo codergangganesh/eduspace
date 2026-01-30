@@ -16,6 +16,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
 import { useRealtimeInvitations } from "@/hooks/useRealtimeInvitations";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -55,9 +56,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="size-8 animate-spin text-primary" />
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }

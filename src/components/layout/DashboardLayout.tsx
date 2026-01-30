@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { MobileSidebar } from "./MobileSidebar";
+import PageTransition from "./PageTransition";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -25,7 +26,9 @@ export function DashboardLayout({ children, actions, fullHeight = false }: Dashb
             : "p-4 lg:p-6"
           }
         >
-          {children}
+          <PageTransition className="h-full">
+            {children}
+          </PageTransition>
         </main>
       </div>
     </div>

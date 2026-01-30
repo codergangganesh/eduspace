@@ -39,6 +39,7 @@ import { useSchedule, Schedule as ScheduleType } from "@/hooks/useSchedule";
 import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
 import { SectionClassCard } from "@/components/common/SectionClassCard";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 
 interface ClassEvent {
   id: string;
@@ -156,9 +157,7 @@ export default function Schedule() {
   if (loading || classesLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="size-8 animate-spin text-primary" />
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }

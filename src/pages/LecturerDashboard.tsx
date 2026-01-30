@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useRealtimeRejections } from "@/hooks/useRealtimeRejections";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
@@ -63,9 +64,7 @@ export default function LecturerDashboard() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="size-8 animate-spin text-primary" />
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }

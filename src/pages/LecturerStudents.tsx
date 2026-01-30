@@ -25,6 +25,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 import { useState } from "react";
 
 export default function LecturerStudents() {
@@ -88,7 +89,9 @@ export default function LecturerStudents() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredStudents.length === 0 ? (
+                                {loading ? (
+                                    <TableSkeleton columns={4} rows={8} />
+                                ) : filteredStudents.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                             No students found.

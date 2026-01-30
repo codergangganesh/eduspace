@@ -30,6 +30,7 @@ import { useAssignmentSubmissions } from '@/hooks/useAssignmentSubmissions';
 import { useClasses } from '@/hooks/useClasses';
 import { supabase } from '@/integrations/supabase/client';
 import { formatFileSize, getFileExtension, getFileTypeDisplay } from '@/lib/fileUtils';
+import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 
 export default function SubmissionDetailsPage() {
     const { classId, assignmentId } = useParams<{ classId: string; assignmentId: string }>();
@@ -272,14 +273,7 @@ export default function SubmissionDetailsPage() {
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <Loader2 className="size-4 animate-spin" />
-                                                <span>Loading submissions...</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                    <TableSkeleton columns={6} rows={5} />
                                 ) : filteredSubmissions.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
