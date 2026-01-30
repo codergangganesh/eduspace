@@ -13,11 +13,23 @@ interface CreateNotificationParams {
 
 /**
  * Create a notification for a specific user
+ * Respects the master notification toggle (notifications_enabled)
  */
 export async function createNotification(params: CreateNotificationParams) {
     const { userId, title, message, type, relatedId, senderId, actionType } = params;
 
     try {
+        // Check if recipient has notifications enabled globally
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("notifications_enabled")
+            .eq("user_id", userId)
+            .single();
+
+        if (profile && profile.notifications_enabled === false) {
+            return { success: true, message: "Notifications disabled by user" };
+        }
+
         const { error } = await supabase.from("notifications").insert({
             recipient_id: userId,
             title,
@@ -44,6 +56,7 @@ export async function createNotification(params: CreateNotificationParams) {
 
 /**
  * Create notifications for multiple users
+ * Automatically filters out users who have disabled notifications globally
  */
 export async function createBulkNotifications(
     userIds: string[],
@@ -52,7 +65,29 @@ export async function createBulkNotifications(
     const { title, message, type, relatedId, classId, senderId, actionType } = params;
 
     try {
-        const notifications = userIds.map((userId) => ({
+        if (!userIds || userIds.length === 0) {
+            return { success: true, message: "No users to notify" };
+        }
+
+        // Filter out users who have notifications disabled globally
+        const { data: profiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .in("user_id", userIds)
+            .eq("notifications_enabled", false);
+
+        let activeUserIds = [...userIds];
+
+        if (profiles && profiles.length > 0) {
+            const disabledUserIds = new Set(profiles.map(p => p.user_id));
+            activeUserIds = userIds.filter(id => !disabledUserIds.has(id));
+        }
+
+        if (activeUserIds.length === 0) {
+            return { success: true, message: "All target users have notifications disabled" };
+        }
+
+        const notifications = activeUserIds.map((userId) => ({
             recipient_id: userId,
             title,
             message,

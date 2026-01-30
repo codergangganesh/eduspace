@@ -95,6 +95,7 @@ export default function Profile() {
     enrollment_date: "",
     expected_graduation: "",
     // Notifications
+    notifications_enabled: true,
     email_notifications: true,
     push_notifications: true,
     sms_notifications: false,
@@ -146,6 +147,7 @@ export default function Profile() {
         advisor: profile.advisor || "",
         enrollment_date: profile.enrollment_date || "",
         expected_graduation: profile.expected_graduation || "",
+        notifications_enabled: profile.notifications_enabled ?? true,
         email_notifications: profile.email_notifications ?? true,
         push_notifications: profile.push_notifications ?? true,
         sms_notifications: profile.sms_notifications ?? false,
@@ -271,6 +273,7 @@ export default function Profile() {
       advisor: formData.advisor,
       enrollment_date: formData.enrollment_date || null,
       expected_graduation: formData.expected_graduation || null,
+      notifications_enabled: formData.notifications_enabled,
       email_notifications: formData.email_notifications,
       push_notifications: formData.push_notifications,
       sms_notifications: formData.sms_notifications,
@@ -884,29 +887,24 @@ export default function Profile() {
               <h2 className="text-lg font-semibold text-foreground mb-6">Notification Preferences</h2>
 
               <div className="space-y-6">
-                {/* Message Notifications */}
-                <div className="flex items-center justify-between">
+                {/* Master Toggle */}
+                <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-card shadow-sm">
                   <div>
-                    <p className="font-medium text-foreground">Message Notifications</p>
-                    <p className="text-sm text-muted-foreground">Receive alerts for new messages</p>
+                    <div className="flex items-center gap-2">
+                      <Bell className="size-4 text-primary" />
+                      <p className="font-medium text-foreground">Allow Notifications</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Turn off to pause all notifications. Important alerts may still appear in your dashboard.
+                    </p>
                   </div>
                   <Switch
-                    checked={formData.message_notifications}
-                    onCheckedChange={(checked) => handleInputChange("message_notifications", checked)}
+                    checked={formData.notifications_enabled}
+                    onCheckedChange={(checked) => handleInputChange("notifications_enabled", checked)}
                   />
                 </div>
 
-                {/* Assignment Reminders */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">Assignment Reminders</p>
-                    <p className="text-sm text-muted-foreground">Get reminded about upcoming due dates</p>
-                  </div>
-                  <Switch
-                    checked={formData.assignment_reminders}
-                    onCheckedChange={(checked) => handleInputChange("assignment_reminders", checked)}
-                  />
-                </div>
+
               </div>
             </div>
           )}
