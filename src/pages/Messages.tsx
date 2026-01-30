@@ -289,10 +289,6 @@ export default function Messages() {
     }
   };
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const handleDeleteMessage = async () => {
     if (!messageToDelete) return;
@@ -365,7 +361,9 @@ export default function Messages() {
   };
 
   const handleSendMessage = async () => {
-    if ((!messageInput.trim() && !selectedFile) || !selectedConversation || !user) return;
+    if ((!messageInput.trim() && !selectedFile) || !selectedConversation || !user || isUploading) return;
+
+    setIsUploading(true);
 
     const receiverId = selectedConversation.participant_1 === user.id
       ? selectedConversation.participant_2
@@ -404,6 +402,7 @@ export default function Messages() {
     } catch (err) {
       console.error('Failed to send message:', err);
       toast.error("Failed to send message");
+    } finally {
       setIsUploading(false);
     }
   };
