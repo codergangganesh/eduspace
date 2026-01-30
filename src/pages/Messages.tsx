@@ -73,98 +73,141 @@ interface MessageBubbleProps {
   setMessageToDelete: (id: string) => void;
 }
 
-const MessageBubble = ({ message, setMessageToDelete }: MessageBubbleProps) => {
+const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
+  message: any;
+  setMessageToDelete: (id: string) => void;
+  onEdit: (id: string, newContent: string) => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const user = useAuth().user;
+
   const longPressHandlers = useLongPress({
     onLongPress: () => message.isOwn && setMessageToDelete(message.id),
     delay: 500,
   });
 
-  const downloadFile = async (url: string, filename: string) => {
-    try {
-      let downloadUrl = url;
-      if (downloadUrl.includes('cloudinary.com') && downloadUrl.includes('/upload/')) {
-        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        return;
-      }
-      const response = await fetch(downloadUrl);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-    } catch (error) {
-      window.open(url, '_blank');
+  const canEdit = message.isOwn &&
+    !message.attachment &&
+    (Date.now() - new Date(message.created_at_raw).getTime() < 5 * 60 * 1000) &&
+    (message.edit_count || 0) < 2;
+
+  const handleSaveEdit = () => {
+    if (editContent.trim() !== message.content) {
+      onEdit(message.id, editContent);
     }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(false);
   };
 
   return (
     <div
       className={cn(
-        "flex mb-3",
+        "flex mb-3 group/bubble",
         message.isOwn ? "justify-end" : "justify-start"
       )}
     >
-      <div
-        {...(message.isOwn ? longPressHandlers : {})}
-        className={cn(
-          "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm relative group",
-          message.isOwn
-            ? "bg-emerald-100 dark:bg-emerald-900/40 text-foreground rounded-br-md"
-            : "bg-white dark:bg-slate-800 text-foreground rounded-bl-md"
-        )}
-      >
-        {message.attachment && (
-          <div className="mb-2">
-            {message.attachment.type?.startsWith('image/') ? (
-              <div className="rounded-lg overflow-hidden mb-2">
-                <img
-                  src={message.attachment.url}
-                  alt="Attachment"
-                  className="max-w-full max-h-64 object-cover rounded-lg cursor-pointer"
-                  onClick={() => window.open(message.attachment.url, '_blank')}
-                />
-              </div>
-            ) : (
-              <div
-                className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-700 cursor-pointer"
-                onClick={() => downloadFile(message.attachment.url, message.attachment.name)}
-              >
-                <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                  <FileText className="size-5 text-emerald-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{message.attachment.name}</p>
-                  <p className="text-xs text-muted-foreground">{message.attachment.size}</p>
-                </div>
-                <Download className="size-4 text-muted-foreground" />
-              </div>
-            )}
+      <div className={cn("relative max-w-[70%]", message.isOwn ? "items-end" : "items-start")}>
+
+        {/* Edit/Delete Menu Trigger for Desktop (Hover) */}
+        {message.isOwn && !isEditing && (
+          <div className={cn(
+            "absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity p-1",
+            message.isOwn ? "-left-8" : "-right-8"
+          )}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-6 h-6 w-6 p-0">
+                  <MoreVertical className="size-4 text-slate-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {canEdit && (
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setMessageToDelete(message.id)} className="text-red-600">
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
 
-        {message.content && (
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        )}
-
-        <div className={cn(
-          "flex items-center gap-1 mt-1 justify-end",
-          message.isOwn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-        )}>
-          <span className="text-[10px]">{message.timestamp}</span>
-          {message.isOwn && (
-            <CheckCheck className="size-3" />
+        <div
+          {...(message.isOwn ? longPressHandlers : {})}
+          className={cn(
+            "rounded-2xl px-4 py-2.5 shadow-sm relative group w-full",
+            message.isOwn
+              ? "bg-emerald-100 dark:bg-emerald-900/40 text-foreground rounded-br-md"
+              : "bg-white dark:bg-slate-800 text-foreground rounded-bl-md"
           )}
+        >
+          {message.attachment && (
+            <div className="mb-2">
+              {message.attachment.type?.startsWith('image/') ? (
+                <div className="rounded-lg overflow-hidden mb-2">
+                  <img
+                    src={message.attachment.url}
+                    alt="Attachment"
+                    className="max-w-full max-h-64 object-cover rounded-lg cursor-pointer"
+                    onClick={() => window.open(message.attachment.url, '_blank')}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-700 cursor-pointer"
+                  onClick={() => window.open(message.attachment.url, '_blank')}
+                >
+                  <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <FileText className="size-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{message.attachment.name}</p>
+                    <p className="text-xs text-muted-foreground">{message.attachment.size}</p>
+                  </div>
+                  <Download className="size-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {isEditing ? (
+            <div className="min-w-[200px]">
+              <Input
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                className="mb-2 h-8 text-sm"
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={handleCancelEdit}>Cancel</Button>
+                <Button size="sm" className="h-6 text-xs bg-emerald-600" onClick={handleSaveEdit}>Save</Button>
+              </div>
+            </div>
+          ) : (
+            message.content && (
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            )
+          )}
+
+          <div className={cn(
+            "flex items-center gap-1 mt-1 justify-end",
+            message.isOwn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+          )}>
+            <span className="text-[10px]">
+              {message.timestamp}
+              {message.isEdited && <span className="italic ml-1">(edited)</span>}
+            </span>
+            {message.isOwn && (
+              <CheckCheck className="size-3" />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -195,7 +238,7 @@ const TypingIndicator = () => (
 
 export default function Messages() {
   const { user, role, profile } = useAuth();
-  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation } = useMessages();
+  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
@@ -207,6 +250,8 @@ export default function Messages() {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Add wallpaper state
   const [wallpaper, setWallpaper] = useState<string>('');
@@ -349,6 +394,50 @@ export default function Messages() {
     setIsNewChatOpen(false);
   };
 
+  const handleClearChat = async () => {
+    if (!selectedConversationId) return;
+    try {
+      await clearChat(selectedConversationId);
+      toast.success("Chat cleared");
+    } catch (error) {
+      console.error("Failed to clear chat:", error);
+      toast.error("Failed to clear chat");
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!selectedConversationId) return;
+    const previousId = selectedConversationId;
+
+    try {
+      // Step 1: Hide immediately (Soft Delete)
+      await hideChat(previousId);
+
+      // Step 2: Show Undo Toast
+      toast.success("Chat deleted", {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            // Undo Logic: Unhide
+            try {
+              await unhideChat(previousId);
+              toast.success("Chat restored");
+            } catch (e) {
+              console.error("Restore failed", e);
+              toast.error("Failed to restore chat");
+            }
+          }
+        },
+        duration: 5000,
+        // Removed auto-finalize for now to ensure reliability of restore logic first.
+        // Hiding is sufficient for "Deletions". History clearing is optional step 2.
+      });
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
+      toast.error("Failed to delete chat");
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -421,6 +510,9 @@ export default function Messages() {
       timestamp: format(msgDate, 'h:mm a'),
       isOwn: msg.sender_id === user?.id,
       sender: msg.sender_name || 'Unknown',
+      isEdited: msg.is_edited,
+      edit_count: msg.edit_count,
+      created_at_raw: msg.created_at,
       attachment: msg.attachment_name ? {
         name: msg.attachment_name,
         size: msg.attachment_size || '',
@@ -678,6 +770,33 @@ export default function Messages() {
                     >
                       <Search className="size-5" />
                     </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-9 text-slate-500 hover:text-emerald-600">
+                          <MoreVertical className="size-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setShowClearDialog(true)}>
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                            <Trash2 className="size-4" />
+                            <span>Clear Chat</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowDeleteDialog(true)}>
+                          <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                            <LogOut className="size-4" />
+                            <span>Delete Chat</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => document.getElementById('wallpaper-upload')?.click()}>
+                          <span className="text-xs">Change Wallpaper</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <input
                       id="wallpaper-upload"
                       type="file"
@@ -701,6 +820,7 @@ export default function Messages() {
                         key={message.id}
                         message={message}
                         setMessageToDelete={setMessageToDelete}
+                        onEdit={editMessage}
                       />
                     ))}
                   </div>
@@ -798,6 +918,42 @@ export default function Messages() {
         )}
 
         {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Conversation</DialogTitle>
+              <DialogDescription>
+                This will delete the chat only for you. The other person will still have the conversation.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => {
+                handleDeleteChat();
+                setShowDeleteDialog(false);
+              }}>Delete</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Clear Confirmation Dialog */}
+        <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Clear Chat History</DialogTitle>
+              <DialogDescription>
+                This will clear all messages in this viewer for you. The chat will remain in your list.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setShowClearDialog(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => {
+                handleClearChat();
+                setShowClearDialog(false);
+              }}>Clear Messages</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <Dialog open={!!messageToDelete} onOpenChange={(open) => !open && setMessageToDelete(null)}>
           <DialogContent>
             <DialogHeader>

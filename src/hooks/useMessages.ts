@@ -15,6 +15,9 @@ interface Message {
     is_read: boolean;
     created_at: string;
     sender_name?: string;
+    is_edited?: boolean;
+    edit_count?: number;
+    last_edited_at?: string;
 }
 
 interface Conversation {
@@ -27,6 +30,8 @@ interface Conversation {
     other_user_avatar?: string;
     other_user_role?: string;
     online?: boolean;
+    cleared_at?: Record<string, string> | null;
+    visible_to?: string[] | null;
 }
 
 interface Attachment {
@@ -60,9 +65,14 @@ export function useMessages() {
                 console.warn('Error fetching conversations:', fetchError);
                 setConversations([]);
             } else {
+                // Filter conversations where user is in visible_to (handle null as visible to all for backward compatibility or migration)
+                const visibleConversations = (data || []).filter(conv =>
+                    !conv.visible_to || conv.visible_to.includes(user.id)
+                );
+
                 // Fetch other user details for each conversation
                 const conversationsWithUsers = await Promise.all(
-                    (data || []).map(async (conv) => {
+                    visibleConversations.map(async (conv) => {
                         const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
 
                         const { data: profileData } = await supabase
@@ -144,7 +154,16 @@ export function useMessages() {
                     console.warn('Error fetching messages:', fetchError);
                     setMessages([]);
                 } else {
-                    setMessages((data || []) as Message[]);
+                    const currentConv = conversations.find(c => c.id === selectedConversationId);
+                    let filteredData = data || [];
+
+                    // Filter messages based on cleared_at
+                    if (currentConv?.cleared_at && currentConv.cleared_at[user.id]) {
+                        const clearedTime = new Date(currentConv.cleared_at[user.id]).getTime();
+                        filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
+                    }
+
+                    setMessages(filteredData as Message[]);
                 }
             } catch (err) {
                 console.error('Error fetching messages:', err);
@@ -209,6 +228,23 @@ export function useMessages() {
                 }
             )
             .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE', // Listen for updates (edits)
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `conversation_id=eq.${selectedConversationId}`,
+                },
+                (payload) => {
+                    const updatedMessage = payload.new as Message;
+                    if (updatedMessage && updatedMessage.conversation_id === selectedConversationId) {
+                        setMessages((prev) =>
+                            prev.map(m => m.id === updatedMessage.id ? updatedMessage : m)
+                        );
+                    }
+                }
+            )
+            .on(
                 'broadcast',
                 { event: 'new_message' },
                 (payload) => {
@@ -217,7 +253,7 @@ export function useMessages() {
                     if (newMessage && newMessage.conversation_id === selectedConversationId) {
                         setMessages((prev) => {
                             if (prev.some(m => m.id === newMessage.id)) {
-                                return prev;
+                                return prev; // Avoid duplicates
                             }
                             return [...prev, newMessage];
                         });
@@ -383,13 +419,35 @@ export function useMessages() {
                 }
             }
 
-            // Update conversation last message
+            // Update conversation last message AND ensure visibility (Resurrection)
+            const currentConv = conversations.find(c => c.id === conversationId);
+            let updatePayload: any = {
+                last_message: finalContent,
+                last_message_at: timestamp,
+            };
+
+            // If we have conversation data, check if we need to update visible_to
+            if (currentConv) {
+                const participants = [currentConv.participant_1, currentConv.participant_2];
+                const currentVisibleTo = currentConv.visible_to || participants;
+
+                // If anyone is missing from visible_to, reset it to include everyone
+                // This logic ensures that if the *other* person deleted the chat, it reappears for them.
+                // And if *I* deleted it (but am now sending a message), it reappears for me (though I'm already in it conceptually if I'm sending).
+                const isEveryoneVisible = participants.every(p => currentVisibleTo.includes(p));
+
+                if (!isEveryoneVisible) {
+                    updatePayload.visible_to = participants;
+                }
+            } else {
+                // Should normally have currentConv by now, but just in case for new convs, default is null which migration sets to all.
+                // If this is a brand new insert (handled in the 'else' block above), it defaults to null/all. 
+                // This block is for UPDATING existing convs.
+            }
+
             await supabase
                 .from('conversations')
-                .update({
-                    last_message: finalContent,
-                    last_message_at: timestamp,
-                })
+                .update(updatePayload)
                 .eq('id', conversationId);
 
             // Send notification to receiver
@@ -485,6 +543,189 @@ export function useMessages() {
         }
     };
 
+    // Clear chat (hide messages for current user)
+    const clearChat = async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            const conversation = conversations.find(c => c.id === conversationId);
+            const currentClearedAt = conversation?.cleared_at || {};
+
+            const updatedClearedAt = {
+                ...currentClearedAt,
+                [user.id]: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('conversations')
+                .update({ cleared_at: updatedClearedAt })
+                .eq('id', conversationId);
+
+            if (error) throw error;
+
+            // Optimistic update
+            setMessages([]);
+            setConversations(prev => prev.map(c =>
+                c.id === conversationId
+                    ? { ...c, cleared_at: updatedClearedAt }
+                    : c
+            ));
+        } catch (err) {
+            console.error('Error clearing chat:', err);
+            throw err;
+        }
+    };
+
+    // Delete chat (hide conversation from list)
+    const deleteChat = async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+
+            const currentVisibleTo = conversation.visible_to || [conversation.participant_1, conversation.participant_2];
+            const updatedVisibleTo = currentVisibleTo.filter(id => id !== user.id);
+
+            // Also clear messages effectively by updating cleared_at if not already cleared?
+            // User requested "Previous messages remain hidden for the deleting user" when resurfaces.
+            // So we should basically do a "Clear Chat" AND "Hide Chat".
+
+            const currentClearedAt = conversation.cleared_at || {};
+            const updatedClearedAt = {
+                ...currentClearedAt,
+                [user.id]: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('conversations')
+                .update({
+                    visible_to: updatedVisibleTo,
+                    cleared_at: updatedClearedAt
+                })
+                .eq('id', conversationId);
+
+            if (error) throw error;
+
+            // Optimistic update: Remove from list
+            setConversations(prev => prev.filter(c => c.id !== conversationId));
+            if (selectedConversationId === conversationId) {
+                setSelectedConversationId(null);
+            }
+        } catch (err) {
+            console.error('Error deleting chat:', err);
+            throw err;
+        }
+    };
+
+    // Edit message
+    const editMessage = async (messageId: string, newContent: string) => {
+        if (!user) return;
+
+        try {
+            // Optimistic update
+            const timestamp = new Date().toISOString();
+            setMessages(prev => prev.map(m =>
+                m.id === messageId
+                    ? { ...m, content: newContent, is_edited: true, edit_count: (m.edit_count || 0) + 1, last_edited_at: timestamp }
+                    : m
+            ));
+
+            const { data, error } = await supabase.rpc('edit_message', {
+                message_id: messageId,
+                new_content: newContent,
+                editing_user_id: user.id
+            });
+
+            if (error) throw error;
+            if (data && !data.success) {
+                throw new Error(data.error || 'Failed to edit message');
+            }
+        } catch (err) {
+            console.error('Error editing message:', err);
+            // Revert optimistic update by fetching original
+            const { data: original } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('id', messageId)
+                .single();
+            if (original) {
+                setMessages(prev => prev.map(m => m.id === messageId ? (original as Message) : m));
+            }
+            throw err;
+        }
+    };
+
+    // Hide chat (Soft delete for list - Undoable step 1)
+    const hideChat = async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+
+            const currentVisibleTo = conversation.visible_to || [conversation.participant_1, conversation.participant_2];
+            // Remove user from visible_to
+            const updatedVisibleTo = currentVisibleTo.filter(id => id !== user.id);
+
+            const { error } = await supabase
+                .from('conversations')
+                .update({ visible_to: updatedVisibleTo })
+                .eq('id', conversationId);
+
+            if (error) throw error;
+
+            // Optimistic update: Remove from list
+            setConversations(prev => prev.filter(c => c.id !== conversationId));
+            if (selectedConversationId === conversationId) {
+                setSelectedConversationId(null);
+            }
+        } catch (err) {
+            console.error('Error hiding chat:', err);
+            throw err;
+        }
+    };
+
+    // Unhide chat (Restore from list - Undo step)
+    const unhideChat = async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            // Fetch conversation data
+            const { data: conversation, error: fetchError } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('id', conversationId)
+                .maybeSingle();
+
+            if (fetchError || !conversation) throw fetchError || new Error("Chat not found");
+
+            const currentVisibleTo = conversation.visible_to || [conversation.participant_1, conversation.participant_2];
+            // Add user back if not present
+            if (!currentVisibleTo.includes(user.id)) {
+                const updatedVisibleTo = [...currentVisibleTo, user.id];
+
+                const { error } = await supabase
+                    .from('conversations')
+                    .update({ visible_to: updatedVisibleTo })
+                    .eq('id', conversationId);
+
+                if (error) throw error;
+            }
+
+            // Trigger a refetch
+            await fetchConversations();
+        } catch (err) {
+            console.error('Error unhiding chat:', err);
+            throw err;
+        }
+    };
+
+    // Finalize Delete (Clear history - Step 2)
+    const finalizeDeleteChat = async (conversationId: string) => {
+        await clearChat(conversationId);
+    };
+
     // Mark messages as read
     const markMessagesAsRead = async (conversationId: string) => {
         if (!user) return;
@@ -514,6 +755,12 @@ export function useMessages() {
         error,
         refreshConversations: fetchConversations,
         typingUsers,
-        sendTyping
+        sendTyping,
+        clearChat,
+        deleteChat: finalizeDeleteChat, // Keep compatibility if needed, but UI uses hide first
+        hideChat,
+        unhideChat,
+        finalizeDeleteChat,
+        editMessage
     };
 }
