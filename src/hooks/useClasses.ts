@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getEnrolledClassIds } from '@/lib/studentUtils';
 
 export interface Class {
     id: string;
@@ -17,6 +18,7 @@ export interface Class {
     created_at: string;
     updated_at: string;
     student_count?: number;
+    subjects?: string[]; // Added for student view
 }
 
 export interface CreateClassData {
@@ -29,7 +31,7 @@ export interface CreateClassData {
 }
 
 export function useClasses() {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [classes, setClasses] = useState<Class[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -43,32 +45,80 @@ export function useClasses() {
         try {
             setLoading(true);
 
-            // Fetch classes for the current lecturer
-            const { data: classesData, error: classesError } = await supabase
-                .from('classes')
-                .select('*')
-                .eq('lecturer_id', user.id)
-                .eq('is_active', true)
-                .order('created_at', { ascending: false });
+            if (role === 'student') {
+                // STUDENT: Fetch enrolled classes
+                const enrolledIds = await getEnrolledClassIds(user.id);
 
-            if (classesError) throw classesError;
+                if (enrolledIds.length === 0) {
+                    setClasses([]);
+                    setLoading(false);
+                    return;
+                }
 
-            // Fetch student count for each class
-            const classesWithCount = await Promise.all(
-                (classesData || []).map(async (classItem) => {
-                    const { count } = await supabase
-                        .from('class_students')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('class_id', classItem.id);
+                const { data: classesData, error: classesError } = await supabase
+                    .from('classes')
+                    .select('*')
+                    .in('id', enrolledIds)
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false });
 
-                    return {
-                        ...classItem,
-                        student_count: count || 0,
-                    };
-                })
-            );
+                if (classesError) throw classesError;
 
-            setClasses(classesWithCount);
+                // Enrich with subjects and latest lecturer profile info
+                const enrichedClasses = await Promise.all(
+                    (classesData || []).map(async (classItem) => {
+                        // Fetch subjects
+                        const { data: subjectsData } = await supabase
+                            .from('subjects')
+                            .select('name')
+                            .eq('class_id', classItem.id);
+
+                        // Fetch latest lecturer profile image (in case it changed)
+                        const { data: lecturerProfile } = await supabase
+                            .from('profiles')
+                            .select('avatar_url, full_name')
+                            .eq('user_id', classItem.lecturer_id)
+                            .single();
+
+                        return {
+                            ...classItem,
+                            lecturer_profile_image: lecturerProfile?.avatar_url || classItem.lecturer_profile_image,
+                            lecturer_name: lecturerProfile?.full_name || classItem.lecturer_name,
+                            subjects: subjectsData?.map(s => s.name) || []
+                        };
+                    })
+                );
+
+                setClasses(enrichedClasses);
+
+            } else {
+                // LECTURER: Fetch own classes
+                const { data: classesData, error: classesError } = await supabase
+                    .from('classes')
+                    .select('*')
+                    .eq('lecturer_id', user.id)
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false });
+
+                if (classesError) throw classesError;
+
+                // Fetch student count for each class
+                const classesWithCount = await Promise.all(
+                    (classesData || []).map(async (classItem) => {
+                        const { count } = await supabase
+                            .from('class_students')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('class_id', classItem.id);
+
+                        return {
+                            ...classItem,
+                            student_count: count || 0,
+                        };
+                    })
+                );
+
+                setClasses(classesWithCount);
+            }
             setError(null);
         } catch (err) {
             console.error('Error fetching classes:', err);
@@ -77,32 +127,40 @@ export function useClasses() {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, role]);
 
     useEffect(() => {
         fetchClasses();
 
         // Real-time subscription for classes
-        const subscription = supabase
-            .channel('classes_changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'classes',
-                    filter: `lecturer_id=eq.${user?.id}`,
-                },
-                () => {
-                    fetchClasses();
-                }
-            )
-            .subscribe();
+        // Note: For students, we might want to listen to access_requests too, but general class updates are fine for now.
+        // Or if the lecturer calls updates.
+        const filter = role === 'lecturer' ? `lecturer_id=eq.${user?.id}` : undefined; // Students listen to broad updates or specific? 
+        // Broad updates might be too much. Let's stick to basic reload on mount/focus for now or simple subscription.
+        // Re-using existing subscription logic but refining filter
+
+        let subscription: any;
+
+        if (role === 'lecturer') {
+            subscription = supabase
+                .channel('classes_changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'classes',
+                        filter: `lecturer_id=eq.${user?.id}`,
+                    },
+                    () => fetchClasses()
+                )
+                .subscribe();
+        }
 
         return () => {
-            subscription.unsubscribe();
+            if (subscription) subscription.unsubscribe();
         };
-    }, [user, fetchClasses]);
+    }, [user, role, fetchClasses]);
 
     const createClass = async (data: CreateClassData) => {
         if (!user) throw new Error('User not authenticated');

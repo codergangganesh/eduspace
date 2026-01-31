@@ -53,6 +53,9 @@ import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { useEligibleStudents } from "@/hooks/useEligibleStudents";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { ChatSkeleton } from "@/components/skeletons/ChatSkeleton";
+import { useClasses } from "@/hooks/useClasses";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { BookOpen, GraduationCap } from "lucide-react";
 
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -243,6 +246,7 @@ export default function Messages() {
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
+  const { classes, loading: classesLoading } = useClasses();
 
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -488,21 +492,35 @@ export default function Messages() {
   ));
 
   const studentsWithoutChat = eligibleStudents.filter(s => !existingContactIds.has(s.id));
+  const lecturersWithoutChat = instructors.filter(i => !existingContactIds.has(i.id));
 
-  const studentContacts = studentsWithoutChat.map(s => ({
-    id: `new:${s.id}`,
-    participant_1: user?.id || '',
-    participant_2: s.id,
-    last_message: 'Start a conversation',
-    last_message_at: null,
-    other_user_name: s.full_name,
-    other_user_avatar: s.avatar_url,
-    other_user_role: 'student',
-    other_user_id: s.id,
-    is_virtual: true
-  }));
+  const virtualContacts = role === 'student'
+    ? lecturersWithoutChat.map(i => ({
+      id: `new:${i.id}`,
+      participant_1: user?.id || '',
+      participant_2: i.id,
+      last_message: 'Start a conversation',
+      last_message_at: null,
+      other_user_name: i.full_name,
+      other_user_avatar: i.avatar_url,
+      other_user_role: 'lecturer',
+      other_user_id: i.id,
+      is_virtual: true
+    }))
+    : studentsWithoutChat.map(s => ({
+      id: `new:${s.id}`,
+      participant_1: user?.id || '',
+      participant_2: s.id,
+      last_message: 'Start a conversation',
+      last_message_at: null,
+      other_user_name: s.full_name,
+      other_user_avatar: s.avatar_url,
+      other_user_role: 'student',
+      other_user_id: s.id,
+      is_virtual: true
+    }));
 
-  const allItems = [...conversations, ...studentContacts].filter((item) =>
+  const allItems = [...conversations, ...virtualContacts].filter((item) =>
     (item.other_user_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   ).filter(item => {
     if (filterMode === 'all') return true;
@@ -589,46 +607,57 @@ export default function Messages() {
               </div>
             </div >
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-9 text-slate-500 hover:text-emerald-600">
-                  <MoreVertical className="size-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Chat Settings</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-2">
-                  Background Colors
-                </DropdownMenuLabel>
-                <div className="p-2 grid grid-cols-4 gap-2 mb-2">
-                  {[
-                    '#fecaca', // Red
-                    '#fed7aa', // Orange
-                    '#fde68a', // Amber
-                    '#bbf7d0', // Green
-                    '#a5f3fc', // Cyan
-                    '#bfdbfe', // Blue
-                    '#ddd6fe', // Violet
-                    '#fbcfe8'  // Pink
-                  ].map(c => (
-                    <button
-                      key={c}
-                      className="size-8 rounded-lg border shadow-sm transition-transform hover:scale-110"
-                      style={{ backgroundColor: c }}
-                      onClick={() => handleWallpaperChange(c)}
-                      title={c}
-                    />
-                  ))}
-                </div>
-                <DropdownMenuItem onClick={() => handleWallpaperChange('')}>
-                  <span className="text-xs">Reset Default</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => document.getElementById('wallpaper-upload')?.click()}>
-                  <span className="text-xs">Upload Image</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 text-slate-500 hover:text-emerald-600"
+                onClick={() => setIsNewChatOpen(true)}
+                title="Start New Chat"
+              >
+                <Plus className="size-5" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-9 text-slate-500 hover:text-emerald-600">
+                    <MoreVertical className="size-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Chat Settings</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-2">
+                    Background Colors
+                  </DropdownMenuLabel>
+                  <div className="p-2 grid grid-cols-4 gap-2 mb-2">
+                    {[
+                      '#fecaca', // Red
+                      '#fed7aa', // Orange
+                      '#fde68a', // Amber
+                      '#bbf7d0', // Green
+                      '#a5f3fc', // Cyan
+                      '#bfdbfe', // Blue
+                      '#ddd6fe', // Violet
+                      '#fbcfe8'  // Pink
+                    ].map(c => (
+                      <button
+                        key={c}
+                        className="size-8 rounded-lg border shadow-sm transition-transform hover:scale-110"
+                        style={{ backgroundColor: c }}
+                        onClick={() => handleWallpaperChange(c)}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                  <DropdownMenuItem onClick={() => handleWallpaperChange('')}>
+                    <span className="text-xs">Reset Default</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => document.getElementById('wallpaper-upload')?.click()}>
+                    <span className="text-xs">Upload Image</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Search */}
@@ -947,6 +976,7 @@ export default function Messages() {
             </div>
           </div>
         ) : (
+
           <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-900">
             <div className="text-center max-w-md">
               <div className="size-24 mx-auto mb-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
@@ -966,6 +996,7 @@ export default function Messages() {
             </div>
           </div>
         )}
+
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1028,11 +1059,11 @@ export default function Messages() {
         <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{role === 'lecturer' ? "New Message" : "Ask a Doubt"}</DialogTitle>
+              <DialogTitle>{role === 'lecturer' ? "New Message" : "Select a Class"}</DialogTitle>
               <DialogDescription>
                 {role === 'lecturer'
                   ? "Select a student to message."
-                  : "Select a lecturer to start a conversation."}
+                  : "Choose a class to contact the lecturer."}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -1071,32 +1102,45 @@ export default function Messages() {
                   </ScrollArea>
                 )
               ) : (
-                instructorsLoading ? (
+                classesLoading ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="size-8 animate-spin text-emerald-500" />
                   </div>
-                ) : instructors.length === 0 ? (
-                  <p className="text-center text-slate-500 py-8">No lecturers found.</p>
+                ) : classes.length === 0 ? (
+                  <p className="text-center text-slate-500 py-8">No enrolled classes found.</p>
                 ) : (
-                  <ScrollArea className="h-[300px]">
-                    <div className="space-y-1">
-                      {instructors.map(inst => (
-                        <button
-                          key={inst.id}
-                          onClick={() => handleStartNewChat(inst.id)}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
-                        >
-                          <Avatar className="size-10">
-                            <AvatarImage src={inst.avatar_url || ''} />
-                            <AvatarFallback className="bg-emerald-100 text-emerald-600">
-                              {(inst.full_name || 'L').charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{inst.full_name}</p>
-                            <Badge variant="secondary" className="text-xs mt-1">Lecturer</Badge>
+                  <ScrollArea className="h-[400px] pr-4">
+                    <div className="space-y-3">
+                      {classes.map((cls) => (
+                        <div key={cls.id} className="relative group">
+                          <div className="absolute inset-0 bg-emerald-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="relative flex items-center gap-4 p-4 border rounded-xl bg-card hover:border-emerald-500/50 transition-colors">
+                            <Avatar className="size-12 border-2 border-background shadow-sm">
+                              <AvatarImage src={cls.lecturer_profile_image || ''} />
+                              <AvatarFallback>{(cls.lecturer_name || 'L').charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start mb-1">
+                                <h4 className="font-semibold text-sm truncate pr-2" title={cls.class_name || ''}>{cls.class_name || 'Unnamed Class'}</h4>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">
+                                  {cls.course_code}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                                <span className="font-medium text-foreground">{cls.lecturer_name}</span>
+                                <span className="text-xs">• Lecturer</span>
+                              </p>
+                              {cls.subjects && cls.subjects.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                  {cls.subjects.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                            <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white shrink-0" onClick={() => handleStartNewChat(cls.lecturer_id)}>
+                              <MessageSquare className="size-4" />
+                            </Button>
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </ScrollArea>
@@ -1106,6 +1150,6 @@ export default function Messages() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 }
