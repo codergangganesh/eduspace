@@ -1,9 +1,10 @@
 import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
+
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { UpcomingTask } from "@/components/dashboard/UpcomingTask";
 import { useAssignments } from "@/hooks/useAssignments";
+import { DashboardAssignmentList } from "@/components/dashboard/DashboardAssignmentList";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useNavigate } from "react-router-dom";
 import { StatsCard } from "@/components/dashboard/StatsCard";
@@ -169,24 +170,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-foreground">Current Assignments</h2>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <AssignmentCard
-                  title="Assignments Assigned"
-                  value={stats.total}
-                  icon={FileText}
-                  onClick={() => { }} // Disabled navigation
-                  subtitle="View all assignments"
-                />
-                <AssignmentCard
-                  title="Action Required"
-                  value={stats.pending}
-                  icon={AlertCircle}
-                  onClick={() => { }} // Disabled navigation
-                  variant="danger"
-                  subtitle="Pending submissions"
-                />
-              </div>
+              <DashboardAssignmentList assignments={assignments} />
             </div>
           </div>
 
@@ -203,7 +187,11 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {upcomingClasses.length > 0 ? (
                   upcomingClasses.map(cls => (
-                    <UpcomingTask key={cls.id} {...cls} />
+                    <UpcomingTask
+                      key={cls.id}
+                      {...cls}
+                      onClick={() => navigate("/schedule")}
+                    />
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">No upcoming classes</p>
@@ -228,7 +216,11 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {upcomingTasks.length > 0 ? (
                   upcomingTasks.map(task => (
-                    <UpcomingTask key={task.id} {...task} />
+                    <UpcomingTask
+                      key={task.id}
+                      {...task}
+                      onClick={() => navigate(`/student/assignments/${task.id}`)}
+                    />
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">No pending deadlines</p>

@@ -51,7 +51,8 @@ export default function StudentAssignments() {
         loading,
         submitAssignment,
         deleteSubmission, // Destructure deleteSubmission
-        refreshAssignments
+        refreshAssignments,
+        stats
     } = useAssignments();
     const [filter, setFilter] = useState<FilterType>("all");
     const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
@@ -70,12 +71,6 @@ export default function StudentAssignments() {
         graded: assignments.filter((a) => a.studentStatus === "graded").length,
         overdue: assignments.filter((a) => a.studentStatus === "overdue").length,
     };
-
-    // Calculate average grade
-    const gradedAssignments = assignments.filter((a) => a.grade !== undefined && a.grade !== null);
-    const averageGrade = gradedAssignments.length > 0
-        ? Math.round((gradedAssignments.reduce((sum, a) => sum + ((a.grade || 0) / a.max_points) * 100, 0) / gradedAssignments.length))
-        : 0;
 
     const handleSubmitClick = (assignment: any) => {
         setSelectedAssignment(assignment);
@@ -166,7 +161,7 @@ export default function StudentAssignments() {
                         <CardContent className="p-4 flex items-center justify-between relative z-10">
                             <div>
                                 <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Avg. Grade</p>
-                                <p className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">{averageGrade}%</p>
+                                <p className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">{stats.averageGrade || 0}%</p>
                             </div>
                             <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
                                 <TrendingUp className="size-6 text-purple-600 dark:text-purple-400" />

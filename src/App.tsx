@@ -190,14 +190,7 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/student/assignments/:id" // New route matching StudentAssignments.tsx
-                    element={
-                      <ProtectedRoute>
-                        <AssignmentSubmit />
-                      </ProtectedRoute>
-                    }
-                  />
+
                   <Route
                     path="/profile"
                     element={

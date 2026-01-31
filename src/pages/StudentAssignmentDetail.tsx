@@ -469,15 +469,7 @@ export default function StudentAssignmentDetail() {
                     </CardContent>
                 </Card>
 
-                {/* Back Button */}
-                <div className="flex justify-start pb-4">
-                    <Link to="/student/assignments">
-                        <Button variant="outline">
-                            <ArrowLeft className="size-4 mr-2" />
-                            Back to Assignments
-                        </Button>
-                    </Link>
-                </div>
+
             </div>
 
             {/* Submit Dialog */}

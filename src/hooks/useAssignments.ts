@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
 
-interface Assignment {
+export interface Assignment {
     id: string;
     course_id: string;
     class_id?: string;
@@ -30,7 +30,7 @@ interface Assignment {
     earnedPoints?: number;
 }
 
-interface AssignmentSubmission {
+export interface AssignmentSubmission {
     id: string;
     assignment_id: string;
     student_id: string;
@@ -49,6 +49,7 @@ interface AssignmentStats {
     total: number;
     completed: number;
     pending: number;
+    averageGrade?: number;
 }
 
 export function useAssignments() {
@@ -680,7 +681,53 @@ export function useAssignments() {
         }
     };
 
-    const stats: AssignmentStats = {
+
+    // Calculate Average Grade for Students
+    let averageGrade = 0;
+    if (role === 'student' && assignments.length > 0) {
+        let totalWeightedScore = 0;
+        let count = 0;
+
+        assignments.forEach(a => {
+            const maxPoints = a.max_points || 100;
+            let score = 0;
+            let shouldCount = false;
+
+            if (a.studentStatus === 'graded' && a.grade !== undefined && a.grade !== null) {
+                // 1. Graded: Use actual grade (percentage)
+                score = (a.grade / maxPoints) * 100;
+                shouldCount = true;
+            } else if (a.studentStatus === 'submitted' && a.submission) {
+                // 2 & 3. Submitted (Ungraded)
+                const submittedAt = new Date(a.submission.submitted_at);
+                const dueDate = a.due_date ? new Date(a.due_date) : new Date();
+
+                // Check if late (submitted after due date)
+                if (a.due_date && submittedAt > dueDate) {
+                    // Late penalty: 10% deduction from full score
+                    score = 90;
+                } else {
+                    // On time: Award full base grade (100%)
+                    score = 100;
+                }
+                shouldCount = true;
+            } else if (a.studentStatus === 'overdue') {
+                // 4. Overdue (Not submitted): 0%
+                score = 0;
+                shouldCount = true;
+            }
+            // Pending/Future assignments are excluded from the denominator
+
+            if (shouldCount) {
+                totalWeightedScore += score;
+                count++;
+            }
+        });
+
+        averageGrade = count > 0 ? Math.round(totalWeightedScore / count) : 0;
+    }
+
+    const stats: AssignmentStats & { averageGrade: number } = {
         total: assignments.length,
         completed: role === 'student'
             ? assignments.filter((a) => a.studentStatus === 'submitted' || a.studentStatus === 'graded').length
@@ -688,6 +735,7 @@ export function useAssignments() {
         pending: role === 'student'
             ? assignments.filter((a) => a.studentStatus === 'pending' || a.studentStatus === 'overdue').length
             : assignments.filter((a) => a.status === 'published').length,
+        averageGrade
     };
 
     return {
@@ -702,6 +750,7 @@ export function useAssignments() {
         fetchSubmissions,
         gradeSubmission,
         submitAssignment,
+        deleteSubmission,
         refreshAssignments: fetchAssignments,
     };
 }

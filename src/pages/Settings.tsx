@@ -10,10 +10,7 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
-  Bell,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,59 +22,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useEffect } from "react";
 
 export default function Settings() {
   const { toast } = useToast();
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      // Default to true if undefined
-      setNotificationsEnabled(profile.notifications_enabled !== false);
-    }
-  }, [profile]);
-
-  const handleToggleNotifications = async (checked: boolean) => {
-    if (!user) return;
-    setIsUpdating(true);
-    setNotificationsEnabled(checked); // Optimistic
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ notifications_enabled: checked })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: checked ? "Notifications Enabled" : "Notifications Disabled",
-        description: checked
-          ? "You will now receive alerts for activities."
-          : "Notification alerts have been muted.",
-      });
-
-      // Reload window to reflect header changes or use context update
-      // Ideally update context, but reload is safer for quick impl without reload-less context sync
-      window.location.reload();
-
-    } catch (error) {
-      console.error(error);
-      setNotificationsEnabled(!checked); // Revert
-      toast({
-        title: "Error",
-        description: "Failed to update settings",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   const handleDeleteAccount = async () => {
     if (!user) return;
@@ -121,33 +72,7 @@ export default function Settings() {
           </p>
         </div>
 
-        {/* Notification Preferences */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="size-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>
-              Manage how you receive alerts and reminders
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h4 className="font-medium">Enable Notifications</h4>
-                <p className="text-sm text-muted-foreground">
-                  Show the notification bell and receive alerts for assignments
-                </p>
-              </div>
-              <Switch
-                checked={notificationsEnabled}
-                onCheckedChange={handleToggleNotifications}
-                disabled={isUpdating}
-              />
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Danger Zone */}
         <Card className="border-destructive/20 bg-destructive/5">

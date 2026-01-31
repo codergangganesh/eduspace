@@ -2,12 +2,14 @@ import { Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UpcomingTaskProps {
+  id?: string;
   title: string;
   course: string;
   dueDate: string;
   dueTime: string;
   type: "assignment" | "quiz" | "exam" | "project" | "lecture" | "lab" | "tutorial";
   isUrgent?: boolean;
+  onClick?: () => void;
 }
 
 const typeStyles = {
@@ -20,12 +22,15 @@ const typeStyles = {
   tutorial: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
 };
 
-export function UpcomingTask({ title, course, dueDate, dueTime, type, isUrgent }: UpcomingTaskProps) {
+export function UpcomingTask({ title, course, dueDate, dueTime, type, isUrgent, onClick }: UpcomingTaskProps) {
   return (
-    <div className={cn(
-      "flex items-start gap-4 p-4 rounded-lg border",
-      isUrgent ? "border-destructive/50 bg-destructive/5" : "border-border bg-surface"
-    )}>
+    <div
+      onClick={onClick}
+      className={cn(
+        "flex items-start gap-4 p-4 rounded-lg border transition-all duration-200",
+        isUrgent ? "border-destructive/50 bg-destructive/5" : "border-border bg-surface",
+        onClick && "cursor-pointer hover:shadow-md hover:border-primary/30"
+      )}>
       <div className={cn("px-2.5 py-1 rounded-md text-xs font-medium capitalize", typeStyles[type])}>
         {type}
       </div>
