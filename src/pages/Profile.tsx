@@ -336,10 +336,10 @@ export default function Profile() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col xl:flex-row gap-8 w-full animate-in fade-in duration-500">
-        {/* Left Sidebar - Profile Navigation */}
-        <div className="w-full xl:w-80 shrink-0">
-          <div className="bg-surface border border-border rounded-xl p-4">
+      <div className="flex flex-col xl:flex-row gap-8 w-full animate-in fade-in duration-500 pb-24 xl:pb-0">
+        {/* Left Sidebar - Profile Navigation (Desktop Only) */}
+        <div className="hidden xl:block w-80 shrink-0">
+          <div className="bg-surface border border-border rounded-xl p-4 sticky top-4">
             {/* User Quick Info */}
             <div className="flex items-center gap-3 pb-4 border-b border-border mb-4">
               <Avatar className="size-12">
@@ -1049,6 +1049,42 @@ export default function Profile() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Bottom Navigation for Profile Tabs */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border xl:hidden pb-safe">
+        <nav className="flex items-center justify-around h-16 px-2 overflow-x-auto no-scrollbar">
+          {profileTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 min-w-[64px] h-full text-[10px] font-medium transition-colors my-1",
+                activeTab === tab.id
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <div
+                className={cn(
+                  "p-1.5 rounded-xl transition-all",
+                  activeTab === tab.id && "bg-primary/10"
+                )}
+              >
+                <tab.icon
+                  className={cn("size-5 transition-all", activeTab === tab.id ? "text-primary" : "text-muted-foreground")}
+                  strokeWidth={activeTab === tab.id ? 2.5 : 2}
+                />
+              </div>
+              <span className={cn("hidden xs:block scale-0 transition-all duration-200", activeTab === tab.id && "scale-100")}>
+                {tab.label.split(" ")[0]}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
     </DashboardLayout>
   );
 }
