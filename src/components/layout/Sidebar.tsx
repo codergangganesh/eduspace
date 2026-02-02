@@ -24,6 +24,7 @@ const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/student/assignments" },
+  { icon: FileText, label: "Quizzes", path: "/student/quizzes" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
@@ -33,6 +34,7 @@ const lecturerNavItems = [
   { icon: Table, label: "Time Table", path: "/lecturer/timetable" }, // New Item
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
+  { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" }, // New Item
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 

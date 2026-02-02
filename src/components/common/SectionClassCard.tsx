@@ -31,7 +31,7 @@ interface ClassData {
 
 interface SectionClassCardProps {
     classData: ClassData;
-    variant?: 'assignments' | 'schedule' | 'students';
+    variant?: 'assignments' | 'schedule' | 'students' | 'quizzes';
     onAction?: (id: string) => void;
     index?: number;
     onEdit?: (classData: ClassData) => void;
@@ -146,7 +146,7 @@ export function SectionClassCard({
                         "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-white/50 dark:bg-black/20",
                         colors.accent
                     )}>
-                        {variant === 'assignments' ? 'Assignments' : variant === 'students' ? 'Students' : 'Schedule'}
+                        {variant === 'assignments' ? 'Assignments' : variant === 'students' ? 'Students' : variant === 'quizzes' ? 'Quizzes' : 'Schedule'}
                         <ArrowRight className="size-3" />
                     </div>
                 </div>
