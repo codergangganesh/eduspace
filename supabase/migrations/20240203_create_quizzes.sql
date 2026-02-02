@@ -31,7 +31,7 @@ create table if not exists public.quiz_questions (
 create table if not exists public.quiz_submissions (
   id uuid default uuid_generate_v4() primary key,
   quiz_id uuid references public.quizzes(id) on delete cascade not null,
-  student_id uuid references auth.users(id) not null,
+  student_id uuid references public.profiles(id) not null,
   total_obtained integer not null default 0,
   status text not null default 'pending' check (status in ('passed', 'failed', 'pending')),
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -129,6 +129,10 @@ create policy "Students can view their own submissions"
   for select
   using (auth.uid() = student_id);
 
+CREATE POLICY "Students can update their own submissions"
+  ON public.quiz_submissions FOR UPDATE
+  USING (auth.uid() = student_id);
+  
 -- Answers Policies
 create policy "Lecturers can view answers"
   on public.quiz_answers

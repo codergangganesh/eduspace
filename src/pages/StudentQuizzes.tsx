@@ -77,77 +77,104 @@ export default function StudentQuizzes() {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col gap-6">
-                <div>
-                    <h1 className="text-2xl font-bold">My Quizzes</h1>
-                    <p className="text-muted-foreground">Available quizzes from your enrolled classes</p>
+            <div className="w-full flex flex-col gap-10 animate-in fade-in duration-500">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div>
+                        <h1 className="text-4xl font-bold tracking-tight">Available Assessments</h1>
+                        <p className="text-muted-foreground text-lg mt-2">Track and complete quizzes for your enrolled classes</p>
+                    </div>
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <div className="flex justify-center p-24">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                     </div>
                 ) : quizzes.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <div className="p-4 rounded-full bg-primary/10 mb-4">
-                                <FileText className="size-8 text-primary" />
+                    <Card className="border-dashed border-2 bg-muted/20 rounded-3xl">
+                        <CardContent className="flex flex-col items-center justify-center py-24 text-center">
+                            <div className="p-6 rounded-full bg-primary/10 mb-6">
+                                <FileText className="size-16 text-primary" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">No quizzes available</h3>
-                            <p className="text-muted-foreground">
-                                You don't have any pending quizzes at this time.
+                            <h3 className="text-2xl font-bold mb-3">Your desk is clear!</h3>
+                            <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                                You don't have any pending quizzes or assessments at the moment. Great job!
                             </p>
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
                         {quizzes.map((quiz) => (
-                            <Card key={quiz.id} className="group hover:shadow-md transition-all overflow-hidden border-l-4 border-l-primary/50">
-                                <CardContent className="p-6 flex flex-col gap-4">
+                            <Card key={quiz.id} className="group relative overflow-hidden border-none bg-gradient-to-br from-card to-card/50 shadow-md hover:shadow-2xl transition-all duration-500 border-l-4 border-l-primary/20 hover:border-l-primary">
+                                <CardContent className="p-7 flex flex-col h-full gap-6">
                                     <div className="flex justify-between items-start">
-                                        <div>
-                                            <Badge variant="outline" className="mb-2">
+                                        <div className="space-y-3">
+                                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider">
                                                 {quiz.classes?.course_code}
                                             </Badge>
-                                            <h3 className="font-semibold text-lg line-clamp-1" title={quiz.title}>
+                                            <h3 className="font-bold text-2xl line-clamp-2 leading-tight group-hover:text-primary transition-colors" title={quiz.title}>
                                                 {quiz.title}
                                             </h3>
-                                            <p className="text-sm text-muted-foreground line-clamp-1">
+                                            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full w-fit">
                                                 {quiz.classes?.class_name}
                                             </p>
                                         </div>
-                                        {quiz.my_submission ? (
-                                            quiz.my_submission.status === 'passed' ? (
-                                                <CheckCircle className="text-green-500 size-6" />
+                                        <div className="flex shrink-0">
+                                            {quiz.my_submission ? (
+                                                quiz.my_submission.status === 'passed' ? (
+                                                    <div className="p-3 bg-emerald-500/10 rounded-2xl">
+                                                        <CheckCircle className="text-emerald-500 size-7" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-3 bg-red-500/10 rounded-2xl">
+                                                        <XCircle className="text-red-500 size-7" />
+                                                    </div>
+                                                )
                                             ) : (
-                                                <XCircle className="text-red-500 size-6" />
-                                            )
-                                        ) : (
-                                            <Clock className="text-primary size-6" />
-                                        )}
+                                                <div className="p-3 bg-blue-500/10 rounded-2xl animate-pulse">
+                                                    <Clock className="text-blue-500 size-7" />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                        <span>{quiz.total_marks} Marks</span>
-                                        <span>•</span>
-                                        <span>{quiz.pass_percentage}% to Pass</span>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-3 rounded-xl bg-muted/30">
+                                            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Total Points</p>
+                                            <p className="text-xl font-black">{quiz.total_marks}</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-muted/30">
+                                            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Pass Score</p>
+                                            <p className="text-xl font-black">{quiz.pass_percentage}%</p>
+                                        </div>
                                     </div>
 
                                     {quiz.my_submission ? (
-                                        <div className={`mt-auto p-3 rounded-lg flex justify-between items-center ${quiz.my_submission.status === 'passed'
-                                                ? 'bg-green-500/10 text-green-700 dark:text-green-400'
-                                                : 'bg-red-500/10 text-red-700 dark:text-red-400'
+                                        <div className={`mt-auto p-5 rounded-2xl border flex flex-col gap-3 ${quiz.my_submission.status === 'passed'
+                                            ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                                            : 'bg-red-500/5 border-red-500/20 text-red-700 dark:text-red-400'
                                             }`}>
-                                            <span className="font-medium">
-                                                {quiz.my_submission.status === 'passed' ? 'Passed' : 'Failed'}
-                                            </span>
-                                            <span className="font-bold">
-                                                {quiz.my_submission.total_obtained} / {quiz.total_marks}
-                                            </span>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs uppercase font-black tracking-widest opacity-80">Final Result</span>
+                                                <span className="text-xs font-bold px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-current opacity-80">
+                                                    {quiz.my_submission.status === 'passed' ? 'COMPLETED' : 'RE-ATTEMPT NEEDED'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-end">
+                                                <span className="text-2xl font-black tracking-tight leading-none uppercase">
+                                                    {quiz.my_submission.status === 'passed' ? 'Passed' : 'Failed'}
+                                                </span>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-2xl font-black leading-none">{quiz.my_submission.total_obtained}</span>
+                                                    <span className="text-xs font-bold opacity-60">/ {quiz.total_marks}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : (
-                                        <Button className="w-full mt-auto group-hover:bg-primary/90" onClick={() => handleAttempt(quiz.id)}>
-                                            Attempt Quiz <ArrowRight className="ml-2 size-4" />
+                                        <Button
+                                            className="w-full h-14 mt-auto text-lg font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all gap-2"
+                                            onClick={() => handleAttempt(quiz.id)}
+                                        >
+                                            Start Assessment <ArrowRight className="size-5" />
                                         </Button>
                                     )}
                                 </CardContent>

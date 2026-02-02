@@ -193,9 +193,10 @@ export default function CreateQuiz() {
             const totalMarks = calculateTotalMarks();
 
             // 1. Create Quiz Record
+            // 1. Create/Update Quiz Record
             const { data: quizData, error: quizError } = await supabase
                 .from('quizzes')
-                .insert({
+                .upsert({
                     class_id: classId,
                     title,
                     description,
@@ -244,132 +245,195 @@ export default function CreateQuiz() {
 
     return (
         <DashboardLayout>
-            <div className="max-w-4xl mx-auto pb-10">
+            <div className="w-full pb-10 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                        <ArrowLeft className="size-5" />
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold">Create New Quiz</h1>
-                            {lastSaved && (
-                                <span className="text-xs text-muted-foreground flex items-center animate-in fade-in">
-                                    <Save className="size-3 mr-1" />
-                                    Saved {lastSaved.toLocaleTimeString()}
-                                </span>
-                            )}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-12 w-12 rounded-full hover:bg-muted transition-colors">
+                            <ArrowLeft className="size-6" />
+                        </Button>
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-3xl font-bold tracking-tight">Create New Quiz</h1>
+                                {lastSaved && (
+                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-medium animate-in zoom-in">
+                                        <Save className="size-3" />
+                                        Auto-saved at {lastSaved.toLocaleTimeString()}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-muted-foreground text-lg mt-1">Design your assessment and set grading criteria</p>
                         </div>
-                        <p className="text-muted-foreground">Add questions and set passing criteria</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" onClick={() => navigate(-1)} className="h-11 px-6">Discard Draft</Button>
+                        <Button
+                            onClick={handlePublishQuiz}
+                            disabled={saving || questions.length === 0}
+                            className="h-11 px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                        >
+                            {saving ? 'Publishing...' : 'Publish Quiz Now'}
+                        </Button>
                     </div>
                 </div>
 
-                <div className="grid gap-6">
-                    {/* Basic Info */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quiz Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Quiz Title</Label>
-                                <Input
-                                    placeholder="e.g., Mid-Term Physics Assessment"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Description (Optional)</Label>
-                                <Textarea
-                                    placeholder="Instructions for students..."
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="space-y-2 flex-1">
-                                    <Label>Pass Percentage (%)</Label>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Sidebar: Basic Info & Criteria */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <Card className="shadow-md border-none bg-gradient-to-br from-card to-card/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Edit2 className="size-5 text-primary" />
+                                    Quiz Overview
+                                </CardTitle>
+                                <CardDescription>Basic information and passing rules</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2.5">
+                                    <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Quiz Title</Label>
                                     <Input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        value={passPercentage}
-                                        onChange={(e) => setPassPercentage(parseInt(e.target.value) || 0)}
+                                        placeholder="e.g., Mid-Term Physics Assessment"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className="h-11 text-lg font-medium"
                                     />
                                 </div>
-                                <div className="space-y-2 flex-1">
-                                    <Label>Total Marks</Label>
-                                    <div className="h-10 px-3 py-2 bg-muted rounded-md border text-muted-foreground flex items-center">
-                                        {calculateTotalMarks()}
+                                <div className="space-y-2.5">
+                                    <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Detailed Description</Label>
+                                    <Textarea
+                                        placeholder="Add instructions, rules, or learning objectives..."
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        className="min-h-[120px] resize-none"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6 pt-2">
+                                    <div className="space-y-2.5">
+                                        <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pass Score (%)</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                max={100}
+                                                value={passPercentage}
+                                                onChange={(e) => setPassPercentage(parseInt(e.target.value) || 0)}
+                                                className="h-11 pr-8 font-bold"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2.5">
+                                        <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Total Points</Label>
+                                        <div className="h-11 px-4 bg-muted/50 rounded-md border-2 border-dashed border-muted text-foreground font-bold flex items-center justify-center text-xl">
+                                            {calculateTotalMarks()}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
 
-                    {/* Questions Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">Questions ({questions.length})</h2>
-                            <Button onClick={() => setIsEditingQuestion(true)} disabled={isEditingQuestion}>
-                                <Plus className="size-4 mr-2" />
-                                Add Question
-                            </Button>
+                        <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
+                            <h4 className="font-bold mb-2 flex items-center gap-2">
+                                <Plus className="size-4 text-primary" />
+                                Pro Tip
+                            </h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Quizzes are auto-saved as drafts. Your students will only be able to see and attempt the quiz once you click **"Publish Quiz Now"**.
+                            </p>
                         </div>
-
-                        {isEditingQuestion ? (
-                            <QuestionEditor
-                                question={editingQuestionId ? questions.find(q => q.id === editingQuestionId) : undefined}
-                                onSave={handleSaveQuestion}
-                                onCancel={() => {
-                                    setIsEditingQuestion(false);
-                                    setEditingQuestionId(null);
-                                }}
-                                questionNumber={editingQuestionId ? questions.findIndex(q => q.id === editingQuestionId) + 1 : questions.length + 1}
-                            />
-                        ) : null}
-
-                        <div className="space-y-3">
-                            {questions.map((question, index) => (
-                                <Card key={question.id} className="relative group">
-                                    <CardContent className="p-4 flex gap-4">
-                                        <div className="flex flex-col items-center justify-center p-2 bg-muted rounded w-12 h-12 shrink-0">
-                                            <span className="font-bold text-lg">Q{index + 1}</span>
-                                        </div>
-                                        <div className="flex-1 space-y-1">
-                                            <p className="font-medium">{question.question_text}</p>
-                                            <div className="flex gap-2 text-sm text-muted-foreground">
-                                                <Badge variant="secondary">{question.marks} Marks</Badge>
-                                                <span>{question.options.length} Options</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-start gap-1">
-                                            <Button variant="ghost" size="icon" onClick={() => handleEditQuestion(question)}>
-                                                <Edit2 className="size-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteQuestion(question.id)}>
-                                                <Trash2 className="size-4" />
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-
-                        {questions.length === 0 && !isEditingQuestion && (
-                            <div className="text-center py-12 border-2 border-dashed rounded-xl text-muted-foreground">
-                                <p>No questions added yet. Click "Add Question" to start.</p>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Footer Actions */}
-                    <div className="flex items-center justify-end gap-4 mt-8">
-                        <Button variant="outline" onClick={() => navigate(-1)}>Cancel</Button>
-                        <Button onClick={handlePublishQuiz} disabled={saving || questions.length === 0} className="w-40">
-                            {saving ? 'Publishing...' : 'Publish Quiz'}
-                        </Button>
+                    {/* Main Section: Questions List */}
+                    <div className="lg:col-span-8 space-y-6">
+                        <Card className="shadow-md border-none">
+                            <CardHeader className="flex flex-row items-center justify-between pb-4">
+                                <div>
+                                    <CardTitle className="text-2xl">Exam Questions</CardTitle>
+                                    <CardDescription>Manage and organize your question bank</CardDescription>
+                                </div>
+                                <Button
+                                    onClick={() => setIsEditingQuestion(true)}
+                                    disabled={isEditingQuestion}
+                                    variant="outline"
+                                    className="gap-2 border-primary text-primary hover:bg-primary hover:text-white"
+                                >
+                                    <Plus className="size-4" />
+                                    New Question
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {isEditingQuestion && (
+                                    <div className="bg-muted/30 p-6 rounded-xl border-2 border-dashed border-primary/20 animate-in slide-in-from-top-4 duration-300">
+                                        <QuestionEditor
+                                            question={editingQuestionId ? questions.find(q => q.id === editingQuestionId) : undefined}
+                                            onSave={handleSaveQuestion}
+                                            onCancel={() => {
+                                                setIsEditingQuestion(false);
+                                                setEditingQuestionId(null);
+                                            }}
+                                            questionNumber={editingQuestionId ? questions.findIndex(q => q.id === editingQuestionId) + 1 : questions.length + 1}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="space-y-4">
+                                    {questions.map((question, index) => (
+                                        <Card key={question.id} className="relative group hover:border-primary/50 transition-colors shadow-sm bg-muted/20">
+                                            <CardContent className="p-5 flex gap-6">
+                                                <div className="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-900 rounded-xl w-14 h-14 shrink-0 shadow-sm border font-bold text-xl text-primary">
+                                                    {index + 1}
+                                                </div>
+                                                <div className="flex-1 space-y-3">
+                                                    <p className="font-semibold text-lg leading-tight">{question.question_text}</p>
+                                                    <div className="flex flex-wrap items-center gap-4">
+                                                        <Badge variant="outline" className="bg-white dark:bg-slate-900 px-3 py-1 border-primary/20 shadow-sm">
+                                                            {question.marks} Points
+                                                        </Badge>
+                                                        <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                            <div className="size-1.5 rounded-full bg-muted-foreground" />
+                                                            {question.options.length} Choices
+                                                        </span>
+                                                        <span className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
+                                                            <div className="size-1.5 rounded-full bg-emerald-600" />
+                                                            Answer Set
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleEditQuestion(question)} className="h-10 w-10 hover:bg-white dark:hover:bg-slate-900 shadow-sm border border-transparent hover:border-border">
+                                                        <Edit2 className="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20"
+                                                        onClick={() => {
+                                                            if (confirm('Delete this question?')) handleDeleteQuestion(question.id);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                {questions.length === 0 && !isEditingQuestion && (
+                                    <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-muted/10 opacity-60">
+                                        <div className="p-4 rounded-full bg-muted w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                            <Plus className="size-8 text-muted-foreground" />
+                                        </div>
+                                        <h4 className="text-lg font-bold">No questions yet</h4>
+                                        <p className="text-muted-foreground mt-1">Start building your quiz by adding your first question.</p>
+                                        <Button onClick={() => setIsEditingQuestion(true)} className="mt-6" variant="secondary">
+                                            Add First Question
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </div>

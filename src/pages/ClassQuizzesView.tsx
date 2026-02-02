@@ -38,121 +38,139 @@ export default function ClassQuizzesView() {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-between">
+            <div className="w-full flex flex-col gap-8 animate-in fade-in duration-500">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold">Class Quizzes</h1>
-                        <p className="text-muted-foreground">Manage and track quizzes for this class</p>
+                        <h1 className="text-3xl font-bold tracking-tight">Class Quizzes</h1>
+                        <p className="text-muted-foreground mt-1 text-lg">Manage and track quizzes for this class</p>
                     </div>
-                    <Button onClick={handleCreateQuiz} className="gap-2">
-                        <Plus className="size-4" />
-                        Create Quiz
+                    <Button onClick={handleCreateQuiz} className="gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                        <Plus className="size-5" />
+                        Create New Quiz
                     </Button>
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <div className="flex justify-center p-20">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                     </div>
                 ) : quizzes.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <div className="p-4 rounded-full bg-primary/10 mb-4">
-                                <FileText className="size-8 text-primary" />
+                    <Card className="border-dashed border-2 bg-muted/30">
+                        <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="p-6 rounded-full bg-primary/10 mb-6 group-hover:scale-110 transition-transform">
+                                <FileText className="size-12 text-primary" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">No quizzes created yet</h3>
-                            <p className="text-muted-foreground max-w-sm mb-6">
-                                Create your first quiz to assess student understanding.
+                            <h3 className="text-2xl font-semibold mb-3">No quizzes created yet</h3>
+                            <p className="text-muted-foreground max-w-sm mb-8 text-lg">
+                                Create your first quiz to assess student understanding and track performance.
                             </p>
-                            <Button onClick={handleCreateQuiz} variant="outline">
-                                Create Quiz
+                            <Button onClick={handleCreateQuiz} variant="outline" size="lg" className="h-12 px-8">
+                                Create Your First Quiz
                             </Button>
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-4">
+                    <div className="grid gap-6">
                         {quizzes.map((quiz) => (
-                            <Card key={quiz.id} className="group hover:shadow-md transition-all">
-                                <CardContent className="p-6 flex items-start justify-between gap-4">
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Badge variant="secondary" className={getStatusColor(quiz.status)}>
-                                                {quiz.status.charAt(0).toUpperCase() + quiz.status.slice(1)}
-                                            </Badge>
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <Clock className="size-3" />
-                                                Created {format(new Date(quiz.created_at), 'MMM d, yyyy')}
-                                            </span>
-                                        </div>
-                                        <h3 className="font-semibold text-lg">{quiz.title}</h3>
-                                        <p className="text-muted-foreground line-clamp-1 text-sm">
-                                            {quiz.description || 'No description'}
-                                        </p>
-                                        <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
-                                            <span>{quiz.total_marks} Marks</span>
-                                            <span>•</span>
-                                            <span>{quiz.pass_percentage}% Pass</span>
-                                            <span>•</span>
-                                            <span>{quiz._count?.questions || 0} Questions</span>
-                                            <span>•</span>
-                                            <span>{quiz._count?.submissions || 0} Submissions</span>
-                                        </div>
-                                    </div>
+                            <Card key={quiz.id} className="group overflow-hidden border-none bg-gradient-to-br from-card to-card/50 shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-primary/10 hover:border-l-primary">
+                                <CardContent className="p-0">
+                                    <div className="p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                                        <div className="flex-1 space-y-4">
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <Badge variant="secondary" className={`${getStatusColor(quiz.status)} px-3 py-1 text-xs font-semibold uppercase tracking-wider`}>
+                                                    {quiz.status}
+                                                </Badge>
+                                                <span className="text-sm text-muted-foreground flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full">
+                                                    <Clock className="size-3.5" />
+                                                    {format(new Date(quiz.created_at), 'MMM d, yyyy')}
+                                                </span>
+                                            </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="hidden sm:flex gap-2"
-                                            onClick={() => handleViewResults(quiz.id)}
-                                        >
-                                            <BarChart className="size-4" />
-                                            Results
-                                        </Button>
+                                            <div>
+                                                <h3 className="font-bold text-2xl group-hover:text-primary transition-colors">{quiz.title}</h3>
+                                                <p className="text-muted-foreground mt-2 text-base line-clamp-2 max-w-3xl">
+                                                    {quiz.description || 'No description provided for this quiz.'}
+                                                </p>
+                                            </div>
 
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="size-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleViewResults(quiz.id)}>
-                                                    View Results
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                {quiz.status === 'draft' && (
-                                                    <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'published')}>
-                                                        <Globe className="size-4 mr-2" />
-                                                        Publish
+                                            <div className="flex flex-wrap items-center gap-6 pt-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground uppercase font-semibold">Total Marks</span>
+                                                    <span className="font-bold text-lg">{quiz.total_marks}</span>
+                                                </div>
+                                                <div className="h-8 w-px bg-border" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground uppercase font-semibold">Pass Criteria</span>
+                                                    <span className="font-bold text-lg">{quiz.pass_percentage}%</span>
+                                                </div>
+                                                <div className="h-8 w-px bg-border" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground uppercase font-semibold">Questions</span>
+                                                    <span className="font-bold text-lg">{quiz._count?.questions || 0}</span>
+                                                </div>
+                                                <div className="h-8 w-px bg-border" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground uppercase font-semibold">Submissions</span>
+                                                    <span className="font-bold text-lg">{quiz._count?.submissions || 0}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-border">
+                                            <Button
+                                                variant="default"
+                                                className="flex-1 lg:flex-none gap-2 h-11 px-6 shadow-md"
+                                                onClick={() => handleViewResults(quiz.id)}
+                                            >
+                                                <BarChart className="size-4" />
+                                                Analytics & Results
+                                            </Button>
+
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="outline" size="icon" className="h-11 w-11">
+                                                        <MoreVertical className="size-5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56 p-2">
+                                                    <DropdownMenuItem onClick={() => handleViewResults(quiz.id)} className="h-10 cursor-pointer">
+                                                        <BarChart className="size-4 mr-2" />
+                                                        Detailed View
                                                     </DropdownMenuItem>
-                                                )}
-                                                {quiz.status === 'published' && (
-                                                    <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'closed')}>
-                                                        <Lock className="size-4 mr-2" />
-                                                        Close
+                                                    <DropdownMenuSeparator />
+                                                    {quiz.status === 'draft' && (
+                                                        <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'published')} className="h-10 cursor-pointer text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50">
+                                                            <Globe className="size-4 mr-2" />
+                                                            Publish Now
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {quiz.status === 'published' && (
+                                                        <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'closed')} className="h-10 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                                                            <Lock className="size-4 mr-2" />
+                                                            Close Submissions
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {quiz.status === 'closed' && (
+                                                        <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'published')} className="h-10 cursor-pointer text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50">
+                                                            <Globe className="size-4 mr-2" />
+                                                            Re-open Quiz
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        className="h-10 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
+                                                        onClick={() => {
+                                                            if (confirm('Are you sure you want to delete this quiz? This action is permanent.')) {
+                                                                deleteQuiz(quiz.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="size-4 mr-2" />
+                                                        Delete Permanently
                                                     </DropdownMenuItem>
-                                                )}
-                                                {quiz.status === 'closed' && (
-                                                    <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'published')}>
-                                                        <Globe className="size-4 mr-2" />
-                                                        Re-open
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    className="text-red-600"
-                                                    onClick={() => {
-                                                        if (confirm('Are you sure you want to delete this quiz?')) {
-                                                            deleteQuiz(quiz.id);
-                                                        }
-                                                    }}
-                                                >
-                                                    <Trash2 className="size-4 mr-2" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
