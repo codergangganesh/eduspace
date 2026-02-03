@@ -21,7 +21,9 @@ export default function StudentQuizzes() {
         const fetchStudentQuizzes = async () => {
             if (!user) return;
             try {
-                setLoading(true);
+                // Keep loading state only on initial load
+                if (quizzes.length === 0) setLoading(true);
+
                 // 1. Get enrolled classes (we could reuse useClasses, but let's do direct for speed/custom query)
                 const { data: enrollments } = await supabase
                     .from('class_students')
@@ -42,20 +44,20 @@ export default function StudentQuizzes() {
                     .select(`
                         *,
                         classes (class_name, course_code),
-                        quiz_submissions (id, status, total_obtained)
+                        quiz_submissions (id, status, total_obtained, is_archived)
                     `)
                     .in('class_id', classIds)
-                    .eq('status', 'published') // Or closed too if we want to show history? Prompt says "Quiz remains available until lecturer closes it". Closed quizzes might be viewable but not attempted.
+                    .eq('status', 'published')
                     .order('created_at', { ascending: false });
 
-                // Check if student attempted
+                // Check if student attempted (filter out archived submissions)
                 const processedQuizzes = quizzesData?.map(q => {
-                    const submission = q.quiz_submissions?.find((s: any) => s.student_id === user.id); // Although simple query filters by user? RLS should filter submissions? 
-                    // Wait, the select `quiz_submissions` will fetch ALL submissions for that quiz if RLS allows? 
-                    // My RLS says: "Students can view their own submissions". So yes, we only see ours.
+                    const activeSubmission = q.quiz_submissions?.find((s: any) => s.student_id === user.id && !s.is_archived);
+                    const hasArchived = q.quiz_submissions?.some((s: any) => s.student_id === user.id && s.is_archived);
                     return {
                         ...q,
-                        my_submission: q.quiz_submissions?.[0] || null
+                        my_submission: activeSubmission || null,
+                        has_archived: hasArchived
                     };
                 }) || [];
 
@@ -69,7 +71,43 @@ export default function StudentQuizzes() {
         };
 
         fetchStudentQuizzes();
-    }, [user]);
+
+        // Real-time updates
+        const channel = supabase
+            .channel('student_quizzes_updates')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'quiz_submissions',
+                    filter: `student_id=eq.${user?.id}`
+                },
+                () => {
+                    console.log('Submission updated, refreshing...');
+                    fetchStudentQuizzes();
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'quizzes'
+                },
+                () => {
+                    // Refresh on any quiz change (publishes, updates)
+                    // Optimization: check if quiz.class_id is in my enrollments?
+                    // For now, simpler to just refresh.
+                    fetchStudentQuizzes();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user, quizzes.length]);
 
     const handleAttempt = (quizId: string) => {
         navigate(`/student/quizzes/${quizId}`);
@@ -148,8 +186,8 @@ export default function StudentQuizzes() {
                                         </div>
                                     </div>
 
-                                    {quiz.my_submission ? (
-                                        <div className={`mt-auto p-5 rounded-2xl border flex flex-col gap-3 ${quiz.my_submission.status === 'passed'
+                                    {quiz.my_submission && (
+                                        <div className={`mt-auto p-5 rounded-2xl border flex flex-col gap-3 mb-4 ${quiz.my_submission.status === 'passed'
                                             ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
                                             : 'bg-red-500/5 border-red-500/20 text-red-700 dark:text-red-400'
                                             }`}>
@@ -169,14 +207,31 @@ export default function StudentQuizzes() {
                                                 </div>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <Button
-                                            className="w-full h-14 mt-auto text-lg font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all gap-2"
-                                            onClick={() => handleAttempt(quiz.id)}
-                                        >
-                                            Start Assessment <ArrowRight className="size-5" />
-                                        </Button>
                                     )}
+
+                                    <Button
+                                        className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${quiz.my_submission
+                                            ? 'bg-muted text-muted-foreground shadow-none cursor-not-allowed opacity-70 hover:bg-muted'
+                                            : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
+                                            }`}
+                                        onClick={() => handleAttempt(quiz.id)}
+                                        disabled={!!quiz.my_submission}
+                                    >
+                                        {quiz.my_submission ? (
+                                            <>
+                                                <CheckCircle className="size-5" />
+                                                Quiz Completed
+                                            </>
+                                        ) : quiz.has_archived ? (
+                                            <>
+                                                Retake Quiz <ArrowRight className="size-5" />
+                                            </>
+                                        ) : (
+                                            <>
+                                                Start Quiz <ArrowRight className="size-5" />
+                                            </>
+                                        )}
+                                    </Button>
                                 </CardContent>
                             </Card>
                         ))}

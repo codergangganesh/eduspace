@@ -43,6 +43,7 @@ const LecturerClassesQuizzes = lazy(() => import("./pages/LecturerClassesQuizzes
 const ClassQuizzesView = lazy(() => import("./pages/ClassQuizzesView"));
 const QuizResultsView = lazy(() => import("./pages/QuizResultsView"));
 const CreateQuiz = lazy(() => import("./pages/CreateQuiz"));
+const EditQuiz = lazy(() => import("./pages/EditQuiz"));
 const StudentQuizzes = lazy(() => import("./pages/StudentQuizzes"));
 const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
 const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDetail"));
@@ -217,6 +218,14 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                         <ClassQuizzesView />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/quizzes/:classId/:quizId/edit"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <EditQuiz />
                       </ProtectedRoute>
                     }
                   />

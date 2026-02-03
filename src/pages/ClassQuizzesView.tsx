@@ -3,7 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BarChart, FileText, MoreVertical, Trash2, Globe, Clock, Lock } from 'lucide-react';
+import { Plus, BarChart, FileText, MoreVertical, Trash2, Globe, Clock, Lock, Edit2 } from 'lucide-react';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import {
     DropdownMenu,
@@ -26,6 +26,10 @@ export default function ClassQuizzesView() {
     const handleViewResults = (quizId: string) => {
         // Navigate to results page (to be implemented)
         navigate(`/lecturer/quizzes/${classId}/${quizId}/results`);
+    };
+
+    const handleEditQuiz = (quizId: string) => {
+        navigate(`/lecturer/quizzes/${classId}/${quizId}/edit`);
     };
 
     const getStatusColor = (status: string) => {
@@ -123,7 +127,7 @@ export default function ClassQuizzesView() {
                                                 onClick={() => handleViewResults(quiz.id)}
                                             >
                                                 <BarChart className="size-4" />
-                                                Analytics & Results
+                                                Results
                                             </Button>
 
                                             <DropdownMenu>
@@ -133,9 +137,9 @@ export default function ClassQuizzesView() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56 p-2">
-                                                    <DropdownMenuItem onClick={() => handleViewResults(quiz.id)} className="h-10 cursor-pointer">
-                                                        <BarChart className="size-4 mr-2" />
-                                                        Detailed View
+                                                    <DropdownMenuItem onClick={() => handleEditQuiz(quiz.id)} className="h-10 cursor-pointer">
+                                                        <Edit2 className="size-4 mr-2" />
+                                                        Edit Quiz
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     {quiz.status === 'draft' && (
@@ -166,7 +170,7 @@ export default function ClassQuizzesView() {
                                                         }}
                                                     >
                                                         <Trash2 className="size-4 mr-2" />
-                                                        Delete Permanently
+                                                        Delete Quiz
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

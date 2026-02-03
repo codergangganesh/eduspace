@@ -6,140 +6,180 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Save, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
-import { useQuizzes } from '@/hooks/useQuizzes';
+import { ArrowLeft, Save, Plus, Trash2, Edit2, Loader2, AlertCircle } from 'lucide-react';
 import { QuestionEditor } from '@/components/quizzes/QuestionEditor';
 import { QuizQuestion } from '@/types/quiz';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Simple UUID generator to avoid external dependency
-const generateId = () => {
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+// Simple UUID generator
+// Robust UUID generator for client-side IDs
+const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }
 
-export default function CreateQuiz() {
-    const { classId } = useParams();
+export default function EditQuiz() {
+    const { classId, quizId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { createQuiz } = useQuizzes(classId);
 
     // Quiz Details State
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [passPercentage, setPassPercentage] = useState(50);
+    const [status, setStatus] = useState('draft');
 
     // Questions State
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [isEditingQuestion, setIsEditingQuestion] = useState(false);
     const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
-    const [draftId, setDraftId] = useState<string | null>(null);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const [hasSubmissions, setHasSubmissions] = useState(false);
 
     const calculateTotalMarks = () => {
         return questions.reduce((sum, q) => sum + q.marks, 0);
     };
 
-    // Load draft from DB on mount
+    // Load quiz from DB on mount
     useEffect(() => {
-        const loadDraft = async () => {
-            if (!classId || !user) {
+        const loadQuiz = async () => {
+            if (!quizId || !user) {
                 setIsLoading(false);
                 return;
             }
 
             try {
-                // Check quiz_drafts table
-                const { data: draft, error } = await supabase
-                    .from('quiz_drafts')
-                    .select('*')
-                    .eq('class_id', classId)
-                    .eq('user_id', user.id)
+                // Fetch quiz data
+                const { data: quiz, error: quizError } = await supabase
+                    .from('quizzes')
+                    .select('*, questions:quiz_questions(*)')
+                    .eq('id', quizId)
                     .single();
 
-                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-                    console.error('Error fetching draft:', error);
-                } else if (draft) {
-                    setDraftId(draft.id);
-                    const data = draft.data as any;
+                if (quizError) throw quizError;
 
-                    if (data) {
-                        setTitle(data.title || '');
-                        setDescription(data.description || '');
-                        setPassPercentage(data.passPercentage || 50);
-                        setQuestions(data.questions || []);
-                    }
+                if (quiz) {
+                    setTitle(quiz.title || '');
+                    setDescription(quiz.description || '');
+                    setPassPercentage(quiz.pass_percentage || 50);
+                    setStatus(quiz.status || 'draft');
+
+                    // Sort questions by order_index
+                    const sortedQuestions = (quiz.questions || []).sort((a: any, b: any) => a.order_index - b.order_index);
+                    setQuestions(sortedQuestions.map((q: any) => ({
+                        id: q.id,
+                        quiz_id: q.quiz_id,
+                        question_text: q.question_text,
+                        question_type: q.question_type,
+                        marks: q.marks,
+                        options: q.options,
+                        correct_answer: q.correct_answer,
+                        order_index: q.order_index
+                    })));
                 }
+
+                // Check if quiz has submissions
+                const { count } = await supabase
+                    .from('quiz_submissions')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('quiz_id', quizId);
+
+                setHasSubmissions((count || 0) > 0);
+
             } catch (error) {
-                console.error('Error loading draft:', error);
+                console.error('Error loading quiz:', error);
+                toast.error('Failed to load quiz');
+                navigate(`/lecturer/quizzes/${classId}`);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        loadDraft();
-    }, [classId, user]);
+        loadQuiz();
+    }, [quizId, user, classId, navigate]);
 
-    // Unified Auto-Save Logic (Supabase only)
+    // Auto-save logic
     useEffect(() => {
-        // Skip if still loading initial data or empty state
         if (isLoading) return;
         if (!title && questions.length === 0 && !description) return;
 
         const saveEverything = async () => {
-            if (!classId || !user) return;
-            setIsAutoSaving(true);
+            if (!classId || !user || !quizId) return;
 
             try {
-                const draftData = {
-                    title,
-                    description,
-                    passPercentage,
-                    questions
-                };
-
-                const { data: savedDraft, error } = await supabase
-                    .from('quiz_drafts')
-                    .upsert({
-                        class_id: classId,
-                        user_id: user.id,
-                        data: draftData,
-                        updated_at: new Date().toISOString(),
-                        ...(draftId ? { id: draftId } : {})
+                // Update Quiz Metadata
+                const { error: quizError } = await supabase
+                    .from('quizzes')
+                    .update({
+                        title: title || 'Untitled Quiz',
+                        description,
+                        total_marks: calculateTotalMarks(),
+                        pass_percentage: passPercentage,
                     })
-                    .select()
-                    .single();
+                    .eq('id', quizId);
 
-                if (error) throw error;
+                if (quizError) throw quizError;
 
-                if (!draftId && savedDraft) {
-                    setDraftId(savedDraft.id);
+                // Smart Sync Questions: Upsert all current, Delete missing
+                if (questions.length > 0) {
+                    const questionsToUpsert = questions.map((q, index) => ({
+                        id: q.id, // Include ID for upsert
+                        quiz_id: quizId,
+                        question_text: q.question_text,
+                        question_type: q.question_type,
+                        marks: q.marks,
+                        options: q.options,
+                        correct_answer: q.correct_answer,
+                        order_index: index
+                    }));
+
+                    const { error: upsertError } = await supabase
+                        .from('quiz_questions')
+                        .upsert(questionsToUpsert);
+
+                    if (upsertError) throw upsertError;
+
+                    // Delete questions that are no longer in the list
+                    const currentIds = questions.map(q => q.id);
+                    const { error: deleteError } = await supabase
+                        .from('quiz_questions')
+                        .delete()
+                        .eq('quiz_id', quizId)
+                        .not('id', 'in', currentIds);
+
+                    if (deleteError) console.error("Error deleting removed questions:", deleteError);
+                } else {
+                    // If no questions, delete all
+                    await supabase.from('quiz_questions').delete().eq('quiz_id', quizId);
                 }
 
                 setLastSaved(new Date());
 
             } catch (error) {
                 console.error('Auto-save failed:', error);
-            } finally {
-                setIsAutoSaving(false);
             }
         };
 
         const timeoutId = setTimeout(saveEverything, 1000); // 1s debounce
         return () => clearTimeout(timeoutId);
-    }, [title, description, passPercentage, questions, classId, user, draftId, isLoading]);
-
+    }, [title, description, passPercentage, questions, classId, user, quizId, isLoading]);
 
     const handleSaveQuestion = (question: QuizQuestion) => {
         if (editingQuestionId) {
             setQuestions(questions.map(q => q.id === editingQuestionId ? question : q));
         } else {
-            setQuestions([...questions, { ...question, id: generateId() }]);
+            setQuestions([...questions, { ...question, id: generateUUID() }]);
         }
         setIsEditingQuestion(false);
         setEditingQuestionId(null);
@@ -154,13 +194,9 @@ export default function CreateQuiz() {
         setQuestions(questions.filter(q => q.id !== id));
     };
 
-    const handlePublishQuiz = async () => {
+    const handleSaveAndClose = async () => {
         if (!title.trim()) {
             toast.error('Please enter a quiz title');
-            return;
-        }
-        if (questions.length === 0) {
-            toast.error('Please add at least one question');
             return;
         }
 
@@ -168,51 +204,67 @@ export default function CreateQuiz() {
             setSaving(true);
             const totalMarks = calculateTotalMarks();
 
-            // 1. Create Quiz Record in REAL table
-            const { data: quizData, error: quizError } = await supabase
+            // Update Quiz
+            const { error: quizError } = await supabase
                 .from('quizzes')
-                .insert({
-                    class_id: classId,
+                .update({
                     title,
                     description,
                     total_marks: totalMarks,
                     pass_percentage: passPercentage,
-                    status: 'published',
-                    created_by: user?.id
                 })
-                .select()
-                .single();
+                .eq('id', quizId);
 
             if (quizError) throw quizError;
 
-            // 2. Create Questions
-            const questionsToInsert = questions.map((q, index) => ({
-                quiz_id: quizData.id,
-                question_text: q.question_text,
-                question_type: q.question_type,
-                marks: q.marks,
-                options: q.options,
-                correct_answer: q.correct_answer,
-                order_index: index
-            }));
+            // Smart Sync Questions (same as auto-save)
+            if (questions.length > 0) {
+                const questionsToUpsert = questions.map((q, index) => ({
+                    id: q.id,
+                    quiz_id: quizId,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    marks: q.marks,
+                    options: q.options,
+                    correct_answer: q.correct_answer,
+                    order_index: index
+                }));
 
-            const { error: questionsError } = await supabase
-                .from('quiz_questions')
-                .insert(questionsToInsert);
+                const { error: upsertError } = await supabase
+                    .from('quiz_questions')
+                    .upsert(questionsToUpsert);
 
-            if (questionsError) throw questionsError;
+                if (upsertError) throw upsertError;
 
-            // 3. Delete Draft
-            if (draftId) {
-                await supabase.from('quiz_drafts').delete().eq('id', draftId);
+                // Delete missing
+                const currentIds = questions.map(q => q.id);
+                await supabase
+                    .from('quiz_questions')
+                    .delete()
+                    .eq('quiz_id', quizId)
+                    .not('id', 'in', currentIds);
+
+            } else {
+                await supabase.from('quiz_questions').delete().eq('quiz_id', quizId);
             }
 
-            toast.success('Quiz created and published successfully!');
+            // If republishing, archive existing submissions to allow retake
+            if (status === 'published') {
+                const { error: archiveError } = await supabase
+                    .from('quiz_submissions')
+                    .update({ is_archived: true })
+                    .eq('quiz_id', quizId)
+                    .eq('is_archived', false);
+
+                if (archiveError) console.error("Error archiving submissions:", archiveError);
+            }
+
+            toast.success('Quiz updated successfully!');
             navigate(`/lecturer/quizzes/${classId}`);
 
         } catch (error) {
-            console.error('Error publishing quiz:', error);
-            toast.error('Failed to publish quiz');
+            console.error('Error saving quiz:', error);
+            toast.error('Failed to update quiz');
         } finally {
             setSaving(false);
         }
@@ -224,7 +276,7 @@ export default function CreateQuiz() {
                 <div className="flex items-center justify-center py-20">
                     <div className="flex flex-col items-center gap-4">
                         <Loader2 className="size-10 animate-spin text-primary" />
-                        <p className="text-muted-foreground font-medium">Loading your quiz draft...</p>
+                        <p className="text-muted-foreground font-medium">Loading quiz...</p>
                     </div>
                 </div>
             </DashboardLayout>
@@ -242,34 +294,41 @@ export default function CreateQuiz() {
                         </Button>
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="text-3xl font-bold tracking-tight">Create New Quiz</h1>
-                                {isAutoSaving && (
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium animate-in fade-in">
-                                        <Loader2 className="size-3 animate-spin" />
-                                        Saving...
-                                    </div>
-                                )}
-                                {!isAutoSaving && lastSaved && (
+                                <h1 className="text-3xl font-bold tracking-tight">Edit Quiz</h1>
+                                <Badge variant={status === 'published' ? 'default' : status === 'closed' ? 'destructive' : 'secondary'}>
+                                    {status}
+                                </Badge>
+                                {lastSaved && (
                                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-medium animate-in zoom-in">
                                         <Save className="size-3" />
                                         Auto-saved at {lastSaved.toLocaleTimeString()}
                                     </div>
                                 )}
                             </div>
-                            <p className="text-muted-foreground text-lg mt-1">Design your assessment and set grading criteria</p>
+                            <p className="text-muted-foreground text-lg mt-1">Modify your quiz questions and settings</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button variant="outline" onClick={() => navigate(-1)} className="h-11 px-6">Discard Draft</Button>
+                        <Button variant="outline" onClick={() => navigate(-1)} className="h-11 px-6">Cancel</Button>
                         <Button
-                            onClick={handlePublishQuiz}
+                            onClick={handleSaveAndClose}
                             disabled={saving || questions.length === 0}
                             className="h-11 px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                         >
-                            {saving ? 'Publishing...' : 'Publish Quiz Now'}
+                            {saving ? (status === 'published' ? 'Republishing...' : 'Saving...') : (status === 'published' ? 'Republish Quiz' : 'Save Changes')}
                         </Button>
                     </div>
                 </div>
+
+                {hasSubmissions && (
+                    <Alert className="mb-6 border-amber-500/50 bg-amber-500/10">
+                        <AlertCircle className="size-4 text-amber-500" />
+                        <AlertDescription className="text-amber-700 dark:text-amber-400">
+                            <strong>Note:</strong> This quiz has student submissions. Editing questions may affect the grading consistency.
+                            Consider creating a new quiz instead if major changes are needed.
+                        </AlertDescription>
+                    </Alert>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Sidebar: Basic Info & Criteria */}
@@ -326,16 +385,6 @@ export default function CreateQuiz() {
                                 </div>
                             </CardContent>
                         </Card>
-
-                        <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
-                            <h4 className="font-bold mb-2 flex items-center gap-2">
-                                <Plus className="size-4 text-primary" />
-                                Pro Tip
-                            </h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                Quizzes are auto-saved as drafts. Your students will only be able to see and attempt the quiz once you click **"Publish Quiz Now"**.
-                            </p>
-                        </div>
                     </div>
 
                     {/* Main Section: Questions List */}
