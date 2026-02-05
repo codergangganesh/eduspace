@@ -2,7 +2,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, Clock, CheckCircle, ArrowRight, XCircle, MoreVertical, PlayCircle, Eye } from 'lucide-react';
+import { FileText, Clock, CheckCircle, ArrowRight, XCircle, MoreVertical, PlayCircle, Eye, Trophy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
@@ -196,14 +196,18 @@ export default function StudentQuizzes() {
                                                                 <Eye className="size-4 mr-2" />
                                                                 View Details
                                                             </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => navigate(`/student/quizzes/${quiz.class_id}/${quiz.id}/results`)}>
+                                                                <Trophy className="size-4 mr-2" />
+                                                                View Leaderboard
+                                                            </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </div>
                                             ) : (
                                                 <Button
                                                     className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${isPending
-                                                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                                            : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
+                                                        ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                                                        : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
                                                         }`}
                                                     onClick={() => handleAttempt(quiz.id)}
                                                 >

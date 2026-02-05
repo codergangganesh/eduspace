@@ -134,6 +134,14 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/student/quizzes/:classId/:quizId/results"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <QuizResultsView />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Protected Lecturer Routes */}
                   <Route
