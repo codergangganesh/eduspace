@@ -94,7 +94,9 @@ export default function TakeQuiz() {
 
                 // Check for existing ACTIVE submission (pending or completed, but not archived)
                 // We order by created_at desc to get the latest attempt
-                const { data: submission } = await supabase
+                // Check for existing ACTIVE submission (pending or completed, but not archived)
+                // We order by created_at desc to get the latest attempt
+                let { data: submission } = await supabase
                     .from('quiz_submissions')
                     .select('*')
                     .eq('quiz_id', quizId)
@@ -103,6 +105,19 @@ export default function TakeQuiz() {
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
+
+                // Check for version mismatch (Re-attempt Logic)
+                if (submission && (submission.quiz_version || 1) < (quizData.version || 1)) {
+                    console.log("Found outdated active submission. Archiving to allow re-take.");
+                    // Archive the old submission
+                    await supabase
+                        .from('quiz_submissions')
+                        .update({ is_archived: true })
+                        .eq('id', submission.id);
+
+                    // Reset submission variable to trigger new creation
+                    submission = null;
+                }
 
                 if (submission) {
                     setSubmissionId(submission.id);
@@ -127,7 +142,10 @@ export default function TakeQuiz() {
                         setLoading(false);
                         return;
                     }
-                } else {
+                }
+
+                // Create new submission if none exists (or if we just archived the outdated one)
+                if (!submission) {
                     // Try to create only if we didn't find one
                     const { data: newSubmission, error: createError } = await supabase
                         .from('quiz_submissions')
@@ -135,7 +153,8 @@ export default function TakeQuiz() {
                             quiz_id: quizId,
                             student_id: user.id,
                             total_obtained: 0,
-                            status: 'pending'
+                            status: 'pending',
+                            quiz_version: quizData.version // helper to store initial version
                         })
                         .select()
                         .single();
@@ -354,7 +373,8 @@ export default function TakeQuiz() {
                 .update({
                     total_obtained: score,
                     status: status,
-                    submitted_at: new Date().toISOString()
+                    submitted_at: new Date().toISOString(),
+                    quiz_version: quiz.version // Store the version of the quiz being taken
                 })
                 .eq('id', activeSubmissionId)
                 .select()

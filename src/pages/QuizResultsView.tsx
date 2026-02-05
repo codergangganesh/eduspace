@@ -82,11 +82,13 @@ export default function QuizResultsView() {
             if (studentIds.length > 0) {
                 const { data: profilesData } = await supabase
                     .from('profiles')
-                    .select('id, full_name, avatar_url')
-                    .in('id', studentIds);
+                    .select('id, user_id, full_name, avatar_url')
+                    .in('user_id', studentIds);
 
                 profilesMap = (profilesData || []).reduce((acc, p) => {
-                    acc[p.id] = { full_name: p.full_name, avatar_url: p.avatar_url };
+                    // Map by user_id since that's what we have in submissions
+                    const key = p.user_id || p.id;
+                    acc[key] = { full_name: p.full_name, avatar_url: p.avatar_url };
                     return acc;
                 }, {} as Record<string, { full_name: string; avatar_url: string | null }>);
             }
@@ -276,10 +278,12 @@ export default function QuizResultsView() {
                                     </div>
                                     <CardContent className="pt-8 pb-6 px-4 flex flex-col items-center text-center">
                                         <Avatar className="size-20 border-4 border-slate-100 dark:border-slate-800 shadow-lg mb-3">
-                                            <AvatarImage src={podiumStudents[1].profiles?.avatar_url || undefined} />
+                                            <AvatarImage src={podiumStudents[1].profiles?.avatar_url || undefined} className="object-cover" />
                                             <AvatarFallback className="bg-slate-100 text-slate-600 font-bold">{podiumStudents[1].profiles?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                                         </Avatar>
-                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate w-full text-base mb-1">{podiumStudents[1].profiles?.full_name}</h3>
+                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate w-full text-base mb-1" title={podiumStudents[1].profiles?.full_name}>
+                                            {podiumStudents[1].profiles?.full_name || 'Unknown Student'}
+                                        </h3>
 
                                         <div className="flex items-center gap-1.5 text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full mb-3">
                                             <Clock className="size-3" />
@@ -301,10 +305,12 @@ export default function QuizResultsView() {
                                     </div>
                                     <CardContent className="pt-10 pb-8 px-6 flex flex-col items-center text-center bg-gradient-to-b from-yellow-50/50 to-transparent dark:from-yellow-500/5 dark:to-transparent">
                                         <Avatar className="size-24 border-4 border-yellow-100 dark:border-yellow-500/20 shadow-xl ring-4 ring-yellow-500/10 mb-4">
-                                            <AvatarImage src={podiumStudents[0].profiles?.avatar_url || undefined} />
+                                            <AvatarImage src={podiumStudents[0].profiles?.avatar_url || undefined} className="object-cover" />
                                             <AvatarFallback className="bg-yellow-100 text-yellow-700 font-bold">{podiumStudents[0].profiles?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                                         </Avatar>
-                                        <h3 className="text-lg font-black text-slate-900 dark:text-white truncate w-full mb-1">{podiumStudents[0].profiles?.full_name}</h3>
+                                        <h3 className="text-lg font-black text-slate-900 dark:text-white truncate w-full mb-1" title={podiumStudents[0].profiles?.full_name}>
+                                            {podiumStudents[0].profiles?.full_name || 'Unknown Student'}
+                                        </h3>
 
                                         <div className="flex items-center gap-1.5 text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-500/10 px-4 py-1 rounded-full mb-4">
                                             <Clock className="size-3.5" />
@@ -326,10 +332,12 @@ export default function QuizResultsView() {
                                     </div>
                                     <CardContent className="pt-8 pb-6 px-4 flex flex-col items-center text-center">
                                         <Avatar className="size-20 border-4 border-slate-100 dark:border-slate-800 shadow-lg mb-3">
-                                            <AvatarImage src={podiumStudents[2].profiles?.avatar_url || undefined} />
+                                            <AvatarImage src={podiumStudents[2].profiles?.avatar_url || undefined} className="object-cover" />
                                             <AvatarFallback className="bg-amber-50 text-amber-800 font-bold">{podiumStudents[2].profiles?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                                         </Avatar>
-                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate w-full text-base mb-1">{podiumStudents[2].profiles?.full_name}</h3>
+                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate w-full text-base mb-1" title={podiumStudents[2].profiles?.full_name}>
+                                            {podiumStudents[2].profiles?.full_name || 'Unknown Student'}
+                                        </h3>
 
                                         <div className="flex items-center gap-1.5 text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full mb-3">
                                             <Clock className="size-3" />
@@ -398,7 +406,6 @@ export default function QuizResultsView() {
                                                                 {s.profiles?.full_name}
                                                                 {user?.id === s.student_id && <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-blue-100 text-blue-700">YOU</Badge>}
                                                             </div>
-                                                            <div className="text-xs text-slate-500">ID: {s.student_id?.slice(0, 8)}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>

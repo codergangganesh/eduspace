@@ -48,6 +48,7 @@ const StudentQuizzes = lazy(() => import("./pages/StudentQuizzes"));
 const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
 const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDetail"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
+const QuizAttemptDetails = lazy(() => import("./pages/QuizAttemptDetails"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -139,6 +140,15 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRoles={["student", "admin"]}>
                         <QuizResultsView />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/student/quizzes/:quizId/details"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <QuizAttemptDetails />
                       </ProtectedRoute>
                     }
                   />

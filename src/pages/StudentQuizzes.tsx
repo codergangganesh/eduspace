@@ -50,7 +50,7 @@ export default function StudentQuizzes() {
                     .select(`
                         *,
                         classes (class_name, course_code),
-                        quiz_submissions (id, status, total_obtained, is_archived)
+                        quiz_submissions (id, status, total_obtained, is_archived, quiz_version)
                     `)
                     .in('class_id', classIds)
                     .eq('status', 'published')
@@ -126,6 +126,16 @@ export default function StudentQuizzes() {
                             const isCompleted = quiz.my_submission && quiz.my_submission.status !== 'pending';
                             const isPending = quiz.my_submission && quiz.my_submission.status === 'pending';
 
+                            // Reattempt Logic:
+                            // If submission exists but its version is LOWER than quiz current version, offer re-attempt.
+                            // If submission version is missing (legacy), assume it's older if quiz.version > 1.
+                            const submissionVersion = quiz.my_submission?.quiz_version || 1;
+                            const currentQuizVersion = quiz.version || 1;
+                            const canReattempt = isCompleted && currentQuizVersion > submissionVersion;
+
+                            // "Attempted" State applies only if Completed AND on Current Version
+                            const showAttemptedState = isCompleted && !canReattempt;
+
                             return (
                                 <Card key={quiz.id} className="group relative overflow-hidden border-none bg-gradient-to-br from-card to-card/50 shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-primary/20 hover:border-l-primary">
                                     <CardContent className="p-7 flex flex-col h-full gap-6">
@@ -142,7 +152,7 @@ export default function StudentQuizzes() {
                                                 </p>
                                             </div>
                                             <div className="flex shrink-0">
-                                                {isCompleted ? (
+                                                {showAttemptedState ? (
                                                     quiz.my_submission.status === 'passed' ? (
                                                         <div className="p-3 bg-emerald-500/10 rounded-2xl">
                                                             <CheckCircle className="text-emerald-500 size-7" />
@@ -171,9 +181,27 @@ export default function StudentQuizzes() {
                                             </div>
                                         </div>
 
+                                        {/* Show Marks/Status if Attempted */}
+                                        {showAttemptedState && (
+                                            <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/50 flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Your Score</p>
+                                                    <p className="text-2xl font-black">{quiz.my_submission.total_obtained} <span className="text-sm text-muted-foreground font-medium">/ {quiz.total_marks}</span></p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <Badge className={quiz.my_submission.status === 'passed' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}>
+                                                        {quiz.my_submission.status.toUpperCase()}
+                                                    </Badge>
+                                                    <p className="text-xs font-bold mt-1 text-muted-foreground">
+                                                        {Math.round((quiz.my_submission.total_obtained / quiz.total_marks) * 100)}%
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Actions Area */}
                                         <div className="mt-auto pt-2">
-                                            {isCompleted ? (
+                                            {showAttemptedState ? (
                                                 <div className="flex items-center gap-2">
                                                     {/* "Attempted" Text - Hidden/Disabled style as requested */}
                                                     <Button
@@ -192,7 +220,7 @@ export default function StudentQuizzes() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleAttempt(quiz.id)}>
+                                                            <DropdownMenuItem onClick={() => navigate(`/student/quizzes/${quiz.id}/details`)}>
                                                                 <Eye className="size-4 mr-2" />
                                                                 View Details
                                                             </DropdownMenuItem>
@@ -205,13 +233,20 @@ export default function StudentQuizzes() {
                                                 </div>
                                             ) : (
                                                 <Button
-                                                    className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${isPending
-                                                        ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                                        : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
+                                                    className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${canReattempt
+                                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
+                                                        : isPending
+                                                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                                                            : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
                                                         }`}
                                                     onClick={() => handleAttempt(quiz.id)}
                                                 >
-                                                    {isPending ? (
+                                                    {canReattempt ? (
+                                                        <>
+                                                            <PlayCircle className="size-5" />
+                                                            Updated Quiz - Retake
+                                                        </>
+                                                    ) : isPending ? (
                                                         <>
                                                             <PlayCircle className="size-5" />
                                                             Resume Quiz

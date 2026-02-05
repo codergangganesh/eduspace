@@ -90,9 +90,17 @@ export function useQuizzes(classId?: string) {
         if (!user) return;
 
         try {
+            // If publishing, we want to increment the version to allow re-attempts
+            let versionUpdate = {};
+            if (status === 'published') {
+                const { data: currentQuiz } = await supabase.from('quizzes').select('version').eq('id', quizId).single();
+                const newVersion = (currentQuiz?.version || 1) + 1;
+                versionUpdate = { version: newVersion };
+            }
+
             const { error } = await supabase
                 .from('quizzes')
-                .update({ status })
+                .update({ status, ...versionUpdate })
                 .eq('id', quizId);
 
             if (error) throw error;
@@ -111,7 +119,7 @@ export function useQuizzes(classId?: string) {
                 }
             }
 
-            toast.success(`Quiz ${status === 'published' ? 'published' : 'closed'} successfully`);
+            toast.success(`Quiz ${status === 'published' ? 'published (v' + (versionUpdate as any).version + ')' : 'closed'} successfully`);
             fetchQuizzes();
         } catch (error) {
             console.error('Error updating quiz status:', error);
