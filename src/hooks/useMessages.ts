@@ -85,6 +85,24 @@ export function useMessages() {
                             .eq('user_id', otherUserId)
                             .maybeSingle();
 
+                        // If no profile data, try class_students table (for imported students who haven't registered)
+                        let otherUserName = profileData?.full_name;
+                        let otherUserAvatar = profileData?.avatar_url;
+
+                        if (!otherUserName) {
+                            const { data: classStudentData } = await supabase
+                                .from('class_students')
+                                .select('student_name, student_image_url')
+                                .eq('student_id', otherUserId)
+                                .limit(1)
+                                .maybeSingle();
+
+                            if (classStudentData) {
+                                otherUserName = classStudentData.student_name;
+                                otherUserAvatar = classStudentData.student_image_url || otherUserAvatar;
+                            }
+                        }
+
                         const { data: roleData } = await supabase
                             .from('user_roles')
                             .select('role')
@@ -93,8 +111,8 @@ export function useMessages() {
 
                         return {
                             ...conv,
-                            other_user_name: profileData?.full_name || 'Unknown User',
-                            other_user_avatar: profileData?.avatar_url,
+                            other_user_name: otherUserName || 'Unknown User',
+                            other_user_avatar: otherUserAvatar,
                             other_user_role: roleData?.role,
                         };
                     })

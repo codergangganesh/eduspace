@@ -40,7 +40,8 @@ export function useQuizzes(classId?: string) {
             setQuizzes(transformedQuizzes as unknown as Quiz[]);
         } catch (error) {
             console.error('Error fetching quizzes:', error);
-            toast.error('Failed to load quizzes');
+            // Don't show error toast for empty results - UI will show empty state
+            setQuizzes([]);
         } finally {
             setLoading(false);
         }
@@ -53,6 +54,8 @@ export function useQuizzes(classId?: string) {
 
 
     const createQuiz = async (quizData: Partial<Quiz>) => {
+        if (!user) throw new Error('User not authenticated');
+
         try {
             const { data, error } = await supabase
                 .from('quizzes')
@@ -61,6 +64,18 @@ export function useQuizzes(classId?: string) {
                 .single();
 
             if (error) throw error;
+
+            // Send notifications to enrolled students if quiz is published
+            if (quizData.status === 'published' && quizData.class_id) {
+                const { notifyQuizPublished } = await import('@/lib/notificationService');
+                await notifyQuizPublished(
+                    data.id,
+                    quizData.class_id,
+                    quizData.title || 'New Quiz',
+                    user.id
+                );
+            }
+
             toast.success('Quiz created successfully');
             fetchQuizzes();
             return data;
@@ -72,6 +87,8 @@ export function useQuizzes(classId?: string) {
     };
 
     const updateQuizStatus = async (quizId: string, status: 'published' | 'closed') => {
+        if (!user) return;
+
         try {
             const { error } = await supabase
                 .from('quizzes')
@@ -79,6 +96,21 @@ export function useQuizzes(classId?: string) {
                 .eq('id', quizId);
 
             if (error) throw error;
+
+            // Send notifications when publishing
+            if (status === 'published') {
+                const quiz = quizzes.find(q => q.id === quizId);
+                if (quiz?.class_id) {
+                    const { notifyQuizPublished } = await import('@/lib/notificationService');
+                    await notifyQuizPublished(
+                        quizId,
+                        quiz.class_id,
+                        quiz.title || 'Quiz',
+                        user.id
+                    );
+                }
+            }
+
             toast.success(`Quiz ${status === 'published' ? 'published' : 'closed'} successfully`);
             fetchQuizzes();
         } catch (error) {

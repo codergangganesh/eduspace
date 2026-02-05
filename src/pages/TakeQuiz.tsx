@@ -1,16 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, Clock, Trophy, Target, ArrowLeft, Save } from 'lucide-react';
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
@@ -19,20 +15,74 @@ export default function TakeQuiz() {
 
     const [quiz, setQuiz] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
-    const [answers, setAnswers] = useState<Record<string, string>>({}); // question_id -> option_id
+    const [answers, setAnswers] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [submissionId, setSubmissionId] = useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [rank, setRank] = useState<{ position: number, total: number } | null>(null);
+    const [elapsedTime, setElapsedTime] = useState<number>(0);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // LocalStorage keys for persistence
+    const getStorageKey = (key: string) => `quiz_${quizId}_${key}`;
+
+    // Load saved quiz state from localStorage on mount
+    useEffect(() => {
+        if (!quizId) return;
+
+        const savedIndex = localStorage.getItem(getStorageKey('currentIndex'));
+        const savedStartTime = localStorage.getItem(getStorageKey('startTime'));
+
+        if (savedIndex !== null) {
+            setCurrentIndex(parseInt(savedIndex, 10));
+        }
+
+        // Initialize start time if not exists
+        let startTimestamp = savedStartTime ? parseInt(savedStartTime, 10) : Date.now();
+        if (!savedStartTime) {
+            localStorage.setItem(getStorageKey('startTime'), startTimestamp.toString());
+        }
+
+        // Star timer
+        timerRef.current = setInterval(() => {
+            const now = Date.now();
+            const elapsed = Math.floor((now - startTimestamp) / 1000);
+            setElapsedTime(elapsed);
+        }, 1000);
+
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [quizId]);
+
+    // Save currentIndex to localStorage when it changes
+    useEffect(() => {
+        if (quizId && !result) {
+            localStorage.setItem(getStorageKey('currentIndex'), currentIndex.toString());
+        }
+    }, [currentIndex, quizId, result]);
+
+    // Clear localStorage when quiz is submitted
+    const clearQuizStorage = () => {
+        if (quizId) {
+            localStorage.removeItem(getStorageKey('currentIndex'));
+            localStorage.removeItem(getStorageKey('startTime'));
+        }
+    };
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     useEffect(() => {
         const fetchQuizData = async () => {
             if (!quizId || !user) return;
             try {
                 setLoading(true);
-                // Fetch Quiz Metadata
                 const { data: quizData, error: quizError } = await supabase
                     .from('quizzes')
                     .select('*, classes(class_name)')
@@ -42,21 +92,22 @@ export default function TakeQuiz() {
                 if (quizError) throw quizError;
                 setQuiz(quizData);
 
-                // Check for existing submission
+                // Check for existing ACTIVE submission (pending or completed, but not archived)
+                // We order by created_at desc to get the latest attempt
                 const { data: submission } = await supabase
                     .from('quiz_submissions')
                     .select('*')
                     .eq('quiz_id', quizId)
                     .eq('student_id', user.id)
-                    .eq('is_archived', false)
+                    .eq('is_archived', false) // Use active submissions only
+                    .order('created_at', { ascending: false })
+                    .limit(1)
                     .maybeSingle();
 
                 if (submission) {
                     setSubmissionId(submission.id);
                     if (submission.status === 'pending') {
-                        // Resume quiz
-                        setResult(null); // Ensure we are in taking mode
-                        // Load existing answers?
+                        setResult(null);
                         const { data: existingAnswers } = await supabase
                             .from('quiz_answers')
                             .select('question_id, selected_option')
@@ -71,32 +122,48 @@ export default function TakeQuiz() {
                             toast.info('Resuming your quiz attempt');
                         }
                     } else {
-                        // Already finished
+                        // Submission is already completed (passed/failed)
                         setResult(submission);
                         setLoading(false);
                         return;
                     }
                 } else {
-                    // Create PENDING submission immediately to track attempt
+                    // Try to create only if we didn't find one
                     const { data: newSubmission, error: createError } = await supabase
                         .from('quiz_submissions')
                         .insert({
                             quiz_id: quizId,
                             student_id: user.id,
                             total_obtained: 0,
-                            status: 'pending' // Mark as in progress
+                            status: 'pending'
                         })
                         .select()
                         .single();
 
                     if (createError) {
-                        console.error('Error creating pending submission', createError);
+                        // Handle unique constraint violation (race condition or filter mismatch)
+                        if (createError.code === '23505') {
+                            console.log('Found existing submission via uniqueness constraint, recovering...');
+                            const { data: recoveredSub } = await supabase
+                                .from('quiz_submissions')
+                                .select('*')
+                                .eq('quiz_id', quizId)
+                                .eq('student_id', user.id)
+                                .eq('status', 'pending')
+                                .maybeSingle();
+
+                            if (recoveredSub) {
+                                setSubmissionId(recoveredSub.id);
+                                // Should load answers here too technically, but usually new/empty
+                            }
+                        } else {
+                            console.error('Error creating pending submission', createError);
+                        }
                     } else if (newSubmission) {
                         setSubmissionId(newSubmission.id);
                     }
                 }
 
-                // Fetch Questions
                 const { data: questionsData, error: questionsError } = await supabase
                     .from('quiz_questions')
                     .select('*')
@@ -109,7 +176,7 @@ export default function TakeQuiz() {
             } catch (error) {
                 console.error('Error loading quiz:', error);
                 toast.error('Failed to load quiz');
-                navigate('/student/quizzes'); // Redirect if error
+                navigate('/student/quizzes');
             } finally {
                 setLoading(false);
             }
@@ -118,25 +185,20 @@ export default function TakeQuiz() {
         fetchQuizData();
     }, [quizId, user, navigate]);
 
-    // Load saved answers - REMOVED LOCAL STORAGE
-
-    // Fetch rank when result is available
     useEffect(() => {
         if (result && quizId) {
             const fetchRank = async () => {
                 try {
-                    // Get count of students who scored HIGHER than this result
                     const { count: higherScoresCount } = await supabase
                         .from('quiz_submissions')
                         .select('*', { count: 'exact', head: true })
                         .eq('quiz_id', quizId)
                         .gt('total_obtained', result.total_obtained);
 
-                    // Get total submissions
                     const { count: totalSubmissions } = await supabase
                         .from('quiz_submissions')
                         .select('*', { count: 'exact', head: true })
-                        .eq('quiz_id', quizId)
+                        .eq('quiz_id', quizId);
 
                     if (higherScoresCount !== null && totalSubmissions !== null) {
                         setRank({
@@ -152,13 +214,10 @@ export default function TakeQuiz() {
         }
     }, [result, quizId]);
 
-    // Save answers on change - TO DB
-
     const handleAnswerChange = async (questionId: string, optionId: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: optionId }));
 
         if (submissionId) {
-            // Live save to DB
             const { error } = await supabase.from('quiz_answers').upsert({
                 submission_id: submissionId,
                 question_id: questionId,
@@ -169,21 +228,99 @@ export default function TakeQuiz() {
         }
     };
 
+    const clearAnswer = () => {
+        const currentQuestion = questions[currentIndex];
+        if (currentQuestion) {
+            setAnswers(prev => {
+                const newAnswers = { ...prev };
+                delete newAnswers[currentQuestion.id];
+                return newAnswers;
+            });
+        }
+    };
 
     const handleSubmit = async () => {
         if (!user || !quiz) return;
 
-        // Basic validation: Check if all questions answered? Optional.
         const unansweredCount = questions.length - Object.keys(answers).length;
         if (unansweredCount > 0) {
-            if (!confirm(`You have ${unansweredCount} unanswered questions. submitting now will mark them as incorrect. Continue?`)) {
+            if (!confirm(`You have ${unansweredCount} unanswered questions. Submit anyway?`)) {
                 return;
             }
         }
 
         setSubmitting(true);
         try {
-            // Calculate Score
+            // Ensure submissionId exists
+            let activeSubmissionId = submissionId;
+
+            if (!activeSubmissionId) {
+                console.log("No active submission ID, checking for existing pending submission...");
+
+                // 1. Check for existing pending submission first
+                const { data: existingSub } = await supabase
+                    .from('quiz_submissions')
+                    .select('id')
+                    .eq('quiz_id', quizId)
+                    .eq('student_id', user.id)
+                    .eq('status', 'pending')
+                    .maybeSingle();
+
+                if (existingSub) {
+                    console.log("Found existing pending submission:", existingSub.id);
+                    activeSubmissionId = existingSub.id;
+                    setSubmissionId(existingSub.id);
+                } else {
+                    // 2. Only create if no pending submission exists
+                    console.log("No pending submission found, creating new one...");
+                    const { data: newSub, error: createError } = await supabase
+                        .from('quiz_submissions')
+                        .insert({
+                            quiz_id: quizId,
+                            student_id: user.id,
+                            total_obtained: 0,
+                            status: 'pending'
+                        })
+                        .select()
+                        .single();
+
+                    if (createError) {
+                        if (createError.code === '23505' || createError.message?.includes('duplicate key')) { // Unique violation code or message check
+                            console.log('Duplicate key error detected. Attempting recovery via RPC...', { quizId, userId: user.id });
+
+                            // Use RPC to bypass RLS and find the exact active submission
+                            const { data: rpcResult, error: rpcError } = await supabase
+                                .rpc('get_active_student_submission', {
+                                    p_quiz_id: quizId,
+                                    p_student_id: user.id
+                                });
+
+                            console.log('RPC Recovery Query Result:', { rpcResult, rpcError });
+
+                            const retrySub = rpcResult as any;
+
+                            if (retrySub) {
+                                if (retrySub.status !== 'pending') {
+                                    setResult(retrySub);
+                                    toast.info('Quiz already submitted');
+                                    return;
+                                }
+                                activeSubmissionId = retrySub.id;
+                                setSubmissionId(retrySub.id);
+                            } else {
+                                console.error('Recovery failed: Active submission not found via RPC', rpcResult);
+                                throw new Error(`Failed to create submission: Duplicate detected but active submission not found via RPC. IDs: Q=${quizId}, U=${user.id}`);
+                            }
+                        } else {
+                            throw new Error(`Failed to create submission: ${createError.message}`);
+                        }
+                    } else {
+                        activeSubmissionId = newSub.id;
+                        setSubmissionId(newSub.id);
+                    }
+                }
+            }
+
             let score = 0;
             const answersToInsert: any[] = [];
 
@@ -193,10 +330,10 @@ export default function TakeQuiz() {
                 if (isCorrect) score += q.marks;
 
                 answersToInsert.push({
-                    submission_id: null, // Will replace after submission creation
+                    submission_id: activeSubmissionId,
                     question_id: q.id,
                     selected_option: selected || 'skipped',
-                    correct_option_id: q.correct_answer, // Store correct answer for verification
+                    correct_option_id: q.correct_answer,
                     is_correct: isCorrect
                 });
             });
@@ -204,22 +341,14 @@ export default function TakeQuiz() {
             const percentage = (score / quiz.total_marks) * 100;
             const status = percentage >= quiz.pass_percentage ? 'passed' : 'failed';
 
-            // 2. Insert Answers Details -> NO, they are already inserted! 
-            // We just need to update final score and status.
-            // AND we need to mark answers as correct/incorrect in DB?
-            // Yes, our current upsert during quiz taking only stores selected_option.
-            // We need to update `is_correct` and `correct_option_id` now.
+            // Delete old answers and insert new ones
+            const { error: deleteError } = await supabase.from('quiz_answers').delete().eq('submission_id', activeSubmissionId);
+            if (deleteError) throw deleteError;
 
-            // Delete old answers? Or update them?
-            // Easiest is to delete all for this submission and re-insert FINAL verified answers
-            // OR update each. 
-            // Delete-Insert is robust.
+            const { error: insertError } = await supabase.from('quiz_answers').insert(answersToInsert);
+            if (insertError) throw insertError;
 
-            await supabase.from('quiz_answers').delete().eq('submission_id', submissionId);
-            const finalAnswers = answersToInsert.map(a => ({ ...a, submission_id: submissionId }));
-            await supabase.from('quiz_answers').insert(finalAnswers);
-
-            // Update Submission Status
+            // Update submission status
             const { data: submissionData, error: subError } = await supabase
                 .from('quiz_submissions')
                 .update({
@@ -227,20 +356,22 @@ export default function TakeQuiz() {
                     status: status,
                     submitted_at: new Date().toISOString()
                 })
-                .eq('id', submissionId)
+                .eq('id', activeSubmissionId)
                 .select()
                 .single();
 
             if (subError) throw subError;
 
+            // Clear localStorage on successful submission
+            clearQuizStorage();
+
             setResult(submissionData);
-            // Clear saved answers
-            localStorage.removeItem(`quiz_attempt_${quizId}_${user.id}`);
+            if (timerRef.current) clearInterval(timerRef.current);
             toast.success('Quiz submitted successfully!');
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting quiz:', error);
-            toast.error('Failed to submit quiz');
+            toast.error(error.message || 'Failed to submit quiz');
         } finally {
             setSubmitting(false);
         }
@@ -256,385 +387,375 @@ export default function TakeQuiz() {
         );
     }
 
-    // Handle case where quiz didn't load
     if (!quiz) {
         return (
             <DashboardLayout>
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <XCircle className="size-16 text-destructive" />
                     <h2 className="text-2xl font-bold">Quiz Not Found</h2>
-                    <p className="text-muted-foreground">This quiz could not be loaded or doesn't exist.</p>
-                    <Button onClick={() => navigate('/student/quizzes')}>
-                        Back to Quizzes
-                    </Button>
+                    <Button onClick={() => navigate('/student/quizzes')}>Back to Quizzes</Button>
                 </div>
             </DashboardLayout>
         );
     }
 
+    // ==================== RESULT VIEW ====================
     if (result) {
-        // Result View
+        const percentage = Math.round((result.total_obtained / quiz.total_marks) * 100);
+        const isPassed = result.status === 'passed';
+
         return (
             <DashboardLayout>
-                <div className="max-w-2xl mx-auto py-10">
-                    <Card className="text-center p-8">
-                        <div className="flex justify-center mb-6">
-                            {result.status === 'passed' ? (
-                                <CheckCircle className="size-20 text-green-500" />
-                            ) : (
-                                <XCircle className="size-20 text-red-500" />
-                            )}
-                        </div>
-                        <h1 className="text-3xl font-bold mb-2">
-                            {result.status === 'passed' ? 'Congratulations!' : 'Keep Practicing!'}
-                        </h1>
-                        <p className="text-muted-foreground mb-6">
-                            You have {result.status} the quiz followed by <strong>{quiz.title}</strong>
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-                            <div className="bg-muted p-6 rounded-xl">
-                                <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Your Score</p>
-                                <p className="text-4xl font-bold">
-                                    {result.total_obtained} <span className="text-xl text-muted-foreground">/ {quiz.total_marks}</span>
+                <div className="min-h-full bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-950 dark:to-blue-950/20 p-4 lg:p-8">
+                    <div className="max-w-4xl mx-auto space-y-8">
+                        {/* Result Header Card */}
+                        <Card className={`overflow-hidden border-0 shadow-2xl ${isPassed ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-red-500'}`}>
+                            <CardContent className="p-8 lg:p-12 text-white text-center">
+                                <div className={`inline-flex items-center justify-center size-24 rounded-full mb-6 ${isPassed ? 'bg-white/20' : 'bg-white/20'}`}>
+                                    {isPassed ? (
+                                        <Trophy className="size-12" />
+                                    ) : (
+                                        <Target className="size-12" />
+                                    )}
+                                </div>
+                                <h1 className="text-4xl lg:text-5xl font-black mb-2">
+                                    {isPassed ? 'Congratulations!' : 'Keep Practicing!'}
+                                </h1>
+                                <p className="text-xl opacity-90 mb-8">
+                                    You {result.status} <span className="font-bold">{quiz.title}</span>
                                 </p>
-                                <p className="text-sm mt-2">
-                                    Pass requirement: {quiz.pass_percentage}%
-                                </p>
-                            </div>
-                            <div className="bg-muted p-6 rounded-xl flex flex-col justify-center items-center">
-                                <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Class Rank</p>
-                                {rank ? (
-                                    <>
-                                        <p className="text-4xl font-bold">
-                                            #{rank.position} <span className="text-xl text-muted-foreground">/ {rank.total}</span>
-                                        </p>
-                                        <p className="text-sm mt-2 text-muted-foreground">
-                                            Based on scores
-                                        </p>
-                                    </>
-                                ) : (
-                                    <Loader2 className="animate-spin size-6" />
-                                )}
-                            </div>
+
+                                {/* Score Display */}
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
+                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Your Score</p>
+                                        <p className="text-3xl font-black">{result.total_obtained}<span className="text-lg opacity-70">/{quiz.total_marks}</span></p>
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
+                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Percentage</p>
+                                        <p className="text-3xl font-black">{percentage}%</p>
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
+                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Pass Mark</p>
+                                        <p className="text-3xl font-black">{quiz.pass_percentage}%</p>
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
+                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Class Rank</p>
+                                        {rank ? (
+                                            <p className="text-3xl font-black">#{rank.position}<span className="text-lg opacity-70">/{rank.total}</span></p>
+                                        ) : (
+                                            <Loader2 className="animate-spin size-6 mx-auto mt-1" />
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Navigation */}
+                        <div className="flex justify-center">
+                            <Button
+                                onClick={() => navigate('/student/quizzes')}
+                                size="lg"
+                                className="h-14 px-10 text-lg font-bold rounded-xl shadow-lg"
+                            >
+                                <ArrowLeft className="size-5 mr-2" />
+                                Back to Quizzes
+                            </Button>
                         </div>
 
-                        <Button onClick={() => navigate('/student/quizzes')}>
-                            Back to Quizzes
-                        </Button>
-                    </Card>
+                        {/* Answer Review */}
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-bold px-2">Review Your Answers</h2>
+                            {questions.map((q, index) => {
+                                const userAnswerId = answers[q.id];
+                                const isCorrect = userAnswerId === q.correct_answer;
 
-                    {/* Answer Review Section */}
-                    <div className="space-y-6">
-                        <h2 className="text-xl font-bold">Review Answers</h2>
-                        {questions.map((q, index) => {
-                            const userAnswerId = answers[q.id]; // Access from state, or we could use the result if we fetched it back
-                            // Ideally we should use the `answers` state which we still have.
-                            const isCorrect = userAnswerId === q.correct_answer;
-
-                            return (
-                                <Card key={q.id} className={`border-l-4 ${isCorrect ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                                    <CardHeader className="pb-3">
-                                        <CardTitle className="text-lg flex justify-between">
-                                            <span>{index + 1}. {q.question_text}</span>
-                                            <div className="flex items-center gap-2">
-                                                {isCorrect ? (
-                                                    <span className="text-sm font-medium text-green-600 flex items-center gap-1">
-                                                        <CheckCircle className="size-4" /> Correct
+                                return (
+                                    <Card key={q.id} className={`border-l-4 ${isCorrect ? 'border-l-emerald-500' : 'border-l-red-500'} shadow-lg`}>
+                                        <CardContent className="p-6">
+                                            <div className="flex items-start justify-between gap-4 mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`flex items-center justify-center size-10 rounded-xl font-bold text-white ${isCorrect ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                                                        {index + 1}
                                                     </span>
-                                                ) : (
-                                                    <span className="text-sm font-medium text-red-600 flex items-center gap-1">
-                                                        <XCircle className="size-4" /> Incorrect
+                                                    <p className="font-semibold text-lg">{q.question_text}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {isCorrect ? (
+                                                        <span className="flex items-center gap-1 text-emerald-600 font-bold text-sm">
+                                                            <CheckCircle className="size-4" /> Correct
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1 text-red-600 font-bold text-sm">
+                                                            <XCircle className="size-4" /> Incorrect
+                                                        </span>
+                                                    )}
+                                                    <span className="text-sm bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg font-medium">
+                                                        {q.marks} pts
                                                     </span>
-                                                )}
-                                                <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded">
-                                                    {q.marks} Marks
-                                                </span>
+                                                </div>
                                             </div>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-3">
-                                            {q.options.map((option: any) => {
-                                                const isSelected = userAnswerId === option.id;
-                                                const isTheCorrectAnswer = q.correct_answer === option.id;
+                                            <div className="grid gap-2">
+                                                {q.options.map((option: any) => {
+                                                    const isSelected = userAnswerId === option.id;
+                                                    const isTheCorrectAnswer = q.correct_answer === option.id;
 
-                                                let optionStyle = "border p-3 rounded-lg flex items-center justify-between ";
-                                                if (isTheCorrectAnswer) {
-                                                    optionStyle += "bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400";
-                                                } else if (isSelected && !isCorrect) {
-                                                    optionStyle += "bg-red-500/10 border-red-500/50 text-red-700 dark:text-red-400";
-                                                } else {
-                                                    optionStyle += "opacity-70";
-                                                }
+                                                    let className = "flex items-center gap-3 p-4 rounded-xl border-2 ";
+                                                    if (isTheCorrectAnswer) {
+                                                        className += "bg-emerald-50 border-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/30";
+                                                    } else if (isSelected) {
+                                                        className += "bg-red-50 border-red-300 dark:bg-red-500/10 dark:border-red-500/30";
+                                                    } else {
+                                                        className += "bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 opacity-60";
+                                                    }
 
-                                                return (
-                                                    <div key={option.id} className={optionStyle}>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`size-4 rounded-full border flex items-center justify-center ${isSelected || isTheCorrectAnswer ? 'border-current' : 'border-muted-foreground'
-                                                                }`}>
-                                                                {isSelected && <div className="size-2 rounded-full bg-current" />}
-                                                            </div>
-                                                            <span>{option.text}</span>
+                                                    return (
+                                                        <div key={option.id} className={className}>
+                                                            <span className="font-medium">{option.text}</span>
+                                                            {isTheCorrectAnswer && (
+                                                                <span className="ml-auto text-xs font-bold text-emerald-600 uppercase">Correct Answer</span>
+                                                            )}
+                                                            {isSelected && !isTheCorrectAnswer && (
+                                                                <span className="ml-auto text-xs font-bold text-red-600 uppercase">Your Answer</span>
+                                                            )}
                                                         </div>
-                                                        {isTheCorrectAnswer && <span className="text-xs font-bold uppercase tracking-wider">Correct Answer</span>}
-                                                        {isSelected && !isTheCorrectAnswer && <span className="text-xs font-bold uppercase tracking-wider">Your Answer</span>}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
+                                                    );
+                                                })}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </DashboardLayout>
         );
     }
 
-    // Handle case where there are no questions
     if (questions.length === 0) {
         return (
             <DashboardLayout>
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <FileText className="size-16 text-muted-foreground" />
                     <h2 className="text-2xl font-bold">No Questions Available</h2>
-                    <p className="text-muted-foreground">This quiz doesn't have any questions yet.</p>
-                    <Button onClick={() => navigate('/student/quizzes')}>
-                        Back to Quizzes
-                    </Button>
+                    <Button onClick={() => navigate('/student/quizzes')}>Back to Quizzes</Button>
                 </div>
             </DashboardLayout>
         );
     }
 
-    const progress = ((currentIndex + 1) / questions.length) * 100;
+    const progress = (Object.keys(answers).length / questions.length) * 100;
     const currentQuestion = questions[currentIndex];
 
-    // Safety check for currentQuestion
     if (!currentQuestion) {
         setCurrentIndex(0);
         return null;
     }
 
+    // ==================== QUIZ TAKING VIEW ====================
     return (
         <DashboardLayout fullHeight>
-            <div className="w-full h-full flex flex-col animate-in fade-in duration-700 relative overflow-hidden">
-                {/* Gradient Background with Orbs */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20 dark:from-slate-950 dark:via-blue-950/20 dark:to-violet-950/10" />
-                <div className="absolute top-20 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-20 -right-32 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-primary/5 to-transparent rounded-full blur-2xl" />
-
-                {/* Glassmorphic Header */}
-                <header className="shrink-0 px-6 lg:px-10 py-5 backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border-b border-white/20 dark:border-slate-700/50 flex items-center justify-between relative z-10 shadow-lg shadow-black/5">
-                    <div className="flex items-center gap-5">
-                        <div className="flex items-center justify-center size-12 rounded-2xl bg-gradient-to-br from-primary to-violet-600 shadow-lg shadow-primary/25">
-                            <FileText className="size-6 text-white" />
+            <div className="h-full flex flex-col overflow-hidden bg-[#f8fafc] dark:bg-slate-950">
+                {/* Top Header Bar */}
+                <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center size-10 rounded-xl bg-blue-500 text-white">
                         </div>
-                        <div className="hidden md:flex flex-col">
-                            <h1 className="text-xl font-black tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-                                {quiz.title}
-                            </h1>
-                            <p className="text-sm text-muted-foreground font-medium">{quiz.classes?.class_name}</p>
-                        </div>
+                        <h1 className="font-bold text-lg">{quiz.title}</h1>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        {/* Question Navigator Pills */}
-                        <div className="hidden xl:flex items-center gap-1.5 p-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                            {questions.map((q, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => setCurrentIndex(i)}
-                                    className={`relative size-8 rounded-full font-bold text-xs transition-all duration-300 ${i === currentIndex
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110'
-                                        : answers[q.id]
-                                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30'
-                                            : 'bg-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                        }`}
-                                >
-                                    {i + 1}
-                                    {answers[q.id] && i !== currentIndex && (
-                                        <div className="absolute -top-0.5 -right-0.5 size-2.5 bg-emerald-500 rounded-full" />
-                                    )}
-                                </button>
-                            ))}
+                    {/* Progress */}
+                    <div className="hidden md:flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground font-medium">PROGRESS</span>
+                        <div className="w-40 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                                style={{ width: `${progress}%` }}
+                            />
                         </div>
+                        <span className="text-sm font-bold text-blue-600">{Math.round(progress)}%</span>
+                    </div>
 
-                        {/* Progress Ring */}
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
-                                <svg className="size-14 -rotate-90">
-                                    <circle cx="28" cy="28" r="24" stroke="currentColor" strokeWidth="4" fill="none" className="text-slate-200 dark:text-slate-700" />
-                                    <circle
-                                        cx="28" cy="28" r="24"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        fill="none"
-                                        strokeLinecap="round"
-                                        className="text-primary transition-all duration-500"
-                                        strokeDasharray={`${progress * 1.51} 151`}
-                                    />
-                                </svg>
-                                <span className="absolute inset-0 flex items-center justify-center text-xs font-black text-primary">
-                                    {Math.round(progress)}%
-                                </span>
-                            </div>
-
-                            <div className="h-10 w-px bg-border/50 hidden lg:block" />
-
-                            <Button
-                                variant="default"
-                                size="lg"
-                                className="h-12 px-6 font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 gap-2 bg-gradient-to-r from-primary to-violet-600 hover:from-primary hover:to-violet-500"
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                            >
-                                {submitting ? (
-                                    <Loader2 className="animate-spin size-4" />
-                                ) : (
-                                    <>Submit <CheckCircle className="size-4" /></>
-                                )}
-                            </Button>
-                        </div>
+                    {/* Timer */}
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl">
+                        <Clock className="size-5 text-blue-500" />
+                        <span className="font-mono font-bold text-lg tracking-wider">{formatTime(elapsedTime)}</span>
                     </div>
                 </header>
 
-                {/* Main Assessment Area */}
-                <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-10">
-                    <div className="max-w-4xl mx-auto h-full flex flex-col">
-                        <div className="flex-1 flex flex-col justify-center gap-6 py-6">
-                            {/* Question Card */}
-                            <div className="relative">
-                                {/* Glow Effect */}
-                                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-violet-500/20 to-primary/20 rounded-[2rem] blur-xl opacity-70" />
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Left Sidebar - Question Navigator */}
+                    <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-5">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Question Navigator</h3>
 
-                                <Card className="relative border-0 shadow-2xl rounded-[1.5rem] overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl">
-                                    {/* Top Progress Bar */}
-                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-primary via-violet-500 to-primary transition-all duration-500 ease-out rounded-full"
-                                            style={{ width: `${progress}%` }}
-                                        />
-                                    </div>
+                        {/* Question Grid */}
+                        <div className="grid grid-cols-5 gap-2 mb-6">
+                            {questions.map((q, i) => {
+                                const isAnswered = !!answers[q.id];
+                                const isCurrent = i === currentIndex;
 
-                                    <CardContent className="p-8 lg:p-12">
-                                        <div className="space-y-8">
-                                            {/* Question Header */}
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center justify-center size-14 lg:size-16 rounded-2xl bg-gradient-to-br from-primary to-violet-600 text-white font-black text-2xl lg:text-3xl shadow-xl shadow-primary/25">
-                                                    {currentIndex + 1}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                                                        Question {currentIndex + 1} of {questions.length}
-                                                    </p>
-                                                </div>
-                                                <Badge className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 rounded-xl">
-                                                    ⭐ {currentQuestion.marks} {currentQuestion.marks === 1 ? 'Point' : 'Points'}
-                                                </Badge>
-                                            </div>
+                                let className = "flex items-center justify-center size-10 rounded-lg font-bold text-sm transition-all cursor-pointer ";
+                                if (isCurrent) {
+                                    className += "bg-blue-500 text-white shadow-lg";
+                                } else if (isAnswered) {
+                                    className += "bg-emerald-500 text-white";
+                                } else {
+                                    className += "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700";
+                                }
 
-                                            {/* Question Text */}
-                                            <h2 className="text-2xl lg:text-3xl font-bold leading-relaxed text-slate-800 dark:text-white">
-                                                {currentQuestion.question_text}
-                                            </h2>
+                                return (
+                                    <button
+                                        key={i}
+                                        onClick={() => setCurrentIndex(i)}
+                                        className={className}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                );
+                            })}
+                        </div>
 
-                                            {/* Options Grid */}
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {currentQuestion.options.map((option: any, idx: number) => {
-                                                    const isSelected = answers[currentQuestion.id] === option.id;
-                                                    const optionLetter = String.fromCharCode(65 + idx);
-                                                    return (
-                                                        <button
-                                                            key={option.id}
-                                                            onClick={() => handleAnswerChange(currentQuestion.id, option.id)}
-                                                            className={`group relative flex items-center p-5 lg:p-6 text-left rounded-2xl border-2 transition-all duration-300 ${isSelected
-                                                                ? 'bg-gradient-to-r from-primary/10 to-violet-500/10 border-primary shadow-xl shadow-primary/10 scale-[1.02]'
-                                                                : 'bg-white dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80 hover:border-primary/50 hover:bg-slate-50 dark:hover:bg-slate-800 hover:scale-[1.01]'
-                                                                }`}
-                                                        >
-                                                            <div className={`flex items-center justify-center size-12 rounded-xl font-bold text-lg mr-5 transition-all duration-300 ${isSelected
-                                                                ? 'bg-gradient-to-br from-primary to-violet-600 text-white shadow-lg shadow-primary/25 scale-110'
-                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 group-hover:bg-primary/10 group-hover:text-primary'
-                                                                }`}>
-                                                                {optionLetter}
-                                                            </div>
-                                                            <span className={`text-lg lg:text-xl font-semibold flex-1 ${isSelected ? 'text-primary' : 'text-slate-700 dark:text-slate-200'
-                                                                }`}>
-                                                                {option.text}
-                                                            </span>
-                                                            {isSelected && (
-                                                                <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center animate-in zoom-in duration-300 shadow-lg shadow-primary/25">
-                                                                    <CheckCircle className="size-5 text-white" />
-                                                                </div>
-                                                            )}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                        <div className="flex-1" />
+
+                        {/* Legend */}
+                        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Legend</p>
+                            <div className="flex items-center gap-2 text-sm">
+                                <div className="size-4 rounded bg-blue-500" />
+                                <span>Current Question</span>
                             </div>
-
-                            {/* Navigation Controls */}
-                            <div className="flex items-center justify-between gap-4 px-2">
-                                <Button
-                                    variant="outline"
-                                    size="lg"
-                                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                                    disabled={currentIndex === 0}
-                                    className="h-14 px-8 rounded-2xl border-2 font-bold text-base gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-30"
-                                >
-                                    <ChevronLeft className="size-5" /> Previous
-                                </Button>
-
-                                {/* Question Dots (Mobile) */}
-                                <div className="flex xl:hidden items-center gap-2">
-                                    {questions.slice(Math.max(0, currentIndex - 2), Math.min(questions.length, currentIndex + 3)).map((_, i) => {
-                                        const actualIndex = Math.max(0, currentIndex - 2) + i;
-                                        return (
-                                            <button
-                                                key={actualIndex}
-                                                onClick={() => setCurrentIndex(actualIndex)}
-                                                className={`rounded-full transition-all duration-300 ${actualIndex === currentIndex
-                                                    ? 'bg-primary w-8 h-3 shadow-lg shadow-primary/30'
-                                                    : answers[questions[actualIndex]?.id]
-                                                        ? 'bg-emerald-500 w-3 h-3'
-                                                        : 'bg-slate-300 dark:bg-slate-600 w-3 h-3 hover:bg-slate-400'
-                                                    }`}
-                                            />
-                                        );
-                                    })}
-                                </div>
-
-                                {currentIndex === questions.length - 1 ? (
-                                    <Button
-                                        variant="default"
-                                        size="lg"
-                                        onClick={handleSubmit}
-                                        disabled={submitting}
-                                        className="h-14 px-8 rounded-2xl font-bold text-base shadow-xl shadow-primary/25 hover:scale-105 active:scale-95 transition-all gap-2 bg-gradient-to-r from-primary to-violet-600 hover:from-primary hover:to-violet-500"
-                                    >
-                                        {submitting ? <Loader2 className="animate-spin size-5" /> : <>Finish & Submit <ArrowRight className="size-5" /></>}
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        variant="default"
-                                        size="lg"
-                                        onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                                        className="h-14 px-8 rounded-2xl font-bold text-base shadow-xl shadow-primary/25 hover:scale-105 active:scale-95 transition-all gap-2 bg-gradient-to-r from-primary to-violet-600 hover:from-primary hover:to-violet-500"
-                                    >
-                                        Next <ChevronRight className="size-5" />
-                                    </Button>
-                                )}
+                            <div className="flex items-center gap-2 text-sm">
+                                <div className="size-4 rounded bg-emerald-500" />
+                                <span>Answered</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                                <div className="size-4 rounded bg-slate-200 dark:bg-slate-700" />
+                                <span>Unanswered</span>
                             </div>
                         </div>
+
+                        {/* Submit Button */}
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                            className="mt-6 w-full h-12 bg-blue-500 hover:bg-blue-600 text-white font-bold text-base"
+                        >
+                            {submitting ? <Loader2 className="animate-spin" /> : <>Submit Exam <ChevronRight className="size-4 ml-1" /></>}
+                        </Button>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950">
+                        <div className="max-w-3xl mx-auto px-6 py-8">
+                            {/* Question Header Row */}
+                            <div className="flex items-center gap-3 mb-6">
+                                <span className="text-3xl font-bold text-[#3b82f6]">Q{currentIndex + 1}</span>
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Multiple Choice</span>
+                            </div>
+
+                            {/* Question Box */}
+                            <div className="mb-8 p-6 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                <p className="text-lg font-medium leading-relaxed text-slate-700 dark:text-slate-200">
+                                    {currentQuestion.question_text}
+                                </p>
+                            </div>
+
+                            {/* Answer Options */}
+                            <div className="space-y-3 mb-10">
+                                {currentQuestion.options.map((option: any, idx: number) => {
+                                    const optionLetter = String.fromCharCode(65 + idx);
+                                    const isSelected = answers[currentQuestion.id] === option.id;
+
+                                    return (
+                                        <button
+                                            key={option.id}
+                                            onClick={() => handleAnswerChange(currentQuestion.id, option.id)}
+                                            className={`w-full flex items-center gap-4 p-4 rounded-lg border text-left transition-all ${isSelected
+                                                ? 'border-[#3b82f6] bg-blue-50/50 dark:bg-blue-500/10'
+                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            {/* Letter Badge */}
+                                            <span className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm shrink-0 ${isSelected
+                                                ? 'bg-[#3b82f6] text-white'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                                }`}>
+                                                {optionLetter}
+                                            </span>
+                                            {/* Option Text */}
+                                            <span className={`flex-1 text-[15px] ${isSelected ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                {option.text}
+                                            </span>
+                                            {/* Checkmark */}
+                                            {isSelected && (
+                                                <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-[#3b82f6]">
+                                                    <CheckCircle className="size-4 text-white" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Bottom Navigation */}
+                            <div className="flex items-center justify-between gap-4">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                                    disabled={currentIndex === 0}
+                                    className="h-11 px-5 font-medium gap-2 border-slate-300 dark:border-slate-600"
+                                >
+                                    <ChevronLeft className="size-4" /> Previous
+                                </Button>
+
+                                <button
+                                    onClick={clearAnswer}
+                                    disabled={!answers[currentQuestion.id]}
+                                    className="h-11 px-5 font-medium text-slate-500 hover:text-slate-700 disabled:opacity-40"
+                                >
+                                    Clear Answer
+                                </button>
+
+                                <Button
+                                    onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                    disabled={currentIndex === questions.length - 1}
+                                    className="h-11 px-6 font-medium gap-2 bg-[#3b82f6] hover:bg-blue-600 text-white"
+                                >
+                                    Next Question <ChevronRight className="size-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+
+                {/* Mobile Bottom Nav */}
+                <div className="lg:hidden shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                            disabled={currentIndex === 0}
+                            className="flex-1 h-12"
+                        >
+                            <ChevronLeft className="size-4" /> Prev
+                        </Button>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                            className="flex-1 h-12 bg-blue-500"
+                        >
+                            {submitting ? <Loader2 className="animate-spin" /> : 'Submit'}
+                        </Button>
+                        <Button
+                            onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                            disabled={currentIndex === questions.length - 1}
+                            className="flex-1 h-12 bg-blue-500"
+                        >
+                            Next <ChevronRight className="size-4" />
+                        </Button>
                     </div>
-                </main>
+                </div>
             </div>
         </DashboardLayout>
     );

@@ -35,38 +35,46 @@ export function useEligibleStudents() {
 
                 const classIds = classes.map(c => c.id);
 
-                // 2. Get accepted students directly using denormalized columns in class_students
-                // This avoids potential RLS issues with profiles table
+                // 2. Get ALL students in classes, including those who haven't linked accounts yet
+                // This ensures imported students appear even before they register
                 const { data, error } = await supabase
                     .from('class_students')
                     .select(`
+                        id,
                         student_id,
                         class_id,
                         student_name,
                         email,
-                        register_number
+                        register_number,
+                        student_image_url
                     `)
-                    .in('class_id', classIds)
-                    .not('student_id', 'is', null);
+                    .in('class_id', classIds);
 
                 if (error) throw error;
 
                 // 3. Transform and Deduplicate
+                // Use student_id if available, otherwise use class_students.id as fallback key
                 const studentMap = new Map<string, EligibleStudent>();
                 const studentIds: string[] = [];
 
                 data?.forEach((item: any) => {
-                    const studentId = item.student_id;
-                    if (studentId && !studentMap.has(studentId)) {
+                    // Use student_id for linked accounts, or class_students.id for imported students
+                    const uniqueKey = item.student_id || `unlinked_${item.id}`;
+                    const studentId = item.student_id || item.id; // For display purposes
+
+                    if (!studentMap.has(uniqueKey)) {
                         const cls = classes.find(c => c.id === item.class_id);
-                        studentMap.set(studentId, {
+                        studentMap.set(uniqueKey, {
                             id: studentId,
-                            full_name: item.student_name || item.email?.split('@')[0] || 'Unknown Student', // Fallback to email prefix
+                            full_name: item.student_name || item.email?.split('@')[0] || 'Unknown Student',
                             email: item.email || '',
-                            // Avatar will be fetched separately
+                            avatar_url: item.student_image_url || undefined,
                             class_name: cls?.class_name
                         });
-                        studentIds.push(studentId);
+                        // Only add to studentIds if they have a linked account (for profile lookup)
+                        if (item.student_id) {
+                            studentIds.push(item.student_id);
+                        }
                     }
                 });
 
