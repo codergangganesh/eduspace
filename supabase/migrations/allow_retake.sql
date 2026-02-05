@@ -13,4 +13,14 @@ on public.quiz_submissions (quiz_id, student_id)
 where is_archived = false;
 
 -- Setup RLS for Lecturers to update submissions (to archive them)
-
+create policy "Lecturers can update submissions for their quizzes"
+  on public.quiz_submissions
+  for update
+  using (
+    exists (
+      select 1 from public.quizzes
+      join public.classes on classes.id = quizzes.class_id
+      where quizzes.id = quiz_submissions.quiz_id
+      and classes.lecturer_id = auth.uid()
+    )
+  );
