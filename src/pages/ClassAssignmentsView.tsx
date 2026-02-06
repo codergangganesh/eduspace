@@ -234,6 +234,8 @@ export default function ClassAssignmentsView() {
                                 onDelete={handleDeleteClick}
                                 role="lecturer"
                                 index={index}
+                                classId={classId!}
+                                onView={(id) => navigate(`/lecturer/assignments/${classId}/${id}/submissions`)}
                             />
                         ))}
                     </div >

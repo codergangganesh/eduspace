@@ -29,6 +29,7 @@ const Assignments = lazy(() => import("./pages/Assignments"));
 const AssignmentSubmit = lazy(() => import("./pages/AssignmentSubmit"));
 const LecturerClassesAssignments = lazy(() => import("./pages/LecturerClassesAssignments"));
 const ClassAssignmentsView = lazy(() => import("./pages/ClassAssignmentsView"));
+const AssignmentSubmissionsPage = lazy(() => import("./pages/AssignmentSubmissionsPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Schedule = lazy(() => import("./pages/Schedule"));
@@ -201,6 +202,14 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                         <ClassAssignmentsView />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/assignments/:classId/:assignmentId/submissions"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <AssignmentSubmissionsPage />
                       </ProtectedRoute>
                     }
                   />

@@ -18,7 +18,8 @@ import {
     ChevronRight,
     Edit,
     Trash2,
-    MoreVertical
+    MoreVertical,
+    Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -56,6 +57,7 @@ interface AssignmentCardProps {
     className?: string;
     onSubmit?: (assignment: Assignment) => void;
     index?: number;
+    classId?: string;
 }
 
 export function AssignmentCard({
@@ -66,7 +68,8 @@ export function AssignmentCard({
     onSubmit,
     role = 'lecturer',
     className,
-    index
+    index,
+    classId
 }: AssignmentCardProps) {
     const colors = index !== undefined ? getCardColorByIndex(index) : getCardColor(assignment.id);
 
@@ -292,7 +295,7 @@ export function AssignmentCard({
                             </Button>
                         )}
 
-                        {onView && role !== 'lecturer' && (
+                        {onView && (
                             <Button
                                 size="sm"
                                 className={cn(
@@ -307,13 +310,23 @@ export function AssignmentCard({
                                     onView(assignment.id);
                                 }}
                             >
-                                {role === 'student' ? 'View' : 'View Details'}
+                                {role === 'student'
+                                    ? 'View'
+                                    : (
+                                        <span className="flex items-center gap-1.5">
+                                            <Users className="size-3.5" />
+                                            View Submissions
+                                        </span>
+                                    )
+                                }
                                 <ChevronRight className="size-3.5" />
                             </Button>
                         )}
                     </div>
                 </div>
+
+
             </CardContent>
-        </Card>
+        </Card >
     );
 }
