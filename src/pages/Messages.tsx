@@ -244,7 +244,7 @@ export default function Messages() {
   const { user, role, profile } = useAuth();
   const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage, hasMore, loadMoreMessages } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
-  const { students: eligibleStudents, loading: studentsLoading } = useEligibleStudents();
+  const { students: eligibleStudents, classGroups, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
   const { classes, loading: classesLoading } = useClasses();
 
@@ -1072,34 +1072,43 @@ export default function Messages() {
                   <div className="flex justify-center py-8">
                     <Loader2 className="size-8 animate-spin text-emerald-500" />
                   </div>
-                ) : eligibleStudents.length === 0 ? (
+                ) : classGroups?.length === 0 ? (
                   <p className="text-center text-slate-500 py-8">No eligible students found.</p>
                 ) : (
                   <ScrollArea className="h-[300px]">
-                    <div className="space-y-1">
-                      {eligibleStudents.map(student => (
-                        <button
-                          key={student.id}
-                          onClick={() => handleStartNewChat(student.id)}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
-                        >
-                          <Avatar className="size-10">
-                            <AvatarImage src={student.avatar_url || ''} />
-                            <AvatarFallback className="bg-emerald-100 text-emerald-600">
-                              {(student.full_name || 'S').charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{student.full_name}</p>
-                            <p className="text-xs text-slate-500 truncate">{student.email}</p>
+                    <div className="space-y-4">
+                      {classGroups?.map((group) => (
+                        group.students.length > 0 && (
+                          <div key={group.class_id}>
+                            <h4 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-white dark:bg-slate-900 z-10 py-1">
+                              {group.class_name}
+                            </h4>
+                            <div className="space-y-1">
+                              {group.students.map(student => (
+                                <button
+                                  key={student.id}
+                                  onClick={() => handleStartNewChat(student.id)}
+                                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                                >
+                                  <Avatar className="size-10">
+                                    <AvatarImage src={student.avatar_url || ''} />
+                                    <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                                      {(student.full_name || 'S').charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm">{student.full_name}</p>
+                                    <p className="text-xs text-slate-500 truncate">{student.email}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          {student.class_name && (
-                            <Badge variant="secondary" className="text-xs shrink-0">{student.class_name}</Badge>
-                          )}
-                        </button>
+                        )
                       ))}
                     </div>
                   </ScrollArea>
+
                 )
               ) : (
                 classesLoading ? (
@@ -1109,36 +1118,29 @@ export default function Messages() {
                 ) : classes.length === 0 ? (
                   <p className="text-center text-slate-500 py-8">No enrolled classes found.</p>
                 ) : (
-                  <ScrollArea className="h-[400px] pr-4">
-                    <div className="space-y-3">
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-4">
                       {classes.map((cls) => (
-                        <div key={cls.id} className="relative group">
-                          <div className="absolute inset-0 bg-emerald-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <div className="relative flex items-center gap-4 p-4 border rounded-xl bg-card hover:border-emerald-500/50 transition-colors">
-                            <Avatar className="size-12 border-2 border-background shadow-sm">
-                              <AvatarImage src={cls.lecturer_profile_image || ''} />
-                              <AvatarFallback>{(cls.lecturer_name || 'L').charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start mb-1">
-                                <h4 className="font-semibold text-sm truncate pr-2" title={cls.class_name || ''}>{cls.class_name || 'Unnamed Class'}</h4>
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">
-                                  {cls.course_code}
-                                </span>
+                        <div key={cls.id}>
+                          <h4 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-white dark:bg-slate-900 z-10 py-1">
+                            {cls.class_name || cls.course_code}
+                          </h4>
+                          <div className="space-y-1">
+                            <button
+                              onClick={() => handleStartNewChat(cls.lecturer_id)}
+                              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                            >
+                              <Avatar className="size-10">
+                                <AvatarImage src={cls.lecturer_profile_image || ''} />
+                                <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                                  {(cls.lecturer_name || 'L').charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm">{cls.lecturer_name || 'Unknown Lecturer'}</p>
+                                <p className="text-xs text-slate-500 truncate">Lecturer • {cls.course_code}</p>
                               </div>
-                              <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
-                                <span className="font-medium text-foreground">{cls.lecturer_name}</span>
-                                <span className="text-xs">• Lecturer</span>
-                              </p>
-                              {cls.subjects && cls.subjects.length > 0 && (
-                                <p className="text-xs text-muted-foreground mt-1 truncate">
-                                  {cls.subjects.join(', ')}
-                                </p>
-                              )}
-                            </div>
-                            <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white shrink-0" onClick={() => handleStartNewChat(cls.lecturer_id)}>
-                              <MessageSquare className="size-4" />
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       ))}

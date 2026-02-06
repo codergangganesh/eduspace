@@ -65,29 +65,46 @@ export function useClasses() {
                 if (classesError) throw classesError;
 
                 // Enrich with subjects and latest lecturer profile info
-                const enrichedClasses = await Promise.all(
-                    (classesData || []).map(async (classItem) => {
-                        // Fetch subjects
-                        const { data: subjectsData } = await supabase
-                            .from('subjects')
-                            .select('name')
-                            .eq('class_id', classItem.id);
+                const classIds = classesData?.map(c => c.id) || [];
+                const lecturerIds = Array.from(new Set(classesData?.map(c => c.lecturer_id) || []));
 
-                        // Fetch latest lecturer profile image (in case it changed)
-                        const { data: lecturerProfile } = await supabase
-                            .from('profiles')
-                            .select('avatar_url, full_name')
-                            .eq('user_id', classItem.lecturer_id)
-                            .single();
+                // fetch subjects in bulk
+                const { data: allSubjects } = await supabase
+                    .from('subjects')
+                    .select('name, class_id')
+                    .in('class_id', classIds);
 
-                        return {
-                            ...classItem,
-                            lecturer_profile_image: lecturerProfile?.avatar_url || classItem.lecturer_profile_image,
-                            lecturer_name: lecturerProfile?.full_name || classItem.lecturer_name,
-                            subjects: subjectsData?.map(s => s.name) || []
-                        };
-                    })
-                );
+                // fetch lecturer profiles in bulk
+                const { data: allProfiles } = await supabase
+                    .from('profiles')
+                    .select('user_id, full_name, avatar_url')
+                    .in('user_id', lecturerIds);
+
+                // Create maps for easy lookup
+                const subjectsMap = new Map<string, string[]>();
+                allSubjects?.forEach((s: any) => {
+                    const current = subjectsMap.get(s.class_id) || [];
+                    current.push(s.name);
+                    subjectsMap.set(s.class_id, current);
+                });
+
+                const profilesMap = new Map<string, { full_name: string, avatar_url: string }>();
+                allProfiles?.forEach((p: any) => {
+                    profilesMap.set(p.user_id, {
+                        full_name: p.full_name,
+                        avatar_url: p.avatar_url
+                    });
+                });
+
+                const enrichedClasses = (classesData || []).map((classItem) => {
+                    const lecturer = profilesMap.get(classItem.lecturer_id);
+                    return {
+                        ...classItem,
+                        lecturer_profile_image: lecturer?.avatar_url || classItem.lecturer_profile_image,
+                        lecturer_name: lecturer?.full_name || classItem.lecturer_name || 'Unknown Lecturer',
+                        subjects: subjectsMap.get(classItem.id) || []
+                    };
+                });
 
                 setClasses(enrichedClasses);
 
