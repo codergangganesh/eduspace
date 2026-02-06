@@ -38,8 +38,17 @@ const Settings = lazy(() => import("./pages/Settings"));
 const AllStudents = lazy(() => import("./pages/AllStudents"));
 const CreateClass = lazy(() => import("./pages/CreateClass"));
 const LecturerTimeTable = lazy(() => import("./pages/LecturerTimeTable"));
+const LecturerClassesQuizzes = lazy(() => import("./pages/LecturerClassesQuizzes"));
+
+const ClassQuizzesView = lazy(() => import("./pages/ClassQuizzesView"));
+const QuizResultsView = lazy(() => import("./pages/QuizResultsView"));
+const CreateQuiz = lazy(() => import("./pages/CreateQuiz"));
+const EditQuiz = lazy(() => import("./pages/EditQuiz"));
+const StudentQuizzes = lazy(() => import("./pages/StudentQuizzes"));
+const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
 const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDetail"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
+const QuizAttemptDetails = lazy(() => import("./pages/QuizAttemptDetails"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -110,6 +119,39 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/student/quizzes"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <StudentQuizzes />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/quizzes/:quizId"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <TakeQuiz />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/quizzes/:classId/:quizId/results"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <QuizResultsView />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/student/quizzes/:quizId/details"
+                    element={
+                      <ProtectedRoute allowedRoles={["student", "admin"]}>
+                        <QuizAttemptDetails />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Protected Lecturer Routes */}
                   <Route
@@ -168,6 +210,48 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                         <SubmissionDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Lecturer Quiz Routes */}
+                  <Route
+                    path="/lecturer/quizzes"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <LecturerClassesQuizzes />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/quizzes/:classId/create"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <CreateQuiz />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/quizzes/:classId"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <ClassQuizzesView />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/quizzes/:classId/:quizId/edit"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <EditQuiz />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/quizzes/:classId/:quizId/results"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <QuizResultsView />
                       </ProtectedRoute>
                     }
                   />
@@ -241,7 +325,7 @@ const App = () => (
         </ThemeProvider>
       </LanguageProvider>
     </AuthProvider>
-  </QueryClientProvider>
+  </QueryClientProvider >
 );
 
 export default App;

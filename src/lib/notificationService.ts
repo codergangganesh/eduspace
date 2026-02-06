@@ -247,6 +247,51 @@ export async function notifyAssignmentUpdated(
 }
 
 /**
+ * Notify students about a published quiz
+ * Sends notifications to all enrolled students who have accepted the class
+ */
+export async function notifyQuizPublished(
+    quizId: string,
+    classId: string,
+    quizTitle: string,
+    lecturerId: string
+) {
+    try {
+        // Get enrolled students (accepted status)
+        const { data: acceptedRequests, error: requestsError } = await supabase
+            .from('access_requests')
+            .select('student_id')
+            .eq('class_id', classId)
+            .eq('status', 'accepted');
+
+        if (requestsError) {
+            console.error("Error fetching accepted students:", requestsError);
+            return { success: false, error: requestsError };
+        }
+
+        const studentIds = acceptedRequests?.map(r => r.student_id).filter(Boolean) as string[] || [];
+
+        if (studentIds.length === 0) {
+            return { success: true, message: "No students to notify" };
+        }
+
+        // Send notifications using bulk function (handles preference checking)
+        return await createBulkNotifications(studentIds, {
+            title: "New Quiz Available",
+            message: `Quiz "${quizTitle}" is now available. Good luck!`,
+            type: "announcement",
+            relatedId: quizId,
+            classId: classId,
+            senderId: lecturerId,
+            actionType: 'published',
+        });
+    } catch (err) {
+        console.error("Error in notifyQuizPublished:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
  * Notify a user about a new message
  */
 export async function notifyNewMessage(
@@ -329,26 +374,8 @@ export async function notifyScheduleCreated(
             return { success: true, message: "No students to notify" };
         }
 
-        // Get students who have schedule notifications enabled
-        const { data: profiles, error: profileError } = await supabase
-            .from("student_profiles")
-            .select("user_id")
-            .in("user_id", studentIds)
-            .eq("email_notifications", true); // Using email_notifications as proxy for schedule notifications
-
-        if (profileError) {
-            console.error("Error fetching profiles:", profileError);
-            return { success: false, error: profileError };
-        }
-
-        if (!profiles || profiles.length === 0) {
-            return { success: true, message: "No students with notifications enabled" };
-        }
-
-        const notifyUserIds = profiles.map(p => p.user_id);
-
-        // Send notifications to students with notifications enabled
-        return await createBulkNotifications(notifyUserIds, {
+        // Use createBulkNotifications which handles preference checking via profiles table
+        return await createBulkNotifications(studentIds, {
             title: "New Schedule Added",
             message: `${scheduleTitle}: ${scheduleDetails}`,
             type: "schedule",
@@ -380,26 +407,8 @@ export async function notifyScheduleUpdated(
             return { success: true, message: "No students to notify" };
         }
 
-        // Get students who have schedule notifications enabled
-        const { data: profiles, error: profileError } = await supabase
-            .from("student_profiles")
-            .select("user_id")
-            .in("user_id", studentIds)
-            .eq("email_notifications", true); // Using email_notifications as proxy for schedule notifications
-
-        if (profileError) {
-            console.error("Error fetching profiles:", profileError);
-            return { success: false, error: profileError };
-        }
-
-        if (!profiles || profiles.length === 0) {
-            return { success: true, message: "No students with notifications enabled" };
-        }
-
-        const notifyUserIds = profiles.map(p => p.user_id);
-
-        // Send notifications to students with notifications enabled
-        return await createBulkNotifications(notifyUserIds, {
+        // Use createBulkNotifications which handles preference checking via profiles table
+        return await createBulkNotifications(studentIds, {
             title: "Schedule Updated",
             message: `${scheduleTitle}: ${updateDetails}`,
             type: "schedule",

@@ -130,8 +130,8 @@ export function useClassAssignments(classId: string | null) {
         } catch (err) {
             console.error('Error fetching class assignments:', err);
             setError(err as Error);
-            toast.error('Failed to load assignments');
-            // Don't clear assignments on error during refresh - keep existing data
+            // Only show error for genuine failures, not empty results
+            // Set empty array on initial load failure
             if (isInitialLoad) {
                 setAssignments([]);
             }
