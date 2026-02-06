@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export interface DashboardStats {
     enrolledStudents: number;
@@ -10,18 +11,31 @@ export interface DashboardStats {
     totalExpectedSubmissions: number; // For "X / Y" format display
 }
 
-export interface RecentSubmission {
+export interface ActiveTaskSummary {
+    id: string;
+    title: string;
+    type: 'assignment' | 'quiz';
+    courseCode: string;
+    className: string;
+    submittedCount: number;
+    totalStudents: number;
+    dueDate?: string | null;
+}
+
+export interface RecentActivity {
     id: string;
     studentName: string;
-    assignmentTitle: string;
+    assignmentTitle: string; // Used for quiz title too
     courseCode: string;
-    className: string; // Added for activity display
+    className: string;
     submittedAt: string;
-    status: "pending" | "graded" | "submitted";
+    status: "pending" | "graded" | "submitted" | "passed" | "failed";
     grade: string | null;
-    classId?: string; // Added for navigation
-    assignmentId?: string; // Added for navigation
-    action?: 'submitted' | 'updated' | 'deleted'; // Added for activity tracking
+    classId?: string;
+    assignmentId?: string; // Used for quizId too
+    quizId?: string;
+    type: 'assignment' | 'quiz';
+    action?: 'submitted' | 'updated' | 'deleted';
 }
 // ... (keep existing code until line 170)
 
@@ -46,8 +60,9 @@ export function useLecturerData() {
         pendingSubmissions: 0,
         totalExpectedSubmissions: 0,
     });
-    const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
+    const [recentSubmissions, setRecentSubmissions] = useState<RecentActivity[]>([]);
     const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
+    const [totalTasks, setTotalTasks] = useState<ActiveTaskSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -77,82 +92,89 @@ export function useLecturerData() {
             let submissionsReceived = 0;
             let pendingSubmissions = 0;
             let totalExpectedSubmissions = 0;
+            const allActivities: RecentActivity[] = [];
+
+            // Pre-fetch all IDs needed for counts and activity
+            let allAssignmentIds: string[] = [];
+            const { data: directAssignments } = await supabase.from("assignments").select("id, class_id").eq("lecturer_id", user.id);
+            if (directAssignments) allAssignmentIds = directAssignments.map(a => a.id);
+            if (classIds.length > 0) {
+                const { data: classAssignments } = await supabase.from("assignments").select("id, class_id").in("class_id", classIds);
+                if (classAssignments) allAssignmentIds = [...new Set([...allAssignmentIds, ...classAssignments.map(a => a.id)])];
+            }
+
+            let lecturerQuizIds: string[] = [];
+            const { data: directQuizzes } = await supabase.from("quizzes").select("id, class_id").eq("lecturer_id", user.id);
+            if (directQuizzes) lecturerQuizIds = directQuizzes.map(q => q.id);
+            if (classIds.length > 0) {
+                const { data: classQuizzes } = await supabase.from("quizzes").select("id, class_id").in("class_id", classIds);
+                if (classQuizzes) lecturerQuizIds = [...new Set([...lecturerQuizIds, ...classQuizzes.map(q => q.id)])];
+            }
 
             if (classIds.length > 0) {
-                // A. Enrolled Students: Count unique ACCEPTED students across all classes
-                // Use access_requests table with status='accepted' for accurate counts
-                const { data: acceptedEnrollments } = await supabase
-                    .from("access_requests")
-                    .select("student_id, class_id")
-                    .in("class_id", classIds)
-                    .eq("status", "accepted");
-
-                // Count unique students (a student might be in multiple classes)
+                // A. Enrolled Students
+                const { data: acceptedEnrollments } = await supabase.from("access_requests").select("student_id, class_id").in("class_id", classIds).eq("status", "accepted");
                 const uniqueStudents = new Set(acceptedEnrollments?.map(e => e.student_id));
                 enrolledStudents = uniqueStudents.size;
 
-                // Create a map of class_id -> accepted student count for submissions calculation
                 const classStudentCounts = new Map<string, number>();
                 acceptedEnrollments?.forEach(e => {
-                    if (e.class_id) {
-                        classStudentCounts.set(e.class_id, (classStudentCounts.get(e.class_id) || 0) + 1);
-                    }
+                    if (e.class_id) classStudentCounts.set(e.class_id, (classStudentCounts.get(e.class_id) || 0) + 1);
                 });
 
-                // B. Assignments & Submissions
-                // Fetch assignments by lecturer_id OR by class_id for the lecturer's classes
-                let allAssignmentIds: string[] = [];
+                const taskSummaries: ActiveTaskSummary[] = [];
 
-                // Get assignments by lecturer_id
-                const { data: directAssignments } = await supabase
-                    .from("assignments")
-                    .select("id, class_id")
-                    .eq("lecturer_id", user.id)
-                    .or("status.eq.published,status.eq.active,status.eq.completed,status.eq.closed");
-
-                if (directAssignments) {
-                    allAssignmentIds = directAssignments.map(a => a.id);
-                }
-
-                // Also get assignments from lecturer's classes (in case lecturer_id wasn't set)
-                const { data: classAssignments } = await supabase
-                    .from("assignments")
-                    .select("id, class_id")
-                    .in("class_id", classIds)
-                    .or("status.eq.published,status.eq.active,status.eq.completed,status.eq.closed");
-
-                if (classAssignments) {
-                    const classAssignmentIds = classAssignments.map(a => a.id);
-                    // Merge and deduplicate
-                    allAssignmentIds = [...new Set([...allAssignmentIds, ...classAssignmentIds])];
-                }
-
-                // All assignments for calculating expected submissions
-                const allAssignmentsWithClass = [...(directAssignments || []), ...(classAssignments || [])];
-                // Deduplicate by id
-                const uniqueAssignments = Array.from(
-                    new Map(allAssignmentsWithClass.map(a => [a.id, a])).values()
-                );
-
+                // B. Assignments Stats
                 if (allAssignmentIds.length > 0) {
-                    // Count total submissions
-                    const { count: submissionCount } = await supabase
-                        .from("assignment_submissions")
-                        .select("*", { count: 'exact', head: true })
-                        .in("assignment_id", allAssignmentIds);
+                    const { count: submissionCount } = await supabase.from("assignment_submissions").select("*", { count: 'exact', head: true }).in("assignment_id", allAssignmentIds);
+                    submissionsReceived = (submissionCount || 0);
 
-                    submissionsReceived = submissionCount || 0;
+                    const { data: assignmentDetails } = await supabase.from("assignments").select("id, title, class_id, due_date").in("id", allAssignmentIds).or("status.eq.published,status.eq.active,status.eq.completed,status.eq.closed");
 
-                    // Calculate total expected submissions using class student counts
-                    for (const assign of uniqueAssignments) {
-                        if (assign.class_id && classStudentCounts.has(assign.class_id)) {
-                            totalExpectedSubmissions += classStudentCounts.get(assign.class_id) || 0;
+                    for (const a of assignmentDetails || []) {
+                        if (a.class_id && classStudentCounts.has(a.class_id)) {
+                            totalExpectedSubmissions += classStudentCounts.get(a.class_id) || 0;
+
+                            const { count } = await supabase.from("assignment_submissions").select("*", { count: 'exact', head: true }).eq("assignment_id", a.id);
+                            const classInfo = classesMap.get(a.class_id);
+                            taskSummaries.push({
+                                id: a.id,
+                                title: a.title,
+                                type: 'assignment',
+                                courseCode: classInfo?.course_code || 'N/A',
+                                className: classInfo?.class_name || 'Class',
+                                submittedCount: count || 0,
+                                totalStudents: classStudentCounts.get(a.class_id) || 0,
+                                dueDate: a.due_date
+                            });
                         }
                     }
-
-                    pendingSubmissions = Math.max(0, totalExpectedSubmissions - submissionsReceived);
                 }
+
+                // C. Quizzes Stats (Used only for Active Tasks summary now, not global stats)
+                if (lecturerQuizIds.length > 0) {
+                    const { data: quizDetails } = await supabase.from("quizzes").select("id, title, class_id").in("id", lecturerQuizIds).eq("status", "published");
+
+                    for (const q of quizDetails || []) {
+                        if (q.class_id && classStudentCounts.has(q.class_id)) {
+                            const { count } = await supabase.from("quiz_submissions").select("*", { count: 'exact', head: true }).eq("quiz_id", q.id);
+                            const classInfo = classesMap.get(q.class_id);
+                            taskSummaries.push({
+                                id: q.id,
+                                title: q.title,
+                                type: 'quiz',
+                                courseCode: classInfo?.course_code || 'N/A',
+                                className: classInfo?.class_name || 'Class',
+                                submittedCount: count || 0,
+                                totalStudents: classStudentCounts.get(q.class_id) || 0
+                            });
+                        }
+                    }
+                }
+                setTotalTasks(taskSummaries);
             }
+
+            pendingSubmissions = Math.max(0, totalExpectedSubmissions - submissionsReceived);
 
             setStats({
                 enrolledStudents,
@@ -161,146 +183,57 @@ export function useLecturerData() {
                 totalExpectedSubmissions
             });
 
-            // 2. Fetch Recent Submissions - Only for THIS lecturer's assignments
-            // Get assignments either directly owned by lecturer OR belonging to lecturer's classes
-            let lecturerAssignmentIds: string[] = [];
+            // 2. Fetch Recent Activity for Feed
+            if (allAssignmentIds.length > 0) {
+                const { data: submissions } = await supabase.from("assignment_submissions").select(`
+                    id, assignment_id, submitted_at, status, grade,
+                    student:profiles!student_id(full_name),
+                    assignment:assignments!assignment_id(id, title, class_id)
+                `).in("assignment_id", allAssignmentIds).order("submitted_at", { ascending: false }).limit(10);
 
-            // Get assignments by lecturer_id
-            const { data: directAssignments } = await supabase
-                .from("assignments")
-                .select("id")
-                .eq("lecturer_id", user.id);
-
-            if (directAssignments) {
-                lecturerAssignmentIds = directAssignments.map(a => a.id);
+                // Assignment activity only
+                submissions?.forEach(sub => {
+                    const assignmentData = sub.assignment as any;
+                    const classId = assignmentData?.class_id;
+                    allActivities.push({
+                        id: sub.id,
+                        studentName: (sub.student as any)?.full_name || "Unknown Student",
+                        assignmentTitle: assignmentData?.title || "Untitled",
+                        courseCode: classId && classesMap.has(classId) ? classesMap.get(classId)?.course_code || "N/A" : "N/A",
+                        className: classId && classesMap.has(classId) ? classesMap.get(classId)?.class_name || "Unknown Class" : "Unknown Class",
+                        submittedAt: sub.submitted_at,
+                        status: sub.status === "graded" ? "graded" : "pending",
+                        grade: sub.grade ? sub.grade.toString() : null,
+                        classId: classId,
+                        assignmentId: assignmentData?.id || sub.assignment_id,
+                        type: 'assignment'
+                    });
+                });
             }
 
-            // Also get assignments from lecturer's classes (in case lecturer_id wasn't set)
-            if (classIds.length > 0) {
-                const { data: classAssignments } = await supabase
-                    .from("assignments")
-                    .select("id")
-                    .in("class_id", classIds);
+            const finalActivities = allActivities
+                .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                .slice(0, 10)
+                .map(act => ({ ...act, submittedAt: format(new Date(act.submittedAt), "MMM d, h:mm a") }));
 
-                if (classAssignments) {
-                    const classAssignmentIds = classAssignments.map(a => a.id);
-                    // Merge and deduplicate
-                    lecturerAssignmentIds = [...new Set([...lecturerAssignmentIds, ...classAssignmentIds])];
-                }
-            }
+            setRecentSubmissions(finalActivities);
 
-            if (lecturerAssignmentIds.length > 0) {
-                const { data: submissions, error: submissionsError } = await supabase
-                    .from("assignment_submissions")
-                    .select(`
-                        id,
-                        assignment_id,
-                        submitted_at,
-                        status,
-                        grade,
-                        student:profiles!student_id(full_name),
-                        assignment:assignments!assignment_id(id, title, class_id)
-                    `)
-                    .in("assignment_id", lecturerAssignmentIds)
-                    .order("submitted_at", { ascending: false })
-                    .limit(10);
-
-                if (!submissionsError && submissions) {
-                    const formattedSubmissions: RecentSubmission[] = [];
-                    for (const sub of submissions) {
-                        const assignmentData = sub.assignment as any;
-                        const assignmentClassId = assignmentData?.class_id;
-                        const assignmentId = assignmentData?.id || sub.assignment_id;
-                        let courseCode = "N/A";
-                        let className = "Unknown Class";
-
-                        if (assignmentClassId && classesMap.has(assignmentClassId)) {
-                            const classInfo = classesMap.get(assignmentClassId);
-                            courseCode = classInfo?.course_code || "N/A";
-                            className = classInfo?.class_name || "Unknown Class";
-                        } else if (assignmentClassId) {
-                            try {
-                                const { data: cls } = await supabase.from('classes').select('course_code, class_name').eq('id', assignmentClassId).single();
-                                if (cls) {
-                                    courseCode = cls.course_code;
-                                    className = cls.class_name || "Unknown Class";
-                                }
-                            } catch (e) {
-                                // ignore error
-                            }
-                        }
-
-                        formattedSubmissions.push({
-                            id: sub.id,
-                            studentName: (sub.student as any)?.full_name || "Unknown Student",
-                            assignmentTitle: assignmentData?.title || "Untitled",
-                            courseCode: courseCode,
-                            className: className,
-                            submittedAt: format(new Date(sub.submitted_at), "MMM d, h:mm a"),
-                            status: sub.status === "graded" ? "graded" : "pending",
-                            grade: sub.grade ? sub.grade.toString() : null,
-                            classId: assignmentClassId,
-                            assignmentId: assignmentId
-                        });
-                    }
-                    setRecentSubmissions(formattedSubmissions);
-                }
-            } else {
-                setRecentSubmissions([]);
-            }
-
-            // 3. Fetch Upcoming Classes (Schedules)
-            const { data: schedules, error: scheduleError } = await supabase
-                .from("schedules")
-                .select(`
-                    *,
-                    classes:class_id (class_name, course_code)
-                `)
-                .eq("lecturer_id", user.id)
-                .gte("day_of_week", 0) // Just to ensure valid day
-                .order("day_of_week", { ascending: true })
-                .order("start_time", { ascending: true });
-
-            if (!scheduleError && schedules) {
+            // 3. Fetch Upcoming Classes
+            const { data: schedules } = await supabase.from("schedules").select(`*, classes:class_id(class_name, course_code)`).eq("lecturer_id", user.id).order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
+            if (schedules) {
                 const todayIndex = new Date().getDay();
                 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-                const mappedClasses: UpcomingClass[] = schedules
-                    .map((s: any) => {
-                        const isTodayClass = s.day_of_week === todayIndex;
-                        // Handle specific date override logic if present in your app
-                        let isTodayEffective = isTodayClass;
-                        if (s.specific_date) {
-                            const specificDate = new Date(s.specific_date);
-                            const todayDate = new Date();
-                            isTodayEffective = specificDate.toDateString() === todayDate.toDateString();
-                        }
-
-                        // Determine if we should show this (e.g. if it's a specific date in the past, maybe hide?)
-                        // For now show all recurring + future specific
-
-                        return {
-                            id: s.id,
-                            title: s.title,
-                            courseCode: s.classes?.course_code || "Class",
-                            className: s.classes?.class_name || "",
-                            time: s.start_time.slice(0, 5),
-                            room: s.location || "Online",
-                            isToday: isTodayEffective,
-                            day: days[s.day_of_week],
-                            classId: s.class_id // Populate classId
-                        };
-                    })
-                    .sort((a, b) => {
-                        // Custom sort: Today's classes first, then upcoming days
-                        if (a.isToday && !b.isToday) return -1;
-                        if (!a.isToday && b.isToday) return 1;
-                        // If same day status, sort by actual day index relative to today?
-                        // Simple logic: just show them as returned (ordered by day_of_week)
-                        return 0;
-                    })
-                    .slice(0, 5);
-
+                const mappedClasses: UpcomingClass[] = schedules.map((s: any) => ({
+                    id: s.id,
+                    title: s.title,
+                    courseCode: s.classes?.course_code || "Class",
+                    className: s.classes?.class_name || "",
+                    time: s.start_time.slice(0, 5),
+                    room: s.location || "Online",
+                    isToday: s.day_of_week === todayIndex,
+                    day: days[s.day_of_week],
+                    classId: s.class_id
+                })).sort((a, b) => a.isToday === b.isToday ? 0 : a.isToday ? -1 : 1).slice(0, 5);
                 setUpcomingClasses(mappedClasses);
             }
 
@@ -314,144 +247,62 @@ export function useLecturerData() {
 
     useEffect(() => {
         fetchData();
-
-        // Silent refresh function for less critical updates
         const silentFetch = () => fetchData(true);
 
-        // Intelligent handler for submissions - update counts and recent activity immediately
-        const submissionChannel = supabase
-            .channel('dashboard_submissions')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'assignment_submissions' },
-                async (payload) => {
-                    console.log('[useLecturerData] New submission detected:', payload);
-                    const submission = payload.new as any;
-
-                    // Immediately update the submission count
-                    setStats(prev => ({
-                        ...prev,
-                        submissionsReceived: prev.submissionsReceived + 1,
-                        pendingSubmissions: Math.max(0, prev.pendingSubmissions - 1),
-                    }));
-
-                    // Fetch the student and assignment info for recent activity
-                    try {
-                        const { data: studentData } = await supabase
-                            .from('profiles')
-                            .select('full_name')
-                            .eq('user_id', submission.student_id)
-                            .single();
-
-                        const { data: assignmentData } = await supabase
-                            .from('assignments')
-                            .select('title, class_id')
-                            .eq('id', submission.assignment_id)
-                            .single();
-
-                        if (assignmentData) {
-                            const { data: classData } = await supabase
-                                .from('classes')
-                                .select('name')
-                                .eq('id', assignmentData.class_id)
-                                .single();
-
-
-                            const newActivity: RecentSubmission = {
-                                id: submission.id,
-                                studentName: studentData?.full_name || 'Unknown Student',
-                                assignmentTitle: assignmentData?.title || 'Unknown Assignment',
-                                courseCode: classData?.name || 'Unknown Class',
-                                className: classData?.name || 'Unknown Class',
-                                submittedAt: new Date().toISOString(), // Use current time for activity log
-                                status: submission.status,
-                                grade: submission.grade,
-                                assignmentId: submission.assignment_id,
-                                action: 'submitted'
-                            };
-
-                            // Add to recent activity at the top
-                            setRecentSubmissions(prev => [newActivity, ...prev.slice(0, 9)]);
-                            console.log('[useLecturerData] Added to recent activity (Submitted):', newActivity.studentName, newActivity.assignmentTitle);
-                        }
-                    } catch (err) {
-                        console.error('Error enriching submission data:', err);
-                        // Fall back to silent refresh
-                        fetchData(true);
-                    }
+        const assignmentChannel = supabase.channel('dashboard_assignments').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assignment_submissions' }, async (payload) => {
+            const submission = payload.new as any;
+            try {
+                const { data: studentData } = await supabase.from('profiles').select('full_name').eq('user_id', submission.student_id).single();
+                const { data: assignmentData } = await supabase.from('assignments').select('title, class_id').eq('id', submission.assignment_id).single();
+                if (assignmentData) {
+                    const { data: classData } = await supabase.from('classes').select('class_name, course_code').eq('id', assignmentData.class_id).single();
+                    const newActivity: RecentActivity = {
+                        id: submission.id,
+                        studentName: studentData?.full_name || 'Unknown Student',
+                        assignmentTitle: assignmentData?.title || 'Unknown Assignment',
+                        courseCode: classData?.course_code || 'N/A',
+                        className: classData?.class_name || 'Unknown Class',
+                        submittedAt: format(new Date(), "MMM d, h:mm a"),
+                        status: submission.status,
+                        grade: submission.grade,
+                        assignmentId: submission.assignment_id,
+                        classId: assignmentData.class_id,
+                        type: 'assignment',
+                        action: 'submitted'
+                    };
+                    setStats(prev => ({ ...prev, submissionsReceived: prev.submissionsReceived + 1, pendingSubmissions: Math.max(0, prev.pendingSubmissions - 1) }));
+                    setRecentSubmissions(prev => [newActivity, ...prev.slice(0, 9)]);
+                    toast.success(`New Submission: ${studentData?.full_name}`, { description: `Submitted ${assignmentData?.title}` });
                 }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'assignment_submissions' },
-                async (payload) => {
-                    // Log update activity
-                    const submission = payload.new as any;
-                    try {
-                        const { data: studentData } = await supabase.from('profiles').select('full_name').eq('user_id', submission.student_id).single();
-                        const { data: assignmentData } = await supabase.from('assignments').select('title, class_id').eq('id', submission.assignment_id).single();
+            } catch (err) { silentFetch(); }
+        }).subscribe();
 
-                        if (assignmentData) {
-                            const { data: classData } = await supabase.from('classes').select('name').eq('id', assignmentData.class_id).single();
-                            const newActivity: RecentSubmission = {
-                                id: submission.id,
-                                studentName: studentData?.full_name || 'Unknown Student',
-                                assignmentTitle: assignmentData?.title || 'Unknown Assignment',
-                                courseCode: classData?.name || 'Unknown Class',
-                                className: classData?.name || 'Unknown Class',
-                                submittedAt: new Date().toISOString(),
-                                status: submission.status,
-                                grade: submission.grade,
-                                assignmentId: submission.assignment_id,
-                                action: 'updated'
-                            };
-                            setRecentSubmissions(prev => [newActivity, ...prev.slice(0, 9)]);
-                            console.log('[useLecturerData] Added to recent activity (Updated):', newActivity);
-                        }
-                    } catch (e) { console.error(e); fetchData(true); }
+        const quizChannel = supabase.channel('dashboard_quizzes').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quiz_submissions' }, async (payload) => {
+            const submission = payload.new as any;
+            try {
+                const { data: studentData } = await supabase.from('profiles').select('full_name').eq('user_id', submission.student_id).single();
+                const { data: quizData } = await supabase.from('quizzes').select('title, class_id').eq('id', submission.quiz_id).single();
+                if (quizData) {
+                    const { data: classData } = await supabase.from('classes').select('class_name, course_code').eq('id', quizData.class_id).single();
+                    const newActivity: RecentActivity = {
+                        id: submission.id,
+                        studentName: studentData?.full_name || 'Unknown Student',
+                        assignmentTitle: quizData?.title || 'Unknown Quiz',
+                        courseCode: classData?.course_code || 'N/A',
+                        className: classData?.class_name || 'Unknown Class',
+                        submittedAt: format(new Date(), "MMM d, h:mm a"),
+                        status: submission.status,
+                        grade: submission.total_obtained?.toString() || null,
+                        quizId: submission.quiz_id,
+                        classId: quizData.class_id,
+                        type: 'quiz',
+                        action: 'submitted'
+                    };
+                    toast.success(`Quiz Completed: ${studentData?.full_name}`, { description: `Finished ${quizData?.title}` });
                 }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'DELETE', schema: 'public', table: 'assignment_submissions' },
-                async (payload) => {
-                    console.log('[useLecturerData] Submission deleted:', payload);
-                    const submission = payload.old as any;
+            } catch (err) { silentFetch(); }
+        }).subscribe();
 
-                    // Immediately decrement submission count
-                    setStats(prev => ({
-                        ...prev,
-                        submissionsReceived: Math.max(0, prev.submissionsReceived - 1),
-                        pendingSubmissions: prev.pendingSubmissions + 1,
-                    }));
-
-                    // Log delete activity (we might not have full details, but we can try fetching or just show generic)
-                    // Since it's deleted, we can't query it. We rely on the ID to potentially match existing activity or just generic msg.
-                    // Ideally we'd have the assignment_id to fetch assignment title. But 'old' payload might only have ID.
-                    // If replica identity is full, we get more. Assuming standard config, maybe just ID.
-                    // Let's assume we can get basic info or skip exact details if missing.
-                    // NOTE: Without REPLICA IDENTITY FULL, 'old' only contains 'id'.
-                    // So for now, we just decrement stats. If we want detailed log, we need to know what was deleted.
-                    // We can try to finding it in recentSubmissions to get names.
-
-                    setRecentSubmissions(prev => {
-                        const found = prev.find(s => s.id === submission.id);
-                        if (found) {
-                            const deleteActivity: RecentSubmission = {
-                                ...found,
-                                submittedAt: new Date().toISOString(),
-                                action: 'deleted',
-                                status: 'pending' as const
-                            };
-                            return [deleteActivity, ...prev.slice(0, 9)];
-                        }
-                        return prev;
-                    });
-                }
-            )
-            .subscribe();
-
-        // Other subscriptions use full silent refresh
         const subs = [
             supabase.channel('dashboard_class_students').on('postgres_changes', { event: '*', schema: 'public', table: 'class_students' }, silentFetch).subscribe(),
             supabase.channel('dashboard_classes').on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, silentFetch).subscribe(),
@@ -460,10 +311,11 @@ export function useLecturerData() {
         ];
 
         return () => {
-            submissionChannel.unsubscribe();
+            assignmentChannel.unsubscribe();
+            quizChannel.unsubscribe();
             subs.forEach(s => s.unsubscribe());
         };
     }, [user]);
 
-    return { stats, recentSubmissions, upcomingClasses, loading };
+    return { stats, recentSubmissions, upcomingClasses, activeTasks: totalTasks, loading };
 }

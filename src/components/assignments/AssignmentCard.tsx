@@ -252,25 +252,6 @@ export function AssignmentCard({
                         </div>
                     )}
 
-                    {/* Lecturer Stats / Progress */}
-                    {role === 'lecturer' && assignment.total_students !== undefined && (
-                        <div className="space-y-1.5 pt-2">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Submissions</span>
-                                <span className="font-medium text-foreground">
-                                    {assignment.submission_count || 0} / {assignment.total_students || 0}
-                                </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                <div
-                                    className={cn("h-full transition-all duration-500 bg-current", colors.accent)}
-                                    style={{
-                                        width: `${Math.min(100, ((assignment.submission_count || 0) / (assignment.total_students || 1)) * 100)}%`
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer Action */}
@@ -311,7 +292,7 @@ export function AssignmentCard({
                             </Button>
                         )}
 
-                        {onView && (
+                        {onView && role !== 'lecturer' && (
                             <Button
                                 size="sm"
                                 className={cn(
@@ -326,7 +307,7 @@ export function AssignmentCard({
                                     onView(assignment.id);
                                 }}
                             >
-                                {role === 'lecturer' ? 'Submission' : 'View'}
+                                {role === 'student' ? 'View' : 'View Details'}
                                 <ChevronRight className="size-3.5" />
                             </Button>
                         )}

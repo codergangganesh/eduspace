@@ -106,14 +106,17 @@ export function DashboardAssignmentList({ assignments }: DashboardAssignmentList
                                     <div className="flex flex-col">
                                         <span className="text-foreground">{assignment.title}</span>
                                         <span className="text-xs text-muted-foreground md:hidden table-cell">
-                                            {assignment.class_name} • {assignment.subject_name}
+                                            {assignment.class_name}
+                                            {assignment.subject_name && ` • ${assignment.subject_name}`}
                                         </span>
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">
                                     <div className="flex flex-col">
-                                        <span className="font-medium text-xs">{assignment.class_name || "Unknown Class"}</span>
-                                        <span className="text-xs text-muted-foreground">{assignment.subject_name || "Unknown Subject"}</span>
+                                        <span className="font-medium text-xs font-semibold">{assignment.class_name}</span>
+                                        {assignment.subject_name && (
+                                            <span className="text-xs text-muted-foreground">{assignment.subject_name}</span>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">

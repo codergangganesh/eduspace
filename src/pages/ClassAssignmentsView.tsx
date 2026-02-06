@@ -230,7 +230,6 @@ export default function ClassAssignmentsView() {
                             <AssignmentCard
                                 key={assignment.id}
                                 assignment={assignment}
-                                onView={(id) => navigate(`/lecturer/assignments/${classId}/${id}/submissions`)}
                                 onEdit={handleEditClick}
                                 onDelete={handleDeleteClick}
                                 role="lecturer"

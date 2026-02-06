@@ -12,10 +12,11 @@ import { useRealtimeRejections } from "@/hooks/useRealtimeRejections";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { PerformanceTrendChart } from "@/components/dashboard/PerformanceTrendChart";
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
-  const { stats: dataStats, recentSubmissions, upcomingClasses, loading } = useLecturerData();
+  const { stats: dataStats, upcomingClasses, loading } = useLecturerData();
   const navigate = useNavigate();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
@@ -136,88 +137,9 @@ export default function LecturerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Recent Submissions - Left Column (2/3) */}
+          {/* Performance Trend - Left Column (2/3) */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold text-foreground">Recent Activity</h2>
-                <p className="text-sm text-muted-foreground">Latest student submissions needing review</p>
-              </div>
-              <Button variant="ghost" className="text-primary hover:text-primary/80" onClick={() => navigate('/lecturer/assignments')}>
-                View All <ArrowRight className="size-4 ml-1" />
-              </Button>
-            </div>
-
-            <Card className="border-border/50 shadow-sm bg-surface/50 backdrop-blur-sm">
-              <CardContent className="p-0">
-                {recentSubmissions.length > 0 ? (
-                  <div className="divide-y divide-border/50">
-                    {recentSubmissions.map((submission) => (
-                      <div
-                        key={submission.id}
-                        className="flex flex-col sm:flex-row sm:items-center p-5 hover:bg-muted/30 transition-colors group cursor-pointer"
-                        onClick={() => {
-                          if (submission.classId && submission.assignmentId) {
-                            navigate(`/lecturer/assignments/${submission.classId}/${submission.assignmentId}/submissions`);
-                          } else {
-                            navigate('/lecturer/assignments');
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="size-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-sm">
-                            {submission.studentName.charAt(0)}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{submission.studentName}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              submitted <span className="font-medium text-foreground">{submission.assignmentTitle}</span>
-                              <span className="text-muted-foreground"> in </span>
-                              <span className="font-medium text-foreground">{submission.className}</span>
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-6 mt-3 sm:mt-0 pl-14 sm:pl-0">
-                          <div className="hidden sm:block">
-                            <Badge variant="outline" className="bg-background/50 font-normal">
-                              {submission.courseCode}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="size-3.5 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">{submission.submittedAt}</span>
-                          </div>
-                          <div className="w-24 flex justify-end">
-                            <Badge
-                              className={cn(
-                                "capitalize",
-                                submission.status === 'pending'
-                                  ? "bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900"
-                                  : "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900"
-                              )}
-                            >
-                              {submission.status === 'pending' ? 'To Grade' : 'Graded'}
-                            </Badge>
-                          </div>
-                          <ChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity -mr-2" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                      <FileText className="size-8 text-muted-foreground/50" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground">No recent submissions</h3>
-                    <p className="text-sm text-muted-foreground max-w-xs mt-1">
-                      When students submit assignments, they will appear here for your review.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PerformanceTrendChart />
           </div>
 
           {/* Right Sidebar (1/3) */}
@@ -328,6 +250,6 @@ export default function LecturerDashboard() {
         lecturerName={profile?.full_name || "Lecturer"}
         lecturerEmail={profile?.email || ""}
       />
-    </DashboardLayout>
+    </DashboardLayout >
   );
 }

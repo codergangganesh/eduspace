@@ -99,16 +99,31 @@ export default function QuizResultsView() {
                 profiles: profilesMap[s.student_id] || null
             }));
 
-            // Sort: Score DESC, Time ASC
+            // Sort: Score DESC, Time Taken ASC (faster is better), submitted_at ASC (fallback)
             processed.sort((a, b) => {
                 if (b.total_obtained !== a.total_obtained) return b.total_obtained - a.total_obtained;
+
+                // If time_taken exists and differs, use it (faster = lower value = better)
+                if (a.time_taken !== undefined && b.time_taken !== undefined && a.time_taken !== b.time_taken) {
+                    return a.time_taken - b.time_taken;
+                }
+
                 return new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
             });
 
             const enriched = processed.map((s, index) => {
-                const startTime = new Date(s.created_at).getTime();
-                const endTime = new Date(s.submitted_at || s.created_at).getTime();
-                const durationSeconds = Math.floor((endTime - startTime) / 1000);
+                let durationSeconds = 0;
+
+                if (s.time_taken !== null && s.time_taken !== undefined) {
+                    durationSeconds = s.time_taken;
+                } else {
+                    // Fallback for legacy data
+                    const startTime = new Date(s.started_at || s.created_at).getTime();
+                    const endTime = new Date(s.submitted_at || s.created_at).getTime();
+                    durationSeconds = Math.floor((endTime - startTime) / 1000);
+                    if (durationSeconds < 0) durationSeconds = 0;
+                }
+
                 const minutes = Math.floor(durationSeconds / 60);
                 const seconds = durationSeconds % 60;
 

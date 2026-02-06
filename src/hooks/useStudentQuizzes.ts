@@ -19,13 +19,20 @@ export function useStudentQuizzes() {
             setLoading(prev => prev && quizzes.length === 0);
 
             // Get student email for fallback matching
-            const studentEmail = user.email;
+            const studentEmail = user.email || '';
 
             // 1. Get enrolled classes
-            const { data: enrollments } = await supabase
+            // Only use email filter if email exists
+            const emailFilter = studentEmail ? `,email.ilike.${studentEmail}` : '';
+            const { data: enrollments, error: enrollmentError } = await supabase
                 .from('class_students')
                 .select('class_id')
-                .or(`student_id.eq.${user.id},email.ilike.${studentEmail}`);
+                .or(`student_id.eq.${user.id}${emailFilter}`);
+
+            if (enrollmentError) {
+                console.error('Error fetching enrollments:', enrollmentError);
+                // Don't throw here, just treat as empty to avoid crashing if table permissions are weird
+            }
 
             const classIds = enrollments?.map(e => e.class_id).filter(Boolean) as string[] || [];
 
@@ -48,33 +55,47 @@ export function useStudentQuizzes() {
                 .from('quizzes')
                 .select(`
                     *,
-                    classes (class_name, course_code),
-                    quiz_submissions (id, status, total_obtained, is_archived, quiz_version, created_at, submitted_at, student_id),
-                    questions: quiz_questions (count)
+                    classes (class_name, course_code)
                 `)
                 .in('class_id', classIds)
                 .eq('status', 'published')
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error('Error fetching quizzes data:', error);
+                console.error('Error fetching quizzes data:', error.message || error);
                 throw error;
             }
 
-            // Check if student attempted (filter out archived submissions)
-            const processedQuizzes = quizzesData?.map(q => {
-                const activeSubmission = q.quiz_submissions?.find((s: any) => s.student_id === user.id && !s.is_archived);
+            // For each quiz, fetch the student's submission status
+            const processedQuizzes = await Promise.all(quizzesData?.map(async (q) => {
+                // Fetch student's active submission for this quiz
+                const { data: submissionData } = await supabase
+                    .from('quiz_submissions')
+                    .select('id, status, total_obtained, is_archived, quiz_version, submitted_at, time_taken, started_at')
+                    .eq('quiz_id', q.id)
+                    .eq('student_id', user.id)
+                    .eq('is_archived', false)
+                    .maybeSingle();
+
+                // DEBUG LOGGING - Temporary
+                console.log(`[DEBUG] Quiz '${q.title}' (ID: ${q.id}):`, {
+                    hasSubmission: !!submissionData,
+                    submissionStatus: submissionData?.status,
+                    isArchived: submissionData?.is_archived,
+                    quizVersion: submissionData?.quiz_version,
+                    currentQuizVersion: q.version
+                });
+
                 return {
                     ...q,
-                    my_submission: activeSubmission || null,
-                    questions_count: q.questions?.[0]?.count || 0
+                    my_submission: submissionData || null,
                 };
-            }) || [];
+            }) || []);
 
             setQuizzes(processedQuizzes);
 
-        } catch (error) {
-            console.error('Error fetching student quizzes:', error);
+        } catch (error: any) {
+            console.error('Error fetching student quizzes:', error.message || JSON.stringify(error, null, 2));
         } finally {
             setLoading(false);
         }

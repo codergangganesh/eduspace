@@ -14,81 +14,12 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { useStudentQuizzes } from '@/hooks/useStudentQuizzes';
+
 export default function StudentQuizzes() {
-    const { user } = useAuth();
     const navigate = useNavigate();
-    const [quizzes, setQuizzes] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchStudentQuizzes = async () => {
-            if (!user) return;
-            try {
-                // Keep loading state only on initial load
-                if (quizzes.length === 0) setLoading(true);
-
-                // Get student email for fallback matching
-                const studentEmail = user.email;
-
-                // 1. Get enrolled classes
-                const { data: enrollments } = await supabase
-                    .from('class_students')
-                    .select('class_id')
-                    .or(`student_id.eq.${user.id},email.ilike.${studentEmail}`);
-
-                const classIds = enrollments?.map(e => e.class_id).filter(Boolean) as string[] || [];
-
-                if (classIds.length === 0) {
-                    setQuizzes([]);
-                    setLoading(false);
-                    return;
-                }
-
-                // 2. Fetch published quizzes for these classes
-                const { data: quizzesData } = await supabase
-                    .from('quizzes')
-                    .select(`
-                        *,
-                        classes (class_name, course_code),
-                        quiz_submissions (id, status, total_obtained, is_archived, quiz_version)
-                    `)
-                    .in('class_id', classIds)
-                    .eq('status', 'published')
-                    .order('created_at', { ascending: false });
-
-                // Check if student attempted (filter out archived submissions)
-                // If lecturer republishes, the old submission is archived, so 'activeSubmission' becomes undefined.
-                // This automatically enables the "Start Quiz" button again.
-                const processedQuizzes = quizzesData?.map(q => {
-                    const activeSubmission = q.quiz_submissions?.find((s: any) => s.student_id === user.id && !s.is_archived);
-                    return {
-                        ...q,
-                        my_submission: activeSubmission || null,
-                    };
-                }) || [];
-
-                setQuizzes(processedQuizzes);
-
-            } catch (error) {
-                console.error('Error fetching student quizzes:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchStudentQuizzes();
-
-        // Real-time updates
-        const channel = supabase
-            .channel('student_quizzes_updates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_submissions', filter: `student_id=eq.${user?.id}` }, () => fetchStudentQuizzes())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quizzes' }, () => fetchStudentQuizzes())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user, quizzes.length]);
+    const { quizzes, loading } = useStudentQuizzes();
+    // Effect removed as hook handles fetching and subscriptions
 
     const handleAttempt = (quizId: string) => {
         navigate(`/student/quizzes/${quizId}`);
@@ -123,21 +54,38 @@ export default function StudentQuizzes() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
                         {quizzes.map((quiz) => {
-                            const isCompleted = quiz.my_submission && quiz.my_submission.status !== 'pending';
-                            const isPending = quiz.my_submission && quiz.my_submission.status === 'pending';
+                            // Single source of truth: Does an active submission exist?
+                            const hasActiveSubmission = !!quiz.my_submission && !quiz.my_submission.is_archived;
+                            const isCompleted = hasActiveSubmission && quiz.my_submission.status !== 'pending';
+                            const isPending = hasActiveSubmission && quiz.my_submission.status === 'pending';
 
                             // Reattempt Logic:
                             // If submission exists but its version is LOWER than quiz current version, offer re-attempt.
                             // If submission version is missing (legacy), assume it's older if quiz.version > 1.
-                            const submissionVersion = quiz.my_submission?.quiz_version || 1;
+                            const submissionVersion = quiz.my_submission?.quiz_version || 0;
                             const currentQuizVersion = quiz.version || 1;
                             const canReattempt = isCompleted && currentQuizVersion > submissionVersion;
 
-                            // "Attempted" State applies only if Completed AND on Current Version
+                            // Final decision: Show "Attempted" state if completed AND on current version
                             const showAttemptedState = isCompleted && !canReattempt;
 
+                            console.log(`Quiz [${quiz.title}]:`, {
+                                id: quiz.id,
+                                hasActiveSubmission,
+                                isCompleted,
+                                submissionVersion,
+                                currentQuizVersion,
+                                canReattempt,
+                                showAttemptedState,
+                                submissionStatus: quiz.my_submission?.status
+                            });
+
                             return (
-                                <Card key={quiz.id} className="group relative overflow-hidden border-none bg-gradient-to-br from-card to-card/50 shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-primary/20 hover:border-l-primary">
+                                <Card key={quiz.id} className={`group relative overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 border-l-4 
+                                    ${showAttemptedState
+                                        ? 'bg-slate-50/80 dark:bg-slate-900/50 border-l-slate-400 border-r-4 border-r-slate-300 dark:border-r-slate-700 border-r-dotted opacity-90'
+                                        : 'bg-gradient-to-br from-card to-card/50 border-l-primary/20 hover:border-l-primary'
+                                    }`}>
                                     <CardContent className="p-7 flex flex-col h-full gap-6">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-3">
@@ -184,9 +132,16 @@ export default function StudentQuizzes() {
                                         {/* Show Marks/Status if Attempted */}
                                         {showAttemptedState && (
                                             <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/50 flex justify-between items-center">
-                                                <div>
+                                                <div className="flex flex-col gap-1">
                                                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Your Score</p>
-                                                    <p className="text-2xl font-black">{quiz.my_submission.total_obtained} <span className="text-sm text-muted-foreground font-medium">/ {quiz.total_marks}</span></p>
+                                                    <p className="text-2xl font-black leading-none">{quiz.my_submission.total_obtained} <span className="text-sm text-muted-foreground font-medium">/ {quiz.total_marks}</span></p>
+
+                                                    {quiz.my_submission.time_taken !== null && (
+                                                        <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold mt-1">
+                                                            <Clock className="size-3" />
+                                                            {Math.floor(quiz.my_submission.time_taken / 60)}m {quiz.my_submission.time_taken % 60}s
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="text-right">
                                                     <Badge className={quiz.my_submission.status === 'passed' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}>
@@ -199,63 +154,62 @@ export default function StudentQuizzes() {
                                             </div>
                                         )}
 
-                                        {/* Actions Area */}
+                                        {/* Actions Area - Critical: Only show Start Quiz if NO active submission exists */}
                                         <div className="mt-auto pt-2">
-                                            {showAttemptedState ? (
-                                                <div className="flex items-center gap-2">
-                                                    {/* "Attempted" Text - Hidden/Disabled style as requested */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        disabled
-                                                        className="flex-1 bg-muted/50 text-muted-foreground font-bold tracking-wide uppercase opacity-70 cursor-not-allowed justify-start"
-                                                    >
-                                                        Attempted
-                                                    </Button>
+                                            {hasActiveSubmission ? (
+                                                showAttemptedState ? (
+                                                    // Fully completed quiz on current version - show attempted state
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        {/* View Details Button - Primary Action for Attempted */}
+                                                        <Button
+                                                            onClick={() => navigate(`/student/quizzes/${quiz.id}/details`)}
+                                                            className="flex-1 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold shadow-sm"
+                                                            variant="outline"
+                                                        >
+                                                            <Eye className="size-4 mr-2 text-blue-500" />
+                                                            View Details
+                                                        </Button>
 
-                                                    {/* Dotted Menu for View Details */}
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="outline" size="icon" className="shrink-0 h-10 w-10 rounded-xl border-dashed">
-                                                                <MoreVertical className="size-5 text-muted-foreground" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => navigate(`/student/quizzes/${quiz.id}/details`)}>
-                                                                <Eye className="size-4 mr-2" />
-                                                                View Details
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => navigate(`/student/quizzes/${quiz.class_id}/${quiz.id}/results`)}>
-                                                                <Trophy className="size-4 mr-2" />
-                                                                View Leaderboard
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
+                                                        {/* Leaderboard Button */}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="shrink-0 h-10 w-10 rounded-xl border-dashed"
+                                                            onClick={() => navigate(`/student/quizzes/${quiz.class_id}/${quiz.id}/results`)}
+                                                            title="View Leaderboard"
+                                                        >
+                                                            <Trophy className="size-4 text-amber-500" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    // Pending or can reattempt - show appropriate action button
+                                                    <Button
+                                                        className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${canReattempt
+                                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
+                                                            : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                                                            }`}
+                                                        onClick={() => handleAttempt(quiz.id)}
+                                                    >
+                                                        {canReattempt ? (
+                                                            <>
+                                                                <PlayCircle className="size-5" />
+                                                                Updated Quiz - Retake
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <PlayCircle className="size-5" />
+                                                                Resume Quiz
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                )
                                             ) : (
+                                                // No submission exists - show Start Quiz button
                                                 <Button
-                                                    className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${canReattempt
-                                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
-                                                        : isPending
-                                                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                                            : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
-                                                        }`}
+                                                    className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] gap-2"
                                                     onClick={() => handleAttempt(quiz.id)}
                                                 >
-                                                    {canReattempt ? (
-                                                        <>
-                                                            <PlayCircle className="size-5" />
-                                                            Updated Quiz - Retake
-                                                        </>
-                                                    ) : isPending ? (
-                                                        <>
-                                                            <PlayCircle className="size-5" />
-                                                            Resume Quiz
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            Start Quiz <ArrowRight className="size-5" />
-                                                        </>
-                                                    )}
+                                                    Start Quiz <ArrowRight className="size-5" />
                                                 </Button>
                                             )}
                                         </div>

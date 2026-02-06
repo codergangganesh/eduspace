@@ -112,7 +112,7 @@ export function useAssignments() {
                     // Also fetch old course-based assignments for backward compatibility
                     const { data: classesData } = await supabase
                         .from('classes')
-                        .select('id, name, course_code')
+                        .select('id, class_name, course_code')
                         .in('id', enrolledClassIds);
 
                     // Create a map for quick class lookup
@@ -178,7 +178,7 @@ export function useAssignments() {
                     // Enrich assignments with class, subject, and lecturer names
                     data = allAssignments.map(a => ({
                         ...a,
-                        class_name: classMap.get(a.class_id)?.name || null,
+                        class_name: classMap.get(a.class_id)?.class_name || null,
                         subject_name: subjectMap.get(a.subject_id) || null,
                         lecturer_name: lecturerMap.get(a.lecturer_id) || null,
                     }));
@@ -200,7 +200,7 @@ export function useAssignments() {
                     ...a,
                     course_title: a.courses?.title,
                     course_code: a.courses?.course_code,
-                    lecturer_name: a.lecturer?.full_name,
+                    lecturer_name: a.lecturer_name || a.lecturer?.full_name,
                 };
 
                 if (role === 'student') {
@@ -631,11 +631,31 @@ export function useAssignments() {
         if (!user || role !== 'student') return { success: false, error: 'Unauthorized' };
 
         try {
+            // 1. Fetch assignment details (for class_id) and student profile (for register_number)
+            const [assignmentResult, profileResult] = await Promise.all([
+                supabase
+                    .from('assignments')
+                    .select('lecturer_id, title, class_id')
+                    .eq('id', assignmentId)
+                    .single(),
+                supabase
+                    .from('profiles')
+                    .select('full_name, register_number')
+                    .eq('user_id', user.id)
+                    .single()
+            ]);
+
+            const assignment = assignmentResult.data;
+            const studentProfile = profileResult.data;
+
+            // 2. Insert/Update submission including the snapshot fields
             const { error } = await supabase
                 .from('assignment_submissions')
                 .upsert({
                     assignment_id: assignmentId,
                     student_id: user.id,
+                    class_id: assignment?.class_id,
+                    register_number: studentProfile?.register_number,
                     ...data,
                     submitted_at: new Date().toISOString(),
                     status: 'submitted',
@@ -643,21 +663,8 @@ export function useAssignments() {
 
             if (error) throw error;
 
-            // Send notification to lecturer
+            // 3. Send notification to lecturer
             try {
-                // Get assignment details including class_id
-                const { data: assignment } = await supabase
-                    .from('assignments')
-                    .select('lecturer_id, title, class_id')
-                    .eq('id', assignmentId)
-                    .single();
-
-                const { data: studentProfile } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('user_id', user.id)
-                    .single();
-
                 if (assignment && assignment.class_id) {
                     // Use notification service for consistent handling
                     const { notifyAssignmentSubmission } = await import('@/lib/notificationService');

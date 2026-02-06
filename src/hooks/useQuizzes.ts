@@ -20,8 +20,8 @@ export function useQuizzes(classId?: string) {
                 .from('quizzes')
                 .select(`
                     *,
-                    questions:quiz_questions(count),
-                    submissions:quiz_submissions(count)
+                    quiz_questions(count),
+                    quiz_submissions(count)
                 `)
                 .eq('class_id', classId)
                 .order('created_at', { ascending: false });
@@ -32,15 +32,15 @@ export function useQuizzes(classId?: string) {
             const transformedQuizzes = data.map(q => ({
                 ...q,
                 _count: {
-                    questions: q.questions?.[0]?.count || 0,
-                    submissions: q.submissions?.[0]?.count || 0
+                    questions: q.quiz_questions?.[0]?.count || 0,
+                    submissions: q.quiz_submissions?.[0]?.count || 0
                 }
             }));
 
             setQuizzes(transformedQuizzes as unknown as Quiz[]);
-        } catch (error) {
-            console.error('Error fetching quizzes:', error);
-            // Don't show error toast for empty results - UI will show empty state
+        } catch (error: any) {
+            console.error('Error fetching quizzes:', JSON.stringify(error, null, 2));
+            toast.error(`Error loading quizzes: ${error.message || 'Unknown error'}`);
             setQuizzes([]);
         } finally {
             setLoading(false);
@@ -50,7 +50,29 @@ export function useQuizzes(classId?: string) {
     // React to changes
     useEffect(() => {
         fetchQuizzes();
-    }, [fetchQuizzes]);
+
+        if (!classId) return;
+
+        const channel = supabase
+            .channel(`quizzes_channel_${classId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'quizzes',
+                    filter: `class_id=eq.${classId}`
+                },
+                () => {
+                    fetchQuizzes();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchQuizzes, classId]);
 
 
     const createQuiz = async (quizData: Partial<Quiz>) => {

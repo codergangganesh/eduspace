@@ -93,18 +93,24 @@ export default function TakeQuiz() {
                 setQuiz(quizData);
 
                 // Check for existing ACTIVE submission (pending or completed, but not archived)
-                // We order by created_at desc to get the latest attempt
-                // Check for existing ACTIVE submission (pending or completed, but not archived)
-                // We order by created_at desc to get the latest attempt
+                // This is the SINGLE SOURCE OF TRUTH for preventing reattempts
                 let { data: submission } = await supabase
                     .from('quiz_submissions')
                     .select('*')
                     .eq('quiz_id', quizId)
                     .eq('student_id', user.id)
                     .eq('is_archived', false) // Use active submissions only
-                    .order('created_at', { ascending: false })
+                    .order('submitted_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
+
+                // DOUBLE SAFETY CHECK: If submission exists and is completed, redirect immediately
+                if (submission && submission.status !== 'pending') {
+                    console.log('Quiz already completed. Redirecting to results.');
+                    setResult(submission);
+                    setLoading(false);
+                    return;
+                }
 
                 // Check for version mismatch (Re-attempt Logic)
                 if (submission && (submission.quiz_version || 1) < (quizData.version || 1)) {
@@ -137,9 +143,9 @@ export default function TakeQuiz() {
                             toast.info('Resuming your quiz attempt');
                         }
                     } else {
-                        // Submission is already completed (passed/failed)
-                        setResult(submission);
-                        setLoading(false);
+                        // Submission is already completed (passed/failed) - REDIRECT TO RESULTS
+                        console.log('Quiz already completed. Redirecting to results page.');
+                        navigate(`/student/quizzes/${quizId}/details`);
                         return;
                     }
                 }
@@ -154,7 +160,8 @@ export default function TakeQuiz() {
                             student_id: user.id,
                             total_obtained: 0,
                             status: 'pending',
-                            quiz_version: quizData.version // helper to store initial version
+                            quiz_version: quizData.version,
+                            started_at: new Date().toISOString()
                         })
                         .select()
                         .single();
@@ -192,9 +199,9 @@ export default function TakeQuiz() {
                 if (questionsError) throw questionsError;
                 setQuestions(questionsData || []);
 
-            } catch (error) {
-                console.error('Error loading quiz:', error);
-                toast.error('Failed to load quiz');
+            } catch (error: any) {
+                console.error('Error loading quiz:', JSON.stringify(error, null, 2));
+                toast.error(`Failed to load quiz: ${error.message || 'Unknown error'}`);
                 navigate('/student/quizzes');
             } finally {
                 setLoading(false);
@@ -266,6 +273,13 @@ export default function TakeQuiz() {
             if (!confirm(`You have ${unansweredCount} unanswered questions. Submit anyway?`)) {
                 return;
             }
+        }
+
+        // CRITICAL: Prevent re-submission if already done (client-side safety)
+        if (result || (submissionId && !answers)) {
+            toast.error("You have already submitted this quiz.");
+            navigate(`/student/quizzes/${quizId}/details`);
+            return;
         }
 
         setSubmitting(true);
@@ -374,7 +388,8 @@ export default function TakeQuiz() {
                     total_obtained: score,
                     status: status,
                     submitted_at: new Date().toISOString(),
-                    quiz_version: quiz.version // Store the version of the quiz being taken
+                    time_taken: elapsedTime,
+                    quiz_version: quiz.version || 1
                 })
                 .eq('id', activeSubmissionId)
                 .select()
@@ -683,7 +698,7 @@ export default function TakeQuiz() {
 
                             {/* Answer Options */}
                             <div className="space-y-3 mb-10">
-                                {currentQuestion.options.map((option: any, idx: number) => {
+                                {(currentQuestion.options || []).map((option: any, idx: number) => {
                                     const optionLetter = String.fromCharCode(65 + idx);
                                     const isSelected = answers[currentQuestion.id] === option.id;
 

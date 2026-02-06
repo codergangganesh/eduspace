@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
 import { useAssignments } from "@/hooks/useAssignments";
+import { formatFileSize, getFileTypeDisplay, getFileExtension } from "@/lib/fileUtils";
 
 interface AssignmentDetail {
     id: string;
@@ -49,6 +50,8 @@ interface Submission {
     submitted_at: string;
     attachment_url: string | null;
     attachment_name: string | null;
+    file_type: string | null;
+    file_size: number | null;
     submission_text: string | null;
     grade: number | null;
     feedback: string | null;
@@ -123,7 +126,7 @@ export default function StudentAssignmentDetail() {
                 // Fetch student's submission
                 const { data: submissionData } = await supabase
                     .from('assignment_submissions')
-                    .select('*')
+                    .select('*, file_type, file_size')
                     .eq('assignment_id', id)
                     .eq('student_id', user.id)
                     .single();
@@ -150,6 +153,7 @@ export default function StudentAssignmentDetail() {
                     filter: `assignment_id=eq.${id}`,
                 },
                 async (payload) => {
+                    console.log('[StudentAssignmentDetail] Submission update:', payload);
                     if (payload.new && 'student_id' in payload.new && payload.new.student_id === user.id) {
                         setSubmission(payload.new as Submission);
                     }
@@ -391,24 +395,51 @@ export default function StudentAssignmentDetail() {
 
                                 {/* Submitted File */}
                                 {submission.attachment_url && (
-                                    <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                                        <div className="p-2 bg-green-500/10 rounded-lg">
-                                            <FileText className="size-5 text-green-600 dark:text-green-400" />
+                                    <div className="flex flex-col gap-2">
+                                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Submitted File</h4>
+                                        <div className="flex items-center justify-between p-4 rounded-xl border-2 border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 group hover:border-emerald-300 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-emerald-100 dark:border-emerald-800">
+                                                    <FileText className="size-6 text-emerald-600 dark:text-emerald-400" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 truncate max-w-[200px] sm:max-w-[300px]" title={submission.attachment_name || 'Submitted File'}>
+                                                        {submission.attachment_name || 'Submitted File'}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                                                        <span>{getFileTypeDisplay(submission.file_type) || getFileExtension(submission.attachment_name) || 'PDF'}</span>
+                                                        {submission.file_size && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span>{formatFileSize(submission.file_size)}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-9 px-4 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                                                    onClick={() => window.open(submission.attachment_url!, '_blank')}
+                                                >
+                                                    <ExternalLink className="size-4 mr-2" />
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 dark:shadow-none h-9 px-4 hidden sm:flex"
+                                                    asChild
+                                                >
+                                                    <a href={submission.attachment_url!} target="_blank" rel="noreferrer" download>
+                                                        <Download className="size-4 mr-2" />
+                                                        Download
+                                                    </a>
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-foreground truncate">
-                                                {submission.attachment_name || 'Submitted File'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">Your submitted file</p>
-                                        </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => window.open(submission.attachment_url!, '_blank')}
-                                        >
-                                            <ExternalLink className="size-4 mr-2" />
-                                            View
-                                        </Button>
                                     </div>
                                 )}
 
