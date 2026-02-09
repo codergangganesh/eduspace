@@ -83,7 +83,7 @@ export default function CreateClass() {
                     </div>
                     <Button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-primary hover:bg-primary/90 gap-2"
+                        className="hidden sm:flex bg-primary hover:bg-primary/90 gap-2"
                     >
                         <Plus className="size-4" />
                         Create New Class
@@ -235,6 +235,18 @@ export default function CreateClass() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Mobile FAB */}
+            <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <Button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    size="icon"
+                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                    title="Create New Class"
+                >
+                    <Plus className="size-8 text-white" />
+                </Button>
+            </div>
         </DashboardLayout>
     );
 }

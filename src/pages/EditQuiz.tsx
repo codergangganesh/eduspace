@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 // Simple UUID generator
 // Robust UUID generator for client-side IDs
@@ -46,6 +47,7 @@ export default function EditQuiz() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [hasSubmissions, setHasSubmissions] = useState(false);
+    const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
     const calculateTotalMarks = () => {
         return questions.reduce((sum, q) => sum + q.marks, 0);
@@ -451,9 +453,7 @@ export default function EditQuiz() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20"
-                                                        onClick={() => {
-                                                            if (confirm('Delete this question?')) handleDeleteQuestion(question.id);
-                                                        }}
+                                                        onClick={() => setQuestionToDelete(question.id)}
                                                     >
                                                         <Trash2 className="size-4" />
                                                     </Button>
@@ -480,6 +480,19 @@ export default function EditQuiz() {
                     </div>
                 </div>
             </div>
+
+            <DeleteConfirmDialog
+                open={!!questionToDelete}
+                onOpenChange={(open) => !open && setQuestionToDelete(null)}
+                onConfirm={() => {
+                    if (questionToDelete) {
+                        handleDeleteQuestion(questionToDelete);
+                        setQuestionToDelete(null);
+                    }
+                }}
+                title="Delete Question?"
+                description="This will remove the question from your quiz. You'll need to save your changes to make this permanent."
+            />
         </DashboardLayout>
     );
 }

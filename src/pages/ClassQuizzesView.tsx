@@ -17,6 +17,7 @@ import {
     DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
+import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 export default function ClassQuizzesView() {
     const { classId } = useParams();
@@ -24,6 +25,7 @@ export default function ClassQuizzesView() {
     const { profile } = useAuth();
     const { quizzes, loading, updateQuizStatus, deleteQuiz } = useQuizzes(classId);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
 
     const handleCreateQuiz = () => {
         navigate(`/lecturer/quizzes/${classId}/create`);
@@ -75,7 +77,7 @@ export default function ClassQuizzesView() {
                                 <span className="text-xs font-semibold tracking-wide">List</span>
                             </Button>
                         </div>
-                        <Button onClick={handleCreateQuiz} className="gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                        <Button onClick={handleCreateQuiz} className="hidden sm:flex gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
                             <Plus className="size-5" />
                             Create New Quiz
                         </Button>
@@ -104,7 +106,7 @@ export default function ClassQuizzesView() {
                 ) : (
                     <div className={cn(
                         viewMode === 'grid'
-                            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"
+                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-5"
                             : "flex flex-col gap-4"
                     )}>
                         {quizzes.map((quiz) => (
@@ -115,11 +117,7 @@ export default function ClassQuizzesView() {
                                     instructor={profile ? { full_name: profile.full_name, avatar_url: profile.avatar_url } : null}
                                     onViewResults={() => handleViewResults(quiz.id)}
                                     onEdit={() => handleEditQuiz(quiz.id)}
-                                    onDelete={() => {
-                                        if (confirm('Permanently delete this quiz?')) {
-                                            deleteQuiz(quiz.id);
-                                        }
-                                    }}
+                                    onDelete={() => setQuizToDelete(quiz.id)}
                                     onStatusChange={(id, status) => updateQuizStatus(id, status)}
                                 />
                             ) : (
@@ -198,11 +196,7 @@ export default function ClassQuizzesView() {
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem
                                                             className="h-10 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
-                                                            onClick={() => {
-                                                                if (confirm('Are you sure you want to delete this quiz? This action is permanent.')) {
-                                                                    deleteQuiz(quiz.id);
-                                                                }
-                                                            }}
+                                                            onClick={() => setQuizToDelete(quiz.id)}
                                                         >
                                                             <Trash2 className="size-4 mr-2" />
                                                             Delete Quiz
@@ -218,6 +212,31 @@ export default function ClassQuizzesView() {
                     </div>
                 )}
             </div>
+
+            {/* Mobile FAB */}
+            <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <Button
+                    onClick={handleCreateQuiz}
+                    size="icon"
+                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                    title="Create New Quiz"
+                >
+                    <Plus className="size-8 text-white" />
+                </Button>
+            </div>
+
+            <DeleteConfirmDialog
+                open={!!quizToDelete}
+                onOpenChange={(open) => !open && setQuizToDelete(null)}
+                onConfirm={() => {
+                    if (quizToDelete) {
+                        deleteQuiz(quizToDelete);
+                        setQuizToDelete(null);
+                    }
+                }}
+                title="Delete Quiz?"
+                description="This will permanently remove the quiz and all associated student results. This action cannot be undone."
+            />
         </DashboardLayout>
     );
 }

@@ -43,6 +43,7 @@ export interface Profile {
   language: string | null;
   timezone: string | null;
   theme: string | null;
+  sidebar_mode: 'expanded' | 'collapsed' | 'hover' | null;
   created_at: string;
   updated_at: string;
 }

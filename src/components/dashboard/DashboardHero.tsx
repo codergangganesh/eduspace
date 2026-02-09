@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function DashboardHero() {
     const { profile } = useAuth();
-    const firstName = profile?.full_name?.split(" ")[0] || "Student";
+    const fullName = profile?.full_name || "Student";
 
     const today = new Date();
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -23,7 +23,7 @@ export function DashboardHero() {
                         <span className="text-sm font-medium">{dateString}</span>
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                        Welcome back, {firstName}!
+                        Welcome back, {fullName}!
                     </h1>
                     <p className="max-w-xl text-indigo-100">
                         You have a few assignments due this week. Stay focused and keep learning!

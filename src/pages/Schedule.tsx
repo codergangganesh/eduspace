@@ -40,6 +40,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
 import { SectionClassCard } from "@/components/common/SectionClassCard";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { DeleteConfirmDialog } from "@/components/layout/DeleteConfirmDialog";
 
 interface ClassEvent {
   id: string;
@@ -124,6 +125,7 @@ export default function Schedule() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [isEditEventOpen, setIsEditEventOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -391,16 +393,8 @@ export default function Schedule() {
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
-    if (confirm("Are you sure you want to delete this event?")) {
-      const result = await deleteSchedule(id);
-      if (result.success) {
-        toast.success("Event deleted");
-        setIsEditEventOpen(false);
-      } else {
-        toast.error(result.error || "Failed to delete event");
-      }
-    }
+  const handleDeleteEvent = (id: string) => {
+    setEventToDelete(id);
   };
 
   // Render Logic
@@ -486,7 +480,7 @@ export default function Schedule() {
             {!isStudent && (
               <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={resetForm}>
+                  <Button onClick={resetForm} className="hidden sm:flex">
                     <Plus className="size-4 mr-2" />
                     Add Event
                   </Button>
@@ -1038,7 +1032,43 @@ export default function Schedule() {
             </Card>
           </div>
         </div>
+
+        {/* Mobile FAB for Schedule */}
+        {!isStudent && selectedClassId && (
+          <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <Button
+              onClick={() => {
+                resetForm();
+                setIsAddEventOpen(true);
+              }}
+              size="icon"
+              className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+              title="Add Event"
+            >
+              <Plus className="size-8 text-white" />
+            </Button>
+          </div>
+        )}
       </div>
+
+      <DeleteConfirmDialog
+        open={!!eventToDelete}
+        onOpenChange={(open) => !open && setEventToDelete(null)}
+        onConfirm={async () => {
+          if (eventToDelete) {
+            const result = await deleteSchedule(eventToDelete);
+            if (result.success) {
+              toast.success("Event deleted");
+              setIsEditEventOpen(false);
+            } else {
+              toast.error(result.error || "Failed to delete event");
+            }
+            setEventToDelete(null);
+          }
+        }}
+        title="Delete Schedule Entry?"
+        description="This will remove the event from the class timetable. Students will no longer see this in their schedule."
+      />
     </DashboardLayout>
   );
 }

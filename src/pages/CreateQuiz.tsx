@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
+import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 // Simple UUID generator to avoid external dependency
 const generateId = () => {
@@ -40,6 +41,7 @@ export default function CreateQuiz() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
     const calculateTotalMarks = () => {
         return questions.reduce((sum, q) => sum + q.marks, 0);
@@ -402,9 +404,7 @@ export default function CreateQuiz() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20"
-                                                        onClick={() => {
-                                                            if (confirm('Delete this question?')) handleDeleteQuestion(question.id);
-                                                        }}
+                                                        onClick={() => setQuestionToDelete(question.id)}
                                                     >
                                                         <Trash2 className="size-4" />
                                                     </Button>
@@ -431,6 +431,19 @@ export default function CreateQuiz() {
                     </div>
                 </div>
             </div>
+
+            <DeleteConfirmDialog
+                open={!!questionToDelete}
+                onOpenChange={(open) => !open && setQuestionToDelete(null)}
+                onConfirm={() => {
+                    if (questionToDelete) {
+                        handleDeleteQuestion(questionToDelete);
+                        setQuestionToDelete(null);
+                    }
+                }}
+                title="Delete Question?"
+                description="This will remove the question from your draft. Your changes are automatically saved."
+            />
         </DashboardLayout>
     );
 }

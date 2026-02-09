@@ -1,5 +1,5 @@
 import React from 'react';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePerformanceTrend, TrendData } from '@/hooks/usePerformanceTrend';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
@@ -13,7 +13,7 @@ export function PerformanceTrendChart() {
             <Card className="border-border/50 shadow-sm bg-surface/50 backdrop-blur-sm h-[400px] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
                     <Loader2 className="size-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading trend data...</p>
+                    <p className="text-sm text-muted-foreground">Loading Student Performance data...</p>
                 </div>
             </Card>
         );
@@ -39,16 +39,11 @@ export function PerformanceTrendChart() {
             <CardContent className="px-2 pb-4">
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
+                        <BarChart
                             data={data}
                             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                            barSize={40}
                         >
-                            <defs>
-                                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
                             <CartesianGrid
                                 strokeDasharray="3 3"
                                 vertical={false}
@@ -74,6 +69,7 @@ export function PerformanceTrendChart() {
                                 className="text-muted-foreground"
                             />
                             <Tooltip
+                                cursor={{ fill: 'currentColor', opacity: 0.05 }}
                                 content={({ active, payload }) => {
                                     if (active && payload && payload.length) {
                                         return (
@@ -94,18 +90,21 @@ export function PerformanceTrendChart() {
                                     return null;
                                 }}
                             />
-                            <Area
-                                type="monotone"
+                            <Bar
                                 dataKey="score"
-                                stroke="#10b981"
-                                strokeWidth={3}
-                                fillOpacity={1}
-                                fill="url(#colorScore)"
-                                dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
-                                activeDot={{ r: 6, strokeWidth: 0 }}
+                                radius={[6, 6, 0, 0]}
                                 animationDuration={1500}
-                            />
-                        </AreaChart>
+                            >
+                                {data.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill="#10b981"
+                                        fillOpacity={0.8}
+                                        className="transition-all duration-300 hover:fill-opacity-100"
+                                    />
+                                ))}
+                            </Bar>
+                        </BarChart>
                     </ResponsiveContainer>
                 </div>
             </CardContent>

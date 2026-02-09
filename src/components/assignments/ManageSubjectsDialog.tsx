@@ -22,6 +22,7 @@ import {
 import { Plus, Trash2, Edit, Loader2 } from 'lucide-react';
 import { useClassSubjects, Subject } from '@/hooks/useClassSubjects';
 import { toast } from 'sonner';
+import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 interface Props {
     open: boolean;
@@ -40,6 +41,7 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
         code: '',
         description: '',
     });
+    const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
 
     const handleAdd = async () => {
         if (!formData.name) {
@@ -80,14 +82,8 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
         }
     };
 
-    const handleDelete = async (subjectId: string) => {
-        if (confirm('Are you sure you want to delete this subject?')) {
-            try {
-                await deleteSubject(subjectId);
-            } catch (error) {
-                // Error handled in hook
-            }
-        }
+    const handleDelete = (subjectId: string) => {
+        setSubjectToDelete(subjectId);
     };
 
     const handleCancel = () => {
@@ -236,6 +232,23 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
                     </Button>
                 </DialogFooter>
             </DialogContent>
+
+            <DeleteConfirmDialog
+                open={!!subjectToDelete}
+                onOpenChange={(open) => !open && setSubjectToDelete(null)}
+                onConfirm={async () => {
+                    if (subjectToDelete) {
+                        try {
+                            await deleteSubject(subjectToDelete);
+                        } catch (error) {
+                            // Error handled in hook
+                        }
+                        setSubjectToDelete(null);
+                    }
+                }}
+                title="Delete Subject?"
+                description="This will permanently delete the subject and its association with assignments. This cannot be undone."
+            />
         </Dialog>
     );
 }

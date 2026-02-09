@@ -35,12 +35,24 @@ interface Props {
     classId: string;
     subjects: Subject[];
     onManageSubjects: () => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    showTrigger?: boolean;
 }
 
-export function CreateClassAssignmentDialog({ classId, subjects, onManageSubjects }: Props) {
+export function CreateClassAssignmentDialog({
+    classId,
+    subjects,
+    onManageSubjects,
+    open: externalOpen,
+    onOpenChange: setExternalOpen,
+    showTrigger = true
+}: Props) {
     const { createAssignment } = useClassAssignments(classId);
     const { user } = useAuth();
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = externalOpen !== undefined ? externalOpen : internalOpen;
+    const setOpen = setExternalOpen !== undefined ? setExternalOpen : setInternalOpen;
     const [loading, setLoading] = useState(false);
     const [date, setDate] = useState<Date>();
     const [file, setFile] = useState<File | null>(null);
@@ -124,12 +136,14 @@ export function CreateClassAssignmentDialog({ classId, subjects, onManageSubject
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button className="gap-2">
-                    <Plus className="size-4" />
-                    Create Assignment
-                </Button>
-            </DialogTrigger>
+            {showTrigger && (
+                <DialogTrigger asChild>
+                    <Button className="hidden sm:flex gap-2">
+                        <Plus className="size-4" />
+                        Create Assignment
+                    </Button>
+                </DialogTrigger>
+            )}
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Create New Assignment</DialogTitle>

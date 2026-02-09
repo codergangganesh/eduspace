@@ -12,23 +12,26 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Table } from "lucide-react";
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/student/assignments" },
+  { icon: FileText, label: "Quizzes", path: "/student/quizzes" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
-  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
-  { icon: Users, label: "Students", path: "/students" },
+  { icon: Users, label: "All Students", path: "/all-students" },
+  { icon: Table, label: "Time Table", path: "/lecturer/timetable" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
+  { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
-  { icon: Settings, label: "Settings", path: "/settings" },
 ];
+
 
 interface MobileSidebarProps {
   isOpen: boolean;

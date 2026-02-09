@@ -162,41 +162,42 @@ export default function LandingPage() {
 
                 {/* Navigation */}
                 <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl fixed top-0 w-full z-[100] transition-all duration-300">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
-                        <div className="flex items-center justify-between h-16">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
+                        <div className="flex items-center justify-between h-20">
                             {/* Logo */}
                             <div className="flex items-center gap-2">
-                                <Link to="/" className="flex items-center gap-2">
-                                    <div className="size-8 rounded-lg overflow-hidden border border-white/20">
+                                <Link to="/" className="flex items-center gap-2 group">
+                                    <div className="size-10 rounded-xl overflow-hidden border border-white/20 group-hover:border-blue-500/50 transition-all duration-300">
                                         <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                                     </div>
-                                    <span className="text-xl font-bold text-white dark:text-white">
+                                    <span className="text-2xl font-bold text-white dark:text-white tracking-tight">
                                         Eduspace
                                     </span>
                                 </Link>
                             </div>
 
                             {/* Navigation Links */}
-                            <div className="hidden md:flex items-center gap-6">
-                                <a href="#features" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform">
+                            <div className="hidden md:flex items-center gap-8">
+                                <a href="#features" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
                                     Features
                                 </a>
-                                <a href="#students" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform">
-                                    For Students
+                                <a href="#students" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
+                                    Students
                                 </a>
-                                <a href="#lecturers" className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform">
-                                    For Lecturers
+                                <a href="#lecturers" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
+                                    Lecturers
                                 </a>
                                 <button
                                     onClick={() => setShowContact(true)}
-                                    className="text-sm text-slate-200 dark:text-slate-400 hover:text-blue-400 dark:hover:text-blue-400 transition-colors will-change-transform"
+                                    className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors"
                                 >
                                     Support
                                 </button>
+                                <div className="h-6 w-px bg-white/10 mx-2" />
                                 <ThemeToggle />
                                 <Button
                                     onClick={() => setShowRoleDialog(true)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg shadow-blue-600/20"
                                 >
                                     Sign In
                                 </Button>
@@ -206,24 +207,23 @@ export default function LandingPage() {
                 </nav>
 
                 {/* Hero Section */}
-                <section className="max-w-7xl mx-auto px-6 lg:px-8 pt-36 pb-20 lg:pt-48 lg:pb-32">
-                    <div className="grid lg:grid-cols-2 gap-16 items-center">
+                <section className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-40 pb-24 lg:pt-56 lg:pb-40">
+                    <div className="grid lg:grid-cols-[1.2fr,0.8fr] gap-20 items-center">
                         {/* Left Content */}
-                        <div className="space-y-8">
+                        <div className="space-y-10">
                             {/* Badge */}
                             <div className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                                 <div className="size-2 rounded-full bg-blue-600 dark:bg-blue-400" />
                                 Real-time Progress Tracking
                             </div>
 
-                            {/* Heading */}
-                            <div className="space-y-4">
-                                <h1 className="text-5xl lg:text-6xl font-black text-white dark:text-white leading-tight">
+                            <div className="space-y-6">
+                                <h1 className="text-6xl lg:text-7xl xl:text-8xl font-black text-white dark:text-white leading-[1.1] tracking-tight">
                                     Focus on your{" "}
-                                    <span className="text-blue-600 dark:text-blue-400">Growth</span>{" "}
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Growth</span>{" "}
                                     & Success
                                 </h1>
-                                <p className="text-lg text-slate-200 dark:text-slate-400 leading-relaxed max-w-xl">
+                                <p className="text-xl text-slate-200 dark:text-slate-400 leading-relaxed max-w-2xl">
                                     Experience a workspace designed for achievement. Track grades, manage assignments, and visualize your learning journey with our advanced analytics platform.
                                 </p>
                             </div>
@@ -363,8 +363,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* Features Section */}
-                <section id="features" className="py-20 lg:py-32 bg-transparent dark:bg-slate-900/50">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section id="features" className="py-24 lg:py-40 bg-transparent dark:bg-slate-900/50">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="text-center mb-16">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium mb-4">
                                 <Zap className="size-4" />
@@ -407,8 +407,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* For Students Section */}
-                <section id="students" className="py-20 lg:py-32">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section id="students" className="py-24 lg:py-40">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="grid lg:grid-cols-2 gap-16 items-center">
                             <div className="space-y-8">
                                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-sm font-medium">
@@ -484,8 +484,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* For Lecturers Section */}
-                <section id="lecturers" className="py-20 lg:py-32 bg-transparent dark:bg-slate-900/50">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section id="lecturers" className="py-24 lg:py-40 bg-transparent dark:bg-slate-900/50">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="grid lg:grid-cols-2 gap-16 items-center">
                             <div className="order-2 lg:order-1 relative">
                                 <div className="bg-gradient-to-br from-blue-100/90 to-indigo-100/90 dark:from-blue-900/30 dark:to-indigo-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6">
@@ -564,8 +564,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* Statistics Section */}
-                <section className="py-20 lg:py-32 bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section className="py-24 lg:py-40 bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="text-center mb-16">
                             <h2 className="text-4xl lg:text-5xl font-bold mb-4">
                                 Trusted by Thousands
@@ -596,8 +596,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* How It Works Section */}
-                <section className="py-20 lg:py-32">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section className="py-24 lg:py-40">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="text-center mb-16">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-sm font-medium mb-4">
                                 <Zap className="size-4" />
@@ -661,8 +661,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* Testimonials Section */}
-                <section className="py-20 lg:py-32 bg-transparent dark:bg-slate-900/50 overflow-hidden">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section className="py-24 lg:py-40 bg-transparent dark:bg-slate-900/50 overflow-hidden">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="text-center mb-16">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-sm font-medium mb-4">
                                 <Star className="size-4" />
@@ -725,8 +725,8 @@ export default function LandingPage() {
                 </section>
 
                 {/* Benefits Section */}
-                <section className="py-24 lg:py-32 bg-transparent dark:bg-slate-900/50">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <section className="py-24 lg:py-40 bg-transparent dark:bg-slate-900/50">
+                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                         <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
                             {/* Left - Visual (Matched to Hero Style) */}
                             <div className="w-full lg:w-1/2 relative order-last lg:order-first">

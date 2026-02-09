@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, Clock, Trophy, Target, ArrowLeft, Save } from 'lucide-react';
+import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
@@ -23,6 +24,7 @@ export default function TakeQuiz() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [rank, setRank] = useState<{ position: number, total: number } | null>(null);
     const [elapsedTime, setElapsedTime] = useState<number>(0);
+    const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     // LocalStorage keys for persistence
@@ -267,13 +269,7 @@ export default function TakeQuiz() {
 
     const handleSubmit = async () => {
         if (!user || !quiz) return;
-
-        const unansweredCount = questions.length - Object.keys(answers).length;
-        if (unansweredCount > 0) {
-            if (!confirm(`You have ${unansweredCount} unanswered questions. Submit anyway?`)) {
-                return;
-            }
-        }
+        setIsConfirmSubmitOpen(false);
 
         // CRITICAL: Prevent re-submission if already done (client-side safety)
         if (result || (submissionId && !answers)) {
@@ -409,6 +405,15 @@ export default function TakeQuiz() {
             toast.error(error.message || 'Failed to submit quiz');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleAttemptSubmit = () => {
+        const unansweredCount = questions.length - Object.keys(answers).length;
+        if (unansweredCount > 0) {
+            setIsConfirmSubmitOpen(true);
+        } else {
+            handleSubmit();
         }
     };
 
@@ -672,7 +677,7 @@ export default function TakeQuiz() {
 
                         {/* Submit Button */}
                         <Button
-                            onClick={handleSubmit}
+                            onClick={handleAttemptSubmit}
                             disabled={submitting}
                             className="mt-6 w-full h-12 bg-blue-500 hover:bg-blue-600 text-white font-bold text-base"
                         >
@@ -776,7 +781,7 @@ export default function TakeQuiz() {
                             <ChevronLeft className="size-4" /> Prev
                         </Button>
                         <Button
-                            onClick={handleSubmit}
+                            onClick={handleAttemptSubmit}
                             disabled={submitting}
                             className="flex-1 h-12 bg-blue-500"
                         >
@@ -792,6 +797,13 @@ export default function TakeQuiz() {
                     </div>
                 </div>
             </div>
+            <DeleteConfirmDialog
+                open={isConfirmSubmitOpen}
+                onOpenChange={setIsConfirmSubmitOpen}
+                onConfirm={handleSubmit}
+                title="Submit Quiz?"
+                description={`You have ${questions.length - Object.keys(answers).length} unanswered questions. Are you sure you want to submit your quiz now?`}
+            />
         </DashboardLayout>
     );
 }

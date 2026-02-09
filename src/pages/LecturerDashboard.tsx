@@ -24,10 +24,7 @@ export default function LecturerDashboard() {
   useRealtimeRejections();
 
   // Get display name for greeting
-  const displayName = profile?.full_name || "Professor";
-  const title = displayName.startsWith("Dr.") || displayName.startsWith("Prof.")
-    ? displayName
-    : `Dr. ${displayName.split(" ").pop()}`;
+  const title = profile?.full_name || "Professor";
 
   const stats = [
     {
@@ -80,7 +77,7 @@ export default function LecturerDashboard() {
           className="gap-2 shadow-sm"
         >
           <UserPlus className="size-4" />
-          <span className="hidden sm:inline">Invite Student</span>
+          <span>Invite Student</span>
         </Button>
       }
     >
@@ -102,10 +99,10 @@ export default function LecturerDashboard() {
                 Academic Dashboard
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 to-cyan-200">{title}</span>
+                Welcome back, <span className="text-white">{title}</span>
               </h1>
-              <p className="text-slate-300 text-base max-w-lg">
-                Your daily overview of student progress upcoming classes.
+              <p className="text-slate-300 text-base">
+                Your daily overview of student progress and upcoming classes.
               </p>
             </div>
           </div>

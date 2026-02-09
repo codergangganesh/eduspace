@@ -397,7 +397,7 @@ export default function AllStudents() {
                         <Button
                             variant="outline"
                             onClick={() => setShowAddStudentModal(true)}
-                            className="gap-2"
+                            className="hidden sm:flex gap-2"
                         >
                             <UserPlus className="size-4" />
                             Add Student
@@ -679,6 +679,18 @@ export default function AllStudents() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Mobile FAB for Add Student */}
+            <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <Button
+                    onClick={() => setShowAddStudentModal(true)}
+                    size="icon"
+                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                    title="Add Student"
+                >
+                    <Plus className="size-8 text-white" />
+                </Button>
+            </div>
         </DashboardLayout>
     );
 }

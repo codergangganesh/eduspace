@@ -42,6 +42,7 @@ import { EditClassAssignmentDialog } from '@/components/assignments/EditClassAss
 import { ManageSubjectsDialog } from '@/components/assignments/ManageSubjectsDialog';
 import { ClassAssignment } from '@/hooks/useClassAssignments';
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
+import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 type FilterType = 'all' | 'active' | 'closed';
 
@@ -56,6 +57,8 @@ export default function ClassAssignmentsView() {
     const [editingAssignment, setEditingAssignment] = useState<ClassAssignment | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isSubjectsOpen, setIsSubjectsOpen] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
 
     const currentClass = classes.find((c) => c.id === classId);
 
@@ -71,10 +74,8 @@ export default function ClassAssignmentsView() {
         setIsEditOpen(true);
     };
 
-    const handleDeleteClick = async (assignmentId: string) => {
-        if (confirm('Are you sure you want to delete this assignment?')) {
-            await deleteAssignment(assignmentId);
-        }
+    const handleDeleteClick = (assignmentId: string) => {
+        setAssignmentToDelete(assignmentId);
     };
 
     const handleStatusToggle = async (assignmentId: string, currentStatus: string) => {
@@ -129,6 +130,8 @@ export default function ClassAssignmentsView() {
                                 classId={classId!}
                                 subjects={subjects}
                                 onManageSubjects={() => setIsSubjectsOpen(true)}
+                                open={isCreateOpen}
+                                onOpenChange={setIsCreateOpen}
                             />
                         </div>
                     </div>
@@ -225,7 +228,7 @@ export default function ClassAssignmentsView() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
                         {filteredAssignments.map((assignment, index) => (
                             <AssignmentCard
                                 key={assignment.id}
@@ -258,6 +261,31 @@ export default function ClassAssignmentsView() {
 
 
             </div >
+
+            {/* Mobile FAB */}
+            <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <Button
+                    onClick={() => setIsCreateOpen(true)}
+                    size="icon"
+                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                    title="Create Assignment"
+                >
+                    <Plus className="size-8 text-white" />
+                </Button>
+            </div>
+
+            <DeleteConfirmDialog
+                open={!!assignmentToDelete}
+                onOpenChange={(open) => !open && setAssignmentToDelete(null)}
+                onConfirm={async () => {
+                    if (assignmentToDelete) {
+                        await deleteAssignment(assignmentToDelete);
+                        setAssignmentToDelete(null);
+                    }
+                }}
+                title="Delete Assignment?"
+                description="This will permanently delete the assignment and all student submissions associated with it. This action is irreversible."
+            />
         </DashboardLayout >
     );
 }

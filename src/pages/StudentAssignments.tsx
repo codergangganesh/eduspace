@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAssignments } from "@/hooks/useAssignments";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DeleteConfirmDialog } from "@/components/layout/DeleteConfirmDialog";
 
 type FilterType = "all" | "pending" | "submitted" | "graded" | "overdue";
 
@@ -35,6 +36,7 @@ export default function StudentAssignments() {
     const [isSubmitOpen, setIsSubmitOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
 
     // Set default selected class when classes load
     useEffect(() => {
@@ -62,22 +64,8 @@ export default function StudentAssignments() {
         setIsSubmitOpen(true);
     };
 
-    const handleDeleteSubmission = async (assignmentId: string) => {
-        if (confirm("Are you sure you want to delete this submission?")) {
-            console.log("Deleting submission for assignment:", assignmentId);
-            // Find submission ID
-            const assignment = assignments.find(a => a.id === assignmentId);
-            if (assignment?.submission?.id) {
-                const { success, error } = await deleteSubmission(assignment.submission.id);
-                if (success) {
-                    toast.success("Submission deleted successfully");
-                    // Status update is handled by real-time subscription
-                } else {
-                    toast.error("Failed to delete submission");
-                    console.error(error);
-                }
-            }
-        }
+    const handleDeleteSubmission = (assignmentId: string) => {
+        setSubmissionToDelete(assignmentId);
     };
 
     const getStatusVariant = (status: string) => {
@@ -374,6 +362,28 @@ export default function StudentAssignments() {
                     onSubmit={submitAssignment}
                 />
             )}
+
+            <DeleteConfirmDialog
+                open={!!submissionToDelete}
+                onOpenChange={(open) => !open && setSubmissionToDelete(null)}
+                onConfirm={async () => {
+                    if (submissionToDelete) {
+                        const assignment = assignments.find(a => a.id === submissionToDelete);
+                        if (assignment?.submission?.id) {
+                            const { success, error } = await deleteSubmission(assignment.submission.id);
+                            if (success) {
+                                toast.success("Submission deleted successfully");
+                            } else {
+                                toast.error("Failed to delete submission");
+                                console.error(error);
+                            }
+                        }
+                        setSubmissionToDelete(null);
+                    }
+                }}
+                title="Delete Submission?"
+                description="This will permanently delete your work and any feedback or grades you've received for this assignment. This action cannot be undone."
+            />
         </DashboardLayout>
     );
 }
