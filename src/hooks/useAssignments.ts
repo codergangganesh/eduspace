@@ -24,6 +24,7 @@ export interface Assignment {
     class_name?: string;
     subject_name?: string;
     lecturer_name?: string;
+    instructor_avatar?: string;
     studentStatus?: 'pending' | 'submitted' | 'graded' | 'overdue';
     submission?: AssignmentSubmission;
     grade?: number;
@@ -52,13 +53,62 @@ interface AssignmentStats {
     averageGrade?: number;
 }
 
-export function useAssignments() {
+export function useAssignments(selectedClassId?: string) {
     const { user, role } = useAuth();
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>([]);
+
+    const fetchEnrolledClasses = useCallback(async () => {
+        if (!user || role !== 'student') return;
+
+        try {
+            const studentEmail = user.email || '';
+            const emailFilter = studentEmail ? `,email.ilike.${studentEmail}` : '';
+
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from('class_students')
+                .select('class_id')
+                .or(`student_id.eq.${user.id}${emailFilter}`);
+
+            if (enrollmentError) {
+                console.error('Error fetching enrollments:', enrollmentError);
+                return;
+            }
+
+            const classIds = enrollments?.map(e => e.class_id).filter(Boolean) as string[] || [];
+
+            if (classIds.length === 0) {
+                setEnrolledClasses([]);
+                return;
+            }
+
+            const { data: classesData, error: classesError } = await supabase
+                .from('classes')
+                .select('id, class_name, course_code')
+                .in('id', classIds);
+
+            if (classesError) {
+                console.error('Error fetching class details:', classesError);
+                return;
+            }
+
+            setEnrolledClasses(classesData || []);
+
+        } catch (error) {
+            console.error('Error in fetchEnrolledClasses:', error);
+        }
+    }, [user, role]);
+
+    // Initialize enrolled classes for student
+    useEffect(() => {
+        if (role === 'student') {
+            fetchEnrolledClasses();
+        }
+    }, [fetchEnrolledClasses, role]);
 
     // silentRefresh: when true, don't trigger loading state (for real-time updates)
     const fetchAssignments = useCallback(async (silentRefresh = false) => {
@@ -85,75 +135,40 @@ export function useAssignments() {
                 data = assignmentsData || [];
 
             } else {
-                // Student sees only assignments from classes they're enrolled in
-                // Strict check using shared utility
-                const enrolledClassIds = await getEnrolledClassIds(user.id);
+                // Student View
+                let targetClassIds: string[] = [];
 
-                if (enrolledClassIds.length === 0) {
-                    // Student not enrolled in any classes, show no assignments
+                if (selectedClassId) {
+                    targetClassIds = [selectedClassId];
+                } else {
+                    // If no class selected, fetch for all enrolled classes (Dashboard view)
+                    targetClassIds = await getEnrolledClassIds(user.id);
+                }
+
+                if (targetClassIds.length === 0) {
                     data = [];
                     mySubmissions = [];
                 } else {
-                    // Fetch assignments with class_id (new class-first assignments)
+                    // Fetch assignments for the target classes
                     const { data: classAssignments, error: classError } = await supabase
                         .from('assignments')
                         .select('*')
-                        .in('class_id', enrolledClassIds)
+                        .in('class_id', targetClassIds)
                         .or('status.eq.published,status.eq.active,status.eq.completed,status.eq.closed')
                         .order('due_date', { ascending: true });
 
-                    console.log('[useAssignments] Enrolled class IDs:', enrolledClassIds);
-                    console.log('[useAssignments] Class assignments fetched:', classAssignments?.length || 0, classAssignments);
-
                     if (classError) {
                         console.error('Error fetching class assignments:', classError);
+                        throw classError;
                     }
+                    data = classAssignments || [];
+                }
 
-                    // Also fetch old course-based assignments for backward compatibility
-                    const { data: classesData } = await supabase
-                        .from('classes')
-                        .select('id, class_name, course_code')
-                        .in('id', enrolledClassIds);
-
-                    // Create a map for quick class lookup
-                    const classMap = new Map(classesData?.map(c => [c.id, c]) || []);
-
-                    let courseAssignments: any[] = [];
-                    if (classesData && classesData.length > 0) {
-                        const enrolledCourseCodes = classesData.map(c => c.course_code);
-
-                        const { data: enrolledCourses } = await supabase
-                            .from('courses')
-                            .select('id')
-                            .in('course_code', enrolledCourseCodes);
-
-                        const enrolledCourseIds = enrolledCourses?.map(c => c.id) || [];
-
-                        if (enrolledCourseIds.length > 0) {
-                            const { data: oldAssignments, error: fetchError } = await supabase
-                                .from('assignments')
-                                .select('*')
-                                .in('course_id', enrolledCourseIds)
-                                .eq('status', 'published') // Old courses might only use 'published'
-                                .is('class_id', null) // Only old assignments without class_id
-                                .order('due_date', { ascending: true });
-
-                            if (fetchError) {
-                                console.error('Error fetching course assignments:', fetchError);
-                            } else {
-                                courseAssignments = oldAssignments || [];
-                            }
-                        }
-                    }
-
-                    // Combine both class-based and course-based assignments
-                    const allAssignments = [...(classAssignments || []), ...courseAssignments];
-                    console.log('[useAssignments] Total combined assignments:', allAssignments.length);
-
+                if (data.length > 0) {
                     // Fetch related data for enrichment
                     // Get unique subject IDs and lecturer IDs
-                    const subjectIds = [...new Set(allAssignments.map(a => a.subject_id).filter(Boolean))];
-                    const lecturerIds = [...new Set(allAssignments.map(a => a.lecturer_id).filter(Boolean))];
+                    const subjectIds = [...new Set(data.map(a => a.subject_id).filter(Boolean))];
+                    const lecturerIds = [...new Set(data.map(a => a.lecturer_id).filter(Boolean))];
 
                     // Fetch subject names
                     let subjectMap = new Map<string, string>();
@@ -165,33 +180,46 @@ export function useAssignments() {
                         subjectMap = new Map(subjects?.map(s => [s.id, s.name]) || []);
                     }
 
-                    // Fetch lecturer names
-                    let lecturerMap = new Map<string, string>();
+                    // Fetch lecturer names and avatars
+                    let lecturerMap = new Map<string, { name: string, avatar: string | null }>();
                     if (lecturerIds.length > 0) {
                         const { data: lecturers } = await supabase
                             .from('profiles')
-                            .select('user_id, full_name')
+                            .select('user_id, full_name, avatar_url')
                             .in('user_id', lecturerIds);
-                        lecturerMap = new Map(lecturers?.map(l => [l.user_id, l.full_name]) || []);
+
+                        lecturers?.forEach(l => {
+                            lecturerMap.set(l.user_id, {
+                                name: l.full_name,
+                                avatar: l.avatar_url
+                            });
+                        });
                     }
 
-                    // Enrich assignments with class, subject, and lecturer names
-                    data = allAssignments.map(a => ({
-                        ...a,
-                        class_name: classMap.get(a.class_id)?.class_name || null,
-                        subject_name: subjectMap.get(a.subject_id) || null,
-                        lecturer_name: lecturerMap.get(a.lecturer_id) || null,
-                    }));
+                    // Enrich assignments with class, subject, and lecturer details
+                    data = data.map(a => {
+                        const lecturer = lecturerMap.get(a.lecturer_id);
+                        return {
+                            ...a,
+                            class_name: a.class_id ? "Class Assignment" : null,
+                            subject_name: subjectMap.get(a.subject_id) || null,
+                            lecturer_name: lecturer?.name || null,
+                            instructor_avatar: lecturer?.avatar || null,
+                        };
+                    });
 
-                    // Fetch My Submissions to determine status
-                    const { data: submissionsData, error: subError } = await supabase
-                        .from('assignment_submissions')
-                        .select('*')
-                        .eq('student_id', user.id);
+                    // Fetch My Submissions for these assignments
+                    const assignmentIds = data.map(a => a.id);
+                    if (assignmentIds.length > 0) {
+                        const { data: submissionsData, error: subError } = await supabase
+                            .from('assignment_submissions')
+                            .select('*')
+                            .eq('student_id', user.id)
+                            .in('assignment_id', assignmentIds);
 
-                    if (subError) throw subError;
-                    mySubmissions = (submissionsData || []) as any[];
-                    console.log('[useAssignments] My submissions fetched:', mySubmissions.length, mySubmissions.map(s => ({ id: s.id, assignment_id: s.assignment_id, status: s.status })));
+                        if (subError) throw subError;
+                        mySubmissions = (submissionsData || []) as any[];
+                    }
                 }
             }
 
@@ -201,6 +229,7 @@ export function useAssignments() {
                     course_title: a.courses?.title,
                     course_code: a.courses?.course_code,
                     lecturer_name: a.lecturer_name || a.lecturer?.full_name,
+                    instructor_avatar: a.instructor_avatar || a.lecturer?.avatar_url,
                 };
 
                 if (role === 'student') {
@@ -232,7 +261,7 @@ export function useAssignments() {
                 return base;
             });
 
-            console.log('[useAssignments] Final formatted assignments:', formattedAssignments.length, formattedAssignments.map(a => ({ id: a.id, title: a.title, studentStatus: a.studentStatus })));
+            console.log('[useAssignments] Final formatted assignments:', formattedAssignments.length);
             setAssignments(formattedAssignments);
             setError(null);
         } catch (err) {
@@ -241,12 +270,28 @@ export function useAssignments() {
             if (isInitialLoad) {
                 setAssignments([]);
             }
-            setError(null); // Don't show error to user, just log it
+            setError(null);
         } finally {
             setLoading(false);
             setIsInitialLoad(false);
         }
-    }, [user, role, isInitialLoad]);
+    }, [user, role, isInitialLoad, selectedClassId]);
+
+    // Fetch assignments when selected class changes (for student)
+    useEffect(() => {
+        if (role === 'student') {
+            if (selectedClassId) {
+                setAssignments([]); // Clear stale data
+                setLoading(true); // Trigger loading
+                fetchAssignments();
+            } else {
+                fetchAssignments();
+            }
+        } else if (role === 'lecturer') {
+            // Lecturer login handles initial load
+            fetchAssignments();
+        }
+    }, [fetchAssignments, role, selectedClassId]);
 
     // Helper function to merge new assignments with existing ones, preserving submission states
     const mergeAssignmentsWithSubmissions = useCallback((
@@ -287,8 +332,11 @@ export function useAssignments() {
             return;
         }
 
-        // Initial fetch
-        fetchAssignments();
+        if (role !== 'student') {
+            // Initial fetch for non-students (lecturers view all their assignments usually)
+            // or handled by the other useEffect
+            fetchAssignments();
+        }
 
         // Real-time subscription for assignments table
         const assignmentsSubscription = supabase
@@ -308,6 +356,11 @@ export function useAssignments() {
                         const newAssignment = payload.new as any;
 
                         if (role === 'student') {
+                            // If a specific class is selected, ignore assignments from other classes
+                            if (selectedClassId && newAssignment.class_id !== selectedClassId) {
+                                return;
+                            }
+
                             // Check if student is enrolled in this class
                             const enrolledClassIds = await getEnrolledClassIds(user.id);
                             if (newAssignment.class_id && enrolledClassIds.includes(newAssignment.class_id)) {
@@ -759,5 +812,6 @@ export function useAssignments() {
         submitAssignment,
         deleteSubmission,
         refreshAssignments: fetchAssignments,
+        enrolledClasses
     };
 }

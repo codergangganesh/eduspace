@@ -3,27 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-export function useStudentQuizzes() {
+export function useStudentQuizzes(selectedClassId?: string) {
     const { user } = useAuth();
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [enrolledClassIds, setEnrolledClassIds] = useState<string[]>([]);
+    const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>([]);
+    const [enrolledClassIds, setEnrolledClassIds] = useState<string[]>([]); // Keep this for real-time subscriptions
 
     // Use ref to track active channels for cleanup
     const channelsRef = useRef<RealtimeChannel[]>([]);
 
-    const fetchStudentQuizzes = useCallback(async () => {
-        if (!user) return;
-        try {
-            // Keep loading state only on initial load if we don't have data yet
-            setLoading(prev => prev && quizzes.length === 0);
+    const fetchEnrolledClasses = useCallback(async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
+        try {
             // Get student email for fallback matching
             const studentEmail = user.email || '';
-
-            // 1. Get enrolled classes
-            // Only use email filter if email exists
             const emailFilter = studentEmail ? `,email.ilike.${studentEmail}` : '';
+
+            // Get enrolled class IDs first
             const { data: enrollments, error: enrollmentError } = await supabase
                 .from('class_students')
                 .select('class_id')
@@ -31,45 +32,98 @@ export function useStudentQuizzes() {
 
             if (enrollmentError) {
                 console.error('Error fetching enrollments:', enrollmentError);
-                // Don't throw here, just treat as empty to avoid crashing if table permissions are weird
+                setLoading(false);
+                return;
             }
 
             const classIds = enrollments?.map(e => e.class_id).filter(Boolean) as string[] || [];
-
-            // Update state only if changed to prevent unnecessary re-subscriptions
-            setEnrolledClassIds(prev => {
-                if (JSON.stringify(prev.sort()) === JSON.stringify(classIds.sort())) {
-                    return prev;
-                }
-                return classIds;
-            });
+            setEnrolledClassIds(classIds); // Update the internal list of IDs
 
             if (classIds.length === 0) {
+                setEnrolledClasses([]);
+                setLoading(false);
+                return;
+            }
+
+            // Fetch class details
+            const { data: classesData, error: classesError } = await supabase
+                .from('classes')
+                .select('id, class_name, course_code')
+                .in('id', classIds);
+
+            if (classesError) {
+                console.error('Error fetching class details:', classesError);
+                setLoading(false);
+                return;
+            }
+
+            setEnrolledClasses(classesData || []);
+
+        } catch (error) {
+            console.error('Error in fetchEnrolledClasses:', error);
+            setLoading(false);
+        }
+    }, [user]);
+
+    const fetchStudentQuizzes = useCallback(async (overrideClassId?: string) => {
+        const targetClassId = overrideClassId || selectedClassId;
+        if (!user) return;
+        if (!targetClassId) {
+            setQuizzes([]);
+            setLoading(false);
+            return;
+        }
+
+        try {
+            console.log(`[useStudentQuizzes] Fetching quizzes for class: ${targetClassId}`);
+            setLoading(true);
+
+            // 2. Fetch published quizzes for THIS class only - BASIC INFO ONLY
+            const { data: quizzesData, error } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('class_id', targetClassId)
+                .in('status', ['published', 'closed'])
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('[useStudentQuizzes] Error fetching quizzes data:', error.message || error);
+                throw error;
+            }
+
+            console.log(`[useStudentQuizzes] Found ${quizzesData?.length || 0} quizzes for class ${targetClassId}`);
+
+            if (!quizzesData || quizzesData.length === 0) {
                 setQuizzes([]);
                 setLoading(false);
                 return;
             }
 
-            // 2. Fetch published quizzes for these classes
-            // Robust Approach: Fetch raw data first, then fetch related profiles separately
-            const { data: quizzesData, error } = await supabase
-                .from('quizzes')
-                .select(`
-                    *,
-                    classes (
-                        class_name,
-                        course_code
-                    ),
-                    quiz_questions (count)
-                `)
-                .in('class_id', classIds)
-                .eq('status', 'published')
-                .order('created_at', { ascending: false });
+            // Fetch Related Data Separately to avoid RLS join issues
+            // Fetch Class Details
+            const classIds = [...new Set(quizzesData.map(q => q.class_id))];
+            const { data: classesData } = await supabase
+                .from('classes')
+                .select('id, class_name, course_code')
+                .in('id', classIds);
 
-            if (error) {
-                console.error('Error fetching quizzes data:', error.message || error);
-                throw error;
+            const classMap = new Map(classesData?.map(c => [c.id, c]) || []);
+
+            // Fetch Question Counts
+            const quizIds = quizzesData.map(q => q.id);
+            const { data: questionCounts } = await supabase
+                .from('quiz_questions')
+                .select('quiz_id')
+                .in('quiz_id', quizIds);
+
+            // Calculate counts manually since we just got IDs
+            const questionCountMap = new Map<string, number>();
+            if (questionCounts) {
+                questionCounts.forEach((q: { quiz_id: string }) => {
+                    questionCountMap.set(q.quiz_id, (questionCountMap.get(q.quiz_id) || 0) + 1);
+                });
             }
+
 
             // 3. Fetch Instructor Profiles separately (to avoid join failures)
             const instructorIds = [...new Set(quizzesData?.map(q => q.created_by).filter(Boolean))];
@@ -78,13 +132,13 @@ export function useStudentQuizzes() {
             if (instructorIds.length > 0) {
                 const { data: instructors } = await supabase
                     .from('profiles')
-                    .select('id, full_name, avatar_url')
-                    .in('id', instructorIds);
+                    .select('user_id, full_name, avatar_url')
+                    .in('user_id', instructorIds);
 
                 if (instructors) {
                     instructorMap = instructors.reduce((acc, curr) => ({
                         ...acc,
-                        [curr.id]: curr
+                        [curr.user_id]: curr
                     }), {});
                 }
             }
@@ -110,14 +164,17 @@ export function useStudentQuizzes() {
                 });
 
                 // Transform the count to a number and extract instructor details
-                const quizData = q as any;
-                const questionCount = quizData.quiz_questions?.[0]?.count || 0;
                 const instructor = instructorMap[q.created_by] || null;
+                const relatedClass = classMap.get(q.class_id);
 
                 return {
                     ...q,
+                    classes: relatedClass ? {
+                        class_name: relatedClass.class_name,
+                        course_code: relatedClass.course_code
+                    } : null,
                     _count: {
-                        questions: questionCount
+                        questions: questionCountMap.get(q.id) || 0
                     },
                     instructor: instructor ? {
                         full_name: instructor.full_name,
@@ -134,12 +191,36 @@ export function useStudentQuizzes() {
         } finally {
             setLoading(false);
         }
-    }, [user]); // Removed unnecessary dependencies
+    }, [user, selectedClassId]);
 
-    // Initial fetch
+    // Initial fetch of classes
     useEffect(() => {
+        fetchEnrolledClasses();
+    }, [fetchEnrolledClasses]);
+
+    // Fetch quizzes when selectedClassId changes
+    useEffect(() => {
+        if (selectedClassId) {
+            setQuizzes([]); // Clear stale data immediately
+            setLoading(true); // Trigger loading state immediately
+            fetchStudentQuizzes(); // Fetch new data
+        } else {
+            setQuizzes([]);
+            // Ensure loading is false if no class is selected
+            setLoading(false);
+        }
+    }, [selectedClassId, fetchStudentQuizzes]);
+
+    const refreshQuizzes = useCallback(() => {
         fetchStudentQuizzes();
     }, [fetchStudentQuizzes]);
+
+    // Real-time subscriptions - needing selectedClassId to be passed in from component potentially?
+    // Actually, we can subscribe to changes for the *selected* class if we moved state up, 
+    // OR just subscribe to all enrolled classes and selectively refresh.
+    // Ideally, the hook should know the selected class. 
+    // Let's change the hook signature to accept `selectedClassId`.
+
 
     // Real-time subscriptions
     useEffect(() => {
@@ -163,8 +244,17 @@ export function useStudentQuizzes() {
                 },
                 (payload) => {
                     const newRecord = payload.new as any;
-                    // Filter: Only refresh if the affected quiz belongs to an enrolled class
-                    if (newRecord?.class_id && enrolledClassIds.includes(newRecord.class_id)) {
+                    const oldRecord = payload.old as any;
+
+                    if (payload.eventType === 'DELETE') {
+                        // For deletes, we might not know the class_id easily without querying, 
+                        // but we should refresh if the deleted quiz was in our list or just refresh to be safe.
+                        // Since we can't check class_id on DELETE payloads easily (unless replica identity is full),
+                        // we'll optimistically refresh if we have a selected class.
+                        console.log('Quiz deleted, refreshing...', payload);
+                        fetchStudentQuizzes();
+                    } else if (newRecord?.class_id && enrolledClassIds.includes(newRecord.class_id)) {
+                        // Filter for INSERT/UPDATE: Only refresh if the affected quiz belongs to an enrolled class
                         console.log('Relevant quiz update detected:', payload);
                         fetchStudentQuizzes();
                     }
@@ -196,6 +286,7 @@ export function useStudentQuizzes() {
     return {
         quizzes,
         loading,
-        refreshQuizzes: fetchStudentQuizzes
+        enrolledClasses,
+        fetchStudentQuizzes
     };
 }

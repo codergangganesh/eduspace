@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,17 +15,15 @@ import {
     CheckCircle2,
     XCircle,
     AlertCircle,
-    Download,
-    ChevronRight,
-    Edit,
-    Trash2,
+    Trophy,
+    Eye,
+    UploadCloud,
     MoreVertical,
-    Users
+    Edit,
+    Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { getCardColor, getCardColorByIndex } from "@/lib/card-styles";
-// ... imports
 
 interface Assignment {
     id: string;
@@ -42,10 +41,15 @@ interface Assignment {
     class_name?: string;
     subject_name?: string;
     lecturer_name?: string;
+    instructor_avatar?: string; // Added for consistency if available
     submission?: {
         submitted_at?: string;
         file_url?: string;
+        status?: string;
+        grade?: number;
+        feedback?: string;
     };
+    studentStatus?: 'pending' | 'submitted' | 'graded' | 'overdue';
 }
 
 interface AssignmentCardProps {
@@ -58,101 +62,174 @@ interface AssignmentCardProps {
     onSubmit?: (assignment: Assignment) => void;
     index?: number;
     classId?: string;
+    viewMode?: 'grid' | 'list';
 }
 
 export function AssignmentCard({
     assignment,
     onView,
+    onSubmit,
     onEdit,
     onDelete,
-    onSubmit,
     role = 'lecturer',
     className,
-    index,
-    classId
+    viewMode = 'grid'
 }: AssignmentCardProps) {
-    const colors = index !== undefined ? getCardColorByIndex(index) : getCardColor(assignment.id);
 
-    // Status config
-    const getStatusConfig = (status: string) => {
-        switch (status) {
-            case 'active':
-            case 'pending':
-                return { color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800", icon: Clock, label: "Active" };
-            case 'closed':
-            case 'archived':
-                return { color: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800", icon: XCircle, label: "Closed" };
-            case 'submitted':
-                return { color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800", icon: CheckCircle2, label: "Submitted" };
-            case 'graded':
-            case 'completed':
-                return { color: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800", icon: CheckCircle2, label: "Graded" };
-            case 'late':
-            case 'overdue':
-                return { color: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800", icon: AlertCircle, label: "Overdue" };
-            case 'draft':
-                return { color: "bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800", icon: FileText, label: "Draft" };
-            case 'published':
-                return { color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800", icon: CheckCircle2, label: "Published" };
-            default:
-                return { color: "bg-slate-500/10 text-slate-600 border-slate-200", icon: FileText, label: status };
-        }
+    // Determine status logic (similar to QuizCard)
+    const status = assignment.studentStatus || assignment.status || 'pending';
+    const isSubmitted = status === 'submitted' || status === 'graded';
+    const isGraded = status === 'graded';
+    const isOverdue = status === 'overdue';
+    const isLate = status === 'late';
+
+    // Helper to get status color/icon
+    const getStatusDetails = () => {
+        if (isGraded) return { label: 'GRADED', color: 'bg-emerald-400 text-emerald-950', icon: CheckCircle2 };
+        if (isSubmitted) return { label: 'SUBMITTED', color: 'bg-blue-400 text-blue-950', icon: CheckCircle2 };
+        if (isOverdue || isLate) return { label: 'OVERDUE', color: 'bg-red-400 text-red-950', icon: AlertCircle };
+        return { label: 'PENDING', color: 'bg-white/20 hover:bg-white/30 text-white', icon: Clock };
     };
 
-    const statusConfig = getStatusConfig(assignment.status);
-    const StatusIcon = statusConfig.icon;
+    const statusInfo = getStatusDetails();
+
+    if (viewMode === 'list') {
+        return (
+            <Card className={cn(
+                "group relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-xl bg-[#3c3744] text-white border border-white/5",
+                className
+            )}>
+                <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                    {/* Left: Status & Course */}
+                    <div className="flex items-center gap-3 md:w-48 shrink-0">
+                        <div className={cn("p-3 rounded-xl", statusInfo.color.replace('bg-', 'bg-opacity-20 '))} >
+                            <statusInfo.icon className="size-6" />
+                        </div>
+                        <div className="flex flex-col">
+                            <Badge variant="outline" className="w-fit mb-1 border-slate-200 dark:border-slate-700 text-[10px] font-bold">
+                                {assignment.course_code || assignment.class_name || 'COURSE'}
+                            </Badge>
+                            <span className="text-xs font-semibold text-muted-foreground uppercase">
+                                {statusInfo.label}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Middle: Title & Instructor */}
+                    <div className="flex-1 min-w-0 text-center md:text-left">
+                        <h3 className="font-bold text-lg leading-tight text-white truncate mb-1" title={assignment.title}>
+                            {assignment.title}
+                        </h3>
+                        <div className="flex items-center justify-center md:justify-start gap-3 text-xs text-slate-300">
+                            {assignment.lecturer_name && (
+                                <span className="flex items-center gap-1">
+                                    <Avatar className="h-4 w-4">
+                                        <AvatarImage src={assignment.instructor_avatar} />
+                                        <AvatarFallback className="text-[8px]">{assignment.lecturer_name[0]}</AvatarFallback>
+                                    </Avatar>
+                                    {assignment.lecturer_name}
+                                </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                                <Calendar className="size-3" />
+                                {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : "No Due Date"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right: Metrics */}
+                    <div className="flex items-center gap-4 text-sm text-slate-300 shrink-0 border-r border-white/10 pr-4 mr-2 hidden md:flex">
+                        <div className="flex items-center gap-1.5" title="Points">
+                            <Trophy className="size-4" />
+                            <span className="font-medium text-white">{assignment.points || 100} Pts</span>
+                        </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="shrink-0 w-full md:w-auto flex items-center gap-2">
+                        {role === 'student' && !isSubmitted ? (
+                            <Button
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSubmit?.(assignment);
+                                }}
+                                className={cn(
+                                    "w-full md:w-auto font-bold shadow-sm",
+                                    isOverdue
+                                        ? "bg-red-500 hover:bg-red-600 text-white"
+                                        : "bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
+                                )}
+                            >
+                                <UploadCloud className="size-4 mr-2" />
+                                {isOverdue ? 'Late' : 'Submit'}
+                            </Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onView?.(assignment.id);
+                                }}
+                                className="w-full md:w-auto font-semibold"
+                            >
+                                <Eye className="size-4 mr-2" />
+                                Details
+                            </Button>
+                        )}
+
+                        {(onEdit || onDelete) && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="size-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {onEdit && (
+                                        <DropdownMenuItem onClick={() => onEdit(assignment)}>
+                                            <Edit className="size-4 mr-2" /> Edit
+                                        </DropdownMenuItem>
+                                    )}
+                                    {onDelete && (
+                                        <DropdownMenuItem onClick={() => onDelete(assignment.id)} className="text-destructive">
+                                            <Trash2 className="size-4 mr-2" /> Delete
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
-        <Card
-            className={cn(
-                "relative overflow-hidden border rounded-2xl transition-all duration-300 group",
-                colors.bg,
-                colors.border,
-                "shadow-sm hover:shadow-md hover:scale-[1.01]",
-                onView ? "cursor-pointer" : "",
-                className
-            )}
-            onClick={() => onView?.(assignment.id)}
-        >
-            {/* Subtle textured overlay */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
-                backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-                backgroundSize: '16px 16px',
-                color: 'inherit'
-            }} />
+        <Card className={cn(
+            "group relative overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744] text-white",
+            className
+        )}>
+            {/* Header Section - Violet/Purple Gradient for Assignments */}
+            <div className="relative h-32 bg-gradient-to-br from-violet-500 to-fuchsia-600 p-6 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                    <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-sm font-bold tracking-wider uppercase text-[10px] px-2.5 py-1">
+                        {assignment.course_code || assignment.class_name || 'COURSE'}
+                    </Badge>
 
-            <CardContent className="p-0 relative z-10 flex flex-col h-full">
-                <div className="p-5 flex-1 space-y-4">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                            <div className={cn(
-                                "p-2.5 rounded-xl border shadow-sm backdrop-blur-sm shrink-0",
-                                colors.iconBg,
-                                colors.border
-                            )}>
-                                <FileText className={cn("size-5", colors.accent)} />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-foreground line-clamp-2">
-                                    {assignment.title}
-                                </h3>
-                                {/* Mobile Status Badge */}
-                                <Badge variant="outline" className={cn("mt-2 sm:hidden text-[10px] px-2 py-0.5 border h-fit gap-1", statusConfig.color)}>
-                                    <StatusIcon className="size-3" />
-                                    {statusConfig.label}
-                                </Badge>
-                            </div>
-                        </div>
+                    <div className="flex gap-2">
+                        <Badge className={cn("border-none font-bold shadow-sm backdrop-blur-sm", statusInfo.color)}>
+                            {statusInfo.label}
+                        </Badge>
 
-                        {/* Actions Dropdown */}
                         {(onEdit || onDelete) && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 -mt-1 -mr-2 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="h-6 w-6 text-white hover:bg-white/20 hover:text-white rounded-full -mt-1 -mr-1"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <MoreVertical className="size-4" />
@@ -181,152 +258,92 @@ export function AssignmentCard({
                             </DropdownMenu>
                         )}
                     </div>
+                </div>
+            </div>
 
-                    {/* Course/Class Context (for Student View mainly) */}
-                    {(assignment.class_name || assignment.subject_name || assignment.course_code || assignment.lecturer_name) && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                            {assignment.class_name && (
-                                <Badge variant="secondary" className="text-[10px] h-5 rounded-md px-1.5 font-bold">
-                                    {assignment.class_name}
-                                </Badge>
-                            )}
-                            {assignment.subject_name && (
-                                <Badge variant="outline" className="text-[10px] h-5 rounded-md px-1.5">
-                                    {assignment.subject_name}
-                                </Badge>
-                            )}
-                            {!assignment.class_name && assignment.course_code && (
-                                <Badge variant="secondary" className="text-[10px] h-5 rounded-md px-1.5 font-bold">
-                                    {assignment.course_code}
-                                </Badge>
-                            )}
-                            {assignment.lecturer_name && (
-                                <span className="line-clamp-1">
-                                    • {assignment.lecturer_name}
-                                </span>
-                            )}
-                        </div>
-                    )}
+            {/* Content Body */}
+            <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
+                {/* Title */}
+                <div>
+                    <h3 className="font-extrabold text-2xl leading-tight line-clamp-2 mb-3 text-white" title={assignment.title}>
+                        {assignment.title}
+                    </h3>
 
-                    {/* Description - Truncated */}
-                    {assignment.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                            {assignment.description}
-                        </p>
-                    )}
-
-                    {/* Metadata Grid */}
-                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs text-muted-foreground pt-1">
-                        {/* Due Date */}
-                        <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                            <Calendar className="size-3.5 opacity-70" />
-                            <span>
-                                {assignment.due_date
-                                    ? format(new Date(assignment.due_date), "MMM d, yyyy")
-                                    : "No due date"}
-                            </span>
-                        </div>
-
-                        {/* Points */}
-                        {assignment.points !== undefined && (
-                            <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                                <span className={cn("font-medium", colors.accent)}>
-                                    {assignment.points} Points
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Status (Desktop) */}
-                        <div className="hidden sm:flex items-center gap-2 col-span-2">
-                            <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 border h-fit gap-1", statusConfig.color)}>
-                                <StatusIcon className="size-3" />
-                                {statusConfig.label}
-                            </Badge>
-                        </div>
-                    </div>
-
-                    {/* Student Submission Date */}
-                    {role === 'student' && (assignment.status === 'submitted' || assignment.status === 'graded') && assignment.submission?.submitted_at && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 pl-0.5">
-                            <CheckCircle2 className="size-3.5 text-emerald-500" />
-                            <span>
-                                Submitted on {format(new Date(assignment.submission.submitted_at), "MMM d, h:mm a")}
+                    {/* Instructor / Subject Info */}
+                    {(assignment.lecturer_name || assignment.subject_name) && (
+                        <div className="flex items-center gap-2.5">
+                            <Avatar className="h-8 w-8 border-2 border-white/10 shadow-sm">
+                                <AvatarImage src={assignment.instructor_avatar || ''} />
+                                <AvatarFallback className="bg-fuchsia-100 text-fuchsia-700 font-bold text-xs">
+                                    {assignment.lecturer_name?.charAt(0) || 'L'}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-semibold text-slate-200 line-clamp-1">
+                                {assignment.lecturer_name} {assignment.subject_name ? `• ${assignment.subject_name}` : ''}
                             </span>
                         </div>
                     )}
-
                 </div>
 
-                {/* Footer Action */}
-                <div className={cn(
-                    "px-5 py-3 border-t bg-slate-50/50 dark:bg-slate-900/20 backdrop-blur-sm flex items-center justify-between gap-3",
-                    colors.border
-                )}>
-                    {assignment.attachment_url && (
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                    {/* Due Date */}
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20 col-span-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1 rounded-full bg-white/10 text-white">
+                                <Calendar className="size-3" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">Due Date</span>
+                        </div>
+
+                        <span className="text-xs font-bold text-white truncate w-full text-center">
+                            {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, h:mm a") : "No Due Date"}
+                        </span>
+                    </div>
+
+                    {/* Points */}
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20">
+                        <div className="p-1.5 rounded-full bg-white/10 text-white mb-1.5">
+                            <Trophy className="size-3.5" />
+                        </div>
+                        <span className="text-xs font-bold text-white">{assignment.points || 100} Pts</span>
+                    </div>
+                </div>
+
+                {/* Action Area */}
+                <div className="mt-auto">
+                    {role === 'student' && !isSubmitted ? (
                         <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-muted-foreground hover:text-foreground text-xs h-8 gap-1.5 px-2"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(assignment.attachment_url, '_blank');
+                                onSubmit?.(assignment);
                             }}
+                            className={cn(
+                                "w-full rounded-xl font-extrabold text-base h-14 shadow-lg border-none transition-transform hover:-translate-y-0.5 active:translate-y-0",
+                                isOverdue
+                                    ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20"
+                                    : "bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-fuchsia-500/20"
+                            )}
                         >
-                            <Download className="size-3.5" />
-                            View File
+                            <UploadCloud className="size-5 mr-2" />
+                            {isOverdue ? 'Submit Late' : 'Submit Assignment'}
                         </Button>
+                    ) : (
+                        <div className="flex gap-3">
+                            <Button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onView?.(assignment.id);
+                                }}
+                                className="w-full rounded-xl font-bold bg-white/10 border-2 border-white/5 text-white hover:bg-white/20 hover:text-white hover:border-white/10 shadow-sm h-12"
+                            >
+                                <Eye className="size-4 mr-2" />
+                                {role === 'lecturer' ? 'View Submissions' : 'View Details'}
+                            </Button>
+                        </div>
                     )}
-
-                    <div className="flex gap-2 ml-auto">
-                        {role === 'student' && onSubmit && (assignment.status === 'pending' || assignment.status === 'late') && (
-                            <Button
-                                size="sm"
-                                className={cn(
-                                    "h-8 gap-1.5 text-xs rounded-lg shadow-sm font-semibold",
-                                    assignment.status === 'late' ? "bg-red-500 hover:bg-red-600 text-white" : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                                )}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSubmit(assignment);
-                                }}
-                            >
-                                {assignment.status === 'late' ? "Late Submit" : "Submit Now"}
-                                <ChevronRight className="size-3.5" />
-                            </Button>
-                        )}
-
-                        {onView && (
-                            <Button
-                                size="sm"
-                                className={cn(
-                                    "h-8 gap-1.5 text-xs rounded-lg shadow-none",
-                                    colors.iconBg,
-                                    colors.accent,
-                                    "hover:opacity-80 transition-opacity bg-opacity-100"
-                                )}
-                                variant="secondary"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onView(assignment.id);
-                                }}
-                            >
-                                {role === 'student'
-                                    ? 'View'
-                                    : (
-                                        <span className="flex items-center gap-1.5">
-                                            <Users className="size-3.5" />
-                                            View Submissions
-                                        </span>
-                                    )
-                                }
-                                <ChevronRight className="size-3.5" />
-                            </Button>
-                        )}
-                    </div>
                 </div>
-
-
             </CardContent>
-        </Card >
+        </Card>
     );
 }

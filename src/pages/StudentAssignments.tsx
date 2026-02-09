@@ -1,76 +1,55 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Calendar, Clock, FileText, CheckCircle, AlertCircle, ChevronRight, TrendingUp, Target, Loader2, Download, Eye } from "lucide-react";
+import { Calendar, Clock, FileText, CheckCircle, AlertCircle, TrendingUp, BookOpen, CheckCircle2, GraduationCap, Search, LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useAssignments } from "@/hooks/useAssignments";
-import { format, parseISO } from "date-fns";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
-import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type FilterType = "all" | "pending" | "submitted" | "graded" | "overdue";
-
-const statusConfig: any = {
-    pending: {
-        label: "Pending",
-        color: "text-amber-700 dark:text-amber-300",
-        bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900",
-        icon: AlertCircle,
-    },
-    submitted: {
-        label: "Submitted",
-        color: "text-blue-700 dark:text-blue-300",
-        bg: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900",
-        icon: CheckCircle,
-    },
-    graded: {
-        label: "Graded",
-        color: "text-green-700 dark:text-green-300",
-        bg: "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900",
-        icon: CheckCircle,
-    },
-    overdue: {
-        label: "Overdue",
-        color: "text-red-700 dark:text-red-300",
-        bg: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900",
-        icon: AlertCircle,
-    },
-};
 
 export default function StudentAssignments() {
     const navigate = useNavigate();
     const { role } = useAuth();
+    const [selectedClassId, setSelectedClassId] = useState<string>("");
+
     const {
         assignments,
         loading,
         submitAssignment,
-        deleteSubmission, // Destructure deleteSubmission
+        deleteSubmission,
         refreshAssignments,
-        stats
-    } = useAssignments();
+        stats,
+        enrolledClasses
+    } = useAssignments(selectedClassId);
+
     const [filter, setFilter] = useState<FilterType>("all");
     const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
     const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-    // Filter assignments based on computed studentStatus
+    // Set default selected class when classes load
+    useEffect(() => {
+        if (enrolledClasses && enrolledClasses.length > 0 && !selectedClassId) {
+            setSelectedClassId(enrolledClasses[0].id);
+        }
+    }, [enrolledClasses, selectedClassId]);
+
     const filteredAssignments = assignments.filter((assignment) => {
         if (filter === "all") return true;
         return assignment.studentStatus === filter;
-    });
-
-    const counts = {
-        all: assignments.length,
-        pending: assignments.filter((a) => a.studentStatus === "pending").length,
-        submitted: assignments.filter((a) => a.studentStatus === "submitted").length,
-        graded: assignments.filter((a) => a.studentStatus === "graded").length,
-        overdue: assignments.filter((a) => a.studentStatus === "overdue").length,
-    };
+    }).filter(assignment =>
+        assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        assignment.course_code?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handleSubmitClick = (assignment: any) => {
         setSelectedAssignment(assignment);
@@ -101,139 +80,290 @@ export default function StudentAssignments() {
         }
     };
 
-    // ...
-    if (loading) {
-        return (
-            <DashboardLayout>
-                <DashboardSkeleton />
-            </DashboardLayout>
-        );
-    }
+    const getStatusVariant = (status: string) => {
+        switch (status) {
+            case 'graded':
+                return 'success';
+            case 'submitted':
+                return 'default';
+            case 'overdue':
+                return 'destructive';
+            default:
+                return 'secondary';
+        }
+    };
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col gap-6">
-                {/* Header */}
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Assignments</h1>
-                    <p className="text-muted-foreground mt-1">Track and manage your coursework</p>
+            <div className="w-full flex flex-col gap-0 animate-in fade-in duration-500">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div>
+                        <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300">
+                            Assignments
+                        </h1>
+                        <p className="text-muted-foreground text-lg mt-2">
+                            Stay on top of your coursework and deadlines
+                        </p>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center justify-between relative z-10">
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Total</p>
-                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">{counts.all}</p>
-                            </div>
-                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                                <FileText className="size-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="relative overflow-hidden border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center justify-between relative z-10">
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Pending</p>
-                                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{counts.pending}</p>
-                            </div>
-                            <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                                <AlertCircle className="size-6 text-amber-600 dark:text-amber-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="relative overflow-hidden border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center justify-between relative z-10">
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Completed</p>
-                                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">{counts.graded + counts.submitted}</p>
-                            </div>
-                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                <CheckCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="relative overflow-hidden border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center justify-between relative z-10">
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Avg. Grade</p>
-                                <p className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">{stats.averageGrade || 0}%</p>
-                            </div>
-                            <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
-                                <TrendingUp className="size-6 text-purple-600 dark:text-purple-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Filter Tabs */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                    {(["all", "pending", "submitted", "graded", "overdue"] as FilterType[]).map((filterType) => (
-                        <button
-                            key={filterType}
-                            onClick={() => setFilter(filterType)}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
-                                filter === filterType
-                                    ? "bg-primary text-primary-foreground shadow-sm"
-                                    : "bg-surface border border-border text-muted-foreground hover:text-foreground hover:bg-secondary hover:border-primary/30"
-                            )}
-                        >
-                            <span className="capitalize">{filterType}</span>
-                            <span className={cn(
-                                "text-xs px-2 py-0.5 rounded-full font-semibold",
-                                filter === filterType
-                                    ? "bg-primary-foreground/20 text-primary-foreground"
-                                    : "bg-muted text-muted-foreground"
-                            )}>
-                                {counts[filterType]}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Assignments List */}
-                <div className="flex flex-col gap-4">
-                    {filteredAssignments.length === 0 ? (
-                        <Card className="border-dashed">
-                            <CardContent className="flex flex-col items-center justify-center py-12">
-                                <div className="p-4 bg-muted rounded-full mb-4">
-                                    <FileText className="size-8 text-muted-foreground" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-100 dark:border-blue-900/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-500/10 rounded-xl">
+                                    <BookOpen className="w-8 h-8 text-blue-600" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-foreground">No assignments found</h3>
-                                <p className="text-muted-foreground mt-1 text-center max-w-sm">
-                                    No assignments match the selected filter.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredAssignments.map((assignment, index) => (
-                                <AssignmentCard
-                                    key={assignment.id}
-                                    assignment={{
-                                        ...assignment,
-                                        status: assignment.studentStatus || assignment.status || 'pending',
-                                        points: assignment.max_points,
-                                        class_name: assignment.class_name,
-                                        subject_name: assignment.subject_name,
-                                        lecturer_name: assignment.lecturer_name
-                                    }}
-                                    role="student"
-                                    onView={(id) => navigate(`/student/assignments/${id}`)}
-                                    onSubmit={handleSubmitClick}
-                                    onEdit={assignment.studentStatus === 'submitted' ? handleEditSubmission : undefined}
-                                    onDelete={assignment.studentStatus === 'submitted' ? handleDeleteSubmission : undefined}
-                                    index={index}
-                                />
-                            ))}
-                        </div>
-                    )}
+                                <div>
+                                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Assignments</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</h3>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-100 dark:border-emerald-900/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-emerald-500/10 rounded-xl">
+                                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Completed</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.completed}</h3>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-100 dark:border-amber-900/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-amber-500/10 rounded-xl">
+                                    <Clock className="w-8 h-8 text-amber-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Pending</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.pending}</h3>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 border-violet-100 dark:border-violet-900/50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-violet-500/10 rounded-xl">
+                                    <GraduationCap className="w-8 h-8 text-violet-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-violet-600 dark:text-violet-400">Average Grade</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.averageGrade || 0}%</h3>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
+
+                {loading && (enrolledClasses?.length === 0) ? (
+                    <div className={cn(
+                        viewMode === 'grid'
+                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
+                            : "flex flex-col gap-3 max-w-4xl mx-auto"
+                    )}>
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]">
+                                <CardContent className="p-0">
+                                    <div className="h-32 w-full bg-white/5 animate-pulse" />
+                                    <div className="p-6 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                                            <div className="h-6 w-24 bg-white/10 rounded-full animate-pulse" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse" />
+                                            <div className="h-4 w-1/2 bg-white/10 rounded animate-pulse" />
+                                        </div>
+                                        <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                                            <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
+                                            <div className="h-9 w-24 bg-white/10 rounded animate-pulse" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : enrolledClasses && enrolledClasses.length > 0 ? (
+                    <Tabs value={selectedClassId} onValueChange={setSelectedClassId} className="w-full mt-8">
+                        <div className="w-full overflow-hidden">
+                            <TabsList className="bg-transparent h-auto w-full justify-start gap-3 p-1 overflow-x-auto pb-4 snap-x pr-20 no-scrollbar">
+                                {enrolledClasses.map((cls) => (
+                                    <TabsTrigger
+                                        key={cls.id}
+                                        value={cls.id}
+                                        className={cn(
+                                            "relative flex items-center gap-3 pl-2 pr-6 py-2 rounded-full border transition-all duration-300 min-w-[160px] snap-start",
+                                            "data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/20",
+                                            "data-[state=inactive]:bg-white dark:data-[state=inactive]:bg-slate-800/80 data-[state=inactive]:hover:bg-slate-50 dark:data-[state=inactive]:hover:bg-slate-800 data-[state=inactive]:border-slate-200 dark:data-[state=inactive]:border-slate-700 data-[state=inactive]:text-slate-600 dark:data-[state=inactive]:text-slate-400",
+                                            "group overflow-hidden tap-highlight-transparent"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "flex items-center justify-center w-10 h-10 rounded-full font-bold text-xs shrink-0 transition-colors",
+                                            selectedClassId === cls.id
+                                                ? "bg-white/20 text-white"
+                                                : "bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
+                                        )}>
+                                            {cls.course_code.slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="flex flex-col items-start text-left truncate">
+                                            <span className={cn(
+                                                "font-bold text-[10px] uppercase tracking-wider mb-0.5 opacity-70",
+                                            )}>
+                                                {cls.course_code}
+                                            </span>
+                                            <span className="font-bold text-sm truncate w-full max-w-[120px] leading-none">
+                                                {cls.class_name}
+                                            </span>
+                                        </div>
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </div>
+
+                        {/* Content Area - Direct Render */}
+                        <div className="mt-2 space-y-6">
+                            {(assignments.length > 0 || loading) && (
+                                <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-1">
+                                    <div className="flex items-center gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 no-scrollbar">
+                                        {(['all', 'pending', 'submitted', 'graded', 'overdue'] as FilterType[]).map((f) => (
+                                            <Button
+                                                key={f}
+                                                variant={filter === f ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setFilter(f)}
+                                                className={cn(
+                                                    "capitalize whitespace-nowrap rounded-lg px-4 hover:bg-muted font-medium border-transparent bg-transparent text-muted-foreground",
+                                                    filter === f && "bg-background shadow-sm text-foreground border-border"
+                                                )}
+                                            >
+                                                {f}
+                                            </Button>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center gap-3 w-full xl:w-auto">
+                                        <div className="relative flex-1 xl:w-72">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Search assignments..."
+                                                className="pl-9 h-9 bg-background border-border/60 focus-visible:ring-1"
+                                                value={searchQuery}
+                                                onChange={(e: any) => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {loading ? (
+                                <div className={cn(
+                                    viewMode === 'grid'
+                                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
+                                        : "flex flex-col gap-3 max-w-4xl mx-auto"
+                                )}>
+                                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]">
+                                            {viewMode === 'list' ? (
+                                                <div className="p-4 flex items-center gap-4 w-full">
+                                                    <div className="h-10 w-10 rounded-xl bg-white/10 animate-pulse shrink-0" />
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="h-5 w-1/3 bg-white/10 rounded animate-pulse" />
+                                                        <div className="h-4 w-1/4 bg-white/10 rounded animate-pulse" />
+                                                    </div>
+                                                    <div className="h-8 w-16 bg-white/10 rounded animate-pulse shrink-0" />
+                                                </div>
+                                            ) : (
+                                                <CardContent className="p-0">
+                                                    <div className="h-32 w-full bg-white/5 animate-pulse" />
+                                                    <div className="p-6 space-y-4">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                                                            <div className="h-6 w-24 bg-white/10 rounded-full animate-pulse" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse" />
+                                                            <div className="h-4 w-1/2 bg-white/10 rounded animate-pulse" />
+                                                        </div>
+                                                        <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                                                            <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
+                                                            <div className="h-9 w-24 bg-white/10 rounded animate-pulse" />
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            )}
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : filteredAssignments.length === 0 ? (
+                                <Card className="border-dashed">
+                                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                                        <div className="p-4 rounded-full bg-muted mb-4">
+                                            <BookOpen className="w-8 h-8 text-muted-foreground" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold mb-2">No assignments found</h3>
+                                        <p className="text-muted-foreground max-w-sm mb-6">
+                                            {filter === 'all' && !searchQuery
+                                                ? "You don't have any assignments for this class yet."
+                                                : "Try adjusting your filters or search query."}
+                                        </p>
+                                        {(filter !== 'all' || searchQuery) && (
+                                            <Button variant="outline" onClick={() => { setFilter('all'); setSearchQuery(''); }}>
+                                                Clear Filters
+                                            </Button>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <div className={cn(
+                                    viewMode === 'grid'
+                                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
+                                        : "flex flex-col gap-3 max-w-4xl mx-auto"
+                                )}>
+                                    {filteredAssignments.map((assignment) => (
+                                        <AssignmentCard
+                                            key={assignment.id}
+                                            assignment={{
+                                                ...assignment,
+                                                status: (assignment.studentStatus || assignment.status || 'pending') as any,
+                                                points: assignment.max_points,
+                                            }}
+                                            role="student"
+                                            viewMode={viewMode}
+                                            onView={(id) => navigate(`/student/assignments/${id}`)}
+                                            onSubmit={handleSubmitClick}
+                                            onEdit={assignment.studentStatus === 'submitted' ? handleEditSubmission : undefined}
+                                            onDelete={assignment.studentStatus === 'submitted' ? handleDeleteSubmission : undefined}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </Tabs>
+                ) : (
+                    <Card className="border-dashed border-2 bg-muted/20 rounded-3xl">
+                        <CardContent className="flex flex-col items-center justify-center py-24 text-center">
+                            <div className="p-6 rounded-full bg-primary/10 mb-6">
+                                <BookOpen className="size-16 text-primary" />
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3">No Classes Enrolled!</h3>
+                            <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                                You need to join a class before you can see any assignments.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             {selectedAssignment && (
