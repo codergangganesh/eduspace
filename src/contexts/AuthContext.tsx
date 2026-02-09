@@ -44,6 +44,7 @@ export interface Profile {
   timezone: string | null;
   theme: string | null;
   sidebar_mode: 'expanded' | 'collapsed' | 'hover' | null;
+  last_selected_class_id: string | null;
   created_at: string;
   updated_at: string;
 }

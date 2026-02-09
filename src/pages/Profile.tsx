@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -224,9 +225,7 @@ export default function Profile() {
   if (authLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="size-8 animate-spin text-primary" />
-        </div>
+        <ProfileSkeleton />
       </DashboardLayout>
     );
   }

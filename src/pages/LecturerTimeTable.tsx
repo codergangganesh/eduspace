@@ -16,6 +16,7 @@ import {
     MapPin,
     Calendar as CalendarIcon,
 } from "lucide-react";
+import { TimeTableSkeleton } from "@/components/skeletons/TimeTableSkeleton";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
@@ -94,9 +95,7 @@ export default function LecturerTimeTable() {
     if (loading) {
         return (
             <DashboardLayout fullHeight>
-                <div className="flex h-full items-center justify-center">
-                    <Loader2 className="size-8 animate-spin text-primary" />
-                </div>
+                <TimeTableSkeleton />
             </DashboardLayout>
         );
     }

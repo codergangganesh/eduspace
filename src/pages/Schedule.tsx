@@ -40,6 +40,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
 import { SectionClassCard } from "@/components/common/SectionClassCard";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { TimeTableSkeleton } from "@/components/skeletons/TimeTableSkeleton";
 import { DeleteConfirmDialog } from "@/components/layout/DeleteConfirmDialog";
 
 interface ClassEvent {
@@ -159,7 +160,7 @@ export default function Schedule() {
   if (loading || classesLoading) {
     return (
       <DashboardLayout>
-        <DashboardSkeleton />
+        <TimeTableSkeleton />
       </DashboardLayout>
     );
   }

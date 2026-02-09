@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
+import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 
 export default function LecturerClassesAssignments() {
     const navigate = useNavigate();
@@ -108,9 +109,7 @@ export default function LecturerClassesAssignments() {
 
                 {/* Classes Grid */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
+                    <GridSkeleton count={3} />
                 ) : filteredClasses.length === 0 ? (
                     <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl">
                         <CardContent className="p-12 text-center">

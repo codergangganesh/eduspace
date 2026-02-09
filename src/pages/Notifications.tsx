@@ -40,6 +40,7 @@ import { AccessRequestCard } from "@/components/student/AccessRequestCard";
 import { JoinRequestModal } from "@/components/student/JoinRequestModal";
 import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
 import { toast } from "sonner";
+import { NotificationSkeleton } from "@/components/skeletons/NotificationSkeleton";
 
 type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'announcement' | 'general' | 'access_request';
 
@@ -146,9 +147,7 @@ export default function Notifications() {
   if (loading && loadingRequests) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Loader2 className="size-8 animate-spin text-primary" />
-        </div>
+        <NotificationSkeleton />
       </DashboardLayout>
     );
   }

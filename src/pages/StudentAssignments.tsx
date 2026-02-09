@@ -12,13 +12,14 @@ import { Input } from "@/components/ui/input";
 import { useAssignments } from "@/hooks/useAssignments";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/layout/DeleteConfirmDialog";
 
 type FilterType = "all" | "pending" | "submitted" | "graded" | "overdue";
 
 export default function StudentAssignments() {
     const navigate = useNavigate();
-    const { role } = useAuth();
+    const { role, profile, updateProfile: syncProfile } = useAuth();
     const [selectedClassId, setSelectedClassId] = useState<string>("");
 
     const {
@@ -38,12 +39,24 @@ export default function StudentAssignments() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
 
-    // Set default selected class when classes load
+    // Initial load: Set class from profile or first available
     useEffect(() => {
         if (enrolledClasses && enrolledClasses.length > 0 && !selectedClassId) {
-            setSelectedClassId(enrolledClasses[0].id);
+            const lastId = profile?.last_selected_class_id;
+            const isValid = lastId && enrolledClasses.some(c => c.id === lastId);
+
+            if (isValid) {
+                setSelectedClassId(lastId);
+            } else {
+                setSelectedClassId(enrolledClasses[0].id);
+            }
         }
-    }, [enrolledClasses, selectedClassId]);
+    }, [enrolledClasses, profile, selectedClassId]);
+
+    const handleClassChange = (newVal: string) => {
+        setSelectedClassId(newVal);
+        syncProfile({ last_selected_class_id: newVal });
+    };
 
     const filteredAssignments = assignments.filter((assignment) => {
         if (filter === "all") return true;
@@ -183,7 +196,7 @@ export default function StudentAssignments() {
                         ))}
                     </div>
                 ) : enrolledClasses && enrolledClasses.length > 0 ? (
-                    <Tabs value={selectedClassId} onValueChange={setSelectedClassId} className="w-full mt-8">
+                    <Tabs value={selectedClassId} onValueChange={handleClassChange} className="w-full mt-8">
                         <div className="w-full overflow-hidden">
                             <TabsList className="bg-transparent h-auto w-full justify-start gap-3 p-1 overflow-x-auto pb-4 snap-x pr-20 no-scrollbar">
                                 {enrolledClasses.map((cls) => (
@@ -262,31 +275,31 @@ export default function StudentAssignments() {
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]">
+                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white/5 dark:bg-slate-900/50">
                                             {viewMode === 'list' ? (
                                                 <div className="p-4 flex items-center gap-4 w-full">
-                                                    <div className="h-10 w-10 rounded-xl bg-white/10 animate-pulse shrink-0" />
+                                                    <Skeleton className="h-10 w-10 rounded-xl bg-slate-200/50 dark:bg-white/5 shrink-0" />
                                                     <div className="flex-1 space-y-2">
-                                                        <div className="h-5 w-1/3 bg-white/10 rounded animate-pulse" />
-                                                        <div className="h-4 w-1/4 bg-white/10 rounded animate-pulse" />
+                                                        <Skeleton className="h-5 w-1/3 bg-slate-200/50 dark:bg-white/5" />
+                                                        <Skeleton className="h-4 w-1/4 bg-slate-200/50 dark:bg-white/5" />
                                                     </div>
-                                                    <div className="h-8 w-16 bg-white/10 rounded animate-pulse shrink-0" />
+                                                    <Skeleton className="h-8 w-16 bg-slate-200/50 dark:bg-white/5 shrink-0" />
                                                 </div>
                                             ) : (
                                                 <CardContent className="p-0">
-                                                    <div className="h-32 w-full bg-white/5 animate-pulse" />
+                                                    <Skeleton className="h-32 w-full bg-slate-200/50 dark:bg-white/5" />
                                                     <div className="p-6 space-y-4">
                                                         <div className="flex justify-between items-start">
-                                                            <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
-                                                            <div className="h-6 w-24 bg-white/10 rounded-full animate-pulse" />
+                                                            <Skeleton className="h-4 w-20 bg-slate-200/50 dark:bg-white/5" />
+                                                            <Skeleton className="h-6 w-24 rounded-full bg-slate-200/50 dark:bg-white/5" />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse" />
-                                                            <div className="h-4 w-1/2 bg-white/10 rounded animate-pulse" />
+                                                            <Skeleton className="h-6 w-3/4 bg-slate-200/50 dark:bg-white/5" />
+                                                            <Skeleton className="h-4 w-1/2 bg-slate-200/50 dark:bg-white/5" />
                                                         </div>
-                                                        <div className="pt-4 border-t border-white/5 flex justify-between items-center">
-                                                            <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
-                                                            <div className="h-9 w-24 bg-white/10 rounded animate-pulse" />
+                                                        <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex justify-between items-center">
+                                                            <Skeleton className="h-8 w-8 rounded-full bg-slate-200/50 dark:bg-white/5" />
+                                                            <Skeleton className="h-9 w-24 bg-slate-200/50 dark:bg-white/5" />
                                                         </div>
                                                     </div>
                                                 </CardContent>

@@ -6,8 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, Clock, Trophy, Target, ArrowLeft, Save } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, Clock, Trophy, Target, ArrowLeft, Save, Download } from 'lucide-react';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { QuizSkeleton } from '@/components/skeletons/QuizSkeleton';
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
@@ -417,12 +421,11 @@ export default function TakeQuiz() {
         }
     };
 
+
     if (loading) {
         return (
-            <DashboardLayout>
-                <div className="flex justify-center py-20">
-                    <Loader2 className="animate-spin size-10 text-primary" />
-                </div>
+            <DashboardLayout fullHeight>
+                <QuizSkeleton />
             </DashboardLayout>
         );
     }
@@ -443,130 +446,243 @@ export default function TakeQuiz() {
     if (result) {
         const percentage = Math.round((result.total_obtained / quiz.total_marks) * 100);
         const isPassed = result.status === 'passed';
+        const correctCount = questions.filter(q => answers[q.id] === q.correct_answer).length;
 
         return (
-            <DashboardLayout>
-                <div className="min-h-full bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-950 dark:to-blue-950/20 p-4 lg:p-8">
-                    <div className="max-w-4xl mx-auto space-y-8">
-                        {/* Result Header Card */}
-                        <Card className={`overflow-hidden border-0 shadow-2xl ${isPassed ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-red-500'}`}>
-                            <CardContent className="p-8 lg:p-12 text-white text-center">
-                                <div className={`inline-flex items-center justify-center size-24 rounded-full mb-6 ${isPassed ? 'bg-white/20' : 'bg-white/20'}`}>
-                                    {isPassed ? (
-                                        <Trophy className="size-12" />
-                                    ) : (
-                                        <Target className="size-12" />
-                                    )}
-                                </div>
-                                <h1 className="text-4xl lg:text-5xl font-black mb-2">
-                                    {isPassed ? 'Congratulations!' : 'Keep Practicing!'}
-                                </h1>
-                                <p className="text-xl opacity-90 mb-8">
-                                    You {result.status} <span className="font-bold">{quiz.title}</span>
-                                </p>
+            <DashboardLayout fullHeight>
+                <div className="min-h-full bg-[#0A0C14] text-white overflow-y-auto selection:bg-blue-500/30">
+                    <div className="max-w-6xl mx-auto p-4 lg:p-10 space-y-10">
 
-                                {/* Score Display */}
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
-                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Your Score</p>
-                                        <p className="text-3xl font-black">{result.total_obtained}<span className="text-lg opacity-70">/{quiz.total_marks}</span></p>
-                                    </div>
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
-                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Percentage</p>
-                                        <p className="text-3xl font-black">{percentage}%</p>
-                                    </div>
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
-                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Pass Mark</p>
-                                        <p className="text-3xl font-black">{quiz.pass_percentage}%</p>
-                                    </div>
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
-                                        <p className="text-sm uppercase tracking-wider opacity-80 mb-1">Class Rank</p>
-                                        {rank ? (
-                                            <p className="text-3xl font-black">#{rank.position}<span className="text-lg opacity-70">/{rank.total}</span></p>
-                                        ) : (
-                                            <Loader2 className="animate-spin size-6 mx-auto mt-1" />
-                                        )}
-                                    </div>
+                        {/* 1. Results Header */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+                                    <Trophy className="size-6 text-white" />
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Navigation */}
-                        <div className="flex justify-center">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black tracking-[0.2em] text-blue-400 uppercase">Results</span>
+                                    </div>
+                                    <h1 className="text-xl font-bold text-slate-100">{quiz.title}</h1>
+                                </div>
+                            </div>
                             <Button
+                                variant="outline"
                                 onClick={() => navigate('/student/quizzes')}
-                                size="lg"
-                                className="h-14 px-10 text-lg font-bold rounded-xl shadow-lg"
+                                className="bg-slate-900/50 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl gap-2 font-bold"
                             >
-                                <ArrowLeft className="size-5 mr-2" />
-                                Back to Quizzes
+                                <XCircle className="size-4" />
+                                Exit
                             </Button>
                         </div>
 
-                        {/* Answer Review */}
-                        <div className="space-y-4">
-                            <h2 className="text-2xl font-bold px-2">Review Your Answers</h2>
-                            {questions.map((q, index) => {
-                                const userAnswerId = answers[q.id];
-                                const isCorrect = userAnswerId === q.correct_answer;
-
-                                return (
-                                    <Card key={q.id} className={`border-l-4 ${isCorrect ? 'border-l-emerald-500' : 'border-l-red-500'} shadow-lg`}>
-                                        <CardContent className="p-6">
-                                            <div className="flex items-start justify-between gap-4 mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`flex items-center justify-center size-10 rounded-xl font-bold text-white ${isCorrect ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                                                        {index + 1}
-                                                    </span>
-                                                    <p className="font-semibold text-lg">{q.question_text}</p>
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    {isCorrect ? (
-                                                        <span className="flex items-center gap-1 text-emerald-600 font-bold text-sm">
-                                                            <CheckCircle className="size-4" /> Correct
-                                                        </span>
-                                                    ) : (
-                                                        <span className="flex items-center gap-1 text-red-600 font-bold text-sm">
-                                                            <XCircle className="size-4" /> Incorrect
-                                                        </span>
-                                                    )}
-                                                    <span className="text-sm bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg font-medium">
-                                                        {q.marks} pts
-                                                    </span>
-                                                </div>
+                        {/* 2. Main Performance Card */}
+                        <div className="relative group">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-[32px] blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
+                            <div className="relative bg-[#111420] border border-white/5 rounded-[32px] p-8 lg:p-12 overflow-hidden">
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                                    {/* Left: Score Gauge */}
+                                    <div className="lg:col-span-4 flex justify-center">
+                                        <div className="relative size-56">
+                                            <svg className="size-full -rotate-90 transform" viewBox="0 0 100 100">
+                                                <circle
+                                                    className="text-slate-800"
+                                                    strokeWidth="8"
+                                                    stroke="currentColor"
+                                                    fill="transparent"
+                                                    r="42"
+                                                    cx="50"
+                                                    cy="50"
+                                                />
+                                                <circle
+                                                    className="text-blue-500 transition-all duration-1000 ease-out"
+                                                    strokeWidth="8"
+                                                    strokeDasharray={264}
+                                                    strokeDashoffset={264 - (264 * percentage) / 100}
+                                                    strokeLinecap="round"
+                                                    stroke="currentColor"
+                                                    fill="transparent"
+                                                    r="42"
+                                                    cx="50"
+                                                    cy="50"
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-6xl font-black tracking-tighter text-white">{percentage}<span className="text-2xl text-blue-400">%</span></span>
+                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Final Score</span>
                                             </div>
-                                            <div className="grid gap-2">
+                                        </div>
+                                    </div>
+
+                                    {/* Middle: Stats Grid */}
+                                    <div className="lg:col-span-8 space-y-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Accuracy</p>
+                                                <p className="text-3xl font-black text-white">{correctCount} <span className="text-lg text-slate-600 font-bold ml-1">/ {questions.length}</span></p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Global Rank</p>
+                                                {rank ? (
+                                                    <p className="text-3xl font-black text-white">#{rank.position} <span className="text-lg text-slate-600 font-bold ml-1">/ {rank.total}</span></p>
+                                                ) : (
+                                                    <Loader2 className="animate-spin size-6 text-slate-600 mt-1" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Time Spent</p>
+                                                <p className="text-3xl font-black text-white">{formatTime(result.time_taken || elapsedTime)} <span className="text-lg text-slate-600 font-bold ml-1">min</span></p>
+                                            </div>
+                                        </div>
+
+                                        <div className="h-px bg-white/5 w-full"></div>
+
+                                        <div className="flex flex-wrap gap-4 pt-2">
+                                            <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-8 h-12 font-bold shadow-xl shadow-blue-600/20 gap-2 border-none">
+                                                <FileText className="size-4" />
+                                                Detailed Performance Report
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => navigate(`/student/quizzes/${quizId}`)}
+                                                className="bg-transparent border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white rounded-2xl px-8 h-12 font-bold border"
+                                            >
+                                                Retake Practice
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Question Review Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                                <h2 className="text-2xl font-black tracking-tight text-white">Question Review</h2>
+                                <div className="flex gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="size-2 rounded-full bg-emerald-500"></div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80">Correct</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="size-2 rounded-full bg-red-500"></div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-red-500/80">Incorrect</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-8">
+                                {questions.map((q, idx) => {
+                                    const userAnswerId = answers[q.id];
+                                    const isCorrect = userAnswerId === q.correct_answer;
+                                    const isSkipped = !userAnswerId || userAnswerId === 'skipped';
+
+                                    return (
+                                        <div
+                                            key={q.id}
+                                            className={cn(
+                                                "relative bg-[#111420] rounded-[24px] overflow-hidden border transition-all duration-300",
+                                                isCorrect ? "border-emerald-500/10" : "border-red-500/10"
+                                            )}
+                                        >
+                                            {/* Top Bar */}
+                                            <div className="bg-black/20 px-8 py-5 flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn(
+                                                        "size-10 rounded-xl flex items-center justify-center font-black text-sm",
+                                                        isCorrect ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                                                    )}>
+                                                        {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
+                                                    </div>
+                                                    <h3 className="text-lg font-bold text-slate-200">{q.question_text}</h3>
+                                                </div>
+                                                <Badge variant="outline" className="bg-slate-900/50 border-slate-700 text-slate-400 font-black text-[10px] px-3 py-1">
+                                                    {isCorrect ? q.marks : 0}.0 POINTS
+                                                </Badge>
+                                            </div>
+
+                                            {/* Options */}
+                                            <div className="p-8 space-y-3">
                                                 {q.options.map((option: any) => {
                                                     const isSelected = userAnswerId === option.id;
                                                     const isTheCorrectAnswer = q.correct_answer === option.id;
 
-                                                    let className = "flex items-center gap-3 p-4 rounded-xl border-2 ";
-                                                    if (isTheCorrectAnswer) {
-                                                        className += "bg-emerald-50 border-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/30";
-                                                    } else if (isSelected) {
-                                                        className += "bg-red-50 border-red-300 dark:bg-red-500/10 dark:border-red-500/30";
-                                                    } else {
-                                                        className += "bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 opacity-60";
-                                                    }
-
                                                     return (
-                                                        <div key={option.id} className={className}>
-                                                            <span className="font-medium">{option.text}</span>
+                                                        <div
+                                                            key={option.id}
+                                                            className={cn(
+                                                                "group flex items-center gap-4 p-4 rounded-xl border transition-all",
+                                                                isTheCorrectAnswer
+                                                                    ? "bg-emerald-500/5 border-emerald-500/20"
+                                                                    : isSelected
+                                                                        ? "bg-red-500/5 border-red-500/20"
+                                                                        : "bg-slate-900/30 border-white/5 opacity-60"
+                                                            )}
+                                                        >
+                                                            <div className={cn(
+                                                                "size-10 rounded-full flex items-center justify-center transition-colors",
+                                                                isTheCorrectAnswer
+                                                                    ? "bg-emerald-500 text-white"
+                                                                    : isSelected
+                                                                        ? "bg-red-500 text-white"
+                                                                        : "bg-slate-800 text-slate-500"
+                                                            )}>
+                                                                {isTheCorrectAnswer ? <CheckCircle className="size-5" /> : isSelected ? <XCircle className="size-5" /> : <div className="size-2 rounded-full bg-current" />}
+                                                            </div>
+                                                            <span className={cn(
+                                                                "flex-1 font-bold text-sm",
+                                                                isTheCorrectAnswer ? "text-emerald-400" : isSelected ? "text-red-400" : "text-slate-400"
+                                                            )}>
+                                                                {option.text}
+                                                            </span>
                                                             {isTheCorrectAnswer && (
-                                                                <span className="ml-auto text-xs font-bold text-emerald-600 uppercase">Correct Answer</span>
+                                                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full">Correct Answer</span>
                                                             )}
                                                             {isSelected && !isTheCorrectAnswer && (
-                                                                <span className="ml-auto text-xs font-bold text-red-600 uppercase">Your Answer</span>
+                                                                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full">Your Choice</span>
                                                             )}
                                                         </div>
                                                     );
                                                 })}
+
+                                                {/* Explanation Section */}
+                                                {q.explanation && (
+                                                    <div className="mt-8 p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex gap-4 items-start">
+                                                        <div className="size-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                                                            <Target className="size-4 text-blue-400" />
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 leading-relaxed italic">
+                                                            <span className="text-blue-400 font-bold uppercase tracking-wider block mb-1">Explanation:</span>
+                                                            {q.explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
+
+                        {/* Footer Info */}
+                        <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 pb-10">
+                            <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                                <span>Session ID: #{result.id.slice(0, 8).toUpperCase()}</span>
+                                <span className="hidden md:block opacity-30">•</span>
+                                <span>Completed {format(new Date(result.submitted_at), 'MMM d, yyyy')}</span>
+                            </div>
+                            <div className="flex gap-6">
+                                <button className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-[0.2em] group">
+                                    <Download className="size-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                                    Results PDF
+                                </button>
+                                <button className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-[0.2em] group">
+                                    <Trophy className="size-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                                    Share to LinkedIn
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </DashboardLayout>

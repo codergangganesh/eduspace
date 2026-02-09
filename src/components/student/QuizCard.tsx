@@ -23,7 +23,7 @@ interface QuizCardProps {
     };
     onAttempt: (quizId: string) => void;
     onViewDetails: (quizId: string) => void;
-    onViewLeaderboard: (quizId: string) => void;
+    onViewLeaderboard: (quizId: string, classId: string) => void;
     viewMode?: 'grid' | 'list';
     className?: string;
 }
@@ -114,7 +114,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                     Details
                                 </Button>
                                 <Button
-                                    onClick={() => onViewLeaderboard(quiz.id)}
+                                    onClick={() => onViewLeaderboard(quiz.id, quiz.class_id)}
                                     size="icon"
                                     className="shrink-0"
                                     variant="ghost"
@@ -224,7 +224,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                 Details
                             </Button>
                             <Button
-                                onClick={() => onViewLeaderboard(quiz.id)}
+                                onClick={() => onViewLeaderboard(quiz.id, quiz.class_id)}
                                 className="rounded-xl font-bold bg-white/10 border-2 border-white/5 text-white hover:bg-white/20 hover:text-white hover:border-white/10 shadow-sm h-12 w-12 px-0"
                                 title="Leaderboard"
                             >

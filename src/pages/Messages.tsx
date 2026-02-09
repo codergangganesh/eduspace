@@ -40,7 +40,12 @@ import {
   LogOut,
   Settings,
   User,
+  Phone,
+  Video,
+  Copy,
+  Link
 } from "lucide-react";
+import { CallModal } from "@/components/chat/CallModal";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/useMessages";
 import { useInstructors } from "@/hooks/useInstructors";
@@ -262,6 +267,14 @@ export default function Messages() {
   const [wallpaper, setWallpaper] = useState<string>('');
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const [activeCall, setActiveCall] = useState<{ type: 'audio' | 'video', conversationId: string, isMeeting?: boolean } | null>(null);
+
+  // Meeting State
+  const [joinMeetingCode, setJoinMeetingCode] = useState("");
+  const [isJoinMeetingOpen, setIsJoinMeetingOpen] = useState(false);
+  const [createdMeetingCode, setCreatedMeetingCode] = useState("");
+  const [isCreateMeetingOpen, setIsCreateMeetingOpen] = useState(false);
+  const [meetingType, setMeetingType] = useState<'audio' | 'video'>('video');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -279,7 +292,30 @@ export default function Messages() {
     if (user?.id) {
       localStorage.setItem(`chat_wallpaper_${user.id}`, value);
     }
-  }
+  };
+
+  const generateMeetingCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code.substring(0, 3) + '-' + code.substring(3);
+  };
+
+  const handleCreateMeeting = (type: 'audio' | 'video') => {
+    const code = generateMeetingCode();
+    setCreatedMeetingCode(code);
+    setMeetingType(type);
+    setIsCreateMeetingOpen(true);
+  };
+
+  const startMeeting = (code: string, type: 'audio' | 'video') => {
+    setActiveCall({ type, conversationId: code, isMeeting: true });
+    setIsCreateMeetingOpen(false);
+    setIsJoinMeetingOpen(false);
+    setJoinMeetingCode("");
+  };
 
   const handleWallpaperUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -655,6 +691,20 @@ export default function Messages() {
                   <DropdownMenuItem onClick={() => document.getElementById('wallpaper-upload')?.click()}>
                     <span className="text-xs">Upload Image</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-2">
+                    Meetings
+                  </DropdownMenuLabel>
+                  {role === 'lecturer' && (
+                    <DropdownMenuItem onClick={() => handleCreateMeeting('video')}>
+                      <Video className="size-4 mr-2" />
+                      <span className="text-xs">Create Meeting</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setIsJoinMeetingOpen(true)}>
+                    <Link className="size-4 mr-2" />
+                    <span className="text-xs">Join Meeting</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -830,6 +880,24 @@ export default function Messages() {
                       variant="ghost"
                       size="icon"
                       className="size-9 text-slate-500 hover:text-emerald-600"
+                      onClick={() => role === 'lecturer' ? handleCreateMeeting('audio') : setIsJoinMeetingOpen(true)}
+                      title={role === 'lecturer' ? "Create Audio Meeting" : "Join Audio Meeting"}
+                    >
+                      <Phone className="size-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-9 text-slate-500 hover:text-emerald-600"
+                      onClick={() => role === 'lecturer' ? handleCreateMeeting('video') : setIsJoinMeetingOpen(true)}
+                      title={role === 'lecturer' ? "Create Video Meeting" : "Join Video Meeting"}
+                    >
+                      <Video className="size-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-9 text-slate-500 hover:text-emerald-600"
                       onClick={() => setIsMessageSearchOpen(true)}
                     >
                       <Search className="size-5" />
@@ -857,6 +925,20 @@ export default function Messages() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => document.getElementById('wallpaper-upload')?.click()}>
                           <span className="text-xs">Change Wallpaper</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-2">
+                          Meetings
+                        </DropdownMenuLabel>
+                        {role === 'lecturer' && (
+                          <DropdownMenuItem onClick={() => handleCreateMeeting('video')}>
+                            <Video className="size-4 mr-2" />
+                            <span className="text-xs">Create Meeting</span>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => setIsJoinMeetingOpen(true)}>
+                          <Link className="size-4 mr-2" />
+                          <span className="text-xs">Join Meeting</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1152,6 +1234,107 @@ export default function Messages() {
           </DialogContent>
         </Dialog>
       </div>
+      {/* Call Modal */}
+      {activeCall && user && (
+        <CallModal
+          isOpen={!!activeCall}
+          onClose={() => setActiveCall(null)}
+          type={activeCall.type}
+          conversationId={activeCall.conversationId}
+          userName={profile?.full_name || user.email || 'User'}
+        />
+      )}
+      {/* Create Meeting Dialog */}
+      <Dialog open={isCreateMeetingOpen} onOpenChange={setIsCreateMeetingOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Meeting</DialogTitle>
+            <DialogDescription>
+              Share this code with others to let them join.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-6 py-4">
+            <div className="flex items-center gap-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <code className="text-2xl font-mono font-bold tracking-wider text-emerald-600 dark:text-emerald-400">
+                {createdMeetingCode}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  navigator.clipboard.writeText(createdMeetingCode);
+                  toast.success("Meeting code copied!");
+                }}
+              >
+                <Copy className="size-4" />
+              </Button>
+            </div>
+            <div className="flex gap-4">
+              <Button
+                variant={meetingType === 'audio' ? 'default' : 'outline'}
+                onClick={() => setMeetingType('audio')}
+                className="w-32"
+              >
+                <Phone className="size-4 mr-2" />
+                Audio
+              </Button>
+              <Button
+                variant={meetingType === 'video' ? 'default' : 'outline'}
+                onClick={() => setMeetingType('video')}
+                className="w-32"
+              >
+                <Video className="size-4 mr-2" />
+                Video
+              </Button>
+            </div>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => startMeeting(createdMeetingCode, meetingType)}
+            >
+              Start Meeting
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Meeting Dialog */}
+      <Dialog open={isJoinMeetingOpen} onOpenChange={setIsJoinMeetingOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join Meeting</DialogTitle>
+            <DialogDescription>
+              Enter the 6-character code to join an existing meeting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="e.g. ABC-123"
+              className="text-center text-lg tracking-widest uppercase"
+              value={joinMeetingCode}
+              onChange={(e) => setJoinMeetingCode(e.target.value.toUpperCase())}
+              maxLength={7}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                onClick={() => startMeeting(joinMeetingCode, 'audio')}
+                disabled={joinMeetingCode.length < 7}
+              >
+                <Phone className="size-4 mr-2" />
+                Join Audio
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => startMeeting(joinMeetingCode, 'video')}
+                disabled={joinMeetingCode.length < 7}
+              >
+                <Video className="size-4 mr-2" />
+                Join Video
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout >
   );
 }

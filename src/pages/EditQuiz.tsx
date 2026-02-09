@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
+import { FormSkeleton } from '@/components/skeletons/FormSkeleton';
 
 // Simple UUID generator
 // Robust UUID generator for client-side IDs
@@ -275,12 +276,7 @@ export default function EditQuiz() {
     if (isLoading) {
         return (
             <DashboardLayout>
-                <div className="flex items-center justify-center py-20">
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="size-10 animate-spin text-primary" />
-                        <p className="text-muted-foreground font-medium">Loading quiz...</p>
-                    </div>
-                </div>
+                <FormSkeleton />
             </DashboardLayout>
         );
     }

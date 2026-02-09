@@ -17,6 +17,7 @@ import {
     DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
+import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 
 export default function ClassQuizzesView() {
@@ -85,9 +86,7 @@ export default function ClassQuizzesView() {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                    </div>
+                    <GridSkeleton count={4} />
                 ) : quizzes.length === 0 ? (
                     <Card className="border-dashed border-2 bg-muted/30">
                         <CardContent className="flex flex-col items-center justify-center py-20 text-center">

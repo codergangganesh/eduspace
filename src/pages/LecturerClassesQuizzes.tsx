@@ -12,6 +12,7 @@ import {
 import { useState } from 'react';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
 import { Badge } from '@/components/ui/badge';
+import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 
 export default function LecturerClassesQuizzes() {
     const navigate = useNavigate();
@@ -104,9 +105,7 @@ export default function LecturerClassesQuizzes() {
                     </div>
 
                     {loading ? (
-                        <div className="flex items-center justify-center py-24">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                        </div>
+                        <GridSkeleton count={4} />
                     ) : filteredClasses.length === 0 ? (
                         <Card className="bg-muted/30 border-dashed border-2 rounded-3xl">
                             <CardContent className="p-20 text-center">
@@ -120,7 +119,7 @@ export default function LecturerClassesQuizzes() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-6">
                             {filteredClasses.map((classItem) => (
                                 <SectionClassCard
                                     key={classItem.id}

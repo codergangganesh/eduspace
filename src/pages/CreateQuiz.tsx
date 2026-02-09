@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
+import { FormSkeleton } from '@/components/skeletons/FormSkeleton';
 
 // Simple UUID generator to avoid external dependency
 const generateId = () => {
@@ -223,12 +224,7 @@ export default function CreateQuiz() {
     if (isLoading) {
         return (
             <DashboardLayout>
-                <div className="flex items-center justify-center py-20">
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="size-10 animate-spin text-primary" />
-                        <p className="text-muted-foreground font-medium">Loading your quiz draft...</p>
-                    </div>
-                </div>
+                <FormSkeleton />
             </DashboardLayout>
         );
     }

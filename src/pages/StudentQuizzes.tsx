@@ -8,20 +8,34 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentQuizzes } from '@/hooks/useStudentQuizzes';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function StudentQuizzes() {
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedClassId, setSelectedClassId] = useState<string>('');
-
+    const { profile, updateProfile: syncProfile } = useAuth();
     const { quizzes, loading, enrolledClasses } = useStudentQuizzes(selectedClassId);
 
-    // Set default selected class when classes load
+    // Initial load: Set class from profile or first available
     useEffect(() => {
         if (enrolledClasses.length > 0 && !selectedClassId) {
-            setSelectedClassId(enrolledClasses[0].id);
+            const lastId = profile?.last_selected_class_id;
+            const isValid = lastId && enrolledClasses.some(c => c.id === lastId);
+
+            if (isValid) {
+                setSelectedClassId(lastId);
+            } else {
+                setSelectedClassId(enrolledClasses[0].id);
+            }
         }
-    }, [enrolledClasses, selectedClassId]);
+    }, [enrolledClasses, profile, selectedClassId]);
+
+    const handleClassChange = (newVal: string) => {
+        setSelectedClassId(newVal);
+        syncProfile({ last_selected_class_id: newVal });
+    };
 
     const handleAttempt = (quizId: string) => {
         navigate(`/student/quizzes/${quizId}`);
@@ -67,7 +81,7 @@ export default function StudentQuizzes() {
                         ))}
                     </div>
                 ) : enrolledClasses.length > 0 ? (
-                    <Tabs value={selectedClassId} onValueChange={setSelectedClassId} className="w-full">
+                    <Tabs value={selectedClassId} onValueChange={handleClassChange} className="w-full">
                         <div className="w-full overflow-hidden">
                             <TabsList className="bg-transparent h-auto w-full justify-start gap-3 p-1 overflow-x-auto pb-4 snap-x pr-20 no-scrollbar">
                                 {enrolledClasses.map((cls) => (
@@ -113,22 +127,22 @@ export default function StudentQuizzes() {
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]">
-                                            <div className="relative h-32 bg-white/5 animate-pulse p-6"></div>
+                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-md mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]/50 dark:bg-[#1A1C24]">
+                                            <Skeleton className="h-32 w-full rounded-t-2xl bg-white/5" />
                                             <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
                                                 <div className="space-y-3">
-                                                    <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse" />
+                                                    <Skeleton className="h-6 w-3/4 bg-white/5" />
                                                     <div className="flex items-center gap-2">
-                                                        <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
-                                                        <div className="h-4 w-1/3 bg-white/10 rounded animate-pulse" />
+                                                        <Skeleton className="size-8 rounded-full bg-white/5" />
+                                                        <Skeleton className="h-4 w-1/3 bg-white/5" />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-3">
                                                     {[1, 2, 3].map((j) => (
-                                                        <div key={j} className="h-16 rounded-2xl bg-white/5 animate-pulse" />
+                                                        <Skeleton key={j} className="h-16 rounded-2xl bg-white/5" />
                                                     ))}
                                                 </div>
-                                                <div className="mt-auto h-12 bg-white/10 rounded-xl animate-pulse" />
+                                                <Skeleton className="h-12 w-full rounded-xl bg-white/5 mt-auto" />
                                             </CardContent>
                                         </Card>
                                     ))}
@@ -157,8 +171,8 @@ export default function StudentQuizzes() {
                                             quiz={quiz}
                                             viewMode={viewMode}
                                             onAttempt={handleAttempt}
-                                            onViewDetails={(id) => navigate(`/student/quizzes/${id}/result`)}
-                                            onViewLeaderboard={(id) => navigate(`/student/quizzes/${id}/leaderboard`)}
+                                            onViewDetails={(id) => navigate(`/student/quizzes/${id}/details`)}
+                                            onViewLeaderboard={(quizId, classId) => navigate(`/student/quizzes/${classId}/${quizId}/results`)}
                                         />
                                     ))}
                                 </div>

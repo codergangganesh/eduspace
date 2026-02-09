@@ -43,6 +43,7 @@ import { ManageSubjectsDialog } from '@/components/assignments/ManageSubjectsDia
 import { ClassAssignment } from '@/hooks/useClassAssignments';
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
+import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 
 type FilterType = 'all' | 'active' | 'closed';
 
@@ -210,9 +211,7 @@ export default function ClassAssignmentsView() {
 
                 {/* Assignments Grid */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
+                    <GridSkeleton count={4} />
                 ) : filteredAssignments.length === 0 ? (
                     <Card className="border-dashed bg-transparent shadow-none">
                         <CardContent className="p-12 text-center">
@@ -228,7 +227,7 @@ export default function ClassAssignmentsView() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-6">
                         {filteredAssignments.map((assignment, index) => (
                             <AssignmentCard
                                 key={assignment.id}
