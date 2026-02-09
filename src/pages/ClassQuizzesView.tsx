@@ -5,8 +5,10 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BarChart, FileText, MoreVertical, Trash2, Globe, Clock, Lock, Edit2, LayoutGrid, List, TrendingUp, CheckCircle } from 'lucide-react';
+import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2 } from 'lucide-react';
 import { useQuizzes } from '@/hooks/useQuizzes';
+import { useAuth } from '@/contexts/AuthContext';
+import { LecturerQuizCard } from '@/components/lecturer/LecturerQuizCard';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,6 +21,7 @@ import { format } from 'date-fns';
 export default function ClassQuizzesView() {
     const { classId } = useParams();
     const navigate = useNavigate();
+    const { profile } = useAuth();
     const { quizzes, loading, updateQuizStatus, deleteQuiz } = useQuizzes(classId);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -101,126 +104,30 @@ export default function ClassQuizzesView() {
                 ) : (
                     <div className={cn(
                         viewMode === 'grid'
-                            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"
                             : "flex flex-col gap-4"
                     )}>
                         {quizzes.map((quiz) => (
-                            <Card
-                                key={quiz.id}
-                                className={cn(
-                                    "group overflow-hidden border border-border/50 bg-card hover:shadow-xl transition-all duration-300",
-                                    viewMode === 'grid' ? "rounded-2xl flex flex-col h-full" : "rounded-xl"
-                                )}
-                            >
-                                <CardContent className={cn("p-0 h-full", viewMode === 'list' && "p-4")}>
-                                    {viewMode === 'grid' ? (
-                                        <div className="flex flex-col h-full">
-                                            {/* Card Top Section */}
-                                            <div className="p-6 flex-1 flex flex-col gap-5">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={cn("size-2 rounded-full animate-pulse",
-                                                            quiz.status === 'published' ? "bg-emerald-500" :
-                                                                quiz.status === 'closed' ? "bg-red-500" : "bg-yellow-500"
-                                                        )} />
-                                                        <Badge variant="secondary" className={cn(
-                                                            "px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border-none",
-                                                            getStatusColor(quiz.status)
-                                                        )}>
-                                                            {quiz.status}
-                                                        </Badge>
-                                                    </div>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-muted transition-colors">
-                                                                <MoreVertical className="size-3.5 text-muted-foreground" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-xl shadow-2xl border-border/50">
-                                                            <DropdownMenuItem onClick={() => handleEditQuiz(quiz.id)} className="rounded-lg h-9 text-sm cursor-pointer">
-                                                                <Edit2 className="size-3.5 mr-2 text-primary" />
-                                                                Edit Details
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator className="my-1.5" />
-                                                            {quiz.status === 'draft' && (
-                                                                <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'published')} className="rounded-lg h-9 text-sm cursor-pointer text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50/50">
-                                                                    <Globe className="size-3.5 mr-2" />
-                                                                    Publish Quiz
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            {quiz.status === 'published' && (
-                                                                <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'closed')} className="rounded-lg h-9 text-sm cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50/50">
-                                                                    <Lock className="size-3.5 mr-2" />
-                                                                    Close Access
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            {quiz.status === 'closed' && (
-                                                                <DropdownMenuItem onClick={() => updateQuizStatus(quiz.id, 'published')} className="rounded-lg h-9 text-sm cursor-pointer text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50/50">
-                                                                    <Globe className="size-3.5 mr-2" />
-                                                                    Re-open Quiz
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            <DropdownMenuSeparator className="my-1.5" />
-                                                            <DropdownMenuItem
-                                                                className="rounded-lg h-9 text-sm cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
-                                                                onClick={() => {
-                                                                    if (confirm('Permanently delete this quiz?')) {
-                                                                        deleteQuiz(quiz.id);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <Trash2 className="size-3.5 mr-2" />
-                                                                Delete Quiz
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-
-                                                <div className="space-y-2 flex-1">
-                                                    <h3 className="font-bold text-base leading-snug group-hover:text-primary transition-colors line-clamp-3 min-h-[3rem]">
-                                                        {quiz.title}
-                                                    </h3>
-                                                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80 font-medium">
-                                                        <Clock className="size-2.5" />
-                                                        {format(new Date(quiz.created_at), 'MMM d')}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-col gap-3 pt-5 border-t border-border/30">
-                                                    <div className="flex items-center gap-2.5 bg-muted/20 p-2.5 rounded-xl border border-border/10">
-                                                        <div className="size-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-                                                            <TrendingUp className="size-4" />
-                                                        </div>
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className="text-[10px] text-muted-foreground/60 uppercase font-black tracking-tighter">Stats</span>
-                                                            <span className="font-black text-xs text-foreground truncate">{quiz._count?.submissions || 0} Students</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2.5 bg-muted/20 p-2.5 rounded-xl border border-border/10">
-                                                        <div className="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
-                                                            <CheckCircle className="size-4" />
-                                                        </div>
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className="text-[10px] text-muted-foreground/60 uppercase font-black tracking-tighter">Score</span>
-                                                            <span className="font-black text-xs text-foreground truncate">{quiz.total_marks} Marks</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Card Action */}
-                                            <div className="px-5 pb-5">
-                                                <Button
-                                                    variant="default"
-                                                    className="w-full gap-2 h-10 shadow-lg shadow-primary/10 hover:shadow-primary/20 rounded-xl font-bold text-xs"
-                                                    onClick={() => handleViewResults(quiz.id)}
-                                                >
-                                                    <BarChart className="size-3.5" />
-                                                    Explore Results
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ) : (
+                            viewMode === 'grid' ? (
+                                <LecturerQuizCard
+                                    key={quiz.id}
+                                    quiz={quiz}
+                                    instructor={profile ? { full_name: profile.full_name, avatar_url: profile.avatar_url } : null}
+                                    onViewResults={() => handleViewResults(quiz.id)}
+                                    onEdit={() => handleEditQuiz(quiz.id)}
+                                    onDelete={() => {
+                                        if (confirm('Permanently delete this quiz?')) {
+                                            deleteQuiz(quiz.id);
+                                        }
+                                    }}
+                                    onStatusChange={(id, status) => updateQuizStatus(id, status)}
+                                />
+                            ) : (
+                                <Card
+                                    key={quiz.id}
+                                    className="group overflow-hidden border border-border/50 bg-card hover:shadow-xl transition-all duration-300 rounded-xl"
+                                >
+                                    <CardContent className="p-4">
                                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className="p-3 rounded-xl bg-primary/10 text-primary">
@@ -304,9 +211,9 @@ export default function ClassQuizzesView() {
                                                 </DropdownMenu>
                                             </div>
                                         </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                    </CardContent>
+                                </Card>
+                            )
                         ))}
                     </div>
                 )}

@@ -51,11 +51,16 @@ export function useStudentQuizzes() {
             }
 
             // 2. Fetch published quizzes for these classes
+            // Robust Approach: Fetch raw data first, then fetch related profiles separately
             const { data: quizzesData, error } = await supabase
                 .from('quizzes')
                 .select(`
                     *,
-                    classes (class_name, course_code)
+                    classes (
+                        class_name,
+                        course_code
+                    ),
+                    quiz_questions (count)
                 `)
                 .in('class_id', classIds)
                 .eq('status', 'published')
@@ -64,6 +69,24 @@ export function useStudentQuizzes() {
             if (error) {
                 console.error('Error fetching quizzes data:', error.message || error);
                 throw error;
+            }
+
+            // 3. Fetch Instructor Profiles separately (to avoid join failures)
+            const instructorIds = [...new Set(quizzesData?.map(q => q.created_by).filter(Boolean))];
+            let instructorMap: Record<string, any> = {};
+
+            if (instructorIds.length > 0) {
+                const { data: instructors } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, avatar_url')
+                    .in('id', instructorIds);
+
+                if (instructors) {
+                    instructorMap = instructors.reduce((acc, curr) => ({
+                        ...acc,
+                        [curr.id]: curr
+                    }), {});
+                }
             }
 
             // For each quiz, fetch the student's submission status
@@ -86,8 +109,20 @@ export function useStudentQuizzes() {
                     currentQuizVersion: q.version
                 });
 
+                // Transform the count to a number and extract instructor details
+                const quizData = q as any;
+                const questionCount = quizData.quiz_questions?.[0]?.count || 0;
+                const instructor = instructorMap[q.created_by] || null;
+
                 return {
                     ...q,
+                    _count: {
+                        questions: questionCount
+                    },
+                    instructor: instructor ? {
+                        full_name: instructor.full_name,
+                        avatar_url: instructor.avatar_url
+                    } : null,
                     my_submission: submissionData || null,
                 };
             }) || []);
@@ -115,17 +150,6 @@ export function useStudentQuizzes() {
         channelsRef.current = [];
 
         console.log('Setting up quiz subscriptions for classes:', enrolledClassIds);
-
-        // 1. Subscribe to QUIZZES for enrolled classes
-        // We create one channel for all quiz updates in these classes? 
-        // Or separate channels? 
-        // Supabase channel filtering by `in` is not standard.
-        // Optimization: Use one global channel for quizzes, but filter inside the callback using the Ref to the latest class IDs.
-        // Wait, the requirement says "Subscribe only to quizzes for their enrolled classes".
-        // The most robust way without creating N channels is to subscribe to 'quizzes' and filter.
-        // However, if we MUST stick to "subscribe only", we'd need per-class or per-row. 
-        // Given Supabase limitations, Global + Filter is standard. 
-        // BUT, we can make it cleaner.
 
         const channel = supabase
             .channel(`student_quizzes_${user.id}`)

@@ -31,6 +31,10 @@ export interface Quiz {
         questions: number;
         submissions: number;
     };
+    classes?: {
+        class_name: string;
+        course_code: string;
+    };
 }
 
 export interface QuizSubmission {

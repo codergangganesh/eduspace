@@ -20,6 +20,7 @@ export function useQuizzes(classId?: string) {
                 .from('quizzes')
                 .select(`
                     *,
+                    classes(class_name, course_code),
                     quiz_questions(count),
                     quiz_submissions(count)
                 `)

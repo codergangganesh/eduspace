@@ -1,8 +1,11 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { QuizCard } from '@/components/student/QuizCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, Clock, CheckCircle, ArrowRight, XCircle, MoreVertical, PlayCircle, Eye, Trophy } from 'lucide-react';
+import { FileText, Clock, CheckCircle, ArrowRight, XCircle, MoreVertical, PlayCircle, Eye, Trophy, LayoutGrid, List } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
@@ -19,6 +22,7 @@ import { useStudentQuizzes } from '@/hooks/useStudentQuizzes';
 export default function StudentQuizzes() {
     const navigate = useNavigate();
     const { quizzes, loading } = useStudentQuizzes();
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     // Effect removed as hook handles fetching and subscriptions
 
     const handleAttempt = (quizId: string) => {
@@ -32,6 +36,27 @@ export default function StudentQuizzes() {
                     <div>
                         <h1 className="text-4xl font-bold tracking-tight">Available Assessments</h1>
                         <p className="text-muted-foreground text-lg mt-2">Track and complete quizzes for your enrolled classes</p>
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50 self-start lg:self-auto">
+                        <Button
+                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('grid')}
+                            className={cn("h-9 px-3 rounded-lg transition-all", viewMode === 'grid' && "shadow-sm")}
+                        >
+                            <LayoutGrid className="size-4 mr-2" />
+                            <span className="text-xs font-semibold tracking-wide">Grid</span>
+                        </Button>
+                        <Button
+                            variant={viewMode === 'list' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('list')}
+                            className={cn("h-9 px-3 rounded-lg transition-all", viewMode === 'list' && "shadow-sm")}
+                        >
+                            <List className="size-4 mr-2" />
+                            <span className="text-xs font-semibold tracking-wide">List</span>
+                        </Button>
                     </div>
                 </div>
 
@@ -52,171 +77,113 @@ export default function StudentQuizzes() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-                        {quizzes.map((quiz) => {
-                            // Single source of truth: Does an active submission exist?
-                            const hasActiveSubmission = !!quiz.my_submission && !quiz.my_submission.is_archived;
-                            const isCompleted = hasActiveSubmission && quiz.my_submission.status !== 'pending';
-                            const isPending = hasActiveSubmission && quiz.my_submission.status === 'pending';
+                    <div className={cn(
+                        viewMode === 'grid'
+                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
+                            : "flex flex-col gap-4"
+                    )}>
+                        {quizzes.map((quiz) => (
+                            viewMode === 'grid' ? (
+                                <QuizCard
+                                    key={quiz.id}
+                                    quiz={quiz}
+                                    onAttempt={(id) => navigate(`/student/quizzes/${id}`)}
+                                    onViewDetails={(id) => navigate(`/student/quizzes/${id}/details`)}
+                                    onViewLeaderboard={(id) => navigate(`/student/quizzes/${quiz.class_id}/${id}/results`)}
+                                />
+                            ) : (
+                                <Card key={quiz.id} className="group overflow-hidden border border-border/50 bg-card hover:shadow-xl transition-all duration-300 rounded-xl">
+                                    <div className="flex flex-col sm:flex-row h-full">
+                                        {/* Color Strip */}
+                                        <div className="w-full sm:w-2 bg-gradient-to-b from-blue-500 to-indigo-600 h-2 sm:h-auto" />
 
-                            // Reattempt Logic:
-                            // If submission exists but its version is LOWER than quiz current version, offer re-attempt.
-                            // If submission version is missing (legacy), assume it's older if quiz.version > 1.
-                            const submissionVersion = quiz.my_submission?.quiz_version || 0;
-                            const currentQuizVersion = quiz.version || 1;
-                            const canReattempt = isCompleted && currentQuizVersion > submissionVersion;
+                                        <div className="flex-1 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                                            {/* Icon */}
+                                            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600 shrink-0">
+                                                <FileText className="size-6" />
+                                            </div>
 
-                            // Final decision: Show "Attempted" state if completed AND on current version
-                            const showAttemptedState = isCompleted && !canReattempt;
+                                            {/* Content */}
+                                            <div className="flex-1 min-w-0 space-y-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-none text-[10px] tracking-wider font-bold">
+                                                        {quiz.classes?.course_code || 'COURSE'}
+                                                    </Badge>
 
-                            console.log(`Quiz [${quiz.title}]:`, {
-                                id: quiz.id,
-                                hasActiveSubmission,
-                                isCompleted,
-                                submissionVersion,
-                                currentQuizVersion,
-                                canReattempt,
-                                showAttemptedState,
-                                submissionStatus: quiz.my_submission?.status
-                            });
+                                                    {quiz.my_submission && !quiz.my_submission.is_archived && quiz.my_submission.status !== 'pending' ? (
+                                                        <Badge className={cn(
+                                                            "font-bold uppercase text-[10px]",
+                                                            quiz.my_submission.status === 'passed' ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                                        )}>
+                                                            {quiz.my_submission.status}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
+                                                            NOT STARTED
+                                                        </Badge>
+                                                    )}
+                                                </div>
 
-                            return (
-                                <Card key={quiz.id} className={`group relative overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 border-l-4 
-                                    ${showAttemptedState
-                                        ? 'bg-slate-50/80 dark:bg-slate-900/50 border-l-slate-400 border-r-4 border-r-slate-300 dark:border-r-slate-700 border-r-dotted opacity-90'
-                                        : 'bg-gradient-to-br from-card to-card/50 border-l-primary/20 hover:border-l-primary'
-                                    }`}>
-                                    <CardContent className="p-7 flex flex-col h-full gap-6">
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-3">
-                                                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider">
-                                                    {quiz.classes?.course_code}
-                                                </Badge>
-                                                <h3 className="font-bold text-2xl line-clamp-2 leading-tight group-hover:text-primary transition-colors" title={quiz.title}>
+                                                <h3 className="font-bold text-lg text-slate-900 leading-tight truncate">
                                                     {quiz.title}
                                                 </h3>
-                                                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full w-fit">
-                                                    {quiz.classes?.class_name}
-                                                </p>
+
+                                                <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Trophy className="size-3.5" />
+                                                        {quiz.total_marks} Points
+                                                    </span>
+                                                    <span className="flex items-center gap-1.5">
+                                                        <FileText className="size-3.5" />
+                                                        {quiz._count?.questions || 0} Questions
+                                                    </span>
+                                                    {quiz.instructor && (
+                                                        <span className="flex items-center gap-1.5 text-slate-700">
+                                                            <Avatar className="h-4 w-4">
+                                                                <AvatarImage src={quiz.instructor.avatar_url || ''} />
+                                                                <AvatarFallback className="text-[8px]">{quiz.instructor.full_name?.charAt(0)}</AvatarFallback>
+                                                            </Avatar>
+                                                            {quiz.instructor.full_name}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex shrink-0">
-                                                {showAttemptedState ? (
-                                                    quiz.my_submission.status === 'passed' ? (
-                                                        <div className="p-3 bg-emerald-500/10 rounded-2xl">
-                                                            <CheckCircle className="text-emerald-500 size-7" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="p-3 bg-red-500/10 rounded-2xl">
-                                                            <XCircle className="text-red-500 size-7" />
-                                                        </div>
-                                                    )
+
+                                            {/* Actions */}
+                                            <div className="flex items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+                                                {quiz.my_submission && !quiz.my_submission.is_archived && quiz.my_submission.status !== 'pending' ? (
+                                                    <>
+                                                        <Button
+                                                            onClick={() => navigate(`/student/quizzes/${quiz.id}/details`)}
+                                                            variant="outline"
+                                                            className="flex-1 sm:flex-none font-bold text-slate-0 whitespace-nowrap px-4"
+                                                        >
+                                                            <Eye className="size-4 mr-2" />
+                                                            Details
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => navigate(`/student/quizzes/${quiz.class_id}/${quiz.id}/results`)}
+                                                            variant="outline"
+                                                            className="h-10 w-10 p-0 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700"
+                                                        >
+                                                            <Trophy className="size-4" />
+                                                        </Button>
+                                                    </>
                                                 ) : (
-                                                    <div className="p-3 bg-blue-500/10 rounded-2xl">
-                                                        <Clock className="text-blue-500 size-7" />
-                                                    </div>
+                                                    <Button
+                                                        onClick={() => navigate(`/student/quizzes/${quiz.id}`)}
+                                                        className="w-full sm:w-auto font-bold bg-[#FCD34D] hover:bg-[#FBBF24] text-slate-900 shadow-sm"
+                                                    >
+                                                        Start Quiz
+                                                        <ArrowRight className="size-4 ml-2" />
+                                                    </Button>
                                                 )}
                                             </div>
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-3 rounded-xl bg-muted/30">
-                                                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Total Points</p>
-                                                <p className="text-xl font-black">{quiz.total_marks}</p>
-                                            </div>
-                                            <div className="p-3 rounded-xl bg-muted/30">
-                                                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Pass Score</p>
-                                                <p className="text-xl font-black">{quiz.pass_percentage}%</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Show Marks/Status if Attempted */}
-                                        {showAttemptedState && (
-                                            <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/50 flex justify-between items-center">
-                                                <div className="flex flex-col gap-1">
-                                                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Your Score</p>
-                                                    <p className="text-2xl font-black leading-none">{quiz.my_submission.total_obtained} <span className="text-sm text-muted-foreground font-medium">/ {quiz.total_marks}</span></p>
-
-                                                    {quiz.my_submission.time_taken !== null && (
-                                                        <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold mt-1">
-                                                            <Clock className="size-3" />
-                                                            {Math.floor(quiz.my_submission.time_taken / 60)}m {quiz.my_submission.time_taken % 60}s
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="text-right">
-                                                    <Badge className={quiz.my_submission.status === 'passed' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}>
-                                                        {quiz.my_submission.status.toUpperCase()}
-                                                    </Badge>
-                                                    <p className="text-xs font-bold mt-1 text-muted-foreground">
-                                                        {Math.round((quiz.my_submission.total_obtained / quiz.total_marks) * 100)}%
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Actions Area - Critical: Only show Start Quiz if NO active submission exists */}
-                                        <div className="mt-auto pt-2">
-                                            {hasActiveSubmission ? (
-                                                showAttemptedState ? (
-                                                    // Fully completed quiz on current version - show attempted state
-                                                    <div className="flex items-center gap-2 w-full">
-                                                        {/* View Details Button - Primary Action for Attempted */}
-                                                        <Button
-                                                            onClick={() => navigate(`/student/quizzes/${quiz.id}/details`)}
-                                                            className="flex-1 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold shadow-sm"
-                                                            variant="outline"
-                                                        >
-                                                            <Eye className="size-4 mr-2 text-blue-500" />
-                                                            View Details
-                                                        </Button>
-
-                                                        {/* Leaderboard Button */}
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="shrink-0 h-10 w-10 rounded-xl border-dashed"
-                                                            onClick={() => navigate(`/student/quizzes/${quiz.class_id}/${quiz.id}/results`)}
-                                                            title="View Leaderboard"
-                                                        >
-                                                            <Trophy className="size-4 text-amber-500" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    // Pending or can reattempt - show appropriate action button
-                                                    <Button
-                                                        className={`w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all gap-2 ${canReattempt
-                                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
-                                                            : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                                            }`}
-                                                        onClick={() => handleAttempt(quiz.id)}
-                                                    >
-                                                        {canReattempt ? (
-                                                            <>
-                                                                <PlayCircle className="size-5" />
-                                                                Updated Quiz - Retake
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <PlayCircle className="size-5" />
-                                                                Resume Quiz
-                                                            </>
-                                                        )}
-                                                    </Button>
-                                                )
-                                            ) : (
-                                                // No submission exists - show Start Quiz button
-                                                <Button
-                                                    className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] gap-2"
-                                                    onClick={() => handleAttempt(quiz.id)}
-                                                >
-                                                    Start Quiz <ArrowRight className="size-5" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </CardContent>
+                                    </div>
                                 </Card>
-                            );
-                        })}
+                            )
+                        ))}
                     </div>
                 )}
             </div>
