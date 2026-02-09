@@ -5,6 +5,7 @@ import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
+import { StudentNotesDrawer } from "@/components/student/StudentNotesDrawer";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -31,6 +32,9 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
         {actions}
+
+        <StudentNotesDrawer />
+
         {showNotifications && <NotificationsPopover />}
 
         <Button

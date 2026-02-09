@@ -43,7 +43,9 @@ import {
   Phone,
   Video,
   Copy,
-  Link
+  Link,
+  Play,
+  Pause
 } from "lucide-react";
 import { CallModal } from "@/components/chat/CallModal";
 import { cn } from "@/lib/utils";
@@ -60,7 +62,10 @@ import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { ChatSkeleton } from "@/components/skeletons/ChatSkeleton";
 import { useClasses } from "@/hooks/useClasses";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { BookOpen, GraduationCap } from "lucide-react";
+import { BookOpen, GraduationCap, BarChart2 } from "lucide-react";
+import { PollBubble } from "@/components/chat/PollBubble";
+import { ChatPollDialog } from "@/components/chat/ChatPollDialog";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -89,7 +94,36 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const user = useAuth().user;
+
+  const toggleRecordingPlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const current = audioRef.current.currentTime;
+      const duration = audioRef.current.duration;
+      if (duration > 0) {
+        setProgress((current / duration) * 100);
+      }
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+  };
 
   const longPressHandlers = useLongPress({
     onLongPress: () => message.isOwn && setMessageToDelete(message.id),
@@ -159,7 +193,61 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
         >
           {message.attachment && (
             <div className="mb-2">
-              {message.attachment.type?.startsWith('image/') ? (
+              {message.attachment.type === 'poll' ? (
+                <PollBubble pollId={message.attachment.url} />
+              ) : message.attachment.type === 'audio' ? (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-700 min-w-[240px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-10 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shrink-0 border-0"
+                    onClick={toggleRecordingPlay}
+                  >
+                    {isPlaying ? <Pause className="size-5 text-white" /> : <Play className="size-5 text-white ml-0.5" />}
+                  </Button>
+                  <div className="flex-1 space-y-1">
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden relative">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-100"
+                        style={{ width: `${progress}%` }}
+                      />
+                      {isPlaying && (
+                        <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-30">
+                          {[...Array(15)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-0.5 bg-white rounded-full animate-pulse"
+                              style={{
+                                height: `${40 + Math.random() * 60}%`,
+                                animationDelay: `${i * 100}ms`
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                      <span>{isPlaying ? "Playing..." : "Voice Message"}</span>
+                      <span>{message.attachment.size}</span>
+                    </div>
+                  </div>
+                  <audio
+                    ref={audioRef}
+                    src={message.attachment.url}
+                    onTimeUpdate={handleTimeUpdate}
+                    onEnded={handleAudioEnded}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 rounded-full"
+                    onClick={() => window.open(message.attachment.url, '_blank')}
+                  >
+                    <Download className="size-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              ) : message.attachment.type?.startsWith('image/') ? (
                 <div className="rounded-lg overflow-hidden mb-2">
                   <img
                     src={message.attachment.url}
@@ -214,7 +302,11 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
               {message.isEdited && <span className="italic ml-1">(edited)</span>}
             </span>
             {message.isOwn && (
-              <CheckCheck className="size-3" />
+              message.read_at ? (
+                <CheckCheck className="size-3 text-blue-500" />
+              ) : (
+                <CheckCheck className="size-3 text-slate-400" />
+              )
             )}
           </div>
         </div>
@@ -247,7 +339,7 @@ const TypingIndicator = () => (
 
 export default function Messages() {
   const { user, role, profile } = useAuth();
-  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage, hasMore, loadMoreMessages } = useMessages();
+  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage, hasMore, loadMoreMessages, markMessagesAsRead } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, classGroups, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
@@ -275,6 +367,8 @@ export default function Messages() {
   const [createdMeetingCode, setCreatedMeetingCode] = useState("");
   const [isCreateMeetingOpen, setIsCreateMeetingOpen] = useState(false);
   const [meetingType, setMeetingType] = useState<'audio' | 'video'>('video');
+  const [isPollDialogOpen, setIsPollDialogOpen] = useState(false);
+  const { isRecording, recordingTime, audioBlob, startRecording, stopRecording, resetRecorder } = useAudioRecorder();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -370,6 +464,13 @@ export default function Messages() {
     }
   }, [messages]);
 
+  // Mark messages as read when viewing conversation
+  useEffect(() => {
+    if (selectedConversationId && messages.length > 0) {
+      markMessagesAsRead(selectedConversationId);
+    }
+  }, [selectedConversationId, messages, markMessagesAsRead]);
+
   // Scroll to bottom on initial load or new message (if near bottom)
   useEffect(() => {
     // Only scroll to bottom if WE send a message or it's the initial load (prevScrollHeight is 0)
@@ -398,6 +499,61 @@ export default function Messages() {
   const clearSelectedFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Handle auto-send for audio recording
+  useEffect(() => {
+    if (audioBlob) {
+      handleSendAudio(audioBlob);
+    }
+  }, [audioBlob]);
+
+  const handleSendAudio = async (blob: Blob) => {
+    if (!selectedConversation || !user) return;
+    setIsUploading(true);
+
+    const receiverId = selectedConversation.participant_1 === user.id
+      ? selectedConversation.participant_2
+      : selectedConversation.participant_1;
+
+    try {
+      const file = new File([blob], `audio_message_${Date.now()}.webm`, { type: 'audio/webm' });
+      // Use Cloudinary for audio as well, or Supabase. Let's use Cloudinary as it handles media well.
+      const uploaded = await uploadToCloudinary(file);
+
+      const attachmentData = {
+        name: 'Audio Message',
+        url: uploaded.url,
+        type: 'audio', // Mark as audio for proper rendering
+        size: formatFileSize(blob.size)
+      };
+
+      await sendMessage(receiverId, "", attachmentData);
+      resetRecorder();
+    } catch (err) {
+      console.error('Failed to send audio message:', err);
+      toast.error("Failed to send audio message");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      try {
+        await startRecording();
+      } catch (err) {
+        toast.error("Could not access microphone");
+      }
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleSendMessage = async () => {
@@ -602,6 +758,7 @@ export default function Messages() {
       isOwn: msg.sender_id === user?.id,
       sender: msg.sender_name || 'Unknown',
       isEdited: msg.is_edited,
+      read_at: msg.read_at,
       edit_count: msg.edit_count,
       created_at_raw: msg.created_at,
       attachment: msg.attachment_name ? {
@@ -699,6 +856,12 @@ export default function Messages() {
                     <DropdownMenuItem onClick={() => handleCreateMeeting('video')}>
                       <Video className="size-4 mr-2" />
                       <span className="text-xs">Create Meeting</span>
+                    </DropdownMenuItem>
+                  )}
+                  {role === 'lecturer' && (
+                    <DropdownMenuItem onClick={() => setIsPollDialogOpen(true)}>
+                      <BarChart2 className="size-4 mr-2" />
+                      <span className="text-xs">Create Poll</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => setIsJoinMeetingOpen(true)}>
@@ -1011,8 +1174,6 @@ export default function Messages() {
               )}
 
               <div className="flex items-center gap-2">
-                {/* Removed emoji button */}
-
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1020,40 +1181,87 @@ export default function Messages() {
                   onChange={handleFileSelect}
                   accept="*"
                 />
+
+                <div className="flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("size-10 shrink-0", selectedFile ? "text-emerald-600" : "text-slate-500 hover:text-emerald-600")}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="size-5" />
+                  </Button>
+
+                  {role === 'lecturer' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 text-slate-500 hover:text-emerald-600 shrink-0"
+                      onClick={() => setIsPollDialogOpen(true)}
+                      title="Create Poll"
+                    >
+                      <BarChart2 className="size-5" />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex-1 relative">
+                  {isRecording ? (
+                    <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-700 rounded-xl h-11 px-4 animate-in fade-in zoom-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2 bg-red-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium font-mono">{formatTime(recordingTime)}</span>
+                      </div>
+                      <div className="flex-1 h-1 flex items-center gap-0.5">
+                        {[...Array(20)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1 bg-emerald-500 rounded-full animate-pulse"
+                            style={{
+                              height: `${20 + Math.random() * 80}%`,
+                              animationDelay: `${i * 50}ms`
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs text-slate-500 italic">Recording...</span>
+                    </div>
+                  ) : (
+                    <Input
+                      value={messageInput}
+                      onChange={(e) => {
+                        setMessageInput(e.target.value);
+                        if (e.target.value.length % 5 === 0) sendTyping();
+                      }}
+                      onKeyDown={handleKeyPress}
+                      placeholder="Type a message"
+                      className="bg-slate-100 dark:bg-slate-700 border-0 rounded-xl h-11 text-sm"
+                    />
+                  )}
+                </div>
+
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn("size-10 shrink-0", selectedFile ? "text-emerald-600" : "text-slate-500 hover:text-emerald-600")}
-                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    "size-10 shrink-0 transition-all duration-200",
+                    isRecording ? "text-red-500 bg-red-50 dark:bg-red-900/20" : "text-slate-500 hover:text-emerald-600"
+                  )}
+                  onClick={toggleRecording}
                 >
-                  <Paperclip className="size-5" />
+                  <Mic className={cn("size-5", isRecording && "animate-pulse")} />
                 </Button>
 
-                <div className="flex-1">
-                  <Input
-                    value={messageInput}
-                    onChange={(e) => {
-                      setMessageInput(e.target.value);
-                      if (e.target.value.length % 5 === 0) sendTyping();
-                    }}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Type a message"
-                    className="bg-slate-100 dark:bg-slate-700 border-0 rounded-xl h-11 text-sm"
-                  />
-                </div>
-
-                <Button variant="ghost" size="icon" className="size-10 text-slate-500 hover:text-emerald-600 shrink-0">
-                  <Mic className="size-5" />
-                </Button>
-
-                <Button
-                  size="icon"
-                  className="size-10 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shrink-0"
-                  onClick={handleSendMessage}
-                  disabled={(!messageInput.trim() && !selectedFile) || isUploading}
-                >
-                  {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                </Button>
+                {!isRecording && (
+                  <Button
+                    size="icon"
+                    className="size-10 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shrink-0"
+                    onClick={handleSendMessage}
+                    disabled={(!messageInput.trim() && !selectedFile) || isUploading}
+                  >
+                    {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -1335,6 +1543,27 @@ export default function Messages() {
           </div>
         </DialogContent>
       </Dialog>
-    </DashboardLayout >
+
+      {selectedConversationId && (
+        <ChatPollDialog
+          isOpen={isPollDialogOpen}
+          onClose={() => setIsPollDialogOpen(false)}
+          conversationId={selectedConversationId}
+          onSuccess={(pollId, question) => {
+            const receiverId = conversations.find(c => c.id === selectedConversationId)?.participant_1 === user?.id
+              ? conversations.find(c => c.id === selectedConversationId)?.participant_2
+              : conversations.find(c => c.id === selectedConversationId)?.participant_1;
+
+            if (receiverId) {
+              sendMessage(receiverId, "📊 " + question, {
+                name: question,
+                url: pollId,
+                type: 'poll'
+              });
+            }
+          }}
+        />
+      )}
+    </DashboardLayout>
   );
 }

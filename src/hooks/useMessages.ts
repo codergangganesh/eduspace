@@ -13,6 +13,7 @@ interface Message {
     attachment_type: string | null;
     attachment_size: string | null;
     is_read: boolean;
+    read_at?: string | null;
     created_at: string;
     sender_name?: string;
     is_edited?: boolean;
@@ -157,10 +158,10 @@ export function useMessages() {
         try {
             await supabase
                 .from('messages')
-                .update({ is_read: true })
+                .update({ is_read: true, read_at: new Date().toISOString() })
                 .eq('conversation_id', conversationId)
                 .eq('receiver_id', user.id)
-                .eq('is_read', false);
+                .is('read_at', null); // Only update if not already read
         } catch (err) {
             console.error('Error marking messages as read:', err);
         }
