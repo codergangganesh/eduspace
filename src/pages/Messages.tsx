@@ -1187,7 +1187,7 @@ export default function Messages() {
               viewportRef={scrollViewportRef}
               onScroll={handleScroll}
             >
-              <div className="max-w-6xl mx-auto">
+              <div className="max-w-7xl mx-auto">
                 {loading && !loadingMore ? (
                   <ChatSkeleton />
                 ) : (
