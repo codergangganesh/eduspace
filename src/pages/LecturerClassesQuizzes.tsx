@@ -142,7 +142,7 @@ export default function LecturerClassesQuizzes() {
                                     key={classItem.id}
                                     classData={classItem}
                                     variant="quizzes"
-                                    onAction={() => handleViewQuizzes(classItem.id)}
+                                    onAction={handleViewQuizzes}
                                 />
                             ))}
                         </div>

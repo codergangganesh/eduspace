@@ -51,13 +51,17 @@ export function SectionClassCard({
     return (
         <Card
             className={cn(
-                "relative overflow-hidden border rounded-2xl transition-all duration-300 group cursor-pointer",
+                "relative overflow-hidden border rounded-2xl transition-all duration-300 group",
                 colors.bg,
                 colors.border,
                 "shadow-sm hover:shadow-md hover:scale-[1.01]"
             )}
-            onClick={() => onAction && onAction(classData.id)}
         >
+            {/* Main Click Action Overlay - High z-index to capture all clicks */}
+            <div
+                className="absolute inset-0 z-20 cursor-pointer"
+                onClick={() => onAction && onAction(classData.id)}
+            />
             {/* Gradient Overlay */}
             <div className={cn(
                 "absolute inset-0 bg-gradient-to-br opacity-50",
@@ -86,7 +90,7 @@ export function SectionClassCard({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-6 w-6 -mr-2 text-muted-foreground hover:text-foreground z-20"
+                                        className="h-6 w-6 -mr-2 text-muted-foreground hover:text-foreground z-30 relative"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <MoreVertical className="size-4" />

@@ -41,6 +41,7 @@ export default function CreateClass() {
     const activeClasses = classes.filter(cls => cls.is_active).length;
 
     const handleViewStudents = (classId: string) => {
+        if (!classId) return;
         navigate(`/classes/${classId}/students`);
     };
 

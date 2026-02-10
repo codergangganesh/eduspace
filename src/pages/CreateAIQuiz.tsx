@@ -242,27 +242,20 @@ export default function CreateAIQuiz() {
     // ========== RENDER ==========
     return (
         <DashboardLayout>
-            <div className="w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-6 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-hidden">
+            <div className="w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-3 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-hidden shadow-none md:shadow-sm filter-none">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => step === 'review' ? setStep('input') : navigate(-1)}
-                            className="h-10 w-10 rounded-full"
-                        >
-                            <ArrowLeft className="size-6" />
-                        </Button>
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Create Quiz with AI</h1>
-                                <Badge className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg shadow-purple-500/20">
+                    <div className="flex items-start gap-3">
+
+                        <div className="flex flex-col gap-1">
+                            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+                                <h1 className="text-xl md:text-3xl font-bold tracking-tight">Create Quiz with AI</h1>
+                                <Badge className="w-fit bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none px-2 py-0.5 md:px-3 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg shadow-purple-500/20">
                                     <Sparkles className="size-3 mr-1" />
                                     AI Powered
                                 </Badge>
                             </div>
-                            <p className="text-muted-foreground text-sm mt-1">
+                            <p className="text-muted-foreground text-xs md:text-sm">
                                 Choose how you want AI to generate your quiz
                             </p>
                         </div>
@@ -282,7 +275,7 @@ export default function CreateAIQuiz() {
                             return (
                                 <div key={s.key} className="flex items-center">
                                     <div
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all border ${isActive
+                                        className={`flex items-center gap-2 px-3 py-2 md:px-4 rounded-full text-[10px] md:text-xs font-semibold transition-all border ${isActive
                                             ? 'bg-primary border-primary text-primary-foreground shadow-lg z-10'
                                             : isPast
                                                 ? 'bg-muted border-muted-foreground/20 text-muted-foreground'
@@ -290,10 +283,10 @@ export default function CreateAIQuiz() {
                                             }`}
                                     >
                                         <s.icon className="size-3.5" />
-                                        {s.label}
+                                        <span className={`${isActive ? 'inline' : 'hidden sm:inline'}`}>{s.label}</span>
                                     </div>
                                     {i < arr.length - 1 && (
-                                        <div className={`w-8 h-[2px] ${isPast ? 'bg-primary' : 'bg-muted'}`} />
+                                        <div className={`w-4 md:w-8 h-[2px] ${isPast ? 'bg-primary' : 'bg-muted'}`} />
                                     )}
                                 </div>
                             );
@@ -352,15 +345,7 @@ export default function CreateAIQuiz() {
                                 </CardContent>
                             </Card>
 
-                            <div className="bg-muted/30 rounded-xl p-5 border border-border">
-                                <h4 className="font-semibold text-sm text-primary mb-2 flex items-center gap-2">
-                                    <Brain className="size-4" />
-                                    How It Works
-                                </h4>
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                    AI will generate multiple-choice questions with 4 options each. You'll be able to review, edit, and delete any question before publishing.
-                                </p>
-                            </div>
+
                         </div>
 
                         {/* RIGHT COLUMN: Configuration */}
@@ -384,7 +369,7 @@ export default function CreateAIQuiz() {
                                                     placeholder="e.g., Photosynthesis, Data Structures – Trees, World War II"
                                                     value={topic}
                                                     onChange={(e) => setTopic(e.target.value)}
-                                                    className="h-14 text-base"
+                                                    className="h-12 md:h-14 text-base"
                                                 />
                                             </div>
 
@@ -392,7 +377,7 @@ export default function CreateAIQuiz() {
                                                 <div className="space-y-3">
                                                     <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Difficulty Level</Label>
                                                     <Select value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
-                                                        <SelectTrigger className="h-14 px-4">
+                                                        <SelectTrigger className="h-12 md:h-14 px-4">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -411,7 +396,7 @@ export default function CreateAIQuiz() {
                                                         max={15}
                                                         value={questionCount}
                                                         onChange={(e) => setQuestionCount(Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
-                                                        className="h-14 font-mono text-lg"
+                                                        className="h-12 md:h-14 font-mono text-lg"
                                                     />
                                                     <p className="text-[10px] text-muted-foreground">Between 1 and 15 questions</p>
                                                 </div>
@@ -466,7 +451,7 @@ export default function CreateAIQuiz() {
                                                     max={15}
                                                     value={fileQuestionCount}
                                                     onChange={(e) => setFileQuestionCount(Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
-                                                    className="h-14 font-mono text-lg w-32"
+                                                    className="h-12 md:h-14 font-mono text-lg w-32"
                                                 />
                                             </div>
                                         </>
@@ -476,7 +461,7 @@ export default function CreateAIQuiz() {
                                         <Button
                                             onClick={handleGenerate}
                                             disabled={isGenerating || (inputMethod === 'topic' && !topic.trim()) || (inputMethod === 'file' && !selectedFile)}
-                                            className="w-full h-14 text-lg font-bold shadow-xl shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-none rounded-xl"
+                                            className="w-full h-12 md:h-14 text-lg font-bold shadow-xl shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-none rounded-xl"
                                         >
                                             {isGenerating ? (
                                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -614,24 +599,24 @@ export default function CreateAIQuiz() {
                                         </div>
                                     ) : (
                                         <Card key={question.id} className="relative group hover:border-primary/50 transition-all shadow-sm">
-                                            <CardContent className="p-5 flex gap-6">
-                                                <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-xl w-14 h-14 shrink-0 border border-border font-bold text-xl text-primary font-mono">
+                                            <CardContent className="p-4 sm:p-5 flex gap-4 sm:gap-6 relative">
+                                                <div className="flex flex-col items-center justify-center p-2 sm:p-3 bg-muted rounded-xl w-10 h-10 sm:w-14 sm:h-14 shrink-0 border border-border font-bold text-lg sm:text-xl text-primary font-mono">
                                                     {index + 1}
                                                 </div>
-                                                <div className="flex-1 space-y-3">
-                                                    <p className="font-semibold text-lg leading-tight">{question.question_text}</p>
-                                                    <div className="flex flex-wrap items-center gap-4">
-                                                        <Badge variant="outline" className="bg-muted px-3 py-1 border-border text-muted-foreground">
+                                                <div className="flex-1 space-y-2 sm:space-y-3 min-w-0 pr-12 sm:pr-0">
+                                                    <p className="font-semibold text-base sm:text-lg leading-tight">{question.question_text}</p>
+                                                    <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                                                        <Badge variant="outline" className="bg-muted px-2 py-0.5 sm:px-3 sm:py-1 border-border text-muted-foreground text-[10px] sm:text-xs">
                                                             {question.marks} Points
                                                         </Badge>
-                                                        <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                        <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
                                                             <div className="size-1.5 rounded-full bg-muted-foreground/50" />
                                                             {question.options.length} Choices
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button variant="ghost" size="icon" onClick={() => setEditingQuestionId(question.id)}>
+                                                <div className="flex flex-row sm:flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity absolute right-3 top-3 sm:static bg-background/80 sm:bg-transparent rounded-lg p-1 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none border sm:border-none border-border shadow-sm sm:shadow-none">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingQuestionId(question.id)}>
                                                         <Edit2 className="size-4" />
                                                     </Button>
                                                     <Button

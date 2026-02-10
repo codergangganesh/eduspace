@@ -175,7 +175,7 @@ export function useAccessRequests() {
 
             if (fetchError) throw fetchError;
 
-            return data as AccessRequest[];
+            return (data || []) as AccessRequest[];
         } catch (err) {
             console.error('Error fetching access requests:', err);
             setError(err as Error);

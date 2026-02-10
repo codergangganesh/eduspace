@@ -98,20 +98,18 @@ export default function Schedule() {
   const { role, profile, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Lecturer State: Selected Class ID, initialized from URL if present
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(searchParams.get("classId"));
+  // Lecturer State: Selected Class ID derived directly from URL
+  const selectedClassId = searchParams.get("classId");
 
-  // Sync URL with selectedClassId
-  useEffect(() => {
-    if (role === 'lecturer') {
-      if (selectedClassId) {
-        setSearchParams({ classId: selectedClassId });
-      } else {
-        searchParams.delete("classId");
-        setSearchParams(searchParams);
-      }
+  const handleClassSelect = (classId: string | null) => {
+    if (classId) {
+      setSearchParams({ classId });
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("classId");
+      setSearchParams(newParams);
     }
-  }, [selectedClassId, role, setSearchParams, searchParams]);
+  };
 
   // Hooks
   const { classes, loading: classesLoading } = useClasses();
@@ -418,7 +416,7 @@ export default function Schedule() {
                 key={cls.id}
                 classData={cls}
                 variant="schedule"
-                onAction={(classId) => setSelectedClassId(classId)}
+                onAction={(classId) => handleClassSelect(classId)}
               />
             ))}
             {classes.length === 0 && (
@@ -440,17 +438,17 @@ export default function Schedule() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             {role === 'lecturer' && selectedClassId && (
-              <Button variant="ghost" size="icon" onClick={() => setSelectedClassId(null)}>
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" onClick={() => handleClassSelect(null)} className="shrink-0 mt-0.5 sm:mt-0">
+                <ArrowLeft className="size-5" />
               </Button>
             )}
             <div>
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight">
                 {role === 'lecturer' ? `${selectedClassDetails?.course_code} Schedule` : 'Time Table'}
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 {role === 'lecturer'
                   ? `Manage events for ${selectedClassDetails?.class_name || 'this class'}`
                   : 'View your class timetable and upcoming events'}

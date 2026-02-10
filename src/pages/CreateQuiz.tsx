@@ -233,38 +233,44 @@ export default function CreateQuiz() {
         <DashboardLayout>
             <div className="w-full pb-10 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-12 w-12 rounded-full hover:bg-muted transition-colors">
-                            <ArrowLeft className="size-6" />
-                        </Button>
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-3xl font-bold tracking-tight">Create New Quiz</h1>
-                                {isAutoSaving && (
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium animate-in fade-in">
-                                        <Loader2 className="size-3 animate-spin" />
-                                        Saving...
+                <div className="flex flex-col gap-6 mb-8">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-10 w-10 rounded-full hover:bg-muted transition-colors shrink-0 mt-1 hidden md:flex">
+                                <ArrowLeft className="size-6" />
+                            </Button>
+                            <div>
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <h1 className="text-xl md:text-3xl font-bold tracking-tight">Create New Quiz</h1>
+                                        {isAutoSaving && (
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] md:text-xs font-medium animate-in fade-in">
+                                                <Loader2 className="size-3 animate-spin" />
+                                                Saving...
+                                            </div>
+                                        )}
+                                        {!isAutoSaving && lastSaved && (
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] md:text-xs font-medium animate-in zoom-in">
+                                                <Save className="size-3" />
+                                                <span className="hidden sm:inline">Auto-saved at {lastSaved.toLocaleTimeString()}</span>
+                                                <span className="sm:hidden">Saved</span>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                                {!isAutoSaving && lastSaved && (
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-medium animate-in zoom-in">
-                                        <Save className="size-3" />
-                                        Auto-saved at {lastSaved.toLocaleTimeString()}
-                                    </div>
-                                )}
+                                    <p className="text-muted-foreground text-xs md:text-lg">Design your assessment and set grading criteria</p>
+                                </div>
                             </div>
-                            <p className="text-muted-foreground text-lg mt-1">Design your assessment and set grading criteria</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Button variant="outline" onClick={() => navigate(-1)} className="h-11 px-6">Discard Draft</Button>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto sm:self-end">
+                        <Button variant="outline" onClick={() => navigate(-1)} className="h-10 md:h-11 px-4 md:px-6 flex-1 sm:flex-none">Discard</Button>
                         <Button
                             onClick={handlePublishQuiz}
                             disabled={saving || questions.length === 0}
-                            className="h-11 px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                            className="h-10 md:h-11 px-6 md:px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 flex-1 sm:flex-none"
                         >
-                            {saving ? 'Publishing...' : 'Publish Quiz Now'}
+                            {saving ? 'Publishing...' : 'Publish Quiz'}
                         </Button>
                     </div>
                 </div>
@@ -325,15 +331,7 @@ export default function CreateQuiz() {
                             </CardContent>
                         </Card>
 
-                        <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
-                            <h4 className="font-bold mb-2 flex items-center gap-2">
-                                <Plus className="size-4 text-primary" />
-                                Pro Tip
-                            </h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                Quizzes are auto-saved as drafts. Your students will only be able to see and attempt the quiz once you click **"Publish Quiz Now"**.
-                            </p>
-                        </div>
+
                     </div>
 
                     {/* Main Section: Questions List */}
@@ -372,37 +370,44 @@ export default function CreateQuiz() {
                                 <div className="space-y-4">
                                     {questions.map((question, index) => (
                                         <Card key={question.id} className="relative group hover:border-primary/50 transition-colors shadow-sm bg-muted/20">
-                                            <CardContent className="p-5 flex gap-6">
-                                                <div className="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-900 rounded-xl w-14 h-14 shrink-0 shadow-sm border font-bold text-xl text-primary">
-                                                    {index + 1}
+                                            <CardContent className="p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-6 relative">
+                                                <div className="flex flex-row md:flex-col items-center gap-3 md:gap-0">
+                                                    <div className="flex flex-col items-center justify-center p-2 md:p-3 bg-white dark:bg-slate-900 rounded-xl w-10 h-10 md:w-14 md:h-14 shrink-0 shadow-sm border font-bold text-lg md:text-xl text-primary">
+                                                        {index + 1}
+                                                    </div>
+                                                    <Badge variant="outline" className="md:hidden bg-white dark:bg-slate-900 px-2 py-0.5 border-primary/20 shadow-sm text-xs">
+                                                        {question.marks} Pts
+                                                    </Badge>
                                                 </div>
-                                                <div className="flex-1 space-y-3">
-                                                    <p className="font-semibold text-lg leading-tight">{question.question_text}</p>
-                                                    <div className="flex flex-wrap items-center gap-4">
-                                                        <Badge variant="outline" className="bg-white dark:bg-slate-900 px-3 py-1 border-primary/20 shadow-sm">
+
+                                                <div className="flex-1 space-y-2 md:space-y-3 pt-8 md:pt-0">
+                                                    <p className="font-semibold text-base md:text-lg leading-tight pr-0 md:pr-0">{question.question_text}</p>
+                                                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                                                        <Badge variant="outline" className="hidden md:inline-flex bg-white dark:bg-slate-900 px-3 py-1 border-primary/20 shadow-sm">
                                                             {question.marks} Points
                                                         </Badge>
-                                                        <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                        <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1.5">
                                                             <div className="size-1.5 rounded-full bg-muted-foreground" />
                                                             {question.options.length} Choices
                                                         </span>
-                                                        <span className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
+                                                        <span className="text-xs md:text-sm text-emerald-600 font-medium flex items-center gap-1.5">
                                                             <div className="size-1.5 rounded-full bg-emerald-600" />
                                                             Answer Set
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-2">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleEditQuestion(question)} className="h-10 w-10 hover:bg-white dark:hover:bg-slate-900 shadow-sm border border-transparent hover:border-border">
-                                                        <Edit2 className="size-4" />
+
+                                                <div className="absolute right-3 top-3 md:right-auto md:top-auto md:relative flex md:flex-col gap-2">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleEditQuestion(question)} className="h-8 w-8 md:h-10 md:w-10 hover:bg-white dark:hover:bg-slate-900 shadow-sm border border-transparent hover:border-border">
+                                                        <Edit2 className="size-3 md:size-4" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20"
+                                                        className="h-8 w-8 md:h-10 md:w-10 text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20"
                                                         onClick={() => setQuestionToDelete(question.id)}
                                                     >
-                                                        <Trash2 className="size-4" />
+                                                        <Trash2 className="size-3 md:size-4" />
                                                     </Button>
                                                 </div>
                                             </CardContent>
