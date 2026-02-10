@@ -176,6 +176,18 @@ export default function LandingPage() {
                                 </Link>
                             </div>
 
+                            {/* Mobile Navigation Actions */}
+                            <div className="flex md:hidden items-center gap-3">
+                                <ThemeToggle />
+                                <Button
+                                    onClick={() => setShowRoleDialog(true)}
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20"
+                                >
+                                    Sign In / Up
+                                </Button>
+                            </div>
+
                             {/* Navigation Links */}
                             <div className="hidden md:flex items-center gap-8">
                                 <a href="#features" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
@@ -207,7 +219,7 @@ export default function LandingPage() {
                 </nav>
 
                 {/* Hero Section */}
-                <section className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-40 pb-24 lg:pt-56 lg:pb-40">
+                <section className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-28 pb-24 lg:pt-56 lg:pb-40">
                     <div className="grid lg:grid-cols-[1.2fr,0.8fr] gap-20 items-center">
                         {/* Left Content */}
                         <div className="space-y-10">

@@ -9,10 +9,11 @@ import {
   LogOut,
   X,
   Users,
+  Sparkles,
+  Table,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { Table } from "lucide-react";
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -29,6 +30,7 @@ const lecturerNavItems = [
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" },
+  { icon: Sparkles, label: "AI Quiz", path: "/lecturer/quizzes?mode=create-ai" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
@@ -40,7 +42,7 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const location = useLocation();
-  const { role } = useAuth();
+  const { role, signOut } = useAuth();
 
   const navItems = role === "lecturer" ? lecturerNavItems : studentNavItems;
 
@@ -76,7 +78,19 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           {/* Navigation */}
           <nav className="flex flex-col gap-1 flex-1">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              let isActive = false;
+
+              if (item.path.includes('?')) {
+                // For items with query params (like AI Quiz), require exact match including search
+                isActive = (location.pathname + location.search) === item.path;
+              } else {
+                // For standard items, match pathname but exclude if we're in a specific mode that has its own item
+                isActive = location.pathname === item.path;
+                if (item.path === '/lecturer/quizzes' && location.search.includes('mode=create-ai')) {
+                  isActive = false;
+                }
+              }
+
               return (
                 <Link
                   key={item.path + item.label}
@@ -97,7 +111,14 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           </nav>
 
           {/* Sign Out */}
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full">
+          {/* Sign Out */}
+          <button
+            onClick={() => {
+              signOut();
+              onClose();
+            }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full"
+          >
             <LogOut className="size-5" />
             <span>Sign Out</span>
           </button>

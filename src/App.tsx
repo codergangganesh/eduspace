@@ -10,6 +10,7 @@ import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 // Lazy load pages
 const Index = lazy(() => import("./pages/Index"));
@@ -75,6 +76,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <OfflineBanner />
             <BrowserRouter>
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>

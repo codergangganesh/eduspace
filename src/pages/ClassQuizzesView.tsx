@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2 } from 'lucide-react';
+import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2, Sparkles } from 'lucide-react';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/contexts/AuthContext';
 import { LecturerQuizCard } from '@/components/lecturer/LecturerQuizCard';
@@ -81,9 +81,13 @@ export default function ClassQuizzesView() {
                             </Button>
                         </div>
 
+                        <Button onClick={() => navigate(`/lecturer/quizzes/${classId}/create-ai`)} className="hidden sm:flex gap-2 h-11 px-6 shadow-md transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+                            <Sparkles className="size-5" />
+                            AI Quiz
+                        </Button>
                         <Button onClick={handleCreateQuiz} className="hidden sm:flex gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
                             <Plus className="size-5" />
-                            Create New Quiz
+                            Create Manually
                         </Button>
                     </div>
                 </div>
@@ -220,15 +224,30 @@ export default function ClassQuizzesView() {
 
             {/* Mobile FABs */}
             <div className="fixed bottom-6 right-6 sm:hidden z-40 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
-
-                <Button
-                    onClick={handleCreateQuiz}
-                    size="icon"
-                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
-                    title="Create New Quiz"
-                >
-                    <Plus className="size-8 text-white" />
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            size="icon"
+                            className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                        >
+                            <Plus className="size-8 text-white" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top" className="w-56 p-2 mb-2">
+                        <DropdownMenuItem onClick={handleCreateQuiz} className="h-12 cursor-pointer text-base font-medium">
+                            <Plus className="size-5 mr-3 text-muted-foreground" />
+                            Create Manually
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => navigate(`/lecturer/quizzes/${classId}/create-ai`)}
+                            className="h-12 cursor-pointer text-base font-medium bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 text-indigo-600 dark:text-indigo-400"
+                        >
+                            <Sparkles className="size-5 mr-3" />
+                            Create with AI
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             <DeleteConfirmDialog
