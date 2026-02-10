@@ -139,7 +139,7 @@ export default function ClassAssignmentsView() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
                     <Card className="relative overflow-hidden border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
                         <CardContent className="p-4 flex items-center gap-4 relative z-10">
                             <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
@@ -211,7 +211,7 @@ export default function ClassAssignmentsView() {
 
                 {/* Assignments Grid */}
                 {loading ? (
-                    <GridSkeleton count={4} />
+                    <GridSkeleton count={6} />
                 ) : filteredAssignments.length === 0 ? (
                     <Card className="border-dashed bg-transparent shadow-none">
                         <CardContent className="p-12 text-center">
@@ -227,7 +227,7 @@ export default function ClassAssignmentsView() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                         {filteredAssignments.map((assignment, index) => (
                             <AssignmentCard
                                 key={assignment.id}

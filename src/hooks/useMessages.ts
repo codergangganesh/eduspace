@@ -33,6 +33,7 @@ interface Conversation {
     online?: boolean;
     cleared_at?: Record<string, string> | null;
     visible_to?: string[] | null;
+    auto_delete_settings?: Record<string, boolean>;
 }
 
 interface Attachment {
@@ -194,6 +195,12 @@ export function useMessages() {
                     filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
                 }
 
+                // Apply individual auto-delete filter (15 days rolling window)
+                if (currentConv?.auto_delete_settings?.[user.id]) {
+                    const fifteenDaysAgo = Date.now() - (15 * 24 * 60 * 60 * 1000);
+                    filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > fifteenDaysAgo);
+                }
+
                 const newMessages = [...filteredData].reverse();
                 if (isLoadMore) {
                     setMessages(prev => [...newMessages, ...prev]);
@@ -223,7 +230,15 @@ export function useMessages() {
                 },
                 (payload) => {
                     const newMessage = payload.new as Message;
+                    const currentConv = conversations.find(c => c.id === selectedConversationId);
+
                     setMessages((prev) => {
+                        // Filter real-time messages too
+                        if (currentConv?.auto_delete_settings?.[user.id]) {
+                            const fifteenDaysAgo = Date.now() - (15 * 24 * 60 * 60 * 1000);
+                            if (new Date(newMessage.created_at).getTime() <= fifteenDaysAgo) return prev;
+                        }
+
                         if (prev.some(m => m.id === newMessage.id)) return prev;
                         return [...prev, newMessage];
                     });
@@ -583,6 +598,31 @@ export function useMessages() {
         typingUsers,
         sendTyping,
         clearChat,
+        toggleAutoDelete: async (conversationId: string, enabled: boolean) => {
+            if (!user) return;
+            try {
+                const conversation = conversations.find(c => c.id === conversationId);
+                const updatedSettings = {
+                    ...(conversation?.auto_delete_settings || {}),
+                    [user.id]: enabled
+                };
+
+                const { error } = await supabase
+                    .from('conversations')
+                    .update({ auto_delete_settings: updatedSettings })
+                    .eq('id', conversationId);
+
+                if (error) throw error;
+
+                // Update local state
+                setConversations(prev => prev.map(c =>
+                    c.id === conversationId ? { ...c, auto_delete_settings: updatedSettings } : c
+                ));
+            } catch (err) {
+                console.error('Error toggling auto-delete:', err);
+                throw err;
+            }
+        },
         deleteChat: hideChat, // Soft delete compatibility
         hideChat,
         unhideChat,

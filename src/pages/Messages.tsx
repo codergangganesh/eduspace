@@ -38,15 +38,21 @@ import {
   CheckCheck,
   Clock,
   LogOut,
+  Pause,
+  SwitchCamera,
+  Terminal,
+  ShieldAlert,
+  CalendarCheck,
   Settings,
   User,
   Phone,
   Video,
   Copy,
   Link,
-  Play,
-  Pause
+  Play
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { CallModal } from "@/components/chat/CallModal";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/useMessages";
@@ -339,7 +345,12 @@ const TypingIndicator = () => (
 
 export default function Messages() {
   const { user, role, profile } = useAuth();
-  const { conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId, loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat, finalizeDeleteChat, editMessage, hasMore, loadMoreMessages, markMessagesAsRead } = useMessages();
+  const {
+    conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId,
+    loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat,
+    finalizeDeleteChat, editMessage, hasMore, loadMoreMessages, markMessagesAsRead,
+    toggleAutoDelete
+  } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, classGroups, loading: studentsLoading } = useEligibleStudents();
   const { onlineUsers } = useOnlinePresence();
@@ -368,6 +379,7 @@ export default function Messages() {
   const [isCreateMeetingOpen, setIsCreateMeetingOpen] = useState(false);
   const [meetingType, setMeetingType] = useState<'audio' | 'video'>('video');
   const [isPollDialogOpen, setIsPollDialogOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { isRecording, recordingTime, audioBlob, startRecording, stopRecording, resetRecorder } = useAudioRecorder();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1079,6 +1091,12 @@ export default function Messages() {
                             <span>Clear Chat</span>
                           </div>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                            <Settings className="size-4" />
+                            <span>Chat Settings</span>
+                          </div>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setShowDeleteDialog(true)}>
                           <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                             <LogOut className="size-4" />
@@ -1564,6 +1582,44 @@ export default function Messages() {
           }}
         />
       )}
+      {/* Chat Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="size-5 text-emerald-600" />
+              Chat Settings
+            </DialogTitle>
+            <DialogDescription>
+              Manage privacy and automation for this conversation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="flex items-center justify-between space-x-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="auto-delete" className="text-base font-semibold">Auto-Delete Messages</Label>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  When enabled, messages older than 15 days will be automatically removed from this conversation for you.
+                </p>
+              </div>
+              <Switch
+                id="auto-delete"
+                checked={(user?.id && selectedConversation?.auto_delete_settings?.[user.id]) || false}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await toggleAutoDelete(selectedConversationId!, checked);
+                    toast.success(checked ? "Auto-delete enabled" : "Auto-delete disabled", {
+                      description: checked ? "Messages will be auto-deleted after 15 days." : "Messages will remain permanently."
+                    });
+                  } catch (err) {
+                    toast.error("Failed to update setting");
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
