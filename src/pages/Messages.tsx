@@ -1187,7 +1187,7 @@ export default function Messages() {
               viewportRef={scrollViewportRef}
               onScroll={handleScroll}
             >
-              <div className="max-w-3xl mx-auto">
+              <div className="max-w-6xl mx-auto">
                 {loading && !loadingMore ? (
                   <ChatSkeleton />
                 ) : (
@@ -1218,9 +1218,9 @@ export default function Messages() {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+            <div className="p-2 md:p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
               {selectedFile && (
-                <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-between">
+                <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2">
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                       <FileText className="size-5 text-emerald-600" />
@@ -1236,7 +1236,7 @@ export default function Messages() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 max-w-10xl mx-auto w-full">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1245,84 +1245,104 @@ export default function Messages() {
                   accept="*"
                 />
 
-                <div className="flex items-center">
+                <div className="flex-1 flex items-center bg-slate-100 dark:bg-slate-700/50 rounded-2xl pl-1 pr-1.5 py-1 focus-within:ring-1 focus-within:ring-emerald-500/30 transition-all min-h-[44px] md:min-h-[48px]">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-full shrink-0"
+                      >
+                        <Plus className="size-4 transition-transform hover:rotate-90 duration-200" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" sideOffset={12} className="w-56 rounded-2xl p-2 shadow-xl border-slate-200 dark:border-slate-700 animate-in slide-in-from-bottom-2 duration-200">
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-900/20">
+                        <div className="size-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                          <Paperclip className="size-5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-sm text-foreground">File</span>
+                          <span className="text-[10px] text-muted-foreground">Document, image, or video</span>
+                        </div>
+                      </DropdownMenuItem>
+
+                      {role === 'lecturer' && (
+                        <DropdownMenuItem onClick={() => setIsPollDialogOpen(true)} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-900/20">
+                          <div className="size-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                            <BarChart2 className="size-5" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-sm text-foreground">Poll</span>
+                            <span className="text-[10px] text-muted-foreground">Create a class survey</span>
+                          </div>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 ml-0.5 mr-1 shrink-0" />
+
+                  <div className="flex-1 relative flex items-center">
+                    {isRecording ? (
+                      <div className="flex-1 flex items-center gap-3 h-9 px-2">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 bg-red-500 rounded-full animate-pulse" />
+                          <span className="text-sm font-medium font-mono text-foreground">{formatTime(recordingTime)}</span>
+                        </div>
+                        <div className="flex-1 h-3 flex items-center gap-0.5 overflow-hidden">
+                          {[...Array(24)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-1 bg-emerald-500 rounded-full animate-pulse"
+                              style={{
+                                height: `${30 + Math.random() * 70}%`,
+                                animationDelay: `${i * 40}ms`
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <Input
+                        value={messageInput}
+                        onChange={(e) => {
+                          setMessageInput(e.target.value);
+                          if (e.target.value.length % 5 === 0) sendTyping();
+                        }}
+                        onKeyDown={handleKeyPress}
+                        placeholder="Type a message..."
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 text-sm w-full shadow-none text-foreground placeholder:text-muted-foreground px-1"
+                      />
+                    )}
+                  </div>
+
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={cn("size-10 shrink-0", selectedFile ? "text-emerald-600" : "text-slate-500 hover:text-emerald-600")}
-                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                      "size-9 shrink-0 transition-all duration-200 rounded-full",
+                      isRecording ? "text-red-500 bg-red-100 dark:bg-red-900/30" : "text-slate-500 hover:text-emerald-600"
+                    )}
+                    onClick={toggleRecording}
                   >
-                    <Paperclip className="size-5" />
+                    <Mic className={cn("size-5", isRecording && "animate-pulse")} />
                   </Button>
-
-                  {role === 'lecturer' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-10 text-slate-500 hover:text-emerald-600 shrink-0"
-                      onClick={() => setIsPollDialogOpen(true)}
-                      title="Create Poll"
-                    >
-                      <BarChart2 className="size-5" />
-                    </Button>
-                  )}
                 </div>
-
-                <div className="flex-1 relative">
-                  {isRecording ? (
-                    <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-700 rounded-xl h-11 px-4 animate-in fade-in zoom-in duration-200">
-                      <div className="flex items-center gap-2">
-                        <span className="size-2 bg-red-500 rounded-full animate-pulse" />
-                        <span className="text-sm font-medium font-mono">{formatTime(recordingTime)}</span>
-                      </div>
-                      <div className="flex-1 h-1 flex items-center gap-0.5">
-                        {[...Array(20)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-1 bg-emerald-500 rounded-full animate-pulse"
-                            style={{
-                              height: `${20 + Math.random() * 80}%`,
-                              animationDelay: `${i * 50}ms`
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs text-slate-500 italic">Recording...</span>
-                    </div>
-                  ) : (
-                    <Input
-                      value={messageInput}
-                      onChange={(e) => {
-                        setMessageInput(e.target.value);
-                        if (e.target.value.length % 5 === 0) sendTyping();
-                      }}
-                      onKeyDown={handleKeyPress}
-                      placeholder="Type a message"
-                      className="bg-slate-100 dark:bg-slate-700 border-0 rounded-xl h-11 text-sm"
-                    />
-                  )}
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "size-10 shrink-0 transition-all duration-200",
-                    isRecording ? "text-red-500 bg-red-50 dark:bg-red-900/20" : "text-slate-500 hover:text-emerald-600"
-                  )}
-                  onClick={toggleRecording}
-                >
-                  <Mic className={cn("size-5", isRecording && "animate-pulse")} />
-                </Button>
 
                 {!isRecording && (
                   <Button
                     size="icon"
-                    className="size-10 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shrink-0"
+                    className={cn(
+                      "size-12 rounded-full shrink-0 shadow-lg transition-all active:scale-95",
+                      messageInput.trim() || selectedFile
+                        ? "bg-emerald-500 hover:bg-emerald-600 text-white scale-100"
+                        : "bg-slate-100 dark:bg-slate-700 text-slate-400 scale-95 cursor-not-allowed"
+                    )}
                     onClick={handleSendMessage}
                     disabled={(!messageInput.trim() && !selectedFile) || isUploading}
                   >
-                    {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                    {isUploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
                   </Button>
                 )}
               </div>
