@@ -27,6 +27,7 @@ interface PollData {
     userVotes: Set<number>;
     createdBy: string;
     allowMultiple: boolean;
+    isClosed: boolean;
 }
 
 interface VoterInfo {
@@ -107,7 +108,8 @@ export function PollBubble({ pollId }: { pollId: string }) {
                     totalVotes: totalVotes,
                     userVotes,
                     createdBy: pollData.created_by,
-                    allowMultiple: pollData.allow_multiple ?? false
+                    allowMultiple: pollData.allow_multiple ?? false,
+                    isClosed: pollData.is_closed ?? false
                 });
             } catch (err) {
                 console.error("Error fetching poll:", err);
@@ -145,23 +147,35 @@ export function PollBubble({ pollId }: { pollId: string }) {
             return;
         }
 
-        const isAlreadyVoted = poll.userVotes.has(optionIndex);
+        // Check if poll is closed
+        if ((poll as any).isClosed) {
+            toast.error("This poll has been closed. Voting is no longer allowed.");
+            return;
+        }
 
-        // Optimistic UI Update: Instantly move the selection and recalculate percentages
+        const isAlreadyVoted = poll.userVotes.has(optionIndex);
+        const hasAnyVote = poll.userVotes.size > 0;
+
+        // Optimistic UI Update: Calculate new state before database operation
         const newUserVotes = new Set(poll.userVotes);
         let newOptions = [...poll.options];
         let newTotalVotes = poll.totalVotes;
 
-        if (isAlreadyVoted) {
+        if (isAlreadyVoted && poll.allowMultiple) {
+            // Multi-choice: Deselect this option
             newUserVotes.delete(optionIndex);
             newTotalVotes = Math.max(0, newTotalVotes - 1);
             newOptions[optionIndex] = {
                 ...newOptions[optionIndex],
                 votes: Math.max(0, newOptions[optionIndex].votes - 1)
             };
+        } else if (isAlreadyVoted && !poll.allowMultiple) {
+            // Single-choice: Clicking same option does nothing (already selected)
+            return;
         } else {
-            // If single choice, remove previous votes from options counts
-            if (!poll.allowMultiple) {
+            // Selecting a new option
+            if (!poll.allowMultiple && hasAnyVote) {
+                // Single-choice: Remove previous vote from UI
                 poll.userVotes.forEach(idx => {
                     if (newOptions[idx]) {
                         newOptions[idx] = {
@@ -173,6 +187,8 @@ export function PollBubble({ pollId }: { pollId: string }) {
                 });
                 newUserVotes.clear();
             }
+
+            // Add new vote
             newUserVotes.add(optionIndex);
             newTotalVotes++;
             newOptions[optionIndex] = {
@@ -181,13 +197,13 @@ export function PollBubble({ pollId }: { pollId: string }) {
             };
         }
 
-        // Recalculate percentages for all options based on new total
+        // Recalculate percentages for all options
         newOptions = newOptions.map(opt => ({
             ...opt,
             percentage: newTotalVotes > 0 ? Math.round((opt.votes / newTotalVotes) * 100) : 0
         }));
 
-        // Update local state immediately for 100% visual responsiveness (0% to 100% move)
+        // Update local state immediately for instant feedback
         setPoll(prev => prev ? {
             ...prev,
             userVotes: newUserVotes,
@@ -197,7 +213,9 @@ export function PollBubble({ pollId }: { pollId: string }) {
         setVoting(true);
 
         try {
-            if (isAlreadyVoted) {
+            // Database operation: Handle vote change atomically
+            if (isAlreadyVoted && poll.allowMultiple) {
+                // Multi-choice: Delete this specific vote
                 const { error } = await supabase
                     .from('chat_poll_votes')
                     .delete()
@@ -206,18 +224,23 @@ export function PollBubble({ pollId }: { pollId: string }) {
                     .eq('option_index', optionIndex);
 
                 if (error) throw error;
-            } else {
+            } else if (!isAlreadyVoted) {
+                // Adding a new vote
                 if (!poll.allowMultiple) {
-                    // Always clear previous votes for single choice enforcement
+                    // Single-choice: Delete ALL previous votes first (atomic vote change)
                     const { error: deleteError } = await supabase
                         .from('chat_poll_votes')
                         .delete()
                         .eq('poll_id', pollId)
                         .eq('user_id', user.id);
 
-                    if (deleteError) throw deleteError;
+                    if (deleteError && deleteError.code !== 'PGRST116') {
+                        // PGRST116 = no rows to delete, which is fine
+                        throw deleteError;
+                    }
                 }
 
+                // Insert the new vote
                 const { error: insertError } = await supabase
                     .from('chat_poll_votes')
                     .insert({
@@ -226,16 +249,27 @@ export function PollBubble({ pollId }: { pollId: string }) {
                         option_index: optionIndex
                     });
 
-                // If code is 23505 (unique violation), it means the vote already exists, which is fine
-                if (insertError && (insertError as any).code !== '23505') throw insertError;
+                if (insertError) {
+                    // Handle unique constraint violation gracefully
+                    if ((insertError as any).code === '23505') {
+                        console.warn('Vote already exists, refreshing poll data...');
+                        // Let the subscription handle the refresh
+                        return;
+                    }
+                    throw insertError;
+                }
+            }
+
+            // Success feedback
+            if (!poll.allowMultiple && hasAnyVote && !isAlreadyVoted) {
+                toast.success("Vote changed successfully!");
             }
         } catch (err) {
-            // Check if it's already caught 23505 (shouldn't reach here if handled above, but double check)
-            if ((err as any)?.code === '23505') return;
-
-            console.error("Error voting:", err);
+            console.error("Error updating vote:", err);
             toast.error("Failed to update vote. Please try again.");
-            // Subscription will fix state on error
+
+            // Revert optimistic update by triggering a fresh fetch
+            // The subscription will handle this automatically
         } finally {
             setVoting(false);
         }
@@ -323,185 +357,169 @@ export function PollBubble({ pollId }: { pollId: string }) {
     const isCreator = user?.id === poll.createdBy;
 
     return (
-        <div className="w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden transform transition-all duration-500 hover:shadow-2xl">
-            {/* Header */}
-            <div className="p-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
-                        <BarChart2 className="w-6 h-6" />
-                        <span className="text-[12px] uppercase font-black tracking-widest opacity-80">
-                            {poll.allowMultiple ? 'Multiple Choice' : 'Interactive Poll'}
+        <div className="w-full max-w-sm">
+            {/* Poll Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-emerald-400 dark:border-emerald-500 overflow-hidden shadow-sm">
+                {/* Header */}
+                <div className="px-4 py-3 bg-white dark:bg-slate-900">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="size-5 bg-emerald-500 rounded flex items-center justify-center">
+                            <BarChart2 className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                            Interactive Poll
                         </span>
+                        {poll.isClosed && (
+                            <span className="ml-auto px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[9px] font-bold uppercase rounded">
+                                Closed
+                            </span>
+                        )}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
-                                    <MoreVertical className="h-4 w-4 text-slate-500" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                                <DropdownMenuItem
-                                    className="text-sm font-semibold flex items-center gap-2 cursor-pointer"
-                                    onClick={() => {
-                                        fetchVoterDetails();
-                                        setShowVotesModal(true);
-                                    }}
-                                >
-                                    <Users className="w-4 h-4" />
-                                    View Votes
-                                </DropdownMenuItem>
-                                {isCreator && (
-                                    <DropdownMenuItem
-                                        className="text-sm font-semibold flex items-center gap-2 cursor-pointer text-emerald-600 focus:text-emerald-600"
-                                        onClick={startEditing}
-                                    >
-                                        <BarChart2 className="w-4 h-4" />
-                                        Edit Poll
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
 
-                {isEditing ? (
-                    <div className="space-y-5">
-                        <Input
-                            value={editQuestion}
-                            onChange={(e) => setEditQuestion(e.target.value)}
-                            className="h-12 text-lg font-bold bg-white dark:bg-slate-950 border-2 border-emerald-100 dark:border-emerald-900 focus:border-emerald-500 rounded-2xl px-5"
-                            placeholder="Type your question..."
-                        />
+                    {/* Question */}
+                    {isEditing ? (
                         <div className="space-y-3">
-                            {editOptions.map((option, idx) => (
-                                <Input
-                                    key={idx}
-                                    value={option}
-                                    onChange={(e) => {
-                                        const newOpts = [...editOptions];
-                                        newOpts[idx] = e.target.value;
-                                        setEditOptions(newOpts);
-                                    }}
-                                    className="h-10 text-sm font-semibold border-2 rounded-xl px-5"
-                                    placeholder={`Option ${idx + 1}`}
-                                />
-                            ))}
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/50">
-                            <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Allow Multiple Choice</span>
-                            <button
-                                onClick={() => setEditAllowMultiple(!editAllowMultiple)}
-                                className={`w-12 h-6 rounded-full transition-colors relative ${editAllowMultiple ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                            >
-                                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${editAllowMultiple ? 'translate-x-6' : ''}`} />
-                            </button>
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-2">
-                            <Button variant="ghost" className="rounded-full px-6 h-10 text-sm font-bold" onClick={() => setIsEditing(false)}>
-                                CANCEL
-                            </Button>
-                            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-8 h-10 text-sm font-black shadow-lg shadow-emerald-200 dark:shadow-none transition-all" onClick={handleUpdatePoll} disabled={isUpdating}>
-                                {isUpdating ? "SAVING..." : "SAVE POLL"}
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        <h3 className="font-extrabold text-2xl leading-tight text-slate-900 dark:text-slate-50 mb-5 tracking-tight">
-                            {poll.question}
-                        </h3>
-                        <div className="flex items-center gap-4">
-                            <div className="flex -space-x-2">
-                                {[...Array(Math.min(5, poll.totalVotes))].map((_, i) => (
-                                    <div key={i} className="size-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-800 shadow-sm" />
+                            <Input
+                                value={editQuestion}
+                                onChange={(e) => setEditQuestion(e.target.value)}
+                                className="text-sm font-semibold"
+                                placeholder="Type your question..."
+                            />
+                            <div className="space-y-2">
+                                {editOptions.map((option, idx) => (
+                                    <Input
+                                        key={idx}
+                                        value={option}
+                                        onChange={(e) => {
+                                            const newOpts = [...editOptions];
+                                            newOpts[idx] = e.target.value;
+                                            setEditOptions(newOpts);
+                                        }}
+                                        className="text-sm"
+                                        placeholder={`Option ${idx + 1}`}
+                                    />
                                 ))}
                             </div>
-                            <div className="flex flex-col">
-                                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-widest">{poll.totalVotes} responses collected</p>
+                            <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded">
+                                <span className="text-xs font-semibold">Allow Multiple</span>
+                                <button
+                                    onClick={() => setEditAllowMultiple(!editAllowMultiple)}
+                                    className={`w-10 h-5 rounded-full transition-colors relative ${editAllowMultiple ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${editAllowMultiple ? 'translate-x-5' : ''}`} />
+                                </button>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleUpdatePoll} disabled={isUpdating}>
+                                    {isUpdating ? "Saving..." : "Save"}
+                                </Button>
                             </div>
                         </div>
-                    </>
-                )}
-            </div>
+                    ) : (
+                        <h3 className="text-[15px] font-semibold text-slate-900 dark:text-slate-50 leading-snug">
+                            {poll.question}
+                        </h3>
+                    )}
+                </div>
 
-            {/* Options */}
-            {!isEditing && (
-                <div className="p-6 space-y-8">
-                    {poll.options.map((option, index) => {
-                        const isSelected = poll.userVotes.has(index);
-                        return (
-                            <div key={index} className="space-y-3">
+                {/* Options */}
+                {!isEditing && (
+                    <div className="px-4 pb-4 space-y-2">
+                        {poll.options.map((option, index) => {
+                            const isSelected = poll.userVotes.has(index);
+                            return (
                                 <button
-                                    className={`w-full group text-left relative transition-all duration-300 ${isCreator ? 'cursor-not-allowed' : ''}`}
+                                    key={index}
+                                    className={`w-full text-left transition-all duration-200 ${isCreator || poll.isClosed ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-80'
+                                        }`}
                                     onClick={() => handleVote(index)}
-                                    disabled={voting || isCreator}
+                                    disabled={voting || isCreator || poll.isClosed}
                                 >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className={`size-5 transition-all flex items-center justify-center border-2 ${poll.allowMultiple ? 'rounded-md' : 'rounded-full'
-                                                } ${isSelected ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'border-slate-200 dark:border-slate-700 group-hover:border-emerald-300'}`}>
-                                                {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[4px]" />}
-                                            </div>
-                                            <span className={`text-lg font-bold truncate transition-colors ${isSelected ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                    {/* Option Text and Percentage */}
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            {isSelected && (
+                                                <div className="size-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                                                    <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />
+                                                </div>
+                                            )}
+                                            <span className={`text-sm font-medium ${isSelected ? 'text-slate-900 dark:text-slate-50' : 'text-slate-700 dark:text-slate-300'}`}>
                                                 {option.text}
                                             </span>
                                         </div>
-                                        <div className="flex items-baseline gap-1.5 shrink-0">
-                                            <span className={`text-lg font-black tabular-nums transition-colors ${isSelected ? 'text-emerald-600' : 'text-slate-900 dark:text-slate-100'}`}>
-                                                {option.percentage}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-slate-400">%</span>
-                                        </div>
+                                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                                            {option.percentage}%
+                                        </span>
                                     </div>
 
-                                    {/* Instant Horizontal Progress Line */}
+                                    {/* Progress Bar */}
                                     <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                         <div
-                                            className={`h-full transition-all duration-500 ease-out ${isSelected ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                            className={`h-full transition-all duration-500 ${isSelected ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                                                }`}
                                             style={{ width: `${option.percentage}%` }}
                                         />
                                     </div>
-
-                                    <div className="mt-1 flex justify-end">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                                            {option.votes} {option.votes === 1 ? 'VOTE' : 'VOTES'}
-                                        </span>
-                                    </div>
                                 </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Footer */}
+                {!isEditing && (
+                    <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                        <button
+                            onClick={() => {
+                                fetchVoterDetails();
+                                setShowVotesModal(true);
+                            }}
+                            className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:underline"
+                        >
+                            View votes
+                        </button>
+                        {isCreator && (
+                            <>
+                                <span className="mx-2 text-slate-300">•</span>
+                                <button
+                                    onClick={startEditing}
+                                    className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:underline"
+                                >
+                                    Edit
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Voter Details Modal */}
             <Dialog open={showVotesModal} onOpenChange={setShowVotesModal}>
-                <DialogContent className="sm:max-w-md rounded-3xl">
+                <DialogContent className="sm:max-w-md rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-black text-emerald-600 mb-4 flex items-center gap-2">
+                        <DialogTitle className="text-lg font-bold text-emerald-600 flex items-center gap-2">
                             <Users className="w-5 h-5" />
-                            Participants
+                            Poll Votes
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
+                    <div className="max-h-[60vh] overflow-y-auto space-y-4">
                         {isLoadingVotes ? (
-                            <div className="space-y-4 py-4">
+                            <div className="space-y-3 py-4">
                                 {[1, 2, 3].map(i => (
                                     <div key={i} className="flex items-center gap-3 animate-pulse">
-                                        <div className="w-10 h-10 bg-slate-100 rounded-full" />
+                                        <div className="w-8 h-8 bg-slate-100 rounded-full" />
                                         <div className="flex-1 space-y-2">
-                                            <div className="h-4 bg-slate-100 rounded w-1/2" />
-                                            <div className="h-3 bg-slate-50 rounded w-1/3" />
+                                            <div className="h-3 bg-slate-100 rounded w-1/2" />
+                                            <div className="h-2 bg-slate-50 rounded w-1/3" />
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : voterDetails.length === 0 ? (
-                            <div className="text-center py-10">
-                                <Users className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                                <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">No votes yet</p>
+                            <div className="text-center py-8">
+                                <Users className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                                <p className="text-slate-500 text-sm font-medium">No votes yet</p>
                             </div>
                         ) : (
                             poll.options.map((option, optIdx) => {
@@ -509,25 +527,25 @@ export function PollBubble({ pollId }: { pollId: string }) {
                                 if (optionVoters.length === 0) return null;
 
                                 return (
-                                    <div key={optIdx} className="space-y-3">
+                                    <div key={optIdx} className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2 truncate pr-4">
+                                            <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
                                                 {option.text}
                                             </h4>
-                                            <span className="shrink-0 px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full text-[10px] font-black">
+                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full text-[10px] font-bold">
                                                 {optionVoters.length}
                                             </span>
                                         </div>
-                                        <div className="space-y-2 pl-2 border-l-2 border-emerald-50 dark:border-emerald-900/30">
+                                        <div className="space-y-1.5 pl-3 border-l-2 border-emerald-100 dark:border-emerald-900/30">
                                             {optionVoters.map((voter, vIdx) => (
-                                                <div key={vIdx} className="flex items-center gap-3 group">
-                                                    <Avatar className="h-8 w-8 border border-white dark:border-slate-800 shadow-sm">
+                                                <div key={vIdx} className="flex items-center gap-2">
+                                                    <Avatar className="h-6 w-6">
                                                         <AvatarImage src={voter.avatar_url} />
-                                                        <AvatarFallback className="bg-emerald-50 text-emerald-600 text-[10px] font-black">
+                                                        <AvatarFallback className="bg-emerald-50 text-emerald-600 text-[9px] font-bold">
                                                             {voter.full_name?.charAt(0) || '?'}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <span className="text-[13px] font-bold text-slate-600 dark:text-slate-400 truncate">
+                                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                                                         {voter.full_name}
                                                     </span>
                                                 </div>
