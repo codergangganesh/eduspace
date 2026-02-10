@@ -49,7 +49,8 @@ import {
   Video,
   Copy,
   Link,
-  Play
+  Play,
+  ArrowLeft
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -380,6 +381,31 @@ export default function Messages() {
   const [meetingType, setMeetingType] = useState<'audio' | 'video'>('video');
   const [isPollDialogOpen, setIsPollDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Mobile View State
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+
+  // Auto-open mobile chat when conversation selected
+  useEffect(() => {
+    if (selectedConversationId) {
+      setIsMobileChatOpen(true);
+      localStorage.setItem('last_active_conversation', selectedConversationId);
+    }
+  }, [selectedConversationId]);
+
+  // Restore state on mount
+  useEffect(() => {
+    const savedId = localStorage.getItem('last_active_conversation');
+    if (savedId) {
+      setSelectedConversationId(savedId);
+      // We don't auto-open mobile view on refresh to prevent getting stuck if user wanted list
+      // But user requirement says "Persist state". 
+      // Let's check if we should auto-open based on user expectation. 
+      // If we restore ID, the effect above runs and sets isMobileChatOpen(true). 
+      // Ideally we might want to also save 'isMobileChatOpen' state if we want perfection.
+    }
+  }, []);
+
   const { isRecording, recordingTime, audioBlob, startRecording, stopRecording, resetRecorder } = useAudioRecorder();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -792,10 +818,18 @@ export default function Messages() {
 
   return (
     <DashboardLayout fullHeight={true}>
-      <div className="flex h-full bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
+      <div className={cn(
+        "flex h-full bg-slate-50 dark:bg-slate-900 overflow-hidden",
+        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 md:dark:border-slate-700",
+        "fixed inset-0 z-50 md:static md:z-auto" // Mobile full screen override
+      )}>
 
         {/* Left Sidebar */}
-        <div className="w-80 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800">
+        <div className={cn(
+          "border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800",
+          "md:w-80 w-full",
+          selectedConversationId && isMobileChatOpen ? "hidden md:flex" : "flex"
+        )}>
 
           {/* Sidebar Header */}
           <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-emerald-50 dark:bg-slate-800">
@@ -995,7 +1029,10 @@ export default function Messages() {
 
         {/* Chat Area */}
         {selectedConversation ? (
-          <div className="flex-1 flex flex-col bg-slate-100 dark:bg-slate-900"
+          <div className={cn(
+            "flex-1 flex flex-col bg-slate-100 dark:bg-slate-900",
+            (!isMobileChatOpen ? "hidden md:flex" : "flex")
+          )}
             style={{
               backgroundImage: wallpaper.startsWith('data:') || wallpaper.startsWith('http') ? `url(${wallpaper})` : undefined,
               backgroundColor: !wallpaper.startsWith('data:') && !wallpaper.startsWith('http') ? wallpaper : undefined,
@@ -1005,7 +1042,7 @@ export default function Messages() {
           >
 
             {/* Chat Header */}
-            <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <div className="h-16 px-4 md:px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
               {isMessageSearchOpen ? (
                 <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-top-2 duration-200">
                   <Search className="size-4 text-slate-400" />
@@ -1037,6 +1074,14 @@ export default function Messages() {
               ) : (
                 <>
                   <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="md:hidden -ml-2 text-slate-500"
+                      onClick={() => setIsMobileChatOpen(false)}
+                    >
+                      <ArrowLeft className="size-5" />
+                    </Button>
                     <Avatar className="size-10">
                       <AvatarImage src={selectedConversation.other_user_avatar} />
                       <AvatarFallback className="bg-slate-200 dark:bg-slate-600">
@@ -1285,7 +1330,7 @@ export default function Messages() {
           </div>
         ) : (
 
-          <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-900">
+          <div className="hidden md:flex flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-900">
             <div className="text-center max-w-md">
               <div className="size-24 mx-auto mb-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                 <MessageSquare className="size-12 text-emerald-500" />
