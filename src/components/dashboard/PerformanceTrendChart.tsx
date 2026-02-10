@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
+import { Bar, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePerformanceTrend, TrendData } from '@/hooks/usePerformanceTrend';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
@@ -39,7 +39,7 @@ export function PerformanceTrendChart() {
             <CardContent className="px-2 pb-4">
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
+                        <ComposedChart
                             data={data}
                             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                             barSize={40}
@@ -104,7 +104,16 @@ export function PerformanceTrendChart() {
                                     />
                                 ))}
                             </Bar>
-                        </BarChart>
+                            <Line
+                                type="monotone"
+                                dataKey="score"
+                                stroke="#8b5cf6"
+                                strokeWidth={3}
+                                dot={{ r: 4, fill: "#8b5cf6", strokeWidth: 2, stroke: "#fff" }}
+                                activeDot={{ r: 6, strokeWidth: 0 }}
+                                animationDuration={2000}
+                            />
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </div>
             </CardContent>
