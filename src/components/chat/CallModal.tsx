@@ -3,6 +3,7 @@ import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface CallModalProps {
     isOpen: boolean;
@@ -129,30 +130,40 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="fixed inset-0 w-[100vw] h-[100dvh] max-w-none m-0 p-0 rounded-none overflow-hidden bg-black border-none [&>button]:hidden z-[1000]">
+            <DialogContent
+                className={cn(
+                    "fixed inset-0 w-screen h-[100dvh] max-w-none m-0 p-0 rounded-none overflow-hidden bg-black border-none z-[99999]",
+                    "left-0 top-0 translate-x-0 translate-y-0 shadow-none",
+                    "[&>button]:hidden"
+                )}
+            >
                 {isLoading && (
-                    <div className="absolute inset-0 z-[1100] flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
+                    <div className="absolute inset-0 z-[100000] flex flex-col items-center justify-center bg-slate-900 text-white gap-4 animate-in fade-in duration-300">
                         <div className="relative">
                             <Loader2 className="size-12 animate-spin text-emerald-500" />
                             <div className="absolute inset-0 blur-xl bg-emerald-500/20 animate-pulse" />
                         </div>
-                        <div className="text-center">
-                            <h3 className="text-lg font-semibold px-4">Establishing Secure Connection</h3>
-                            <p className="text-sm text-slate-400">Verifying session with 8x8 JaaS...</p>
+                        <div className="text-center px-6">
+                            <h3 className="text-xl font-bold tracking-tight">Establishing Secure Connection</h3>
+                            <p className="text-sm text-slate-400 mt-1">Verifying your secure session with 8x8 JaaS...</p>
                         </div>
                     </div>
                 )}
 
-                <div id="jaas-container" className="absolute inset-0 w-full h-full bg-black" />
+                <div
+                    id="jaas-container"
+                    className="absolute inset-0 w-full h-full bg-black"
+                />
 
                 {/* Close Button Overlay */}
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-4 right-4 z-[1200] text-white hover:bg-white/10 rounded-full bg-black/20 backdrop-blur-sm"
+                    className="absolute top-6 right-6 z-[100001] text-white hover:bg-white/20 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-2xl transition-all hover:scale-110 active:scale-90"
                     onClick={onClose}
+                    title="End Call"
                 >
-                    <X className="size-5" />
+                    <X className="size-8 md:size-6" />
                 </Button>
             </DialogContent>
         </Dialog>
