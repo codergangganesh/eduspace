@@ -16,6 +16,7 @@ import {
   Table,
   User,
   Users,
+  Sparkles,
 } from "lucide-react";
 import {
   Tooltip,
@@ -51,7 +52,8 @@ const lecturerNavItems = [
   { icon: Table, label: "Time Table", path: "/lecturer/timetable" }, // New Item
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
-  { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" }, // New Item
+  { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" },
+  { icon: Sparkles, label: "AI Quiz", path: "/lecturer/quizzes?mode=create-ai" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
@@ -113,7 +115,18 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
           {/* Navigation */}
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              let isActive = false;
+
+              if (item.path.includes('?')) {
+                // For items with query params (like AI Quiz), require exact match including search
+                isActive = (location.pathname + location.search) === item.path;
+              } else {
+                // For standard items, match pathname but exclude if we're in a specific mode that has its own item
+                isActive = location.pathname === item.path;
+                if (item.path === '/lecturer/quizzes' && location.search.includes('mode=create-ai')) {
+                  isActive = false;
+                }
+              }
               return (
                 <Link
                   key={item.path + item.label}

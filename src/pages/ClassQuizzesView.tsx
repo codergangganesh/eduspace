@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2, Sparkles } from 'lucide-react';
+import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2 } from 'lucide-react';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/contexts/AuthContext';
 import { LecturerQuizCard } from '@/components/lecturer/LecturerQuizCard';
@@ -32,9 +32,7 @@ export default function ClassQuizzesView() {
         navigate(`/lecturer/quizzes/${classId}/create`);
     };
 
-    const handleCreateAIQuiz = () => {
-        navigate(`/lecturer/quizzes/${classId}/create-ai`);
-    };
+
 
     const handleViewResults = (quizId: string) => {
         // Navigate to results page (to be implemented)
@@ -82,10 +80,7 @@ export default function ClassQuizzesView() {
                                 <span className="text-xs font-semibold tracking-wide">List</span>
                             </Button>
                         </div>
-                        <Button onClick={handleCreateAIQuiz} variant="outline" className="hidden sm:flex gap-2 h-11 px-6 border-violet-500/30 text-violet-600 hover:bg-violet-500/10 transition-all hover:scale-105 active:scale-95">
-                            <Sparkles className="size-5" />
-                            Create with AI
-                        </Button>
+
                         <Button onClick={handleCreateQuiz} className="hidden sm:flex gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
                             <Plus className="size-5" />
                             Create New Quiz
@@ -106,10 +101,7 @@ export default function ClassQuizzesView() {
                                 Create your first quiz to assess student understanding and track performance.
                             </p>
                             <div className="flex items-center gap-3">
-                                <Button onClick={handleCreateAIQuiz} variant="outline" size="lg" className="h-12 px-8 border-violet-500/30 text-violet-600 hover:bg-violet-500/10">
-                                    <Sparkles className="size-5 mr-2" />
-                                    Create with AI
-                                </Button>
+
                                 <Button onClick={handleCreateQuiz} variant="outline" size="lg" className="h-12 px-8">
                                     Create Manually
                                 </Button>
@@ -228,14 +220,7 @@ export default function ClassQuizzesView() {
 
             {/* Mobile FABs */}
             <div className="fixed bottom-6 right-6 sm:hidden z-40 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <Button
-                    onClick={handleCreateAIQuiz}
-                    size="icon"
-                    className="size-14 rounded-full shadow-2xl bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 transition-all active:scale-95 border-4 border-background text-white"
-                    title="Create with AI"
-                >
-                    <Sparkles className="size-6" />
-                </Button>
+
                 <Button
                     onClick={handleCreateQuiz}
                     size="icon"

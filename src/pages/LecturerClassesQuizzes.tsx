@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useClasses } from '@/hooks/useClasses';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import {
     Users,
     Search,
     CheckCircle,
+    Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
@@ -16,8 +17,11 @@ import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 
 export default function LecturerClassesQuizzes() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { classes, loading } = useClasses();
     const [searchQuery, setSearchQuery] = useState('');
+
+    const isAICreateMode = searchParams.get('mode') === 'create-ai';
 
     const filteredClasses = classes.filter(
         (classItem) =>
@@ -27,7 +31,11 @@ export default function LecturerClassesQuizzes() {
     );
 
     const handleViewQuizzes = (classId: string) => {
-        navigate(`/lecturer/quizzes/${classId}`);
+        if (isAICreateMode) {
+            navigate(`/lecturer/quizzes/${classId}/create-ai`);
+        } else {
+            navigate(`/lecturer/quizzes/${classId}`);
+        }
     };
 
     return (
@@ -36,11 +44,20 @@ export default function LecturerClassesQuizzes() {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div>
-                        <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                            Quiz Management
+                        <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                            {isAICreateMode ? (
+                                <>
+                                    <Sparkles className="size-8 text-blue-500 fill-blue-500/20" />
+                                    Generate AI Quiz
+                                </>
+                            ) : (
+                                "Quiz Management"
+                            )}
                         </h1>
                         <p className="text-muted-foreground mt-2 text-lg">
-                            Select a class below to create, manage, and analyze student assessments.
+                            {isAICreateMode
+                                ? "Select a class to generate a new quiz using AI."
+                                : "Select a class below to create, manage, and analyze student assessments."}
                         </p>
                     </div>
 
