@@ -1,89 +1,90 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import nodemailer from "npm:nodemailer@6.9.8";
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-        "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface ClassInvitationEmailRequest {
-    studentEmail: string;
-    studentName: string;
-    lecturerName: string;
-    courseCode: string;
-    className?: string;
-    semester?: string;
-    academicYear?: string;
+  studentEmail: string;
+  studentName: string;
+  lecturerName: string;
+  courseCode: string;
+  className?: string;
+  semester?: string;
+  academicYear?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-    // Handle CORS preflight requests
-    if (req.method === "OPTIONS") {
-        return new Response(null, { headers: corsHeaders });
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Verify request has authorization
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error("Missing authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
     }
 
-    try {
-        // Verify request has authorization
-        const authHeader = req.headers.get('authorization');
-        if (!authHeader) {
-            console.error("Missing authorization header");
-            return new Response(
-                JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header" }),
-                {
-                    headers: { ...corsHeaders, "Content-Type": "application/json" },
-                    status: 401,
-                }
-            );
-        }
+    const {
+      studentEmail,
+      studentName,
+      lecturerName,
+      courseCode,
+      className,
+      semester,
+      academicYear
+    } = await req.json() as ClassInvitationEmailRequest;
 
-        const {
-            studentEmail,
-            studentName,
-            lecturerName,
-            courseCode,
-            className,
-            semester,
-            academicYear
-        } = await req.json() as ClassInvitationEmailRequest;
+    console.log(`Preparing to send class invitation email to: ${studentEmail} for ${courseCode}`);
 
-        console.log(`Preparing to send class invitation email to: ${studentEmail} for ${courseCode}`);
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPass = Deno.env.get("SMTP_PASS");
+    const appUrl = Deno.env.get("APP_URL") || "https://eduspace-five.vercel.app";
 
-        const smtpHost = Deno.env.get("SMTP_HOST");
-        const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
-        const smtpUser = Deno.env.get("SMTP_USER");
-        const smtpPass = Deno.env.get("SMTP_PASS");
-        const appUrl = Deno.env.get("APP_URL") || "http://localhost:5173";
+    if (!smtpHost || !smtpUser || !smtpPass) {
+      console.error("Missing SMTP configuration environment variables");
+      throw new Error("Server configuration error: Missing SMTP credentials");
+    }
 
-        if (!smtpHost || !smtpUser || !smtpPass) {
-            console.error("Missing SMTP configuration environment variables");
-            throw new Error("Server configuration error: Missing SMTP credentials");
-        }
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
 
-        const transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: smtpPort === 465,
-            auth: {
-                user: smtpUser,
-                pass: smtpPass,
-            },
-        });
+    console.log("SMTP Transporter configured");
 
-        console.log("SMTP Transporter configured");
+    // Build class details
+    const classDetails = [];
+    if (className) classDetails.push(className);
+    if (semester) classDetails.push(semester);
+    if (academicYear) classDetails.push(academicYear);
+    const classDetailsText = classDetails.length > 0 ? ` (${classDetails.join(' • ')})` : '';
 
-        // Build class details
-        const classDetails = [];
-        if (className) classDetails.push(className);
-        if (semester) classDetails.push(semester);
-        if (academicYear) classDetails.push(academicYear);
-        const classDetailsText = classDetails.length > 0 ? ` (${classDetails.join(' • ')})` : '';
-
-        const mailOptions = {
-            from: `"EduSpace - ${lecturerName}" <${smtpUser}>`,
-            to: studentEmail,
-            subject: `You've Been Invited to Join ${courseCode} on EduSpace`,
-            html: `
+    const mailOptions = {
+      from: `"EduSpace - ${lecturerName}" <${smtpUser}>`,
+      to: studentEmail,
+      subject: `You've Been Invited to Join ${courseCode} on EduSpace`,
+      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -173,29 +174,29 @@ const handler = async (req: Request): Promise<Response> => {
         </body>
         </html>
       `,
-        };
+    };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log("Class invitation email sent successfully:", info.messageId);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Class invitation email sent successfully:", info.messageId);
 
-        return new Response(
-            JSON.stringify({ success: true, message: "Class invitation email sent successfully", messageId: info.messageId }),
-            {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 200,
-            }
-        );
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-        console.error("Error sending class invitation email:", errorMessage);
-        return new Response(
-            JSON.stringify({ success: false, error: errorMessage }),
-            {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 500,
-            }
-        );
-    }
+    return new Response(
+      JSON.stringify({ success: true, message: "Class invitation email sent successfully", messageId: info.messageId }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    console.error("Error sending class invitation email:", errorMessage);
+    return new Response(
+      JSON.stringify({ success: false, error: errorMessage }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
+  }
 };
 
 serve(handler);

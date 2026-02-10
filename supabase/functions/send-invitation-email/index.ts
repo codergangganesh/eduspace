@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import nodemailer from "npm:nodemailer@6.9.8";
 
@@ -42,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
-    const appUrl = Deno.env.get("APP_URL") || "http://localhost:5173";
+    const appUrl = Deno.env.get("APP_URL") || "https://eduspace-five.vercel.app";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");

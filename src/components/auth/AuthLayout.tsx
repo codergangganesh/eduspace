@@ -21,66 +21,64 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
     return (
         <BackgroundGradientAnimation>
-            <div className="absolute inset-0 z-10 overflow-auto">
-                <div className="min-h-screen flex items-center justify-center p-4 lg:p-8">
-                    <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 my-8">
+            <div className="min-h-screen w-full flex items-center justify-center p-4 lg:p-8 z-10 relative overflow-y-auto">
+                <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 my-4 lg:my-8">
 
-                        {/* Modals */}
-                        <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
-                        <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
-                        <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
-                        <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
+                    {/* Modals */}
+                    <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
+                    <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
+                    <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
+                    <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
-                        {/* Branding Panel */}
-                        <div className="lg:w-5/12 p-8 lg:p-12 flex flex-col justify-between bg-black/5 dark:bg-black/40 text-white relative lg:min-h-[700px]">
-                            {/* Decorative background overlay */}
-                            <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 mix-blend-overlay pointer-events-none" />
+                    {/* Branding Panel */}
+                    <div className="w-full lg:w-5/12 p-6 lg:p-12 flex flex-col justify-between bg-black/5 dark:bg-black/40 text-white relative lg:min-h-[700px] shrink-0">
+                        {/* Decorative background overlay */}
+                        <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 mix-blend-overlay pointer-events-none" />
 
-                            <div className="relative z-10">
-                                <Link to="/" className="flex items-center gap-3 w-fit">
-                                    <div className="size-12 rounded-xl overflow-hidden border border-white/20 shadow-xl">
-                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
-                                    </div>
-                                    <span className="text-2xl font-bold text-white tracking-tight">Eduspace</span>
-                                </Link>
-                            </div>
-
-                            <div className="relative z-10 py-12 lg:py-0">
-                                <h1 className="text-4xl lg:text-5xl font-black mb-6 leading-tight tracking-tight">
-                                    Welcome to <br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Eduspace</span>
-                                </h1>
-                                <p className="text-lg text-white/80 leading-relaxed font-medium">
-                                    Your comprehensive academic platform. Connect with your courses, manage assignments, and collaborate effortlessly.
-                                </p>
-                            </div>
-
-                            <div className="relative z-10 hidden lg:block text-xs text-white/50">
-                                Protected by Eduspace Security
-                            </div>
+                        <div className="relative z-10 flex items-center justify-center lg:justify-start">
+                            <Link to="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity">
+                                <div className="size-10 lg:size-12 rounded-xl overflow-hidden border border-white/20 shadow-xl">
+                                    <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                </div>
+                                <span className="text-xl lg:text-2xl font-bold text-white tracking-tight">Eduspace</span>
+                            </Link>
                         </div>
 
-                        {/* Content Panel */}
-                        <div className="flex-1 p-8 lg:p-12 bg-background/80 backdrop-blur-md flex flex-col justify-center relative">
-                            <div className="flex justify-end gap-4 text-sm font-medium mb-8">
-                                <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors">Help</button>
-                                <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors">Support</button>
+                        <div className="relative z-10 hidden lg:block py-12 lg:py-0">
+                            <h1 className="text-4xl lg:text-5xl font-black mb-6 leading-tight tracking-tight">
+                                Welcome to <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Eduspace</span>
+                            </h1>
+                            <p className="text-lg text-white/80 leading-relaxed font-medium">
+                                Your comprehensive academic platform. Connect with your courses, manage assignments, and collaborate effortlessly.
+                            </p>
+                        </div>
+
+                        <div className="relative z-10 text-xs text-white/50 text-center lg:text-left mt-4 lg:mt-0 hidden lg:block">
+                            Protected by Eduspace Security
+                        </div>
+                    </div>
+
+                    {/* Content Panel */}
+                    <div className="flex-1 p-6 lg:p-12 bg-background/80 backdrop-blur-md flex flex-col justify-center relative">
+                        <div className="flex justify-end gap-4 text-sm font-medium mb-6 lg:mb-8">
+                            <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors">Help</button>
+                            <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors">Support</button>
+                        </div>
+
+                        <div className="w-full max-w-md mx-auto">
+                            <div className="mb-6 lg:mb-8 text-center lg:text-left">
+                                <h2 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight mb-2">{title}</h2>
+                                <p className="text-sm lg:text-base text-muted-foreground">{subtitle}</p>
                             </div>
 
-                            <div className="w-full max-w-md mx-auto">
-                                <div className="mb-8">
-                                    <h2 className="text-3xl font-bold text-foreground tracking-tight mb-2">{title}</h2>
-                                    <p className="text-muted-foreground">{subtitle}</p>
-                                </div>
+                            {children}
 
-                                {children}
-
-                                <div className="mt-8 text-center text-xs text-muted-foreground">
-                                    By continuing, you agree to our{" "}
-                                    <button onClick={() => setShowTerms(true)} className="underline hover:text-primary">Terms of Service</button>
-                                    {" "}and{" "}
-                                    <button onClick={() => setShowPrivacy(true)} className="underline hover:text-primary">Privacy Policy</button>.
-                                </div>
+                            <div className="mt-6 lg:mt-8 text-center text-xs text-muted-foreground">
+                                By continuing, you agree to our{" "}
+                                <button onClick={() => setShowTerms(true)} className="underline hover:text-primary">Terms of Service</button>
+                                {" "}and{" "}
+                                <button onClick={() => setShowPrivacy(true)} className="underline hover:text-primary">Privacy Policy</button>.
                             </div>
                         </div>
                     </div>

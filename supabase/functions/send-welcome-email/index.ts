@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import nodemailer from "npm:nodemailer@6.9.8";
 
@@ -100,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
 
               <p>To get started, simply log in to your dashboard and complete your profile.</p>
               <center>
-                <a href="${Deno.env.get("APP_URL") || "http://localhost:5173"}${role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'}" class="button" style="color: white;">Get Started</a>
+                <a href="${Deno.env.get("APP_URL") || "https://eduspace-five.vercel.app"}${role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'}" class="button" style="color: white;">Get Started</a>
               </center>
               <p>If you have any questions, our support team is always here to help.</p>
               <p>Best regards,<br>The EduSpace Team</p>
@@ -126,9 +127,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error) {
-    console.error("Error sending email:", error.message);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    console.error("Error sending email:", errorMessage);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: errorMessage }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
