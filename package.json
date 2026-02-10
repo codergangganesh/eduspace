@@ -60,6 +60,7 @@
     "lucide-react": "^0.462.0",
     "motion": "^12.23.26",
     "next-themes": "^0.3.0",
+    "pdfjs-dist": "^5.4.624",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",

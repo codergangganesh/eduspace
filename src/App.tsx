@@ -43,6 +43,7 @@ const LecturerClassesQuizzes = lazy(() => import("./pages/LecturerClassesQuizzes
 const ClassQuizzesView = lazy(() => import("./pages/ClassQuizzesView"));
 const QuizResultsView = lazy(() => import("./pages/QuizResultsView"));
 const CreateQuiz = lazy(() => import("./pages/CreateQuiz"));
+const CreateAIQuiz = lazy(() => import("./pages/CreateAIQuiz"));
 const EditQuiz = lazy(() => import("./pages/EditQuiz"));
 const StudentQuizzes = lazy(() => import("./pages/StudentQuizzes"));
 const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
@@ -227,6 +228,14 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
                         <CreateQuiz />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/lecturer/quizzes/:classId/create-ai"
+                    element={
+                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
+                        <CreateAIQuiz />
                       </ProtectedRoute>
                     }
                   />

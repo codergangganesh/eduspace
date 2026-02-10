@@ -30,6 +30,7 @@ export default function TakeQuiz() {
     const [elapsedTime, setElapsedTime] = useState<number>(0);
     const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef<number>(Date.now());
 
     // LocalStorage keys for persistence
     const getStorageKey = (key: string) => `quiz_${quizId}_${key}`;
@@ -46,15 +47,15 @@ export default function TakeQuiz() {
         }
 
         // Initialize start time if not exists
-        let startTimestamp = savedStartTime ? parseInt(savedStartTime, 10) : Date.now();
+        const startTimestamp = savedStartTime ? parseInt(savedStartTime, 10) : Date.now();
+        startTimeRef.current = startTimestamp;
         if (!savedStartTime) {
             localStorage.setItem(getStorageKey('startTime'), startTimestamp.toString());
         }
 
-        // Star timer
+        // Start timer — reads from ref so it can be reset mid-session
         timerRef.current = setInterval(() => {
-            const now = Date.now();
-            const elapsed = Math.floor((now - startTimestamp) / 1000);
+            const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
             setElapsedTime(elapsed);
         }, 1000);
 
@@ -110,9 +111,33 @@ export default function TakeQuiz() {
                     .limit(1)
                     .maybeSingle();
 
-                // DOUBLE SAFETY CHECK: If submission exists and is completed, redirect immediately
+                // If submission exists and is completed, load answers and show result view
                 if (submission && submission.status !== 'pending') {
-                    console.log('Quiz already completed. Redirecting to results.');
+                    console.log('Quiz already completed. Loading answers for result view.');
+
+                    // Fetch the student's saved answers so the review section works
+                    const { data: savedAnswers } = await supabase
+                        .from('quiz_answers')
+                        .select('question_id, selected_option')
+                        .eq('submission_id', submission.id);
+
+                    if (savedAnswers) {
+                        const loadedAnswers: Record<string, string> = {};
+                        savedAnswers.forEach((a: any) => {
+                            loadedAnswers[a.question_id] = a.selected_option;
+                        });
+                        setAnswers(loadedAnswers);
+                    }
+
+                    // Also fetch questions so the review section can render
+                    const { data: questionsData } = await supabase
+                        .from('quiz_questions')
+                        .select('*')
+                        .eq('quiz_id', quizId)
+                        .order('order_index');
+
+                    if (questionsData) setQuestions(questionsData);
+
                     setResult(submission);
                     setLoading(false);
                     return;
@@ -126,6 +151,13 @@ export default function TakeQuiz() {
                         .from('quiz_submissions')
                         .update({ is_archived: true })
                         .eq('id', submission.id);
+
+                    // Clear saved quiz state and reset timer to 0
+                    clearQuizStorage();
+                    startTimeRef.current = Date.now();
+                    localStorage.setItem(getStorageKey('startTime'), startTimeRef.current.toString());
+                    setElapsedTime(0);
+                    setCurrentIndex(0);
 
                     // Reset submission variable to trigger new creation
                     submission = null;
@@ -450,8 +482,8 @@ export default function TakeQuiz() {
 
         return (
             <DashboardLayout fullHeight>
-                <div className="min-h-full bg-[#0A0C14] text-white overflow-y-auto selection:bg-blue-500/30">
-                    <div className="max-w-6xl mx-auto p-4 lg:p-10 space-y-10">
+                <div className="h-full bg-[#0A0C14] text-white overflow-y-auto selection:bg-blue-500/30">
+                    <div className="max-w-6xl mx-auto p-4 lg:p-10 space-y-10 pb-20">
 
                         {/* 1. Results Header */}
                         <div className="flex items-center justify-between">
@@ -535,21 +567,7 @@ export default function TakeQuiz() {
                                             </div>
                                         </div>
 
-                                        <div className="h-px bg-white/5 w-full"></div>
 
-                                        <div className="flex flex-wrap gap-4 pt-2">
-                                            <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-8 h-12 font-bold shadow-xl shadow-blue-600/20 gap-2 border-none">
-                                                <FileText className="size-4" />
-                                                Detailed Performance Report
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => navigate(`/student/quizzes/${quizId}`)}
-                                                className="bg-transparent border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white rounded-2xl px-8 h-12 font-bold border"
-                                            >
-                                                Retake Practice
-                                            </Button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -664,24 +682,7 @@ export default function TakeQuiz() {
                             </div>
                         </div>
 
-                        {/* Footer Info */}
-                        <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 pb-10">
-                            <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                <span>Session ID: #{result.id.slice(0, 8).toUpperCase()}</span>
-                                <span className="hidden md:block opacity-30">•</span>
-                                <span>Completed {format(new Date(result.submitted_at), 'MMM d, yyyy')}</span>
-                            </div>
-                            <div className="flex gap-6">
-                                <button className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-[0.2em] group">
-                                    <Download className="size-4 text-blue-500 group-hover:scale-110 transition-transform" />
-                                    Results PDF
-                                </button>
-                                <button className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-[0.2em] group">
-                                    <Trophy className="size-4 text-amber-500 group-hover:scale-110 transition-transform" />
-                                    Share to LinkedIn
-                                </button>
-                            </div>
-                        </div>
+
 
                     </div>
                 </div>
