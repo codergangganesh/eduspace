@@ -110,7 +110,7 @@ export function StudentNotesDrawer() {
             </SheetTrigger>
             <SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full">
                 <SheetHeader className="mb-4">
-                    <SheetTitle className="flex items-center justify-between">
+                    <SheetTitle className="flex items-center justify-between pr-8">
                         <span>My Notes</span>
                         {!newNoteMode && !isEditing && (
                             <Button size="sm" onClick={() => setNewNoteMode(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">

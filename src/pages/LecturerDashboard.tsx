@@ -74,10 +74,11 @@ export default function LecturerDashboard() {
           variant="default"
           size="sm"
           onClick={() => setInviteDialogOpen(true)}
-          className="gap-2 shadow-sm"
+          className="w-9 px-0 md:w-auto md:px-3 gap-2 shadow-sm"
+          title="Invite Student"
         >
           <UserPlus className="size-4" />
-          <span>Invite Student</span>
+          <span className="hidden md:inline">Invite Student</span>
         </Button>
       }
     >
