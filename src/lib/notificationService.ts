@@ -271,30 +271,12 @@ export async function notifyNewAssignment(
             return { success: true, message: "No students to notify" };
         }
 
-        // Get students who have assignment_reminders enabled
-        const { data: profiles, error: profileError } = await supabase
-            .from("profiles")
-            .select("user_id")
-            .in("user_id", studentIds)
-            .eq("assignment_reminders", true);
-
-        if (profileError) {
-            console.error("Error fetching profiles:", profileError);
-            return { success: false, error: profileError };
-        }
-
-        if (!profiles || profiles.length === 0) {
-            return { success: true, message: "No students with reminders enabled" };
-        }
-
-        const notifyUserIds = profiles.map(p => p.user_id);
-
         // Create notification message
         const dueDateText = dueDate ? ` - Due ${new Date(dueDate).toLocaleDateString()}` : "";
         const message = `New assignment: "${assignmentTitle}"${dueDateText}`;
 
-        // Send notifications to students with reminders enabled
-        return await createBulkNotifications(notifyUserIds, {
+        // Send notifications to students (createBulkNotifications handles master toggle check)
+        return await createBulkNotifications(studentIds, {
             title: "New Assignment Posted",
             message,
             type: "assignment",
@@ -320,15 +302,6 @@ export async function notifyGradePosted(
     lecturerId: string, // Sender
     classId: string
 ) {
-    // Check if student has grade_updates enabled
-    const { data } = await supabase
-        .from("profiles")
-        .select("grade_updates")
-        .eq("user_id", studentId)
-        .single();
-
-    if (!data?.grade_updates) return { success: true };
-
     return createNotification({
         userId: studentId,
         title: "Grade Posted",
@@ -358,26 +331,8 @@ export async function notifyAssignmentUpdated(
             return { success: true, message: "No students to notify" };
         }
 
-        // Get students who have assignment_reminders enabled
-        const { data: profiles, error: profileError } = await supabase
-            .from("profiles")
-            .select("user_id")
-            .in("user_id", studentIds)
-            .eq("assignment_reminders", true);
-
-        if (profileError) {
-            console.error("Error fetching profiles:", profileError);
-            return { success: false, error: profileError };
-        }
-
-        if (!profiles || profiles.length === 0) {
-            return { success: true, message: "No students with reminders enabled" };
-        }
-
-        const notifyUserIds = profiles.map(p => p.user_id);
-
-        // Send notifications to students with reminders enabled
-        return await createBulkNotifications(notifyUserIds, {
+        // Send notifications (createBulkNotifications handles master toggle check)
+        return await createBulkNotifications(studentIds, {
             title: "Assignment Updated",
             message: `"${assignmentTitle}" has been updated: ${updateDetails}`,
             type: "assignment",
@@ -447,25 +402,6 @@ export async function notifyNewMessage(
     senderId: string,
     senderAvatar?: string // Added
 ) {
-    // Check if recipient has message_notifications enabled
-    const { data } = await supabase
-        .from("profiles")
-        .select("message_notifications, push_notifications")
-        .eq("user_id", recipientId)
-        .single();
-
-    // Use message_notifications if available, otherwise fall back to push_notifications (or default to true if both missing/null logic implies enabled by default usually, but here we strictly check preference)
-    // Actually, for backward compatibility, if message_notifications is null, we can check push_notifications logic or default to true.
-    // The previous logic was: if (!data?.push_notifications) return...
-
-    // New logic: 
-    // If message_notifications is explicitly false, return.
-    // If message_notifications is null, check push_notifications.
-
-    const messageEnabled = data?.message_notifications ?? data?.push_notifications ?? true;
-
-    if (!messageEnabled) return { success: true };
-
     return createNotification({
         userId: recipientId,
         title: `New message from ${senderName}`,
@@ -596,26 +532,8 @@ export async function notifyClassStudents(
 
         const studentIds = classStudents.map(cs => cs.student_id);
 
-        // Check preferences based on notification type
-        let preferenceField = "email_notifications";
-        if (type === "assignment") preferenceField = "assignment_reminders";
-        else if (type === "grade") preferenceField = "grade_updates";
-
-        // Get students with the relevant preference enabled
-        const { data: profiles, error: profileError } = await supabase
-            .from("student_profiles")
-            .select("user_id")
-            .in("user_id", studentIds)
-            .eq(preferenceField, true);
-
-        if (profileError || !profiles || profiles.length === 0) {
-            return { success: true, message: "No students with notifications enabled" };
-        }
-
-        const notifyUserIds = profiles.map(p => p.user_id);
-
-        // Use createBulkNotifications for unified logic
-        return await createBulkNotifications(notifyUserIds, {
+        // Use createBulkNotifications for unified logic (handles master toggle)
+        return await createBulkNotifications(studentIds, {
             title,
             message,
             type,
@@ -644,22 +562,7 @@ export async function notifyLecturer(
     relatedId?: string
 ) {
     try {
-        // Check lecturer preferences
-        let preferenceField = "email_notifications";
-        if (type === "assignment") preferenceField = "submission_notifications";
-        else if (type === "message") preferenceField = "message_notifications";
-
-        const { data: lecturerProfile } = await supabase
-            .from("lecturer_profiles")
-            .select(preferenceField)
-            .eq("user_id", lecturerId)
-            .single();
-
-        if (!lecturerProfile || !lecturerProfile[preferenceField]) {
-            return { success: true, message: "Notifications disabled" };
-        }
-
-        // Centralized notification handling
+        // Centralized notification handling (handles master toggle)
         return await createNotification({
             userId: lecturerId,
             title,
@@ -688,17 +591,6 @@ export async function notifyAccessRequest(
     requestId: string
 ) {
     try {
-        // Check if student has notifications enabled
-        const { data: studentProfile } = await supabase
-            .from("student_profiles")
-            .select("email_notifications")
-            .eq("user_id", studentId)
-            .single();
-
-        if (!studentProfile?.email_notifications) {
-            return { success: true, message: "Notifications disabled" };
-        }
-
         return createNotification({
             userId: studentId,
             title: "Class Access Request",
@@ -723,17 +615,6 @@ export async function notifyInvitationRejected(
     requestId?: string
 ) {
     try {
-        // Check if lecturer has notifications enabled
-        const { data: lecturerProfile } = await supabase
-            .from("lecturer_profiles")
-            .select("email_notifications")
-            .eq("user_id", lecturerId)
-            .single();
-
-        if (!lecturerProfile?.email_notifications) {
-            return { success: true, message: "Notifications disabled" };
-        }
-
         const classInfo = className ? ` - ${className}` : '';
 
         return createNotification({
@@ -830,18 +711,7 @@ export async function notifyAssignmentSubmission(
     studentId: string
 ) {
     try {
-        // Check lecturer preferences
-        const { data: lecturerProfile } = await supabase
-            .from("lecturer_profiles")
-            .select("submission_notifications")
-            .eq("user_id", lecturerId)
-            .single();
-
-        if (!lecturerProfile?.submission_notifications) {
-            return { success: true, message: "Notifications disabled" };
-        }
-
-        // Use createNotification for centralized logic (DB insert + Push invoke)
+        // Use createNotification for centralized logic (handles master toggle)
         return await createNotification({
             userId: lecturerId,
             senderId: studentId,
@@ -871,18 +741,7 @@ export async function notifyQuizSubmission(
     studentId: string
 ) {
     try {
-        // Check lecturer preferences (using submission_notifications for simplicity as it falls under submission category)
-        const { data: lecturerProfile } = await supabase
-            .from("lecturer_profiles")
-            .select("submission_notifications")
-            .eq("user_id", lecturerId)
-            .single();
-
-        if (!lecturerProfile?.submission_notifications) {
-            return { success: true, message: "Notifications disabled" };
-        }
-
-        // Use createNotification for centralized logic
+        // Use createNotification for centralized logic (handles master toggle)
         return await createNotification({
             userId: lecturerId,
             senderId: studentId,

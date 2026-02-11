@@ -195,10 +195,10 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
         <div
           {...(message.isOwn ? longPressHandlers : {})}
           className={cn(
-            "rounded-xl px-3 py-2 shadow-sm relative group",
+            "rounded-xl px-3.5 py-2 shadow-sm relative group",
             message.isOwn
-              ? "bg-[#064e43] dark:bg-[#064e43] text-white rounded-tr-none"
-              : "bg-[#202c33] dark:bg-[#202c33] text-white rounded-tl-none"
+              ? "bg-emerald-100 dark:bg-[#064e43] text-slate-800 dark:text-white rounded-tr-none"
+              : "bg-white dark:bg-[#202c33] text-slate-800 dark:text-white rounded-tl-none border border-slate-100 dark:border-none"
           )}
         >
           {message.attachment && (
@@ -227,7 +227,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                     <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden relative">
                       <div
                         className="absolute h-full left-0 top-0 bg-[#00a884] transition-all duration-100"
-                        style={{ width: `${audioRef.current ? (audioRef.current.currentTime / audioRef.current.duration) * 100 : 0}%` }}
+                        style={{ width: `${progress}%` }}
                       />
                     </div>
                     <div className="flex justify-between items-center text-[10px] text-slate-400">
@@ -238,8 +238,8 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                   <audio
                     ref={audioRef}
                     src={message.attachment.url}
-                    onTimeUpdate={() => setUpdateTrigger(prev => !prev)}
-                    onEnded={() => setIsPlaying(false)}
+                    onTimeUpdate={handleTimeUpdate}
+                    onEnded={handleAudioEnded}
                     className="hidden"
                   />
                   <Button
@@ -299,7 +299,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
 
           <div className={cn(
             "flex items-center gap-1 mt-1 justify-end",
-            message.isOwn ? "text-emerald-400" : "text-slate-400"
+            message.isOwn ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"
           )}>
             <span className="text-[10px]">
               {message.timestamp}
@@ -816,13 +816,13 @@ export default function Messages() {
   return (
     <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversationId && isMobileChatOpen}>
       <div className={cn(
-        "flex h-full w-full bg-[#111b21] dark:bg-[#111b21] overflow-hidden relative",
-        "md:rounded-xl md:shadow-xl md:border md:border-slate-700"
+        "flex h-full w-full bg-white dark:bg-[#111b21] overflow-hidden relative",
+        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 dark:md:border-slate-700"
       )}>
 
         {/* Left Sidebar */}
         <div className={cn(
-          "border-r border-slate-700/50 flex flex-col bg-[#111b21] dark:bg-[#111b21]",
+          "border-r border-slate-200 dark:border-slate-700/50 flex flex-col bg-white dark:bg-[#111b21]",
           "md:w-80 w-full shrink-0",
           selectedConversationId && isMobileChatOpen ? "hidden md:flex" : "flex"
         )}>
@@ -833,7 +833,7 @@ export default function Messages() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden size-8 text-slate-500 hover:text-emerald-600 mr-1"
+                className="md:hidden size-8 text-slate-900 dark:text-slate-900 hover:text-emerald-900 mr-1"
                 onClick={() => window.history.back()}
               >
                 <ArrowLeft className="size-5" />
@@ -855,7 +855,7 @@ export default function Messages() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-9 text-slate-500 hover:text-emerald-600"
+                className="size-9 text-slate-600 dark:text-slate-400 hover:text-emerald-600"
                 onClick={() => setIsNewChatOpen(true)}
                 title="Start New Chat"
               >
@@ -863,7 +863,7 @@ export default function Messages() {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-9 text-slate-500 hover:text-emerald-600">
+                  <Button variant="ghost" size="icon" className="size-9 text-slate-600 dark:text-slate-400 hover:text-emerald-600">
                     <MoreVertical className="size-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -928,7 +928,7 @@ export default function Messages() {
           <div className="p-3 border-b border-slate-100 dark:border-slate-700">
             <div className="relative flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500 dark:text-slate-400" />
                 <Input
                   placeholder="Search or start new chat"
                   className="pl-9 bg-slate-100 dark:bg-slate-700 border-0 rounded-lg h-9 text-sm"
@@ -938,7 +938,7 @@ export default function Messages() {
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className={cn("size-9", filterMode !== 'all' ? "text-emerald-500 bg-emerald-50" : "text-slate-400")}>
+                  <Button variant="ghost" size="icon" className={cn("size-9", filterMode !== 'all' ? "text-emerald-600 bg-emerald-50" : "text-slate-500 dark:text-slate-400")}>
                     <Filter className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1042,7 +1042,7 @@ export default function Messages() {
         {/* Chat Area */}
         {selectedConversation ? (
           <div className={cn(
-            "flex-1 min-w-0 flex flex-col bg-[#0b141a] dark:bg-[#0b141a] h-full relative overflow-hidden",
+            "flex-1 min-w-0 flex flex-col bg-slate-50 dark:bg-[#0b141a] h-full relative overflow-hidden",
             (!isMobileChatOpen ? "hidden md:flex" : "flex")
           )}
             style={{
@@ -1055,7 +1055,7 @@ export default function Messages() {
           >
 
             {/* Chat Header */}
-            <div className="h-16 px-3 md:px-6 flex items-center justify-between border-b border-slate-700/50 bg-[#1f2c34] dark:bg-[#1f2c34] z-20 shrink-0 select-none">
+            <div className="h-16 px-3 md:px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-[#1f2c34] z-20 shrink-0 select-none">
               {isMessageSearchOpen ? (
                 <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-top-2 duration-200">
                   <Search className="size-4 text-slate-400" />
@@ -1075,7 +1075,7 @@ export default function Messages() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
+                    className="size-8 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400"
                     onClick={() => {
                       setIsMessageSearchOpen(false);
                       setMessageSearchQuery("");
@@ -1090,20 +1090,20 @@ export default function Messages() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="md:hidden text-white hover:bg-white/10 shrink-0 size-10 -ml-2"
+                      className="md:hidden text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 shrink-0 size-10 -ml-2"
                       onClick={() => setIsMobileChatOpen(false)}
                     >
                       <ArrowLeft className="size-6" />
                     </Button>
-                    <Avatar className="size-8 md:size-10 shrink-0 border border-slate-700/50">
+                    <Avatar className="size-8 md:size-10 shrink-0 border border-slate-200 dark:border-slate-700/50">
                       <AvatarImage src={selectedConversation.other_user_avatar} />
-                      <AvatarFallback className="bg-[#064e43] text-white">
+                      <AvatarFallback className="bg-emerald-500 dark:bg-[#064e43] text-white">
                         {(selectedConversation.other_user_name || 'U').split(" ").map((n) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0 flex-1 flex flex-col justify-center ml-1">
-                      <h3 className="font-bold text-sm truncate leading-tight text-white">{selectedConversation.other_user_name || 'Unknown User'}</h3>
-                      <p className="text-[10px] text-emerald-400 truncate leading-none mt-0.5">
+                    <div className="min-w-0 flex-1 flex flex-col justify-center ml-1 text-left">
+                      <h3 className="font-bold text-sm truncate leading-tight text-slate-900 dark:text-white">{selectedConversation.other_user_name || 'Unknown User'}</h3>
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate leading-none mt-0.5">
                         {isOtherUserOnline ? 'Online' : 'Offline'}
                       </p>
                     </div>
@@ -1112,7 +1112,7 @@ export default function Messages() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-9 min-w-[36px] text-slate-300 hover:text-white shrink-0"
+                      className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
                       onClick={() => role === 'lecturer' ? handleCreateMeeting('audio') : setIsJoinMeetingOpen(true)}
                     >
                       <Phone className="size-5" />
@@ -1120,7 +1120,7 @@ export default function Messages() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-9 min-w-[36px] text-slate-300 hover:text-white shrink-0"
+                      className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
                       onClick={() => role === 'lecturer' ? handleCreateMeeting('video') : setIsJoinMeetingOpen(true)}
                     >
                       <Video className="size-5" />
@@ -1128,7 +1128,7 @@ export default function Messages() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-9 min-w-[36px] text-slate-300 hover:text-white shrink-0"
+                      className="size-9 min-w-[36px] text-slate-500 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
                       onClick={() => setIsMessageSearchOpen(true)}
                     >
                       <Search className="size-5" />
@@ -1136,7 +1136,7 @@ export default function Messages() {
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-9 text-slate-500 hover:text-emerald-600">
+                        <Button variant="ghost" size="icon" className="size-9 text-slate-600 dark:text-slate-500 hover:text-emerald-600">
                           <MoreVertical className="size-5" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -1232,7 +1232,7 @@ export default function Messages() {
               </div>
             </ScrollArea>
 
-            <div className="p-2 md:p-4 bg-[#111b21] dark:bg-[#111b21] border-t border-slate-700 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] md:pb-4 shrink-0">
+            <div className="p-2 md:p-4 bg-white dark:bg-[#111b21] border-t border-slate-200 dark:border-slate-700 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] md:pb-4 shrink-0">
               {selectedFile && (
                 <div className="mb-2 p-3 bg-[#1f2c34] rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2">
                   <div className="flex items-center gap-3 overflow-hidden">
@@ -1295,7 +1295,7 @@ export default function Messages() {
                 />
 
                 {/* Message Pill */}
-                <div className="flex-1 flex items-center bg-[#2a3942] rounded-full px-4 py-1 gap-2 min-h-[44px]">
+                <div className="flex-1 flex items-center bg-slate-100 dark:bg-[#2a3942] rounded-full px-4 py-1 gap-2 min-h-[44px] border border-slate-200 dark:border-none">
                   <div className="flex-1 relative flex items-center">
                     {isRecording ? (
                       <div className="flex-1 flex items-center gap-2 h-9">
@@ -1316,7 +1316,7 @@ export default function Messages() {
                         }}
                         onKeyDown={handleKeyPress}
                         placeholder="Type a message..."
-                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 text-sm w-full shadow-none text-slate-200 placeholder:text-slate-400 px-0"
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 text-sm w-full shadow-none text-slate-900 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 px-0"
                       />
                     )}
                   </div>
@@ -1327,7 +1327,7 @@ export default function Messages() {
                     size="icon"
                     className={cn(
                       "size-8 shrink-0 rounded-full",
-                      isRecording ? "text-red-500" : "text-slate-400 hover:text-emerald-500"
+                      isRecording ? "text-red-500" : "text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500"
                     )}
                     onClick={toggleRecording}
                   >
@@ -1341,8 +1341,8 @@ export default function Messages() {
                   className={cn(
                     "size-11 rounded-full shrink-0 shadow-lg transition-transform active:scale-90",
                     messageInput.trim() || selectedFile
-                      ? "bg-[#00a884] hover:bg-[#008f72] text-white"
-                      : "bg-[#2a3942] text-slate-400 cursor-not-allowed opacity-80"
+                      ? "bg-emerald-600 dark:bg-[#00a884] hover:bg-emerald-700 dark:hover:bg-[#008f72] text-white"
+                      : "bg-slate-100 dark:bg-[#2a3942] text-slate-400 cursor-not-allowed opacity-80"
                   )}
                   onClick={handleSendMessage}
                   disabled={(!messageInput.trim() && !selectedFile) || isUploading}

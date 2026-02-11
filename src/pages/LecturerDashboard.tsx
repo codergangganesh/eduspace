@@ -86,24 +86,24 @@ export default function LecturerDashboard() {
       <div className="flex flex-col gap-8 pb-8">
 
         {/* Modern Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-slate-800">
           {/* Abstract Background Shapes */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 size-[500px] rounded-full bg-indigo-500/30 blur-3xl opacity-50 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-[400px] rounded-full bg-emerald-500/20 blur-3xl opacity-50 pointer-events-none" />
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 size-[500px] rounded-full bg-emerald-500/5 dark:bg-indigo-500/30 blur-3xl opacity-50 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-[400px] rounded-full bg-blue-500/5 dark:bg-emerald-500/20 blur-3xl opacity-50 pointer-events-none" />
 
           <div className="relative z-10 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-emerald-300">
+            <div className="space-y-3 max-w-2xl text-center sm:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-white/10 backdrop-blur-md border border-emerald-100 dark:border-white/10 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                 <span className="relative flex size-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
                 </span>
                 Academic Dashboard
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                Welcome back, <span className="text-white">{title}</span>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+                Welcome back, <span className="text-emerald-600 dark:text-emerald-400">{title}</span>
               </h1>
-              <p className="text-slate-300 text-base">
+              <p className="text-slate-500 dark:text-slate-300 text-base max-w-lg">
                 Your daily overview of student progress and upcoming classes.
               </p>
             </div>

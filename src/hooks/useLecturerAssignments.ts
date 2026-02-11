@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { notifyNewAssignment, notifyAssignmentUpdated } from "@/lib/notificationService";
 
 export interface Assignment {
     id: string;
@@ -157,39 +158,18 @@ export function useLecturerAssignments() {
                     .not("student_id", "is", null); // Only students with accounts
 
                 if (!studentsError && enrolledStudents && enrolledStudents.length > 0) {
-                    const notifications = enrolledStudents.map(student => ({
-                        recipient_id: student.student_id,
-                        sender_id: user.id, // Track who created the assignment
-                        title: "New Assignment Posted",
-                        message: `${data.title} has been posted. Due date: ${data.due_date.toLocaleDateString()}`,
-                        type: "assignment",
-                        action_type: "created",
-                        related_id: newAssignment.id,
-                        class_id: classId, // Include class_id for filtering
-                        is_read: false
-                    }));
+                    const studentIds = enrolledStudents.map(s => s.student_id).filter(Boolean) as string[];
 
-                    const { error: notifError } = await supabase
-                        .from("notifications")
-                        .insert(notifications);
-
+                    // Use the centralized notification service
+                    await notifyNewAssignment(
+                        studentIds,
+                        data.title,
+                        newAssignment.id,
+                        user.id,
+                        classId,
+                        data.due_date.toISOString()
+                    );
                 }
-
-                // Send VAPID Push to all enrolled students
-                if (!studentsError && enrolledStudents && enrolledStudents.length > 0) {
-                    enrolledStudents.forEach(student => {
-                        supabase.functions.invoke('send-push', {
-                            body: {
-                                user_id: student.student_id,
-                                title: 'New Assignment',
-                                body: `${data.title} has been posted.`,
-                                url: '/student/assignments',
-                                type: 'assignment'
-                            }
-                        }).catch(err => console.error("Push failed for student", student.student_id, err));
-                    });
-                }
-
             }
 
             toast.success("Assignment created successfully!");
@@ -255,19 +235,17 @@ export function useLecturerAssignments() {
                             .not("student_id", "is", null);
 
                         if (enrolledStudents && enrolledStudents.length > 0) {
-                            const notifications = enrolledStudents.map(student => ({
-                                recipient_id: student.student_id,
-                                sender_id: user.id,
-                                title: "Assignment Updated",
-                                message: `${assignment.title} has been updated`,
-                                type: "assignment",
-                                action_type: "updated",
-                                related_id: id,
-                                class_id: matchingClass.id,
-                                is_read: false
-                            }));
+                            const studentIds = enrolledStudents.map(s => s.student_id).filter(Boolean) as string[];
 
-                            await supabase.from("notifications").insert(notifications);
+                            // Use the centralized notification service
+                            await notifyAssignmentUpdated(
+                                studentIds,
+                                assignment.title,
+                                id,
+                                "The assignment details have been updated.",
+                                user.id,
+                                matchingClass.id
+                            );
                         }
                     }
                 }

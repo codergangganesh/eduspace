@@ -390,8 +390,7 @@ serve(async (req: Request) => {
         const { data: subscriptions, error } = await supabase
             .from('push_subscriptions')
             .select('*')
-            .eq('user_id', user_id)
-            .eq('notification_enabled', true);  // Only get enabled subscriptions
+            .eq('user_id', user_id);
 
         if (error) {
             console.error("Error fetching subscriptions:", error);
