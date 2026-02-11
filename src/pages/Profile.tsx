@@ -950,123 +950,117 @@ export default function Profile() {
       {/* Public Profile Modal */}
       <Dialog open={showPublicProfile} onOpenChange={setShowPublicProfile}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b">
+          <DialogHeader className="pb-4 border-b">
             <DialogTitle>Public Profile View</DialogTitle>
-            <div className="flex items-center gap-2 pr-8">
-              <Button size="sm" variant="outline" className="h-8 gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-all" onClick={handleShare}>
-                <Share2 className="size-3.5" />
-                Share
-              </Button>
-            </div>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Shareable Link Preview */}
-            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <ExternalLink className="size-4 text-primary shrink-0" />
-                <code className="text-[10px] sm:text-xs text-primary font-mono truncate">
-                  eduspace-five.vercel.app/p/{profile?.user_id}
-                </code>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-primary hover:bg-primary/10 shrink-0"
-                onClick={() => {
-                  navigator.clipboard.writeText(`https://eduspace-five.vercel.app/p/${profile?.user_id}`);
-                  toast.success("Link copied!");
-                }}
-              >
-                <Copy className="size-3.5 mr-1" />
-                <span className="text-[10px]">Copy</span>
-              </Button>
+          {/* Academic Profile Preview */}
+          <div className="bg-[#050b14] text-white rounded-xl overflow-hidden shadow-2xl font-sans selection:bg-blue-500/30">
+
+            {/* Top Header */}
+            <div className="pt-8 pb-4 text-center">
+              <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Academic Profile</h2>
             </div>
-            {/* Profile Header */}
-            <div className="flex items-center gap-6 pt-6">
-              <Avatar className="size-24">
-                <AvatarImage src={profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold">{formData.full_name || "User"}</h2>
-                <p className="text-muted-foreground mt-1">
-                  {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                    {role === "lecturer" ? "Lecturer" : "Student"}
+
+            <div className="max-w-md mx-auto px-6 pb-12 relative z-10">
+              <div className="flex flex-col items-center text-center mt-4">
+                {/* Avatar with Glow */}
+                <div className="relative mb-6 group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full opacity-75 blur"></div>
+                  <div className="relative">
+                    <Avatar className="size-24 border-4 border-[#050b14] shadow-2xl">
+                      <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
+                      <AvatarFallback className="bg-slate-800 text-2xl font-bold text-blue-500">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    {profile?.verified && (
+                      <div className="absolute bottom-1 right-1 bg-blue-500 text-white p-1 rounded-full border-4 border-[#050b14]">
+                        <CheckCircle className="size-3" fill="currentColor" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Name */}
+                <h1 className="text-2xl font-bold tracking-tight text-white mb-3">
+                  {formData.full_name || "User Name"}
+                </h1>
+
+                {/* Badges */}
+                <div className="flex flex-wrap justify-center gap-2 mb-6">
+                  <Badge className="bg-blue-900/30 text-blue-400 border-blue-800/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                    Academic Portal
                   </Badge>
                   {profile?.verified && (
-                    <Badge variant="outline" className="bg-green-500/5 text-green-600 border-green-500/20">
-                      <CheckCircle className="size-3 mr-1" />
-                      Verified
+                    <Badge className="bg-slate-800/50 text-slate-400 border-slate-700/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                      Verified Identity
                     </Badge>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Bio */}
-            {formData.bio && (
-              <div>
-                <h3 className="font-semibold mb-2">About</h3>
-                <p className="text-muted-foreground">{formData.bio}</p>
-              </div>
-            )}
+                {/* Info Row */}
+                <div className="flex flex-col items-center gap-2 text-sm text-slate-400 mb-8 font-medium">
+                  <div className="flex items-center gap-2">
+                    <Mail className="size-3.5 text-blue-500" />
+                    <span>{profile?.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="size-3.5 text-blue-500" />
+                    <span>Updated {new Date().toLocaleDateString()}</span>
+                  </div>
+                </div>
 
-            {/* Academic Info */}
-            <div className="grid grid-cols-2 gap-4">
-              {formData.department && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Department</p>
-                  <p className="font-medium">{formData.department}</p>
-                </div>
-              )}
-              {formData.gpa && (
-                <div>
-                  <p className="text-sm text-muted-foreground">GPA</p>
-                  <p className="font-medium">{formData.gpa}</p>
-                </div>
-              )}
-              {formData.student_id && role === "student" && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Student ID</p>
-                  <p className="font-medium">{formData.student_id}</p>
-                </div>
-              )}
-              {formData.expected_graduation && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Expected Graduation</p>
-                  <p className="font-medium">
-                    {new Date(formData.expected_graduation).toLocaleDateString('en-US', {
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Contact Info */}
-            <div>
-              <h3 className="font-semibold mb-3">Contact Information</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="size-4 text-muted-foreground" />
-                  <span>{formData.email}</span>
-                </div>
-                {formData.phone && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Phone className="size-4 text-muted-foreground" />
-                    <span>{formData.phone}</span>
+                {/* Personal Statement */}
+                {formData.bio && (
+                  <div className="w-full text-left mb-8">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">Personal Statement</h3>
+                    </div>
+                    <p className="text-base text-slate-200 italic font-medium leading-relaxed">
+                      "{formData.bio}"
+                    </p>
                   </div>
                 )}
+
+                {/* Connectivity */}
+                <div className="w-full text-left mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
+                    <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">Connectivity</h3>
+                  </div>
+
+                  <div className="bg-[#0f1623] border border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <Globe className="size-4 text-slate-400 shrink-0" />
+                      <span className="text-xs font-semibold text-slate-300 truncate tracking-tight">
+                        eduspace.network/{formData.full_name?.toLowerCase().replace(/\s+/g, '')}
+                      </span>
+                    </div>
+                    <Copy className="size-3.5 text-slate-500" />
+                  </div>
+                </div>
+
+                {/* Footer E-Record Card */}
+                <div className="w-full bg-[#0f1623] border border-white/5 rounded-2xl p-4 flex items-center justify-between shadow-xl shadow-blue-900/5">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full border-2 border-blue-500/20 flex items-center justify-center bg-blue-500/5 text-blue-500">
+                      <Shield className="size-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-bold text-white leading-tight mb-0.5">Official Academic E-Record</p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">ID: PREVIEW-MODE</p>
+                    </div>
+                  </div>
+                  <div className="bg-blue-600 text-[8px] font-black px-3 py-1.5 rounded-lg text-white tracking-wider">
+                    VERIFIED
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
         </DialogContent>
       </Dialog>
 
@@ -1105,6 +1099,6 @@ export default function Profile() {
           ))}
         </nav>
       </div>
-    </DashboardLayout >
+    </DashboardLayout>
   );
 }
