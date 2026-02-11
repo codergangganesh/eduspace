@@ -55,16 +55,36 @@ export function usePushSubscription() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.user) return;
 
-            const p256dh = sub.getKey('p256dh');
-            const auth = sub.getKey('auth');
+            const subJson = sub.toJSON();
+            const p256dhKey = subJson.keys?.p256dh;
+            const authKey = subJson.keys?.auth;
 
-            if (!p256dh || !auth) return;
+            if (!p256dhKey || !authKey) {
+                // Fallback to getKey for binary extraction
+                const p256dhBuf = sub.getKey('p256dh');
+                const authBuf = sub.getKey('auth');
+                if (!p256dhBuf || !authBuf) return;
+
+                const subscriptionData = {
+                    user_id: session.user.id,
+                    endpoint: sub.endpoint,
+                    p256dh: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhBuf)))),
+                    auth: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authBuf)))),
+                };
+
+                const { error } = await supabase
+                    .from('push_subscriptions')
+                    .upsert(subscriptionData, { onConflict: 'user_id, endpoint' });
+
+                if (error) console.error('Failed to sync subscription with DB:', error);
+                return;
+            }
 
             const subscriptionData = {
                 user_id: session.user.id,
                 endpoint: sub.endpoint,
-                p256dh: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dh)))),
-                auth: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(auth)))),
+                p256dh: p256dhKey,
+                auth: authKey,
             };
 
             const { error } = await supabase
@@ -126,7 +146,7 @@ export function usePushSubscription() {
             await subscription.unsubscribe();
             setSubscription(null);
 
-            // Remove from DB (optional, but good practice)
+            // Remove from DB
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 const { error } = await supabase

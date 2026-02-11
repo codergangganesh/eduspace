@@ -6,11 +6,51 @@ interface CreateNotificationParams {
     message: string;
     type: "assignment" | "grade" | "announcement" | "message" | "schedule" | "access_request" | "submission" | "general";
     relatedId?: string;
-    classId?: string; // Class ID for filtering
-    senderId?: string; // User who triggered this notification
-    actionType?: string; // Specific action: created, updated, submitted, accepted, rejected, etc.
-    icon?: string; // Optional icon/avatar for the notification
-    customUrl?: string; // Optional custom URL override
+    classId?: string;
+    senderId?: string;
+    actionType?: string;
+    icon?: string;
+    customUrl?: string;
+    // Rich push payload overrides
+    pushTag?: string;
+    pushImage?: string;
+}
+
+// ─── Rich Push Helpers ──────────────────────────────────────────────────────
+function generateTag(type: string, relatedId?: string, classId?: string): string {
+    const id = relatedId || classId || 'general';
+    switch (type) {
+        case 'message': return `msg-${id}`;
+        case 'assignment': return `assign-${id}`;
+        case 'announcement': return `quiz-${id}`;
+        case 'schedule': return `schedule-${id}`;
+        case 'submission': return `submission-${id}`;
+        case 'grade': return `grade-${id}`;
+        default: return `eduspace-${type}`;
+    }
+}
+
+function getVibrationPattern(type: string): number[] {
+    switch (type) {
+        case 'message': return [100, 50, 100];
+        case 'assignment':
+        case 'submission': return [200, 100, 200];
+        case 'announcement':
+        case 'schedule': return [200, 100, 200, 100, 200];
+        default: return [100, 50, 100];
+    }
+}
+
+function getActions(type: string): Array<{ action: string; title: string }> {
+    switch (type) {
+        case 'message': return [{ action: 'view', title: '💬 View Chat' }, { action: 'dismiss', title: 'Dismiss' }];
+        case 'assignment': return [{ action: 'view', title: '📝 View Assignment' }];
+        case 'announcement': return [{ action: 'view', title: '📋 View Quiz' }];
+        case 'submission': return [{ action: 'view', title: '📄 View Submission' }];
+        case 'schedule': return [{ action: 'view', title: '📅 View Schedule' }];
+        case 'grade': return [{ action: 'view', title: '📊 View Grade' }];
+        default: return [{ action: 'open', title: 'Open EduSpace' }];
+    }
 }
 
 /**
@@ -49,16 +89,28 @@ export async function createNotification(params: CreateNotificationParams) {
             return { success: false, error };
         }
 
-        // Trigger Push Notification
+        // Trigger Rich Push Notification
+        const pushUrl = params.customUrl || getNotificationUrl(type, relatedId, params.classId);
         supabase.functions.invoke('send-push', {
             body: {
                 user_id: userId,
                 title,
                 body: message,
-                url: params.customUrl || getNotificationUrl(type, relatedId, params.classId),
+                url: pushUrl,
                 type,
+                icon: params.icon || '/pwa-192x192.png',
                 badge: '/pwa-192x192.png',
-                icon: params.icon // Pass icon if available
+                tag: params.pushTag || generateTag(type, relatedId, params.classId),
+                image: params.pushImage,
+                timestamp: Date.now(),
+                vibrate: getVibrationPattern(type),
+                actions: getActions(type),
+                renotify: true,
+                data: {
+                    conversationId: type === 'message' ? relatedId : undefined,
+                    classId: params.classId,
+                    relatedId,
+                },
             }
         }).catch(err => console.error("Push failed:", err));
 
@@ -121,17 +173,30 @@ export async function createBulkNotifications(
             return { success: false, error };
         }
 
-        // Trigger Push Notifications for all active users
+        // Trigger Rich Push Notifications for all active users
+        const bulkPushUrl = params.customUrl || getNotificationUrl(type, relatedId, classId);
+        const bulkTag = (params as any).pushTag || generateTag(type, relatedId, classId);
         activeUserIds.forEach(userId => {
             supabase.functions.invoke('send-push', {
                 body: {
                     user_id: userId,
                     title,
                     body: message,
-                    url: params.customUrl || getNotificationUrl(type, relatedId, classId),
-                    type, // Pass type for filtering logic in SW (e.g. chat suppression)
+                    url: bulkPushUrl,
+                    type,
+                    icon: (params as any).icon || '/pwa-192x192.png',
                     badge: '/pwa-192x192.png',
-                    icon: params.icon
+                    tag: bulkTag,
+                    image: (params as any).pushImage,
+                    timestamp: Date.now(),
+                    vibrate: getVibrationPattern(type),
+                    actions: getActions(type),
+                    renotify: true,
+                    data: {
+                        conversationId: type === 'message' ? relatedId : undefined,
+                        classId: classId,
+                        relatedId,
+                    },
                 }
             }).catch(err => console.error(`Push failed for ${userId}:`, err));
         });

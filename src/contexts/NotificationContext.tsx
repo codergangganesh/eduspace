@@ -46,6 +46,52 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         locationRef.current = location.pathname;
     }, [location.pathname]);
 
+    // ─── Broadcast app state to Service Worker for smart push suppression ────
+    useEffect(() => {
+        if (!('serviceWorker' in navigator)) return;
+
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const sendStateToSW = (isFocused: boolean) => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const sw = navigator.serviceWorker.controller;
+                if (!sw) return;
+
+                const searchParams = new URLSearchParams(window.location.search);
+                const activeChatId = location.pathname.startsWith('/messages')
+                    ? searchParams.get('conversation') || null
+                    : null;
+
+                sw.postMessage({
+                    type: 'APP_STATE',
+                    isFocused,
+                    currentPath: location.pathname,
+                    activeChatId,
+                });
+            }, 300); // Debounce to avoid excessive SW wake-ups
+        };
+
+        // Send on route change
+        sendStateToSW(document.hasFocus());
+
+        // Send on focus/blur
+        const onFocus = () => sendStateToSW(true);
+        const onBlur = () => sendStateToSW(false);
+        const onVisibilityChange = () => sendStateToSW(document.visibilityState === 'visible');
+
+        window.addEventListener('focus', onFocus);
+        window.addEventListener('blur', onBlur);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            window.removeEventListener('focus', onFocus);
+            window.removeEventListener('blur', onBlur);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, [location.pathname, location.search]);
+
     useEffect(() => {
         if (!user) {
             setNotifications([]);
