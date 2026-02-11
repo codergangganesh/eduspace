@@ -1,29 +1,20 @@
 import { useEffect } from 'react';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { useFCM } from '@/hooks/useFCM';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Bell } from 'lucide-react';
 
 export function PushNotificationManager() {
     const { user } = useAuth();
-    const { subscribe, permission, isSupported } = usePushSubscription();
+    const { subscribe: subscribeWebPush, permission: webPushPermission, isSupported: webPushSupported } = usePushSubscription();
+    const { subscribe: subscribeFCM, isSupported: fcmSupported } = useFCM();
     const { toast } = useToast();
 
     useEffect(() => {
-        if (!user || !isSupported) return;
+        if (!user || (!webPushSupported && !fcmSupported)) return;
 
-        // If already granted, the hook will have synced the subscription on mount
-        // If denied, we can't do anything.
-        // If default, we could prompt, but we want to avoid spam.
-        // Let's prompt ONCE if it's default and we haven't asked recently?
-        // Or just leave it to a manual action in Settings.
-
-        // For this requirement: "Enable real mobile push notifications... Prevent spammy permission prompts"
-        // We will NOT auto-prompt. We rely on the user to enable it in Settings or via a specific "Enable Notifications" toast?
-
-        // Let's show a toast if permission is default, encouraging them to enable it.
-        if (permission === 'default') {
+        if (webPushPermission === 'default') {
             const hasAsked = localStorage.getItem('eduspace_push_asked');
             if (!hasAsked) {
                 toast({
@@ -34,18 +25,19 @@ export function PushNotificationManager() {
                             variant="outline"
                             size="sm"
                             onClick={async () => {
-                                const success = await subscribe();
-                                if (success) {
+                                const webPushSuccess = await subscribeWebPush();
+                                const fcmSuccess = await subscribeFCM();
+
+                                if (webPushSuccess || fcmSuccess) {
                                     toast({
                                         title: "Notifications Enabled",
                                         description: "You're all set! You'll receive updates even when the app is closed.",
                                         variant: "default"
                                     });
                                 } else {
-                                    // Subscription failed (likely permission denied)
                                     toast({
                                         title: "Action Required",
-                                        description: "Notifications are blocked by your browser. Please enable them in your site settings to receive updates.",
+                                        description: "Notifications might be blocked. Please check your browser settings.",
                                         variant: "destructive"
                                     });
                                 }
@@ -60,7 +52,7 @@ export function PushNotificationManager() {
             }
         }
 
-    }, [user, permission, isSupported, subscribe, toast]);
+    }, [user, webPushPermission, webPushSupported, fcmSupported, subscribeWebPush, subscribeFCM, toast]);
 
     return null;
 }

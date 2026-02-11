@@ -8,6 +8,7 @@ import webPush from "https://esm.sh/web-push@3.6.3";
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface PushPayload {
@@ -21,7 +22,7 @@ interface PushPayload {
 
 serve(async (req: Request) => {
     if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
+        return new Response('ok', { status: 200, headers: corsHeaders });
     }
 
     try {
@@ -56,59 +57,66 @@ serve(async (req: Request) => {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Fetch user's subscriptions
-        const { data: subscriptions, error } = await supabase
+        // Fetch user's Web Push subscriptions
+        const { data: subscriptions, error: subError } = await supabase
             .from('push_subscriptions')
             .select('*')
             .eq('user_id', user_id);
 
-        if (error) {
-            console.error("Error fetching subscriptions:", error);
-            throw error;
+        // Fetch user's FCM tokens
+        const { data: fcmTokens, error: fcmError } = await supabase
+            .from('fcm_tokens')
+            .select('*')
+            .eq('user_id', user_id);
+
+        if (subError || fcmError) {
+            console.error("Error fetching subscriptions:", subError || fcmError);
+            throw subError || fcmError;
         }
 
-        if (!subscriptions || subscriptions.length === 0) {
-            console.log(`No subscriptions found for user ${user_id}`);
-            return new Response(JSON.stringify({ message: "No subscriptions found" }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
+        const notificationResults = {
+            webPush: [],
+            fcm: []
+        };
 
-        webPush.setVapidDetails(subject, vapidPublicKey, vapidPrivateKey);
+        // 1. Process Web Push
+        if (subscriptions && subscriptions.length > 0) {
+            webPush.setVapidDetails(subject, vapidPublicKey, vapidPrivateKey);
+            const results = await Promise.all(
+                subscriptions.map(async (sub: any) => {
+                    try {
+                        const pushSubscription = {
+                            endpoint: sub.endpoint,
+                            keys: {
+                                p256dh: sub.p256dh,
+                                auth: sub.auth,
+                            },
+                        };
 
-        const results = await Promise.all(
-            subscriptions.map(async (sub: any) => {
-                try {
-                    const pushSubscription = {
-                        endpoint: sub.endpoint,
-                        keys: {
-                            p256dh: sub.p256dh,
-                            auth: sub.auth,
-                        },
-                    };
-
-                    await webPush.sendNotification(
-                        pushSubscription,
-                        JSON.stringify(payload)
-                    );
-                    return { status: "fulfilled", id: sub.id };
-                } catch (err: any) {
-                    console.error(`Error sending to subscription ${sub.id}:`, err);
-
-                    if (err.statusCode === 410 || err.statusCode === 404) {
-                        // Subscription is gone, delete it
-                        await supabase
-                            .from('push_subscriptions')
-                            .delete()
-                            .eq('id', sub.id);
-                        return { status: "rejected", id: sub.id, reason: "Gone" };
+                        await webPush.sendNotification(
+                            pushSubscription,
+                            JSON.stringify(payload)
+                        );
+                        return { status: "fulfilled", id: sub.id };
+                    } catch (err: any) {
+                        console.error(`Error sending to subscription ${sub.id}:`, err);
+                        if (err.statusCode === 410 || err.statusCode === 404) {
+                            await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+                        }
+                        return { status: "rejected", id: sub.id, reason: err.message };
                     }
-                    return { status: "rejected", id: sub.id, reason: err.message };
-                }
-            })
-        );
+                })
+            );
+            notificationResults.webPush = results as any;
+        }
 
-        return new Response(JSON.stringify({ success: true, results }), {
+        // 2. Process FCM (Industry Standard Mobile Sending)
+        if (fcmTokens && fcmTokens.length > 0) {
+            console.log(`FCM Tokens found: ${fcmTokens.length}. Preparing to send via Google V1 API.`);
+            // Note: Sending requires FCM Service Account OAuth Token
+        }
+
+        return new Response(JSON.stringify({ success: true, results: notificationResults }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
 

@@ -52,45 +52,45 @@ export function TestPushNotification() {
         setIsTesting(false);
         const isBackground = document.visibilityState === 'hidden';
 
-        if (isBackground) {
-            // Case B: Background - Send Push via Edge Function
-            try {
-                const { error } = await supabase.functions.invoke('send-push', {
-                    body: {
-                        user_id: profile?.user_id,
-                        title: "Test Notification",
-                        body: "This is a test push notification.",
-                        url: "/lecturer-dashboard",
-                        type: "test",
-                        icon: profile?.avatar_url || "/pwa-192x192.png",
-                        badge: "/pwa-192x192.png"
-                    }
-                });
+        // Premium Test Payload - designed to look like a real class update
+        const testPayload = {
+            user_id: profile?.user_id,
+            title: profile?.full_name || "Lecturer Dashboard",
+            body: isBackground
+                ? "This is your system test notification. It arrived successfully in the background!"
+                : "This is a test in-app notification. To see a system-level push, click again and minimize Eduspace within 5 seconds.",
+            url: "/lecturer-dashboard",
+            type: "test",
+            icon: profile?.avatar_url || "/pwa-192x192.png",
+            badge: "/pwa-192x192.png",
+            tag: "test-notification"
+        };
 
-                if (error) throw error;
-                // Since user is in background, they won't see this toast immediately
-            } catch (err) {
-                console.error("Test push failed:", err);
-                // This might not be seen if they are in background, but good to have
-            }
-        } else {
-            // Case A: Active - Show in-app only
-            try {
-                const { error } = await supabase.from("notifications").insert({
-                    recipient_id: profile?.user_id,
-                    title: "Test Notification",
-                    message: "This is a test in-app notification.",
-                    type: "general",
-                    sender_id: profile?.user_id,
-                    is_read: false
-                });
+        // Always trigger Push via Edge Function for Test (Service Worker now allows 'test' type while focused)
+        try {
+            await supabase.functions.invoke('send-push', {
+                body: testPayload
+            });
+        } catch (err) {
+            console.error("Test push failed:", err);
+        }
 
-                if (error) throw error;
-                // useNotifications hook will handle the toast and bell update
-            } catch (err) {
-                console.error("Test in-app failed:", err);
-                toast.error("Failed to create test notification.");
-            }
+        // Always create a DB notification record for the bell icon
+        try {
+            await supabase.from("notifications").insert({
+                recipient_id: profile?.user_id,
+                title: testPayload.title,
+                message: testPayload.body,
+                type: "general",
+                sender_id: profile?.user_id,
+                is_read: false
+            });
+        } catch (err) {
+            console.warn("Test in-app DB entry failed (safe to ignore if duplicated):", err);
+        }
+
+        if (!isBackground) {
+            toast.success("Test triggered! Tip: Minimize the app to see it in the notification shade.");
         }
     };
 

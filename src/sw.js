@@ -29,13 +29,25 @@ self.addEventListener('push', (event) => {
       // Check if any window is currently focused
       const isFocused = clientList.some((client) => client.focused);
 
-      // Core Requirement: Only push when app is closed or backgrounded
-      if (isFocused) {
+      // Show push notification if app is backgrounded OR if it's a test notification
+      if (isFocused && data.type !== 'test') {
         console.log('EduSpace is active and focused. Suppressing push notification.');
         return;
       }
 
-      return self.registration.showNotification(title, options);
+      const notificationOptions = {
+        ...options,
+        vibrate: [100, 50, 100],
+        actions: [
+          {
+            action: 'open',
+            title: 'Open Eduspace',
+          }
+        ],
+        primaryKey: 1
+      };
+
+      return self.registration.showNotification(title, notificationOptions);
     })
   );
 });

@@ -44,7 +44,7 @@ export async function createNotification(params: CreateNotificationParams) {
             is_read: false,
         });
 
-        if (error) {
+        if (error && error.code !== '23505') {
             console.error("Error creating notification:", error);
             return { success: false, error };
         }
@@ -116,7 +116,7 @@ export async function createBulkNotifications(
 
         const { error } = await supabase.from("notifications").insert(notifications);
 
-        if (error) {
+        if (error && error.code !== '23505') {
             console.error("Error creating bulk notifications:", error);
             return { success: false, error };
         }
