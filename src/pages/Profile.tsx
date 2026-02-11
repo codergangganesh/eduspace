@@ -1117,6 +1117,21 @@ export default function Profile() {
                     <span className="font-bold tracking-wide text-xs uppercase">Download Official PDF</span>
                   </Button>
                 </div>
+                
+                {/* Visit Public Profile Link */}
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => {
+                      setShowPublicProfile(false);
+                      setTimeout(() => {
+                        navigate(`/p/${user?.id}`);
+                      }, 100);
+                    }}
+                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm transition-colors underline-offset-2 hover:underline"
+                  >
+                    Visit Public Profile
+                  </button>
+                </div>
               </div>
             </div>
           </div>
