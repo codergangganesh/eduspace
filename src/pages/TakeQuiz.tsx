@@ -12,11 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { QuizSkeleton } from '@/components/skeletons/QuizSkeleton';
+import { notifyQuizSubmission } from '@/lib/notificationService';
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
 
     const [quiz, setQuiz] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
@@ -435,6 +436,18 @@ export default function TakeQuiz() {
             setResult(submissionData);
             if (timerRef.current) clearInterval(timerRef.current);
             toast.success('Quiz submitted successfully!');
+
+            // Notify Lecturer
+            if (quiz.created_by && profile?.full_name) {
+                notifyQuizSubmission(
+                    quiz.created_by,
+                    profile.full_name,
+                    quiz.title,
+                    quiz.id,
+                    quiz.class_id,
+                    user.id
+                ).catch(err => console.error("Failed to notify lecturer:", err));
+            }
 
         } catch (error: any) {
             console.error('Error submitting quiz:', error);

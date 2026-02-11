@@ -9,6 +9,8 @@ interface CreateNotificationParams {
     classId?: string; // Class ID for filtering
     senderId?: string; // User who triggered this notification
     actionType?: string; // Specific action: created, updated, submitted, accepted, rejected, etc.
+    icon?: string; // Optional icon/avatar for the notification
+    customUrl?: string; // Optional custom URL override
 }
 
 /**
@@ -46,6 +48,19 @@ export async function createNotification(params: CreateNotificationParams) {
             console.error("Error creating notification:", error);
             return { success: false, error };
         }
+
+        // Trigger Push Notification
+        supabase.functions.invoke('send-push', {
+            body: {
+                user_id: userId,
+                title,
+                body: message,
+                url: params.customUrl || getNotificationUrl(type, relatedId, params.classId),
+                type,
+                badge: '/pwa-192x192.png',
+                icon: params.icon // Pass icon if available
+            }
+        }).catch(err => console.error("Push failed:", err));
 
         return { success: true };
     } catch (err) {
@@ -106,10 +121,53 @@ export async function createBulkNotifications(
             return { success: false, error };
         }
 
+        // Trigger Push Notifications for all active users
+        activeUserIds.forEach(userId => {
+            supabase.functions.invoke('send-push', {
+                body: {
+                    user_id: userId,
+                    title,
+                    body: message,
+                    url: params.customUrl || getNotificationUrl(type, relatedId, classId),
+                    type, // Pass type for filtering logic in SW (e.g. chat suppression)
+                    badge: '/pwa-192x192.png',
+                    icon: params.icon
+                }
+            }).catch(err => console.error(`Push failed for ${userId}:`, err));
+        });
+
         return { success: true };
     } catch (err) {
         console.error("Error creating bulk notifications:", err);
         return { success: false, error: err };
+    }
+}
+
+function getNotificationUrl(type: string, relatedId?: string, classId?: string): string {
+    switch (type) {
+        case 'message':
+            return relatedId ? `/messages?conversation=${relatedId}` : '/messages';
+        case 'assignment':
+            return classId ? `/student/assignments` : '/student/assignments';
+        case 'quiz':
+            return '/student/quizzes';
+        case 'announcement':
+            // If it's a quiz announcement, link to quizzes
+            if (relatedId && !classId) return '/student/quizzes';
+            // If it's associated with a class, maybe link to class dashboard or quizzes
+            return '/student/quizzes';
+        case 'grade':
+            return '/student/assignments';
+        case 'schedule':
+            return '/schedule';
+        case 'access_request':
+            return '/notifications';
+        case 'submission':
+            if (classId && relatedId) {
+                return `/lecturer/assignments/${classId}/${relatedId}/submissions`;
+            }
+            return '/notifications';
+        default: return '/notifications';
     }
 }
 
@@ -175,7 +233,9 @@ export async function notifyGradePosted(
     studentId: string,
     assignmentTitle: string,
     grade: string,
-    assignmentId: string
+    assignmentId: string,
+    lecturerId: string, // Sender
+    classId: string
 ) {
     // Check if student has grade_updates enabled
     const { data } = await supabase
@@ -192,6 +252,9 @@ export async function notifyGradePosted(
         message: `Your grade for "${assignmentTitle}" is ${grade}`,
         type: "grade",
         relatedId: assignmentId,
+        senderId: lecturerId,
+        classId: classId,
+        actionType: 'graded'
     });
 }
 
@@ -257,19 +320,18 @@ export async function notifyQuizPublished(
     lecturerId: string
 ) {
     try {
-        // Get enrolled students (accepted status)
-        const { data: acceptedRequests, error: requestsError } = await supabase
-            .from('access_requests')
+        // Get enrolled students (from class_students table which is the source of truth)
+        const { data: classStudents, error: studentsError } = await supabase
+            .from('class_students')
             .select('student_id')
-            .eq('class_id', classId)
-            .eq('status', 'accepted');
+            .eq('class_id', classId);
 
-        if (requestsError) {
-            console.error("Error fetching accepted students:", requestsError);
-            return { success: false, error: requestsError };
+        if (studentsError) {
+            console.error("Error fetching class students:", studentsError);
+            return { success: false, error: studentsError };
         }
 
-        const studentIds = acceptedRequests?.map(r => r.student_id).filter(Boolean) as string[] || [];
+        const studentIds = classStudents?.map(s => s.student_id).filter(Boolean) as string[] || [];
 
         if (studentIds.length === 0) {
             return { success: true, message: "No students to notify" };
@@ -299,7 +361,8 @@ export async function notifyNewMessage(
     senderName: string,
     messagePreview: string,
     conversationId: string,
-    senderId: string
+    senderId: string,
+    senderAvatar?: string // Added
 ) {
     // Check if recipient has message_notifications enabled
     const { data } = await supabase
@@ -328,6 +391,7 @@ export async function notifyNewMessage(
         relatedId: conversationId,
         senderId: senderId,
         actionType: 'sent',
+        icon: senderAvatar // Pass avatar
     });
 }
 
@@ -467,26 +531,16 @@ export async function notifyClassStudents(
 
         const notifyUserIds = profiles.map(p => p.user_id);
 
-        // Create notifications with class_id and sender_id
-        const notifications = notifyUserIds.map((userId) => ({
-            recipient_id: userId,
+        // Use createBulkNotifications for unified logic
+        return await createBulkNotifications(notifyUserIds, {
             title,
             message,
             type,
-            related_id: relatedId || null,
-            class_id: classId,
-            sender_id: senderId,
-            is_read: false,
-        }));
-
-        const { error } = await supabase.from("notifications").insert(notifications);
-
-        if (error) {
-            console.error("Error creating class notifications:", error);
-            return { success: false, error };
-        }
-
-        return { success: true, count: notifications.length };
+            relatedId: relatedId || undefined,
+            classId: classId,
+            senderId: senderId,
+            actionType: "class_announcement"
+        });
     } catch (err) {
         console.error("Error in notifyClassStudents:", err);
         return { success: false, error: err };
@@ -522,24 +576,18 @@ export async function notifyLecturer(
             return { success: true, message: "Notifications disabled" };
         }
 
-        // Create notification
-        const { error } = await supabase.from("notifications").insert({
-            recipient_id: lecturerId,
+        // Centralized notification handling
+        return await createNotification({
+            userId: lecturerId,
             title,
             message,
             type,
-            related_id: relatedId || null,
-            class_id: classId || null,
-            sender_id: senderId || null,
-            is_read: false,
+            relatedId,
+            classId,
+            senderId,
+            actionType: 'action', // Default action
+            customUrl: type === 'message' ? `/messages?conversation=${relatedId}` : '/notifications'
         });
-
-        if (error) {
-            console.error("Error creating lecturer notification:", error);
-            return { success: false, error };
-        }
-
-        return { success: true };
     } catch (err) {
         console.error("Error in notifyLecturer:", err);
         return { success: false, error: err };
@@ -710,27 +758,61 @@ export async function notifyAssignmentSubmission(
             return { success: true, message: "Notifications disabled" };
         }
 
-        // Create notification with class_id for proper filtering
-        const { error } = await supabase.from("notifications").insert({
-            recipient_id: lecturerId,
-            sender_id: studentId,
+        // Use createNotification for centralized logic (DB insert + Push invoke)
+        return await createNotification({
+            userId: lecturerId,
+            senderId: studentId,
             title: "New Assignment Submission",
             message: `${studentName} submitted "${assignmentTitle}"`,
             type: "submission",
-            action_type: "submitted",
-            related_id: assignmentId,
-            class_id: classId,
-            is_read: false,
+            actionType: "submitted",
+            relatedId: assignmentId,
+            classId: classId,
+            customUrl: `/lecturer/assignments/${classId}/${assignmentId}/submissions`
         });
-
-        if (error) {
-            console.error("Error creating submission notification:", error);
-            return { success: false, error };
-        }
-
-        return { success: true };
     } catch (err) {
         console.error("Error in notifyAssignmentSubmission:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Notify lecturer about a quiz submission
+ */
+export async function notifyQuizSubmission(
+    lecturerId: string,
+    studentName: string,
+    quizTitle: string,
+    quizId: string,
+    classId: string,
+    studentId: string
+) {
+    try {
+        // Check lecturer preferences (using submission_notifications for simplicity as it falls under submission category)
+        const { data: lecturerProfile } = await supabase
+            .from("lecturer_profiles")
+            .select("submission_notifications")
+            .eq("user_id", lecturerId)
+            .single();
+
+        if (!lecturerProfile?.submission_notifications) {
+            return { success: true, message: "Notifications disabled" };
+        }
+
+        // Use createNotification for centralized logic
+        return await createNotification({
+            userId: lecturerId,
+            senderId: studentId,
+            title: "New Quiz Submission",
+            message: `${studentName} completed "${quizTitle}"`,
+            type: "submission",
+            actionType: "quiz_submitted",
+            relatedId: quizId,
+            classId: classId,
+            customUrl: `/lecturer/quizzes/${classId}/${quizId}/results`
+        });
+    } catch (err) {
+        console.error("Error in notifyQuizSubmission:", err);
         return { success: false, error: err };
     }
 }

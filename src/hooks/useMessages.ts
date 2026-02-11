@@ -44,7 +44,7 @@ interface Attachment {
 }
 
 export function useMessages() {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -414,6 +414,21 @@ export function useMessages() {
                     visible_to: [user.id, receiverId] // Always reset visibility for both
                 })
                 .eq('id', conversationId);
+
+            // Trigger Notification (Push + In-App if enabled)
+            if (user && profile && conversationId) {
+                // Import dynamically to avoid circular dependencies if any
+                import('@/lib/notificationService').then(({ notifyNewMessage }) => {
+                    notifyNewMessage(
+                        receiverId,
+                        profile.full_name || 'New Message',
+                        finalContent,
+                        conversationId!,
+                        user.id,
+                        profile.avatar_url || undefined
+                    ).catch(err => console.error("Failed to notify message:", err));
+                });
+            }
 
             // Manual notification fallback if needed (Optional, but DB trigger is better)
             // We'll skip manual here to avoid double-notification if DB trigger works.

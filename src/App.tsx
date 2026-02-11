@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { PushNotificationManager } from "@/components/PushNotificationManager";
 
 // Lazy load pages
 const Index = lazy(() => import("./pages/Index"));
@@ -78,6 +80,8 @@ const App = () => (
             <Sonner />
             <OfflineBanner />
             <BrowserRouter>
+              <PWAInstallPrompt />
+              <PushNotificationManager />
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* Public Routes */}

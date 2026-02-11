@@ -173,10 +173,23 @@ export function useLecturerAssignments() {
                         .from("notifications")
                         .insert(notifications);
 
-                    if (notifError) {
-                        console.error("Error creating notifications:", notifError);
-                    }
                 }
+
+                // Send VAPID Push to all enrolled students
+                if (!studentsError && enrolledStudents && enrolledStudents.length > 0) {
+                    enrolledStudents.forEach(student => {
+                        supabase.functions.invoke('send-push', {
+                            body: {
+                                user_id: student.student_id,
+                                title: 'New Assignment',
+                                body: `${data.title} has been posted.`,
+                                url: '/student/assignments',
+                                type: 'assignment'
+                            }
+                        }).catch(err => console.error("Push failed for student", student.student_id, err));
+                    });
+                }
+
             }
 
             toast.success("Assignment created successfully!");

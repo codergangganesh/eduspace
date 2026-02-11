@@ -628,7 +628,7 @@ export function useAssignments(selectedClassId?: string) {
                 if (submission) {
                     const { data: assignment } = await supabase
                         .from('assignments')
-                        .select('title')
+                        .select('title, class_id')
                         .eq('id', submission.assignment_id)
                         .single();
 
@@ -638,7 +638,9 @@ export function useAssignments(selectedClassId?: string) {
                             submission.student_id,
                             assignment.title,
                             grade.toString(),
-                            submission.assignment_id
+                            submission.assignment_id,
+                            user.id,
+                            assignment.class_id
                         );
                     }
                 }
