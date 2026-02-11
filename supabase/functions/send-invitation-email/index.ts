@@ -118,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p>Ready to get started? Click the button below to create your account and join the EduSpace community!</p>
               
               <center>
-                <a href="${appUrl}" class="button" style="color: white;">Get Started</a>
+                <a href="https://eduspace-five.vercel.app" class="button" style="color: white;">Get Started</a>
               </center>
 
               <p style="margin-top: 30px; font-size: 14px; color: #64748b;">If you have any questions, feel free to reach out to ${lecturerName} at ${lecturerEmail} or contact our support team.</p>

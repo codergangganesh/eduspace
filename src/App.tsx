@@ -34,6 +34,7 @@ const LecturerClassesAssignments = lazy(() => import("./pages/LecturerClassesAss
 const ClassAssignmentsView = lazy(() => import("./pages/ClassAssignmentsView"));
 const AssignmentSubmissionsPage = lazy(() => import("./pages/AssignmentSubmissionsPage"));
 const Profile = lazy(() => import("./pages/Profile"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Schedule = lazy(() => import("./pages/Schedule"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -84,7 +85,12 @@ const App = () => (
               <PushNotificationManager />
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
-                  {/* Public Routes */}
+                  {/* Public Profile Routes - MUST BE FIRST */}
+                  <Route path="/p/:id" element={<PublicProfile />} />
+                  <Route path="/profile/:id" element={<PublicProfile />} />
+                  <Route path="/share/:id" element={<PublicProfile />} />
+
+                  {/* Public Home Route */}
                   <Route path="/" element={<Index />} />
 
                   {/* Role-specific Auth Routes */}
@@ -100,6 +106,7 @@ const App = () => (
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/update-password" element={<UpdatePassword />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+
 
                   {/* Protected Student Routes */}
                   <Route

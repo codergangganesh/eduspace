@@ -47,6 +47,10 @@ import {
   Palette,
   Loader2,
   Upload,
+  Share2,
+  Copy,
+  ExternalLink,
+  MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -98,14 +102,6 @@ export default function Profile() {
     expected_graduation: "",
     // Notifications
     notifications_enabled: true,
-    email_notifications: true,
-    push_notifications: true,
-    sms_notifications: false,
-    assignment_reminders: true,
-    message_notifications: true, // Added
-    grade_updates: true,
-    course_announcements: true,
-    weekly_digest: false,
     // Preferences
     language: "en",
     timezone: "America/New_York",
@@ -247,6 +243,7 @@ export default function Profile() {
     setIsSaving(true);
     const result = await updateProfile({
       full_name: formData.full_name,
+      email: formData.email,
       phone: formData.phone,
       date_of_birth: formData.date_of_birth || null,
       bio: formData.bio,
@@ -280,6 +277,41 @@ export default function Profile() {
       toast.error(result.error || "Failed to update profile");
     }
     setIsSaving(false);
+  };
+
+  const handleShare = async () => {
+    if (!profile?.user_id) {
+      toast.error("Profile ID not found. Please refresh and try again.");
+      return;
+    }
+    const profileUrl = `https://eduspace-five.vercel.app/p/${profile.user_id}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${formData.full_name}'s Profile | EduSpace`,
+          text: `Check out my academic profile on EduSpace!`,
+          url: profileUrl,
+        });
+        toast.success("Shared successfully");
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+          copyToClipboard(profileUrl);
+        }
+      }
+    } else {
+      copyToClipboard(profileUrl);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Link copied to clipboard");
+    }).catch((err) => {
+      console.error('Could not copy text: ', err);
+      toast.error("Failed to copy link");
+    });
   };
 
   const handlePasswordChange = async () => {
@@ -918,13 +950,40 @@ export default function Profile() {
       {/* Public Profile Modal */}
       <Dialog open={showPublicProfile} onOpenChange={setShowPublicProfile}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Public Profile</DialogTitle>
+          <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b">
+            <DialogTitle>Public Profile View</DialogTitle>
+            <div className="flex items-center gap-2 pr-8">
+              <Button size="sm" variant="outline" className="h-8 gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-all" onClick={handleShare}>
+                <Share2 className="size-3.5" />
+                Share
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* Shareable Link Preview */}
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <ExternalLink className="size-4 text-primary shrink-0" />
+                <code className="text-[10px] sm:text-xs text-primary font-mono truncate">
+                  eduspace-five.vercel.app/p/{profile?.user_id}
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-primary hover:bg-primary/10 shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://eduspace-five.vercel.app/p/${profile?.user_id}`);
+                  toast.success("Link copied!");
+                }}
+              >
+                <Copy className="size-3.5 mr-1" />
+                <span className="text-[10px]">Copy</span>
+              </Button>
+            </div>
             {/* Profile Header */}
-            <div className="flex items-center gap-6 pb-6 border-b">
+            <div className="flex items-center gap-6 pt-6">
               <Avatar className="size-24">
                 <AvatarImage src={profile?.avatar_url || ""} />
                 <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
@@ -1046,6 +1105,6 @@ export default function Profile() {
           ))}
         </nav>
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 }

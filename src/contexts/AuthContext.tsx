@@ -302,6 +302,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: error.message };
     }
 
+    // Also sync to public_profiles table for sharing
+    // Only pick fields that are safe/meant for public viewing
+    const publicData = {
+      user_id: user.id,
+      full_name: data.full_name,
+      avatar_url: data.avatar_url,
+      bio: data.bio,
+      program: data.program,
+      year: data.year,
+      department: data.department,
+      gpa: data.gpa,
+      credits_completed: data.credits_completed,
+      credits_required: data.credits_required,
+      expected_graduation: data.expected_graduation,
+      email: data.email,
+      phone: data.phone,
+      city: data.city,
+      country: data.country,
+      last_updated: new Date().toISOString()
+    };
+
+    // Filter out undefined values to avoid overwriting with null if no change
+    const filteredPublicData = Object.fromEntries(
+      Object.entries(publicData).filter(([_, v]) => v !== undefined)
+    );
+
+    if (Object.keys(filteredPublicData).length > 1) { // More than just user_id
+      await supabase
+        .from("public_profiles")
+        .upsert(filteredPublicData, { onConflict: 'user_id' });
+    }
+
     await refreshProfile();
     return { success: true };
   };
