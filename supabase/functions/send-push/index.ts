@@ -369,10 +369,29 @@ serve(async (req: Request) => {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
+        // ─── Smart Delivery Logic: Check User Preferences ────────────────────────
+        // Step 1: Check if user has notifications enabled globally
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('notifications_enabled')
+            .eq('user_id', user_id)
+            .single();
+
+        if (profile && profile.notifications_enabled === false) {
+            return new Response(JSON.stringify({
+                message: "User has disabled notifications globally",
+                suppressed: true
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+
+        // Step 2: Fetch only ENABLED push subscriptions
         const { data: subscriptions, error } = await supabase
             .from('push_subscriptions')
             .select('*')
-            .eq('user_id', user_id);
+            .eq('user_id', user_id)
+            .eq('notification_enabled', true);  // Only get enabled subscriptions
 
         if (error) {
             console.error("Error fetching subscriptions:", error);
@@ -380,10 +399,19 @@ serve(async (req: Request) => {
         }
 
         if (!subscriptions || subscriptions.length === 0) {
-            return new Response(JSON.stringify({ message: "No subscriptions found" }), {
+            return new Response(JSON.stringify({
+                message: "No enabled subscriptions found",
+                suppressed: true
+            }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
+
+        // ─── Smart Delivery Logic: Skip if user is actively using app ────────────
+        // Note: This is handled by the service worker on the client side
+        // The SW checks if the app is focused and suppresses notifications accordingly
+        // We still send the push, but the SW will decide whether to show it
+        // This allows for proper handling of background vs foreground states
 
         const payloadString = JSON.stringify(payload);
 

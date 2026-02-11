@@ -53,6 +53,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
+import { ProfileNotificationSettings } from "@/components/ProfileNotificationSettings";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -882,30 +883,7 @@ export default function Profile() {
 
           {/* Notifications Section */}
           {activeTab === "notifications" && (
-            <div className="bg-surface border border-border rounded-xl p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Notification Preferences</h2>
-
-              <div className="space-y-6">
-                {/* Master Toggle */}
-                <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-card shadow-sm">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Bell className="size-4 text-primary" />
-                      <p className="font-medium text-foreground">Allow Notifications</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Turn off to pause all notifications. Important alerts may still appear in your dashboard.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.notifications_enabled}
-                    onCheckedChange={(checked) => handleInputChange("notifications_enabled", checked)}
-                  />
-                </div>
-
-
-              </div>
-            </div>
+            <ProfileNotificationSettings />
           )}
 
           {/* Preferences Section */}

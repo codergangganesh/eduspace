@@ -38,79 +38,65 @@ self.addEventListener('push', (event) => {
 
 async function handlePushEvent(data) {
   // ── Smart Suppression Logic ───────────────────────────────────────────────
-  // Always allow test notifications through
   const isTest = data.type === 'test';
 
   if (!isTest) {
-    // Check if any window client is focused
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const hasFocusedClient = clients.some((c) => c.focused);
 
+    // CRITICAL UX RULE: Do NOT send push if user is actively using the app
     if (hasFocusedClient || appState.isFocused) {
-      // App is in foreground — check if we should suppress completely
       const isMessageType = data.type === 'message';
       const isOnMessagesPage = appState.currentPath?.startsWith('/messages');
 
-      // If user is on the messages page and this is a message notification for the active chat, suppress
+      // If user is viewing the same conversation, suppress entirely
       if (isMessageType && isOnMessagesPage) {
         const notifChatId = data.data?.conversationId || data.url?.split('conversation=')[1];
         if (appState.activeChatId && notifChatId === appState.activeChatId) {
-          // User is actively viewing this exact conversation — full suppress
           return;
         }
       }
 
-      // App is focused — let in-app toast handle it, suppress system notification
+      // If app is focused but user is on a different page, we still suppress system push
+      // and let the in-app toast system handle it for Case 1.
       return;
     }
   }
 
-  // ── Build Rich Notification Options ───────────────────────────────────────
+  // ── Build Native Mobile Notification Format ────────────────────────────────
   const title = data.title || 'EduSpace';
-
+  
+  // Requirement: App name + Branded icon + Title + Message preview
   const options = {
     body: data.body || 'New update available',
-    icon: data.icon || '/pwa-192x192.png',
-    badge: data.badge || '/pwa-192x192.png',
+    icon: data.icon || '/logo-branded.png', // Branded Icon
+    badge: data.badge || '/pwa-badge.png',  // Monochrome badge for Android
     tag: data.tag || getDefaultTag(data),
-    renotify: true, // Re-alert even if tag matches (vibrate + sound again)
+    renotify: true,
     timestamp: data.timestamp || Date.now(),
+    dir: 'auto',
+    lang: 'en-US',
     data: {
       url: data.url || '/',
       type: data.type,
+      notificationId: data.data?.notificationId, // To mark as read on click
       ...data.data,
     },
   };
 
-  // Vibration pattern (mobile)
-  if (data.vibrate) {
-    options.vibrate = data.vibrate;
-  } else {
-    options.vibrate = getDefaultVibration(data.type);
-  }
+  // Vibration pattern (Requirement 4: Vibration pattern)
+  options.vibrate = data.vibrate || getDefaultVibration(data.type);
 
-  // Image preview (optional for media-rich notifications)
+  // Requirement: Sound (if allowed)
+  options.silent = false;
+
+  // Requirement: Image preview (for messages/media)
   if (data.image) {
     options.image = data.image;
   }
 
-  // Action buttons
-  if (data.actions && Array.isArray(data.actions)) {
-    options.actions = data.actions;
-  } else {
-    options.actions = getDefaultActions(data.type);
-  }
-
-  // Require interaction for important alerts
-  if (data.requireInteraction) {
-    options.requireInteraction = true;
-  }
-
-  // Silent mode
-  if (data.silent) {
-    options.silent = true;
-    delete options.vibrate;
-  }
+  // Click Actions
+  options.actions = data.actions || getDefaultActions(data.type);
 
   return self.registration.showNotification(title, options);
 }

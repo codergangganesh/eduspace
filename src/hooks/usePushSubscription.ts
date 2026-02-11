@@ -22,6 +22,7 @@ export function usePushSubscription() {
     const [subscription, setSubscription] = useState<PushSubscription | null>(null);
     const [permission, setPermission] = useState<NotificationPermission>('default');
     const [loading, setLoading] = useState(true);
+    const [notificationEnabled, setNotificationEnabled] = useState(true);
 
     useEffect(() => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -36,9 +37,10 @@ export function usePushSubscription() {
                 setSubscription(sub);
                 setPermission(Notification.permission);
 
-                // If we have a subscription, ensure it's synced with DB
+                // If we have a subscription, ensure it's synced with DB and get enabled status
                 if (sub && Notification.permission === 'granted') {
-                    await syncSubscription(sub);
+                    const enabled = await syncSubscription(sub);
+                    setNotificationEnabled(enabled);
                 }
             } catch (error) {
                 console.error('Error checking subscription:', error);
@@ -50,10 +52,10 @@ export function usePushSubscription() {
         checkSubscription();
     }, []);
 
-    const syncSubscription = async (sub: PushSubscription) => {
+    const syncSubscription = async (sub: PushSubscription): Promise<boolean> => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.user) return;
+            if (!session?.user) return true;
 
             const subJson = sub.toJSON();
             const p256dhKey = subJson.keys?.p256dh;
@@ -63,21 +65,24 @@ export function usePushSubscription() {
                 // Fallback to getKey for binary extraction
                 const p256dhBuf = sub.getKey('p256dh');
                 const authBuf = sub.getKey('auth');
-                if (!p256dhBuf || !authBuf) return;
+                if (!p256dhBuf || !authBuf) return true;
 
                 const subscriptionData = {
                     user_id: session.user.id,
                     endpoint: sub.endpoint,
                     p256dh: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhBuf)))),
                     auth: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authBuf)))),
+                    notification_enabled: true,
                 };
 
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('push_subscriptions')
-                    .upsert(subscriptionData, { onConflict: 'user_id, endpoint' });
+                    .upsert(subscriptionData, { onConflict: 'user_id, endpoint' })
+                    .select('notification_enabled')
+                    .single();
 
                 if (error) console.error('Failed to sync subscription with DB:', error);
-                return;
+                return data?.notification_enabled ?? true;
             }
 
             const subscriptionData = {
@@ -85,17 +90,22 @@ export function usePushSubscription() {
                 endpoint: sub.endpoint,
                 p256dh: p256dhKey,
                 auth: authKey,
+                notification_enabled: true,
             };
 
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('push_subscriptions')
-                .upsert(subscriptionData, { onConflict: 'user_id, endpoint' });
+                .upsert(subscriptionData, { onConflict: 'user_id, endpoint' })
+                .select('notification_enabled')
+                .single();
 
             if (error) {
                 console.error('Failed to sync subscription with DB:', error);
             }
+            return data?.notification_enabled ?? true;
         } catch (err) {
             console.error('Sync error:', err);
+            return true;
         }
     };
 
@@ -116,7 +126,10 @@ export function usePushSubscription() {
             const existingSub = await registration.pushManager.getSubscription();
             if (existingSub) {
                 setSubscription(existingSub);
-                await syncSubscription(existingSub);
+                const enabled = await syncSubscription(existingSub);
+                setNotificationEnabled(enabled);
+                // Also enable it in DB if it was disabled
+                await enableNotifications();
                 return true;
             }
 
@@ -132,7 +145,8 @@ export function usePushSubscription() {
             });
 
             setSubscription(newSub);
-            await syncSubscription(newSub);
+            const enabled = await syncSubscription(newSub);
+            setNotificationEnabled(enabled);
             return true;
         } catch (error) {
             console.error('Failed to subscribe:', error);
@@ -161,12 +175,63 @@ export function usePushSubscription() {
         }
     };
 
+    // New method: Disable notifications without unsubscribing
+    const disableNotifications = async () => {
+        if (!subscription) return false;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return false;
+
+            const { error } = await supabase
+                .from('push_subscriptions')
+                .update({ notification_enabled: false })
+                .match({ endpoint: subscription.endpoint, user_id: session.user.id });
+
+            if (error) {
+                console.error('Error disabling notifications:', error);
+                return false;
+            }
+            setNotificationEnabled(false);
+            return true;
+        } catch (err) {
+            console.error('Error disabling notifications:', err);
+            return false;
+        }
+    };
+
+    // New method: Enable notifications
+    const enableNotifications = async () => {
+        if (!subscription) return false;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return false;
+
+            const { error } = await supabase
+                .from('push_subscriptions')
+                .update({ notification_enabled: true })
+                .match({ endpoint: subscription.endpoint, user_id: session.user.id });
+
+            if (error) {
+                console.error('Error enabling notifications:', error);
+                return false;
+            }
+            setNotificationEnabled(true);
+            return true;
+        } catch (err) {
+            console.error('Error enabling notifications:', err);
+            return false;
+        }
+    };
+
     return {
         subscription,
         permission,
         loading,
+        notificationEnabled,
         subscribe,
         unsubscribe,
+        enableNotifications,
+        disableNotifications,
         isSupported: 'serviceWorker' in navigator && 'PushManager' in window
     };
 }

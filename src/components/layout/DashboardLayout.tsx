@@ -10,9 +10,10 @@ interface DashboardLayoutProps {
   children: ReactNode;
   actions?: ReactNode;
   fullHeight?: boolean;
+  hideHeaderOnMobile?: boolean;
 }
 
-export function DashboardLayout({ children, actions, fullHeight = false }: DashboardLayoutProps) {
+export function DashboardLayout({ children, actions, fullHeight = false, hideHeaderOnMobile = false }: DashboardLayoutProps) {
   const { profile, updateProfile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sidebarMode, setSidebarMode] = useState<'expanded' | 'collapsed' | 'hover'>('expanded');
@@ -33,7 +34,7 @@ export function DashboardLayout({ children, actions, fullHeight = false }: Dashb
   const isCollapsed = sidebarMode === 'collapsed' || (sidebarMode === 'hover' && !isHovered);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
       <Sidebar
         mode={sidebarMode}
         setMode={handleModeChange}
@@ -43,17 +44,22 @@ export function DashboardLayout({ children, actions, fullHeight = false }: Dashb
       <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
       <div className={cn(
-        "transition-all duration-300",
+        "flex-1 flex flex-col min-h-0 w-full transition-all duration-300",
         isCollapsed ? "lg:pl-20" : "lg:pl-72"
       )}>
-        <DashboardHeader onMenuClick={() => setIsMobileMenuOpen(true)} actions={actions} />
+        {!hideHeaderOnMobile && <DashboardHeader onMenuClick={() => setIsMobileMenuOpen(true)} actions={actions} />}
+        {hideHeaderOnMobile && (
+          <div className="hidden lg:block">
+            <DashboardHeader onMenuClick={() => setIsMobileMenuOpen(true)} actions={actions} />
+          </div>
+        )}
         <main
-          className={fullHeight
-            ? "h-[calc(100vh-4rem)] overflow-hidden"
-            : "p-4 lg:p-6"
-          }
+          className={cn(
+            "flex-1 min-h-0 overflow-hidden relative",
+            !fullHeight && "p-4 lg:p-6 overflow-y-auto"
+          )}
         >
-          <PageTransition className="h-full">
+          <PageTransition className="h-full w-full">
             {children}
           </PageTransition>
         </main>

@@ -157,11 +157,14 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
   return (
     <div
       className={cn(
-        "flex mb-3 group/bubble",
+        "flex mb-2 group/bubble",
         message.isOwn ? "justify-end" : "justify-start"
       )}
     >
-      <div className={cn("relative max-w-[70%]", message.isOwn ? "items-end" : "items-start")}>
+      <div className={cn(
+        "relative flex flex-col max-w-[85%] md:max-w-[70%] min-w-0",
+        message.isOwn ? "items-end" : "items-start"
+      )}>
 
         {/* Edit/Delete Menu Trigger for Desktop (Hover) */}
         {message.isOwn && !isEditing && (
@@ -192,10 +195,10 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
         <div
           {...(message.isOwn ? longPressHandlers : {})}
           className={cn(
-            "rounded-2xl px-4 py-2.5 shadow-sm relative group w-full",
+            "rounded-xl px-3 py-2 shadow-sm relative group",
             message.isOwn
-              ? "bg-emerald-100 dark:bg-emerald-900/40 text-foreground rounded-br-md"
-              : "bg-white dark:bg-slate-800 text-foreground rounded-bl-md"
+              ? "bg-[#064e43] dark:bg-[#064e43] text-white rounded-tr-none"
+              : "bg-[#202c33] dark:bg-[#202c33] text-white rounded-tl-none"
           )}
         >
           {message.attachment && (
@@ -203,37 +206,31 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
               {message.attachment.type === 'poll' ? (
                 <PollBubble pollId={message.attachment.url} />
               ) : message.attachment.type === 'audio' ? (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-700 min-w-[240px]">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] min-w-[220px] max-w-full overflow-hidden">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-10 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shrink-0 border-0"
-                    onClick={toggleRecordingPlay}
+                    className="size-10 rounded-full bg-[#00a884] hover:bg-[#008f72] flex items-center justify-center shrink-0 border-0 text-white"
+                    onClick={() => {
+                      if (isPlaying) {
+                        audioRef.current?.pause();
+                        setIsPlaying(false);
+                      } else {
+                        audioRef.current?.play();
+                        setIsPlaying(true);
+                      }
+                    }}
                   >
-                    {isPlaying ? <Pause className="size-5 text-white" /> : <Play className="size-5 text-white ml-0.5" />}
+                    {isPlaying ? <Pause className="size-5" /> : <Play className="size-5 ml-0.5" />}
                   </Button>
-                  <div className="flex-1 space-y-1">
-                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden relative">
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden relative">
                       <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-100"
-                        style={{ width: `${progress}%` }}
+                        className="absolute h-full left-0 top-0 bg-[#00a884] transition-all duration-100"
+                        style={{ width: `${audioRef.current ? (audioRef.current.currentTime / audioRef.current.duration) * 100 : 0}%` }}
                       />
-                      {isPlaying && (
-                        <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-30">
-                          {[...Array(15)].map((_, i) => (
-                            <div
-                              key={i}
-                              className="w-0.5 bg-white rounded-full animate-pulse"
-                              style={{
-                                height: `${40 + Math.random() * 60}%`,
-                                animationDelay: `${i * 100}ms`
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
                     </div>
-                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                    <div className="flex justify-between items-center text-[10px] text-slate-400">
                       <span>{isPlaying ? "Playing..." : "Voice Message"}</span>
                       <span>{message.attachment.size}</span>
                     </div>
@@ -241,8 +238,8 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                   <audio
                     ref={audioRef}
                     src={message.attachment.url}
-                    onTimeUpdate={handleTimeUpdate}
-                    onEnded={handleAudioEnded}
+                    onTimeUpdate={() => setUpdateTrigger(prev => !prev)}
+                    onEnded={() => setIsPlaying(false)}
                     className="hidden"
                   />
                   <Button
@@ -265,17 +262,17 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                 </div>
               ) : (
                 <div
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-700 cursor-pointer"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] cursor-pointer hover:bg-[#2a3942] transition-colors max-w-full overflow-hidden"
                   onClick={() => window.open(message.attachment.url, '_blank')}
                 >
-                  <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                    <FileText className="size-5 text-emerald-600" />
+                  <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <FileText className="size-5 text-emerald-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{message.attachment.name}</p>
-                    <p className="text-xs text-muted-foreground">{message.attachment.size}</p>
+                    <p className="text-sm font-medium truncate text-slate-200">{message.attachment.name}</p>
+                    <p className="text-xs text-slate-400">{message.attachment.size}</p>
                   </div>
-                  <Download className="size-4 text-muted-foreground" />
+                  <Download className="size-4 text-slate-400 shrink-0" />
                 </div>
               )}
             </div>
@@ -296,13 +293,13 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
             </div>
           ) : (
             message.content && (
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm shadow-none whitespace-pre-wrap [word-break:break-word] leading-relaxed py-0.5">{message.content}</p>
             )
           )}
 
           <div className={cn(
             "flex items-center gap-1 mt-1 justify-end",
-            message.isOwn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+            message.isOwn ? "text-emerald-400" : "text-slate-400"
           )}>
             <span className="text-[10px]">
               {message.timestamp}
@@ -310,15 +307,15 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
             </span>
             {message.isOwn && (
               message.read_at ? (
-                <CheckCheck className="size-3 text-blue-500" />
+                <CheckCheck className="size-3 text-blue-400" />
               ) : (
-                <CheckCheck className="size-3 text-slate-400" />
+                <CheckCheck className="size-3 text-slate-500" />
               )
             )}
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
@@ -810,24 +807,24 @@ export default function Messages() {
 
   if (loading) {
     return (
-      <DashboardLayout fullHeight={true}>
+      <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversationId && isMobileChatOpen}>
         <ChatSkeleton />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout fullHeight={true}>
+    <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversationId && isMobileChatOpen}>
       <div className={cn(
-        "flex h-full w-full bg-slate-50 dark:bg-slate-900 overflow-hidden",
-        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 md:dark:border-slate-700"
+        "flex h-full w-full bg-[#111b21] dark:bg-[#111b21] overflow-hidden relative",
+        "md:rounded-xl md:shadow-xl md:border md:border-slate-700"
       )}>
 
         {/* Left Sidebar */}
         <div className={cn(
-          "border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800",
-          "md:w-80 w-full",
-          selectedConversationId && conversations.find(c => c.id === selectedConversationId) && isMobileChatOpen ? "hidden md:flex" : "flex"
+          "border-r border-slate-700/50 flex flex-col bg-[#111b21] dark:bg-[#111b21]",
+          "md:w-80 w-full shrink-0",
+          selectedConversationId && isMobileChatOpen ? "hidden md:flex" : "flex"
         )}>
 
           {/* Sidebar Header */}
@@ -842,7 +839,7 @@ export default function Messages() {
                 <ArrowLeft className="size-5" />
               </Button>
               <div className="flex items-center gap-3">
-                <Avatar className="size-10 ring-2 ring-emerald-500/20">
+                <Avatar className="size-7 md:size-10 ring-2 ring-emerald-500/20">
                   <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
                   <AvatarFallback className="bg-emerald-500 text-white font-semibold">
                     {profile?.full_name?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'U'}
@@ -979,7 +976,14 @@ export default function Messages() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => isVirtual ? handleStartNewChat(realId) : setSelectedConversationId(item.id)}
+                    onClick={() => {
+                      if (isVirtual) {
+                        handleStartNewChat(realId);
+                      } else {
+                        setSelectedConversationId(item.id);
+                      }
+                      setIsMobileChatOpen(true);
+                    }}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-50 dark:border-slate-700/50",
                       selectedConversationId === item.id
@@ -1038,19 +1042,20 @@ export default function Messages() {
         {/* Chat Area */}
         {selectedConversation ? (
           <div className={cn(
-            "flex-1 flex flex-col bg-slate-100 dark:bg-slate-900",
+            "flex-1 min-w-0 flex flex-col bg-[#0b141a] dark:bg-[#0b141a] h-full relative overflow-hidden",
             (!isMobileChatOpen ? "hidden md:flex" : "flex")
           )}
             style={{
-              backgroundImage: wallpaper.startsWith('data:') || wallpaper.startsWith('http') ? `url(${wallpaper})` : undefined,
-              backgroundColor: !wallpaper.startsWith('data:') && !wallpaper.startsWith('http') ? wallpaper : undefined,
+              backgroundImage: (wallpaper.startsWith('data:') || wallpaper.startsWith('http')) ? `url(${wallpaper})` : undefined,
+              backgroundColor: (!wallpaper.startsWith('data:') && !wallpaper.startsWith('http')) ? wallpaper : undefined,
               backgroundSize: 'cover',
-              backgroundPosition: 'center'
+              backgroundPosition: 'center',
+              height: '100%'
             }}
           >
 
             {/* Chat Header */}
-            <div className="h-16 px-4 md:px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <div className="h-16 px-3 md:px-6 flex items-center justify-between border-b border-slate-700/50 bg-[#1f2c34] dark:bg-[#1f2c34] z-20 shrink-0 select-none">
               {isMessageSearchOpen ? (
                 <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-top-2 duration-200">
                   <Search className="size-4 text-slate-400" />
@@ -1081,51 +1086,49 @@ export default function Messages() {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="md:hidden -ml-2 text-slate-500"
+                      className="md:hidden text-white hover:bg-white/10 shrink-0 size-10 -ml-2"
                       onClick={() => setIsMobileChatOpen(false)}
                     >
-                      <ArrowLeft className="size-5" />
+                      <ArrowLeft className="size-6" />
                     </Button>
-                    <Avatar className="size-10">
+                    <Avatar className="size-8 md:size-10 shrink-0 border border-slate-700/50">
                       <AvatarImage src={selectedConversation.other_user_avatar} />
-                      <AvatarFallback className="bg-slate-200 dark:bg-slate-600">
+                      <AvatarFallback className="bg-[#064e43] text-white">
                         {(selectedConversation.other_user_name || 'U').split(" ").map((n) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-sm">{selectedConversation.other_user_name || 'Unknown User'}</h3>
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                    <div className="min-w-0 flex-1 flex flex-col justify-center ml-1">
+                      <h3 className="font-bold text-sm truncate leading-tight text-white">{selectedConversation.other_user_name || 'Unknown User'}</h3>
+                      <p className="text-[10px] text-emerald-400 truncate leading-none mt-0.5">
                         {isOtherUserOnline ? 'Online' : 'Offline'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center shrink-0 ml-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-9 text-slate-500 hover:text-emerald-600"
+                      className="size-9 min-w-[36px] text-slate-300 hover:text-white shrink-0"
                       onClick={() => role === 'lecturer' ? handleCreateMeeting('audio') : setIsJoinMeetingOpen(true)}
-                      title={role === 'lecturer' ? "Create Audio Meeting" : "Join Audio Meeting"}
                     >
                       <Phone className="size-5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-9 text-slate-500 hover:text-emerald-600"
+                      className="size-9 min-w-[36px] text-slate-300 hover:text-white shrink-0"
                       onClick={() => role === 'lecturer' ? handleCreateMeeting('video') : setIsJoinMeetingOpen(true)}
-                      title={role === 'lecturer' ? "Create Video Meeting" : "Join Video Meeting"}
                     >
                       <Video className="size-5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-9 text-slate-500 hover:text-emerald-600"
+                      className="size-9 min-w-[36px] text-slate-300 hover:text-white shrink-0"
                       onClick={() => setIsMessageSearchOpen(true)}
                     >
                       <Search className="size-5" />
@@ -1191,11 +1194,15 @@ export default function Messages() {
 
             {/* Messages Area */}
             <ScrollArea
-              className="flex-1 px-6 py-4"
+              className="flex-1 w-full"
+              style={{
+                overscrollBehaviorY: 'contain',
+                WebkitOverflowScrolling: 'touch'
+              }}
               viewportRef={scrollViewportRef}
               onScroll={handleScroll}
             >
-              <div className="max-w-7xl mx-auto">
+              <div className="px-2.5 md:px-6 py-4 max-w-5xl mx-auto w-full">
                 {loading && !loadingMore ? (
                   <ChatSkeleton />
                 ) : (
@@ -1225,26 +1232,60 @@ export default function Messages() {
               </div>
             </ScrollArea>
 
-            {/* Message Input */}
-            <div className="p-2 md:p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+            <div className="p-2 md:p-4 bg-[#111b21] dark:bg-[#111b21] border-t border-slate-700 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] md:pb-4 shrink-0">
               {selectedFile && (
-                <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2">
+                <div className="mb-2 p-3 bg-[#1f2c34] rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2">
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                       <FileText className="size-5 text-emerald-600" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                      <p className="text-xs text-slate-500">{formatFileSize(selectedFile.size)}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate text-slate-200">{selectedFile.name}</p>
+                      <p className="text-xs text-slate-400">{formatFileSize(selectedFile.size)}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="size-8" onClick={clearSelectedFile}>
+                  <Button variant="ghost" size="icon" className="size-8 text-slate-400" onClick={clearSelectedFile}>
                     <X className="size-4" />
                   </Button>
                 </div>
               )}
 
-              <div className="flex items-center gap-2 max-w-10xl mx-auto w-full">
+              <div className="flex items-center gap-2 max-w-full mx-auto w-full">
+                {/* Plus button outside */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 text-emerald-500 hover:bg-emerald-500/10 rounded-full shrink-0"
+                    >
+                      <Plus className="size-6 transition-transform hover:rotate-90 duration-200" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" side="top" sideOffset={12} className="w-56 rounded-2xl p-2 shadow-xl border-slate-700 bg-[#1f2c34]">
+                    <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer focus:bg-emerald-900/30">
+                      <div className="size-10 rounded-xl bg-blue-900/30 flex items-center justify-center text-blue-400">
+                        <Paperclip className="size-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm text-slate-200">File</span>
+                        <span className="text-[10px] text-slate-400">Document, image, or video</span>
+                      </div>
+                    </DropdownMenuItem>
+                    {role === 'lecturer' && (
+                      <DropdownMenuItem onClick={() => setIsPollDialogOpen(true)} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer focus:bg-emerald-900/30">
+                        <div className="size-10 rounded-xl bg-emerald-900/30 flex items-center justify-center text-emerald-500">
+                          <BarChart2 className="size-5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-sm text-slate-200">Poll</span>
+                          <span className="text-[10px] text-slate-400">Create a class survey</span>
+                        </div>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1253,61 +1294,16 @@ export default function Messages() {
                   accept="*"
                 />
 
-                <div className="flex-1 flex items-center bg-slate-100 dark:bg-slate-700/50 rounded-2xl pl-1 pr-1.5 py-1 focus-within:ring-1 focus-within:ring-emerald-500/30 transition-all min-h-[44px] md:min-h-[48px]">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-full shrink-0"
-                      >
-                        <Plus className="size-4 transition-transform hover:rotate-90 duration-200" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="top" sideOffset={12} className="w-56 rounded-2xl p-2 shadow-xl border-slate-200 dark:border-slate-700 animate-in slide-in-from-bottom-2 duration-200">
-                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-900/20">
-                        <div className="size-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                          <Paperclip className="size-5" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm text-foreground">File</span>
-                          <span className="text-[10px] text-muted-foreground">Document, image, or video</span>
-                        </div>
-                      </DropdownMenuItem>
-
-                      {role === 'lecturer' && (
-                        <DropdownMenuItem onClick={() => setIsPollDialogOpen(true)} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-900/20">
-                          <div className="size-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-                            <BarChart2 className="size-5" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-sm text-foreground">Poll</span>
-                            <span className="text-[10px] text-muted-foreground">Create a class survey</span>
-                          </div>
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 ml-0.5 mr-1 shrink-0" />
-
+                {/* Message Pill */}
+                <div className="flex-1 flex items-center bg-[#2a3942] rounded-full px-4 py-1 gap-2 min-h-[44px]">
                   <div className="flex-1 relative flex items-center">
                     {isRecording ? (
-                      <div className="flex-1 flex items-center gap-3 h-9 px-2">
-                        <div className="flex items-center gap-2">
-                          <span className="size-2 bg-red-500 rounded-full animate-pulse" />
-                          <span className="text-sm font-medium font-mono text-foreground">{formatTime(recordingTime)}</span>
-                        </div>
-                        <div className="flex-1 h-3 flex items-center gap-0.5 overflow-hidden">
-                          {[...Array(24)].map((_, i) => (
-                            <div
-                              key={i}
-                              className="w-1 bg-emerald-500 rounded-full animate-pulse"
-                              style={{
-                                height: `${30 + Math.random() * 70}%`,
-                                animationDelay: `${i * 40}ms`
-                              }}
-                            />
+                      <div className="flex-1 flex items-center gap-2 h-9">
+                        <span className="size-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+                        <span className="text-sm font-medium font-mono text-slate-200">{formatTime(recordingTime)}</span>
+                        <div className="flex-1 overflow-hidden flex items-center gap-0.5 opacity-40">
+                          {[...Array(12)].map((_, i) => (
+                            <div key={i} className="w-1 bg-emerald-500 rounded-full h-4 animate-pulse" />
                           ))}
                         </div>
                       </div>
@@ -1320,17 +1316,18 @@ export default function Messages() {
                         }}
                         onKeyDown={handleKeyPress}
                         placeholder="Type a message..."
-                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 text-sm w-full shadow-none text-foreground placeholder:text-muted-foreground px-1"
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 text-sm w-full shadow-none text-slate-200 placeholder:text-slate-400 px-0"
                       />
                     )}
                   </div>
 
+                  {/* Microphone inside the pill */}
                   <Button
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      "size-9 shrink-0 transition-all duration-200 rounded-full",
-                      isRecording ? "text-red-500 bg-red-100 dark:bg-red-900/30" : "text-slate-500 hover:text-emerald-600"
+                      "size-8 shrink-0 rounded-full",
+                      isRecording ? "text-red-500" : "text-slate-400 hover:text-emerald-500"
                     )}
                     onClick={toggleRecording}
                   >
@@ -1338,21 +1335,20 @@ export default function Messages() {
                   </Button>
                 </div>
 
-                {!isRecording && (
-                  <Button
-                    size="icon"
-                    className={cn(
-                      "size-12 rounded-full shrink-0 shadow-lg transition-all active:scale-95",
-                      messageInput.trim() || selectedFile
-                        ? "bg-emerald-500 hover:bg-emerald-600 text-white scale-100"
-                        : "bg-slate-100 dark:bg-slate-700 text-slate-400 scale-95 cursor-not-allowed"
-                    )}
-                    onClick={handleSendMessage}
-                    disabled={(!messageInput.trim() && !selectedFile) || isUploading}
-                  >
-                    {isUploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
-                  </Button>
-                )}
+                {/* Send Button separate circle */}
+                <Button
+                  size="icon"
+                  className={cn(
+                    "size-11 rounded-full shrink-0 shadow-lg transition-transform active:scale-90",
+                    messageInput.trim() || selectedFile
+                      ? "bg-[#00a884] hover:bg-[#008f72] text-white"
+                      : "bg-[#2a3942] text-slate-400 cursor-not-allowed opacity-80"
+                  )}
+                  onClick={handleSendMessage}
+                  disabled={(!messageInput.trim() && !selectedFile) || isUploading}
+                >
+                  {isUploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5 ml-0.5" />}
+                </Button>
               </div>
             </div>
           </div>

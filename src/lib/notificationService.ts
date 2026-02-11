@@ -90,7 +90,24 @@ export async function createNotification(params: CreateNotificationParams) {
         }
 
         // Trigger Rich Push Notification
-        const pushUrl = params.customUrl || getNotificationUrl(type, relatedId, params.classId);
+        let pushUrl = params.customUrl || getNotificationUrl(type, relatedId, params.classId);
+
+        // Get the ID of the newly created notification to pass to the push
+        const { data: insertedNotif } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("recipient_id", userId)
+            .eq("title", title)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        // Append notifId to URL for auto-mark-as-read on click
+        if (insertedNotif?.id) {
+            const separator = pushUrl.includes('?') ? '&' : '?';
+            pushUrl = `${pushUrl}${separator}notifId=${insertedNotif.id}`;
+        }
+
         supabase.functions.invoke('send-push', {
             body: {
                 user_id: userId,
@@ -107,6 +124,7 @@ export async function createNotification(params: CreateNotificationParams) {
                 actions: getActions(type),
                 renotify: true,
                 data: {
+                    notificationId: insertedNotif?.id,
                     conversationId: type === 'message' ? relatedId : undefined,
                     classId: params.classId,
                     relatedId,
@@ -880,5 +898,82 @@ export async function notifyQuizSubmission(
         console.error("Error in notifyQuizSubmission:", err);
         return { success: false, error: err };
     }
+}
+
+/**
+ * Notify lecturer about an assignment submission
+ */
+export async function notifyAssignmentSubmitted(
+    lecturerId: string,
+    studentName: string,
+    assignmentTitle: string,
+    assignmentId: string,
+    classId: string,
+    studentId: string
+) {
+    return createNotification({
+        userId: lecturerId,
+        title: "Assignment Submitted",
+        message: `${studentName} submitted "${assignmentTitle}"`,
+        type: "submission",
+        relatedId: assignmentId,
+        classId: classId,
+        senderId: studentId,
+        actionType: 'submitted'
+    });
+}
+
+/**
+ * Notify students about a new poll in their class
+ */
+export async function notifyPollCreated(
+    classId: string,
+    pollTitle: string,
+    pollId: string,
+    lecturerId: string
+) {
+    try {
+        const { data: classStudents } = await supabase
+            .from('class_students')
+            .select('student_id')
+            .eq('class_id', classId);
+
+        const studentIds = classStudents?.map(s => s.student_id).filter(Boolean) as string[] || [];
+        if (studentIds.length === 0) return { success: true };
+
+        return await createBulkNotifications(studentIds, {
+            title: "New Class Poll",
+            message: `A new poll: "${pollTitle}" is available.`,
+            type: "announcement",
+            relatedId: pollId,
+            classId: classId,
+            senderId: lecturerId,
+            actionType: 'poll_created',
+        });
+    } catch (err) {
+        console.error("Error in notifyPollCreated:", err);
+        return { success: false, error: err };
+    }
+}
+
+/**
+ * Notify students about a quiz update
+ */
+export async function notifyQuizUpdated(
+    studentIds: string[],
+    quizTitle: string,
+    quizId: string,
+    lecturerId: string,
+    classId: string
+) {
+    return createBulkNotifications(studentIds, {
+        title: "Quiz Updated",
+        message: `The quiz "${quizTitle}" has been updated.`,
+        type: "announcement",
+        relatedId: quizId,
+        classId: classId,
+        senderId: lecturerId,
+        actionType: 'updated'
+    });
 }
 
