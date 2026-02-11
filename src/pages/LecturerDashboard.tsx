@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { PerformanceTrendChart } from "@/components/dashboard/PerformanceTrendChart";
 
+import { TestPushNotification } from "@/components/lecturer/TestPushNotification";
+
 export default function LecturerDashboard() {
   const { profile } = useAuth();
   const { stats: dataStats, upcomingClasses, loading } = useLecturerData();
@@ -171,6 +173,9 @@ export default function LecturerDashboard() {
                 </div>
               </button>
             </div>
+
+            {/* Test Notification Card */}
+            <TestPushNotification />
 
             {/* Upcoming Classes - Timeline Style */}
             <div className="space-y-4">
