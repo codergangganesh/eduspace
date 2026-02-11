@@ -15,12 +15,17 @@ import {
     Clock,
     MapPin,
     Calendar as CalendarIcon,
+    Plus
 } from "lucide-react";
 import { TimeTableSkeleton } from "@/components/skeletons/TimeTableSkeleton";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSchedule } from "@/hooks/useSchedule";
+import { useClasses } from "@/hooks/useClasses";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { CreateEventDialog } from "@/components/lecturer/CreateEventDialog";
 
 const TIME_COLUMN_WIDTH = 56;
 
@@ -28,6 +33,10 @@ export default function LecturerTimeTable() {
     const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [currentTime, setCurrentTime] = useState(new Date());
+    const { classes } = useClasses();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -43,6 +52,18 @@ export default function LecturerTimeTable() {
     const goToPreviousWeek = () => setCurrentDate(addDays(currentDate, -7));
     const goToNextWeek = () => setCurrentDate(addDays(currentDate, 7));
     const goToToday = () => setCurrentDate(new Date());
+
+    const handleCreateEvent = () => {
+        if (classes.length === 0) {
+            toast({
+                title: "No Classes Found",
+                description: "Please create a class before adding events.",
+            });
+            navigate('/all-students');
+        } else {
+            setIsCreateEventOpen(true);
+        }
+    };
 
     // Calculate dynamic hour height (10 slots should fill available space)
     const HOUR_HEIGHT_PERCENT = 100 / timeSlots.length;
@@ -116,6 +137,14 @@ export default function LecturerTimeTable() {
                     </div>
 
                     <div className="flex items-center gap-2 self-end md:self-auto w-full md:w-auto justify-between md:justify-start">
+                        <Button
+                            onClick={handleCreateEvent}
+                            className="hidden md:flex gap-2 mr-2"
+                        >
+                            <Plus className="size-4" />
+                            Add Event
+                        </Button>
+
                         <div className="flex items-center bg-muted/50 rounded-lg border border-border flex-1 md:flex-none justify-center">
                             <Button variant="ghost" size="icon" onClick={goToPreviousWeek} className="h-8 w-8 rounded-r-none">
                                 <ChevronLeft className="size-4" />
@@ -358,6 +387,23 @@ export default function LecturerTimeTable() {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <CreateEventDialog
+                    open={isCreateEventOpen}
+                    onOpenChange={setIsCreateEventOpen}
+                />
+
+                {/* Mobile FAB */}
+                <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <Button
+                        onClick={handleCreateEvent}
+                        size="icon"
+                        className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                        title="Add Event"
+                    >
+                        <Plus className="size-8 text-white" />
+                    </Button>
                 </div>
             </div>
         </DashboardLayout>

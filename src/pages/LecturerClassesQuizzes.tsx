@@ -15,11 +15,22 @@ import { SectionClassCard } from '@/components/common/SectionClassCard';
 import { Badge } from '@/components/ui/badge';
 import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
 export default function LecturerClassesQuizzes() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { classes, loading } = useClasses();
     const [searchQuery, setSearchQuery] = useState('');
+    const [isClassSelectOpen, setIsClassSelectOpen] = useState(false);
 
     const isAICreateMode = searchParams.get('mode') === 'create-ai';
 
@@ -35,6 +46,17 @@ export default function LecturerClassesQuizzes() {
             navigate(`/lecturer/quizzes/${classId}/create-ai`);
         } else {
             navigate(`/lecturer/quizzes/${classId}`);
+        }
+    };
+
+    const handleFabClick = () => {
+        if (classes.length === 0) {
+            navigate('/all-students'); // Redirect to Student Management (Create Class) page
+        } else if (classes.length === 1) {
+            // If only one class, go directly to create quiz for that class
+            navigate(`/lecturer/quizzes/${classes[0].id}/create`);
+        } else {
+            setIsClassSelectOpen(true);
         }
     };
 
@@ -148,6 +170,45 @@ export default function LecturerClassesQuizzes() {
                         </div>
                     )}
                 </div>
+
+                {/* Mobile FAB */}
+                <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <Button
+                        onClick={handleFabClick}
+                        size="icon"
+                        className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                        title="Create Quiz"
+                    >
+                        <Plus className="size-8 text-white" />
+                    </Button>
+                </div>
+
+                {/* Select Class Dialog for FAB */}
+                <Dialog open={isClassSelectOpen} onOpenChange={setIsClassSelectOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Select Class</DialogTitle>
+                            <DialogDescription>
+                                Choose a class to create a quiz for.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            {classes.map((cls) => (
+                                <Button
+                                    key={cls.id}
+                                    variant="outline"
+                                    className="justify-start h-auto py-3 px-4"
+                                    onClick={() => navigate(`/lecturer/quizzes/${cls.id}/create`)}
+                                >
+                                    <div className="flex flex-col items-start text-left">
+                                        <span className="font-medium">{cls.course_code}</span>
+                                        <span className="text-xs text-muted-foreground">{cls.class_name || "General"}</span>
+                                    </div>
+                                </Button>
+                            ))}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </DashboardLayout>
     );

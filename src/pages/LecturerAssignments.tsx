@@ -19,7 +19,8 @@ import {
     Calendar,
     Trash2,
     ExternalLink,
-    Edit
+    Edit,
+    Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -30,9 +31,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
+import { useClasses } from "@/hooks/useClasses";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LecturerAssignments() {
     const { assignments, courses, loading, createAssignment, updateAssignment, deleteAssignment, fetchSubjects } = useLecturerAssignments();
+    const { classes } = useClasses();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -97,7 +105,13 @@ export default function LecturerAssignments() {
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Assignment Management</h1>
                         <p className="text-muted-foreground mt-1">Create and manage course assignments</p>
                     </div>
-                    <CreateAssignmentDialog courses={courses} onCreate={createAssignment} fetchSubjects={fetchSubjects} />
+                    <Button
+                        onClick={() => setIsCreateAssignmentOpen(true)}
+                        className="gap-2 shrink-0 hidden sm:flex"
+                    >
+                        <Plus className="size-4" />
+                        Create Assignment
+                    </Button>
                 </div>
 
                 {/* Stats Row */}
@@ -192,12 +206,42 @@ export default function LecturerAssignments() {
                     </CardContent>
                 </Card>
 
+                <CreateAssignmentDialog
+                    courses={courses}
+                    onCreate={createAssignment}
+                    fetchSubjects={fetchSubjects}
+                    open={isCreateAssignmentOpen}
+                    onOpenChange={setIsCreateAssignmentOpen}
+                />
+
                 <EditAssignmentDialog
                     open={isEditOpen}
                     onOpenChange={setIsEditOpen}
                     assignment={editingAssignment}
                     onUpdate={updateAssignment}
                 />
+
+                {/* Mobile FAB */}
+                <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <Button
+                        onClick={() => {
+                            if (classes.length === 0) {
+                                toast({
+                                    title: "No Classes Found",
+                                    description: "Please create a class before creating an assignment.",
+                                });
+                                navigate('/all-students'); // Redirect to Student Management (Create Class) page
+                            } else {
+                                setIsCreateAssignmentOpen(true);
+                            }
+                        }}
+                        size="icon"
+                        className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                        title="Create Assignment"
+                    >
+                        <Plus className="size-8 text-white" />
+                    </Button>
+                </div>
             </div>
         </DashboardLayout>
     );

@@ -819,33 +819,41 @@ export default function Messages() {
   return (
     <DashboardLayout fullHeight={true}>
       <div className={cn(
-        "flex h-full bg-slate-50 dark:bg-slate-900 overflow-hidden",
-        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 md:dark:border-slate-700",
-        "fixed inset-0 z-50 md:static md:z-auto" // Mobile full screen override
+        "flex h-full w-full bg-slate-50 dark:bg-slate-900 overflow-hidden",
+        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 md:dark:border-slate-700"
       )}>
 
         {/* Left Sidebar */}
         <div className={cn(
           "border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800",
           "md:w-80 w-full",
-          selectedConversationId && isMobileChatOpen ? "hidden md:flex" : "flex"
+          selectedConversationId && conversations.find(c => c.id === selectedConversationId) && isMobileChatOpen ? "hidden md:flex" : "flex"
         )}>
 
           {/* Sidebar Header */}
           <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 bg-emerald-50 dark:bg-slate-800">
-            <div className="flex items-center gap-3">
-              <Avatar className="size-10 ring-2 ring-emerald-500/20">
-                <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-emerald-500 text-white font-semibold">
-                  {profile?.full_name?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold text-sm">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400">Active Now</p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden size-8 text-slate-500 hover:text-emerald-600 mr-1"
+                onClick={() => window.history.back()}
+              >
+                <ArrowLeft className="size-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <Avatar className="size-10 ring-2 ring-emerald-500/20">
+                  <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
+                  <AvatarFallback className="bg-emerald-500 text-white font-semibold">
+                    {profile?.full_name?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-sm">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Active Now</p>
+                </div>
               </div>
             </div >
-
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"

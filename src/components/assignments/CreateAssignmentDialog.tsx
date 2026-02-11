@@ -23,14 +23,21 @@ import { CreateAssignmentDTO, Subject } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface Props {
+export interface CreateAssignmentDialogProps {
     courses: { id: string; title: string; course_code: string }[];
     onCreate: (data: CreateAssignmentDTO) => Promise<{ success: boolean; error?: string }>;
     fetchSubjects: (courseId: string) => Promise<Subject[]>;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Props) {
-    const [open, setOpen] = useState(false);
+export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open: controlledOpen, onOpenChange: setControlledOpen }: CreateAssignmentDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = isControlled ? setControlledOpen : setInternalOpen;
+
     const [loading, setLoading] = useState(false);
     const [date, setDate] = useState<Date>();
     const [file, setFile] = useState<File | null>(null);
@@ -82,7 +89,7 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Pro
             const result = await onCreate(assignmentData);
 
             if (result.success) {
-                setOpen(false);
+                setOpen?.(false);
                 // Reset form
                 setFormData({ title: "", description: "", courseId: "", subjectId: "" });
                 setDate(undefined);
@@ -226,7 +233,7 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects }: Pro
                     </div>
 
                     <DialogFooter className="mt-6">
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                        <Button type="button" variant="outline" onClick={() => setOpen?.(false)}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={loading || !file}>
