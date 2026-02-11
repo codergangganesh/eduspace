@@ -51,6 +51,7 @@ import {
   Copy,
   ExternalLink,
   MapPin,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -406,37 +407,51 @@ export default function Profile() {
           {/* Profile Header Card */}
           <div className="bg-surface border border-border rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              {/* Avatar with Edit */}
-              <div className="relative">
-                <Avatar className="size-24 sm:size-28">
-                  <AvatarImage src={profile?.avatar_url || ""} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingImage}
-                  className="absolute bottom-0 right-0 size-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Upload profile image"
+              {/* Top Row on Mobile: Avatar + Mobile Button */}
+              <div className="flex flex-row items-center justify-between w-full sm:w-auto">
+                {/* Avatar with Edit */}
+                <div className="relative">
+                  <Avatar className="size-24 sm:size-28">
+                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="absolute bottom-0 right-0 size-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Upload profile image"
+                  >
+                    {isUploadingImage ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Camera className="size-4" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Mobile Public Profile Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="sm:hidden"
+                  onClick={() => setShowPublicProfile(true)}
                 >
-                  {isUploadingImage ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Camera className="size-4" />
-                  )}
-                </button>
+                  <Eye className="size-4 mr-2" />
+                  Public Profile
+                </Button>
               </div>
 
               {/* User Info */}
-              <div className="flex-1">
+              <div className="flex-1 w-full sm:w-auto">
                 <h1 className="text-2xl font-bold text-foreground">{formData.full_name || "User"}</h1>
                 <p className="text-muted-foreground">
                   {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
@@ -450,11 +465,28 @@ export default function Profile() {
                       Verified
                     </Badge>
                   )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    onClick={() => {
+                      const url = `${window.location.origin}/p/${user?.id}`;
+                      navigator.clipboard.writeText(url);
+                      toast.success("Public profile link copied!");
+                    }}
+                    title="Share Profile"
+                  >
+                    <Share2 className="size-4" />
+                  </Button>
                 </div>
               </div>
 
-              {/* Action Button */}
-              <Button variant="outline" onClick={() => setShowPublicProfile(true)}>
+              {/* Desktop Action Button */}
+              <Button
+                variant="outline"
+                className="hidden sm:flex"
+                onClick={() => setShowPublicProfile(true)}
+              >
                 <Eye className="size-4 mr-2" />
                 View Public Profile
               </Button>
@@ -955,11 +987,11 @@ export default function Profile() {
           </DialogHeader>
 
           {/* Academic Profile Preview */}
-          <div className="bg-[#050b14] text-white rounded-xl overflow-hidden shadow-2xl font-sans selection:bg-blue-500/30">
+          <div className="bg-slate-50 dark:bg-[#050b14] text-slate-900 dark:text-white rounded-xl overflow-hidden shadow-2xl font-sans selection:bg-blue-500/30 transition-colors duration-300">
 
             {/* Top Header */}
             <div className="pt-8 pb-4 text-center">
-              <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Academic Profile</h2>
+              <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-500 dark:text-slate-400 uppercase">Academic Profile</h2>
             </div>
 
             <div className="max-w-md mx-auto px-6 pb-12 relative z-10">
@@ -968,14 +1000,14 @@ export default function Profile() {
                 <div className="relative mb-6 group">
                   <div className="absolute -inset-0.5 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full opacity-75 blur"></div>
                   <div className="relative">
-                    <Avatar className="size-24 border-4 border-[#050b14] shadow-2xl">
+                    <Avatar className="size-24 border-4 border-white dark:border-[#050b14] shadow-2xl">
                       <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
-                      <AvatarFallback className="bg-slate-800 text-2xl font-bold text-blue-500">
+                      <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-2xl font-bold text-blue-500">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     {profile?.verified && (
-                      <div className="absolute bottom-1 right-1 bg-blue-500 text-white p-1 rounded-full border-4 border-[#050b14]">
+                      <div className="absolute bottom-1 right-1 bg-blue-500 text-white p-1 rounded-full border-4 border-white dark:border-[#050b14]">
                         <CheckCircle className="size-3" fill="currentColor" />
                       </div>
                     )}
@@ -983,24 +1015,40 @@ export default function Profile() {
                 </div>
 
                 {/* Name */}
-                <h1 className="text-2xl font-bold tracking-tight text-white mb-3">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-3">
                   {formData.full_name || "User Name"}
                 </h1>
 
                 {/* Badges */}
-                <div className="flex flex-wrap justify-center gap-2 mb-6">
-                  <Badge className="bg-blue-900/30 text-blue-400 border-blue-800/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                <div className="flex flex-wrap justify-center gap-2 mb-6 items-center">
+                  <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
                     Academic Portal
                   </Badge>
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                    {role === "lecturer" ? "Lecturer" : "Student"}
+                  </Badge>
                   {profile?.verified && (
-                    <Badge className="bg-slate-800/50 text-slate-400 border-slate-700/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                    <Badge className="bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
                       Verified Identity
                     </Badge>
                   )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 ml-1"
+                    onClick={() => {
+                      const url = `${window.location.origin}/p/${user?.id}`;
+                      navigator.clipboard.writeText(url);
+                      toast.success("Public profile link copied!");
+                    }}
+                    title="Share Profile"
+                  >
+                    <Share2 className="size-3.5" />
+                  </Button>
                 </div>
 
                 {/* Info Row */}
-                <div className="flex flex-col items-center gap-2 text-sm text-slate-400 mb-8 font-medium">
+                <div className="flex flex-col items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
                   <div className="flex items-center gap-2">
                     <Mail className="size-3.5 text-blue-500" />
                     <span>{profile?.email}</span>
@@ -1016,9 +1064,9 @@ export default function Profile() {
                   <div className="w-full text-left mb-8">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">Personal Statement</h3>
+                      <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 dark:text-slate-500 uppercase">Personal Statement</h3>
                     </div>
-                    <p className="text-base text-slate-200 italic font-medium leading-relaxed">
+                    <p className="text-base text-slate-600 dark:text-slate-200 italic font-medium leading-relaxed">
                       "{formData.bio}"
                     </p>
                   </div>
@@ -1028,13 +1076,13 @@ export default function Profile() {
                 <div className="w-full text-left mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
-                    <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">Connectivity</h3>
+                    <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 dark:text-slate-500 uppercase">Connectivity</h3>
                   </div>
 
-                  <div className="bg-[#0f1623] border border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer">
+                  <div className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <Globe className="size-4 text-slate-400 shrink-0" />
-                      <span className="text-xs font-semibold text-slate-300 truncate tracking-tight">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate tracking-tight">
                         eduspace.network/{formData.full_name?.toLowerCase().replace(/\s+/g, '')}
                       </span>
                     </div>
@@ -1043,19 +1091,31 @@ export default function Profile() {
                 </div>
 
                 {/* Footer E-Record Card */}
-                <div className="w-full bg-[#0f1623] border border-white/5 rounded-2xl p-4 flex items-center justify-between shadow-xl shadow-blue-900/5">
+                <div className="w-full bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between shadow-xl shadow-slate-200/50 dark:shadow-blue-900/5">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-full border-2 border-blue-500/20 flex items-center justify-center bg-blue-500/5 text-blue-500">
                       <Shield className="size-5" />
                     </div>
                     <div className="text-left">
-                      <p className="text-[10px] font-bold text-white leading-tight mb-0.5">Official Academic E-Record</p>
-                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">ID: PREVIEW-MODE</p>
+                      <p className="text-[10px] font-bold text-slate-900 dark:text-white leading-tight mb-0.5">Official Academic E-Record</p>
+                      <p className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">ID: PREVIEW-MODE</p>
                     </div>
                   </div>
                   <div className="bg-blue-600 text-[8px] font-black px-3 py-1.5 rounded-lg text-white tracking-wider">
                     VERIFIED
                   </div>
+                </div>
+
+                <div className="mt-6 w-full pb-2 flex justify-center">
+                  <Button
+                    className="w-full max-w-sm bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-full py-6 shadow-xl shadow-slate-900/10 transition-all active:scale-[0.98] border border-white/10"
+                    onClick={() => {
+                      toast.info("This is a preview. Download functionality is available on the public profile page.");
+                    }}
+                  >
+                    <Download className="size-4 mr-2" />
+                    <span className="font-bold tracking-wide text-xs uppercase">Download Official PDF</span>
+                  </Button>
                 </div>
               </div>
             </div>
