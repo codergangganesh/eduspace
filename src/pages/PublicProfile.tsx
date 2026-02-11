@@ -4,29 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
     Mail,
-    Phone,
-    MapPin,
-    GraduationCap,
+    Calendar,
     CheckCircle,
     Copy,
     ChevronLeft,
     Loader2,
-    BookOpen,
-    Award,
-    Calendar,
     User,
-    Share2,
-    Briefcase,
     Globe,
-    FileText,
-    Zap,
     Shield,
     Printer,
-    Download,
-    Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -43,26 +31,55 @@ export default function PublicProfile() {
             if (!id) return;
             try {
                 setLoading(true);
-                // Now fetching from the dedicated public_profiles table
-                const { data, error: fetchError } = await supabase
+                const { data: publicData, error: publicError } = await supabase
                     .from("public_profiles")
                     .select("*")
                     .eq("user_id", id)
                     .single();
 
-                if (fetchError) {
-                    // Fallback to main profiles table if public_profiles entry doesn't exist yet
+                let finalData = publicData;
+
+                // If public profile missing or missing avatar, try getting from main profiles
+                if (publicError || !publicData?.avatar_url) {
                     const { data: mainData, error: mainError } = await supabase
                         .from("profiles")
                         .select("*")
                         .eq("user_id", id)
                         .single();
 
-                    if (mainError) throw mainError;
-                    setProfile(mainData);
-                } else {
-                    setProfile(data);
+                    if (!mainError && mainData) {
+                        if (!finalData) {
+                            finalData = mainData;
+                        } else {
+                            // Merge missing avatar from main profile
+                            finalData = {
+                                ...finalData,
+                                avatar_url: finalData.avatar_url || mainData.avatar_url,
+                                full_name: finalData.full_name || mainData.full_name,
+                                bio: finalData.bio || mainData.bio
+                            };
+                        }
+                    }
+
+                    // Explicit fallback: Check student_profiles for image if still missing
+                    if (!finalData?.avatar_url) {
+                        const { data: studentData } = await supabase
+                            .from("student_profiles")
+                            .select("profile_image")
+                            .eq("user_id", id)
+                            .maybeSingle();
+
+                        if (studentData?.profile_image) {
+                            if (!finalData) finalData = {}; // Initialize if null
+                            finalData = {
+                                ...finalData,
+                                avatar_url: studentData.profile_image
+                            };
+                        }
+                    }
                 }
+
+                setProfile(finalData);
             } catch (err: any) {
                 console.error("Error fetching public profile:", err);
                 setError(err.message);
@@ -77,19 +94,15 @@ export default function PublicProfile() {
     const copyLink = () => {
         const url = window.location.href;
         navigator.clipboard.writeText(url);
-        toast.success("Profile link copied to clipboard!");
-    };
-
-    const handlePrint = () => {
-        window.print();
+        toast.success("Profile link copied!");
     };
 
     if (loading) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-[#F1F5F9]">
+            <div className="flex h-screen w-full items-center justify-center bg-[#050b14]">
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-slate-500 font-medium animate-pulse text-lg">Preparing Document View...</p>
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                    <p className="text-slate-400 font-medium animate-pulse">Loading Profile...</p>
                 </div>
             </div>
         );
@@ -97,23 +110,12 @@ export default function PublicProfile() {
 
     if (error || !profile) {
         return (
-            <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="size-24 rounded-2xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center mb-8 shadow-inner"
-                >
-                    <User className="size-12 text-red-500" />
-                </motion.div>
-                <h1 className="text-4xl font-black text-foreground mb-4 tracking-tight">Profile Not Found</h1>
-                <p className="text-muted-foreground mb-10 max-w-md mx-auto leading-relaxed">
-                    The requested profile document could not be found in our directory.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <Button onClick={() => navigate("/")} size="lg" className="rounded-full px-10 shadow-xl shadow-primary/20">
-                        Portal Home
-                    </Button>
-                </div>
+            <div className="flex min-h-screen w-full flex-col items-center justify-center bg-[#050b14] p-6 text-center text-white">
+                <User className="size-16 text-slate-700 mb-6" />
+                <h1 className="text-2xl font-bold mb-2">Profile Not Found</h1>
+                <Button onClick={() => navigate("/")} variant="outline" className="rounded-full mt-4 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    Return to Portal
+                </Button>
             </div>
         );
     }
@@ -123,280 +125,127 @@ export default function PublicProfile() {
         : "U";
 
     return (
-        <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0F172A] print:bg-white text-slate-900 dark:text-slate-100 selection:bg-primary/20">
-            {/* Top Toolbar - PDF Style */}
-            <div className="sticky top-0 z-[100] bg-slate-900/90 backdrop-blur-md text-white border-b border-slate-700 h-14 print:hidden">
-                <div className="max-w-6xl mx-auto h-full flex items-center justify-between px-4 sm:px-6">
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-slate-400 hover:text-white hover:bg-slate-800 h-9 w-9"
-                            onClick={() => navigate("/")}
-                            title="Back"
-                        >
-                            <ChevronLeft className="size-5" />
-                        </Button>
-                        <div className="h-4 w-px bg-slate-700 hidden sm:block" />
-                        <span className="text-sm font-medium text-slate-300 hidden sm:block truncate max-w-[200px]">
-                            {profile.full_name}_Academic_Profile.edu
-                        </span>
-                    </div>
+        <div className="min-h-screen bg-[#050b14] text-white pb-20 font-sans selection:bg-blue-500/30">
+            {/* Top Header */}
+            <header className="pt-8 pb-4 text-center">
+                <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Academic Profile</h2>
+            </header>
 
-                    <div className="flex items-center gap-1 sm:gap-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-slate-300 hover:text-white h-9 gap-2 px-3 text-xs"
-                            onClick={copyLink}
-                        >
-                            <Copy className="size-4" />
-                            <span className="hidden xs:inline">Copy Link</span>
-                        </Button>
-                        <div className="h-4 w-px bg-slate-700" />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-slate-300 hover:text-white h-9 w-9"
-                            onClick={handlePrint}
-                            title="Print profile"
-                        >
-                            <Printer className="size-4" />
-                        </Button>
-                        <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-primary hover:bg-primary/90 text-white h-8 sm:h-9 text-xs sm:text-sm font-bold shadow-lg shadow-primary/20 gap-2 px-3 sm:px-4"
-                        >
-                            <Download className="size-4" />
-                            <span className="hidden sm:inline">Export PDF</span>
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Document Surface */}
-            <main className="max-w-5xl mx-auto p-4 sm:p-8 md:p-12 lg:pb-24">
+            {/* Main Content */}
+            <main className="max-w-md mx-auto px-6 relative z-10">
+                {/* Profile Card */}
                 <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="bg-white dark:bg-slate-900 shadow-[0_0_50px_-12px_rgba(0,0,0,0.15)] dark:shadow-none border border-slate-200 dark:border-slate-800 rounded-[2rem] overflow-hidden print:shadow-none print:border-none print:rounded-none"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="flex flex-col items-center text-center mt-8"
                 >
-                    {/* Header Banner */}
-                    <div className="h-6 gap-0 bg-slate-900 flex">
-                        <div className="flex-1 bg-primary" />
-                        <div className="flex-1 bg-blue-600" />
-                        <div className="flex-1 bg-indigo-600" />
-                    </div>
-
-                    <div className="p-8 sm:p-12">
-                        {/* Main Identity Header */}
-                        <div className="flex flex-col md:flex-row gap-8 items-start mb-16 pb-12 border-b border-slate-100 dark:border-slate-800">
-                            <div className="relative group mx-auto md:mx-0">
-                                <div className="absolute -inset-2 bg-slate-100 dark:bg-slate-800 rounded-full scale-105" />
-                                <Avatar className="size-40 sm:size-48 shadow-xl relative border-4 border-white dark:border-slate-900">
-                                    <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                                    <AvatarFallback className="bg-slate-50 dark:bg-slate-800 text-5xl font-black text-primary">
-                                        {initials}
-                                    </AvatarFallback>
-                                </Avatar>
-                                {profile.verified && (
-                                    <div className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full border-4 border-white dark:border-slate-900 shadow-lg">
-                                        <CheckCircle className="size-6" />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex-1 text-center md:text-left space-y-4">
-                                <div className="space-y-1">
-                                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-2">
-                                        <Badge variant="outline" className="rounded-md border-primary/30 text-primary font-bold px-3">
-                                            {profile.role?.toUpperCase() || "ACADEMIC PORTAL"}
-                                        </Badge>
-                                        <Badge variant="outline" className="rounded-md border-slate-200 dark:border-slate-700 text-slate-500 font-bold px-3 uppercase text-[10px]">
-                                            VERIFIED IDENTITY
-                                        </Badge>
-                                    </div>
-                                    <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
-                                        {profile.full_name}
-                                    </h1>
+                    {/* Avatar with Glow */}
+                    <div className="relative mb-6 group">
+                        <div className="absolute -inset-0.5 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full opacity-75 blur group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+                        <div className="relative">
+                            <Avatar className="size-32 border-4 border-[#050b14] shadow-2xl">
+                                <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
+                                <AvatarFallback className="bg-slate-800 text-3xl font-bold text-blue-500">
+                                    {initials}
+                                </AvatarFallback>
+                            </Avatar>
+                            {profile.verified && (
+                                <div className="absolute bottom-1 right-1 bg-blue-500 text-white p-1 rounded-full border-4 border-[#050b14]">
+                                    <CheckCircle className="size-4" fill="currentColor" />
                                 </div>
-
-                                <p className="text-xl text-slate-500 dark:text-slate-400 font-medium">
-                                    {profile.program} {profile.department && `• ${profile.department}`}
-                                </p>
-
-                                <div className="flex flex-wrap justify-center md:justify-start gap-6 pt-4">
-                                    <div className="flex items-center gap-2 text-slate-500">
-                                        <Mail className="size-4 text-primary" />
-                                        <span className="text-sm font-semibold">{profile.email}</span>
-                                    </div>
-                                    {profile.city && (
-                                        <div className="flex items-center gap-2 text-slate-500">
-                                            <MapPin className="size-4 text-primary" />
-                                            <span className="text-sm font-semibold">{profile.city}, {profile.country}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-2 text-slate-500">
-                                        <Calendar className="size-4 text-primary" />
-                                        <span className="text-sm font-semibold">Updated {new Date(profile.last_updated || profile.updated_at).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Content Grid */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-                            {/* Left Side: Summary & Contact */}
-                            <div className="space-y-12">
-                                <section>
-                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
-                                        <div className="h-1 w-6 bg-primary" />
-                                        Academic Overview
-                                    </h3>
-                                    <div className="space-y-6">
-                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <span className="text-[10px] font-black uppercase text-slate-400">Current GPA</span>
-                                                <Award className="size-4 text-primary" />
-                                            </div>
-                                            <p className="text-3xl font-black text-slate-900 dark:text-white">{profile.gpa || '4.0'}</p>
-                                            <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full mt-4 overflow-hidden">
-                                                <div
-                                                    className="h-full bg-primary"
-                                                    style={{ width: `${(parseFloat(profile.gpa || '4.0') / 4) * 100}%` }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <span className="text-[10px] font-black uppercase text-slate-400">Completion</span>
-                                                <BookOpen className="size-4 text-blue-500" />
-                                            </div>
-                                            <div className="flex items-baseline gap-1">
-                                                <p className="text-3xl font-black text-slate-900 dark:text-white">{profile.credits_completed || '85'}</p>
-                                                <span className="text-slate-400 font-bold text-sm">/ {profile.credits_required || '120'} units</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section>
-                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
-                                        <div className="h-1 w-6 bg-primary" />
-                                        Connectivity
-                                    </h3>
-                                    <div className="space-y-4">
-                                        {profile.phone && (
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                                                    <Phone className="size-4" />
-                                                </div>
-                                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300 tracking-tight">{profile.phone}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                                                <Globe className="size-4" />
-                                            </div>
-                                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300 tracking-tight">eduspace.network/{profile.full_name?.toLowerCase().replace(/\s+/g, '')}</span>
-                                        </div>
-                                    </div>
-                                </section>
-                            </div>
-
-                            {/* Right Side: Professional Summary */}
-                            <div className="lg:col-span-2 space-y-12">
-                                <section>
-                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-3">
-                                        <div className="h-1 w-6 bg-primary" />
-                                        Personal Statement
-                                    </h3>
-                                    <p className="text-xl text-slate-700 dark:text-slate-300 leading-[1.8] font-medium italic">
-                                        "{profile.bio || "Academic professional focused on excellence and continuous learning within the Eduspace network. Committed to achieving set benchmarks and contributing to the faculty environment."}"
-                                    </p>
-                                </section>
-
-                                <section>
-                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                                        <div className="h-1 w-6 bg-primary" />
-                                        Key Qualifications
-                                    </h3>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="p-6 rounded-2xl border-2 border-slate-50 dark:border-slate-800 flex items-start gap-4 hover:border-primary/20 transition-all group">
-                                            <div className="size-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                                                <Shield className="size-5" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-black text-slate-900 dark:text-white text-sm uppercase mb-1">Authenticated Member</h4>
-                                                <p className="text-xs text-slate-500 leading-relaxed">Verified security credentials and institutional status.</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-6 rounded-2xl border-2 border-slate-50 dark:border-slate-800 flex items-start gap-4 hover:border-primary/20 transition-all group">
-                                            <div className="size-10 rounded-xl bg-blue-500/5 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                                                <Zap className="size-5" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-black text-slate-900 dark:text-white text-sm uppercase mb-1">Performance Track</h4>
-                                                <p className="text-xs text-slate-500 leading-relaxed">Top tier percentile in department-wide analytics.</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-6 rounded-2xl border-2 border-slate-50 dark:border-slate-800 flex items-start gap-4 hover:border-primary/20 transition-all group">
-                                            <div className="size-10 rounded-xl bg-emerald-500/5 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
-                                                <GraduationCap className="size-5" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-black text-slate-900 dark:text-white text-sm uppercase mb-1">{profile.year || 'Senior'} Status</h4>
-                                                <p className="text-xs text-slate-500 leading-relaxed">Anticipated graduation in {profile.expected_graduation ? new Date(profile.expected_graduation).getFullYear() : '2026'}.</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-6 rounded-2xl border-2 border-slate-50 dark:border-slate-800 flex items-start gap-4 hover:border-primary/20 transition-all group">
-                                            <div className="size-10 rounded-xl bg-amber-500/5 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
-                                                <Briefcase className="size-5" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-black text-slate-900 dark:text-white text-sm uppercase mb-1">Department Affiliation</h4>
-                                                <p className="text-xs text-slate-500 leading-relaxed">Core member of the {profile.department || 'Science'} faculty.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <div className="pt-12">
-                                    <div className="bg-slate-900 rounded-[2rem] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 print:bg-slate-100 print:text-slate-900">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-12 rounded-full border-2 border-primary/50 flex items-center justify-center">
-                                                <CheckCircle className="size-6 text-primary" />
-                                            </div>
-                                            <div>
-                                                <p className="font-black text-lg">Official Academic E-Record</p>
-                                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">ID: {profile.user_id?.slice(0, 8)}</p>
-                                            </div>
-                                        </div>
-                                        <Badge variant="secondary" className="bg-primary hover:bg-primary text-white font-black px-6 py-2 rounded-full border-none">
-                                            {profile.role?.toUpperCase() || "VERIFIED"}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
+
+                    {/* Name */}
+                    <h1 className="text-3xl font-bold tracking-tight text-white mb-3">
+                        {profile.full_name}
+                    </h1>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap justify-center gap-2 mb-6">
+                        <Badge className="bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 border border-blue-800/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                            Academic Portal
+                        </Badge>
+                        {profile.verified && (
+                            <Badge className="bg-slate-800/50 text-slate-400 hover:bg-slate-800 border border-slate-700/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                                Verified Identity
+                            </Badge>
+                        )}
+                    </div>
+
+                    {/* Info Row */}
+                    <div className="flex flex-col items-center gap-2 text-sm text-slate-400 mb-12 font-medium">
+                        <div className="flex items-center gap-2">
+                            <Mail className="size-4 text-blue-500" />
+                            <span>{profile.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Calendar className="size-4 text-blue-500" />
+                            <span>Updated {new Date(profile.updated_at || new Date()).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+
+                    {/* Personal Statement */}
+                    {profile.bio && (
+                        <div className="w-full text-left mb-10">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
+                                <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">Personal Statement</h3>
+                            </div>
+                            <p className="text-lg text-slate-200 italic font-medium leading-relaxed">
+                                "{profile.bio}"
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Connectivity */}
+                    <div className="w-full text-left mb-12">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
+                            <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">Connectivity</h3>
+                        </div>
+
+                        <div className="bg-[#0f1623] border border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer" onClick={copyLink}>
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <Globe className="size-5 text-slate-400 shrink-0" />
+                                <span className="text-sm font-semibold text-slate-300 truncate tracking-tight">
+                                    eduspace.network/{profile.full_name?.toLowerCase().replace(/\s+/g, '')}
+                                </span>
+                            </div>
+                            <Copy className="size-4 text-slate-500 group-hover:text-blue-500 transition-colors" />
+                        </div>
+                    </div>
+
+                    {/* Footer E-Record Card */}
+                    <div className="w-full bg-[#0f1623] border border-white/5 rounded-2xl p-5 flex items-center justify-between shadow-2xl shadow-blue-900/5">
+                        <div className="flex items-center gap-4">
+                            <div className="size-12 rounded-full border-2 border-blue-500/20 flex items-center justify-center bg-blue-500/5 text-blue-500">
+                                <Shield className="size-6" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-xs font-bold text-white leading-tight mb-1">Official Academic E-Record</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">ID: {id?.slice(0, 8).toUpperCase()}</p>
+                            </div>
+                        </div>
+                        <div className="bg-blue-600 text-[10px] font-black px-4 py-2 rounded-lg text-white shadow-lg shadow-blue-600/20 tracking-wider">
+                            VERIFIED
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex gap-4">
+                        <Button variant="ghost" className="text-slate-500 hover:text-white hover:bg-white/5" onClick={() => navigate('/')}>
+                            <ChevronLeft className="size-4 mr-2" />
+                            Back to Portal
+                        </Button>
+                        <Button variant="ghost" className="text-slate-500 hover:text-white hover:bg-white/5" onClick={() => window.print()}>
+                            <Printer className="size-4 mr-2" />
+                            Print Record
+                        </Button>
+                    </div>
+
                 </motion.div>
-
-                {/* Branding Footer */}
-                <div className="text-center mt-12 mb-20 opacity-40">
-                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] mb-4">Digitally Signed & Secured by Eduspace Platform</p>
-                    <div className="flex items-center justify-center gap-8 saturate-0">
-                        <div className="size-8 rounded bg-slate-400" />
-                        <div className="size-8 rounded bg-slate-400 rotate-45" />
-                        <div className="size-8 rounded bg-slate-400" />
-                    </div>
-                </div>
             </main>
         </div>
     );
