@@ -1,20 +1,18 @@
 import { useEffect } from 'react';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
-import { useFCM } from '@/hooks/useFCM';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
 export function PushNotificationManager() {
     const { user } = useAuth();
-    const { subscribe: subscribeWebPush, permission: webPushPermission, isSupported: webPushSupported } = usePushSubscription();
-    const { subscribe: subscribeFCM, isSupported: fcmSupported } = useFCM();
+    const { subscribe, permission, isSupported } = usePushSubscription();
     const { toast } = useToast();
 
     useEffect(() => {
-        if (!user || (!webPushSupported && !fcmSupported)) return;
+        if (!user || !isSupported) return;
 
-        if (webPushPermission === 'default') {
+        if (permission === 'default') {
             const hasAsked = localStorage.getItem('eduspace_push_asked');
             if (!hasAsked) {
                 toast({
@@ -25,10 +23,8 @@ export function PushNotificationManager() {
                             variant="outline"
                             size="sm"
                             onClick={async () => {
-                                const webPushSuccess = await subscribeWebPush();
-                                const fcmSuccess = await subscribeFCM();
-
-                                if (webPushSuccess || fcmSuccess) {
+                                const success = await subscribe();
+                                if (success) {
                                     toast({
                                         title: "Notifications Enabled",
                                         description: "You're all set! You'll receive updates even when the app is closed.",
@@ -52,7 +48,7 @@ export function PushNotificationManager() {
             }
         }
 
-    }, [user, webPushPermission, webPushSupported, fcmSupported, subscribeWebPush, subscribeFCM, toast]);
+    }, [user, permission, isSupported, subscribe, toast]);
 
     return null;
 }
