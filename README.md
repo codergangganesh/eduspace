@@ -2,13 +2,13 @@
 
 EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
-![Eduspace Dashboard](public/landing-preview.png)
+<img width="1918" height="866" alt="image" src="https://github.com/user-attachments/assets/d7780a60-71c1-44de-9d55-28745701ac57" />
 
 ![Project Status](https://img.shields.io/badge/Status-Active-success)
-![License](https://img.shields.io/badge/License-MIT-blue)
-![Tech Stack](https://img.shields.io/badge/Stack-MERN%20Hyper-blueviolet)
+
 
 ---
+
 
 ## 🌟 Key Features
 
@@ -205,12 +205,7 @@ Contributions are welcome! Please follow these steps:
 4.  Push to the branch (`git push origin feature/AmazingFeature`).
 5.  Open a Pull Request.
 
----
-
-## 📞 Support & Contact
-
-If you encounter any issues or have questions, please file an issue on the [GitHub Issues](https://github.com/codergangganesh/eduspace/issues) page.
 
 ---
 
-**Developed with ❤️ by the EduSpace Team**
+**Developed by the EduSpace Team**
