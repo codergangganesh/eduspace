@@ -128,9 +128,37 @@ Follow these steps to set up the project locally.
     ```
     Populate the variables:
     ```env
-    VITE_SUPABASE_URL=https://your-project-id.supabase.co
-    VITE_SUPABASE_ANON_KEY=your-anon-key
-    VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # (Optional, caution advised)
+    # Supabase Configuration
+      VITE_SUPABASE_URL=your_supabase_project_url_here
+      VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+      SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+      
+      # Cloudinary Configuration (for image uploads)
+      VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name_here
+      VITE_CLOUDINARY_UPLOAD_PRESET=your_cloudinary_upload_preset_here
+      
+      # Application URL
+      APP_URL=http://localhost:8080
+      
+      # Email Configuration (SMTP/Resend)
+      RESEND_API_KEY=your_resend_api_key_here
+      SMTP_HOST=smtp.gmail.com
+      SMTP_PORT=587
+      SMTP_USER=your_email@gmail.com
+      SMTP_PASS=your_app_password_here
+      
+      # AI Quiz Generator (OpenRouter)
+      VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
+      
+      # Jitsi / 8x8 JaaS Configuration
+      JITSI_APP_ID=your_jitsi_app_id_here
+      JITSI_KID=your_jitsi_key_id_here
+      JITSI_PRIVATE_KEY="your_jitsi_private_key_pem_content_here"
+      
+      # Web Push Notifications (Standard VAPID)
+      VITE_VAPID_PUBLIC_KEY=your_public_vapid_key_here
+      VAPID_PRIVATE_KEY=your_private_vapid_key_here
+
     ```
 
 4.  **Database Setup**
