@@ -1,4 +1,36 @@
+
 import { supabase } from "@/integrations/supabase/client";
+
+/**
+ * Helper to trigger class email via Edge Function
+ */
+async function sendClassEmail(params: {
+    classId: string;
+    type: 'assignment' | 'quiz' | 'schedule' | 'update';
+    title: string;
+    body: string;
+    link: string;
+    lecturerName?: string; // Optional, defaults to "Your Lecturer" if not provided
+}) {
+    try {
+        console.log(`Triggering class email for ${params.classId}`);
+        const { error } = await supabase.functions.invoke('send-class-email', {
+            body: {
+                ...params,
+                lecturerName: params.lecturerName || "Your Lecturer"
+            }
+        });
+
+        if (error) {
+            console.error("Failed to send class email:", error);
+        } else {
+            console.log("Class email triggered successfully");
+        }
+    } catch (err) {
+        console.error("Error in sendClassEmail:", err);
+    }
+}
+
 
 interface CreateNotificationParams {
     userId: string;
@@ -276,7 +308,7 @@ export async function notifyNewAssignment(
         const message = `New assignment: "${assignmentTitle}"${dueDateText}`;
 
         // Send notifications to students (createBulkNotifications handles master toggle check)
-        return await createBulkNotifications(studentIds, {
+        const result = await createBulkNotifications(studentIds, {
             title: "New Assignment Posted",
             message,
             type: "assignment",
@@ -285,10 +317,34 @@ export async function notifyNewAssignment(
             senderId: lecturerId,
             actionType: 'created',
         });
+
+        // Trigger Email Notification
+        const link = `https://eduspace-five.vercel.app/student/assignments`;
+        const lecturerName = await getLecturerName(lecturerId);
+
+        sendClassEmail({
+            classId: classId || '',
+            type: 'assignment',
+            title: `New Assignment: ${assignmentTitle}`,
+            body: `A new assignment "${assignmentTitle}" has been posted.${dueDate ? ` Due: ${new Date(dueDate).toLocaleDateString()}` : ''}`,
+            link,
+            lecturerName
+        });
+
+        return result;
+
     } catch (err) {
         console.error("Error in notifyNewAssignment:", err);
         return { success: false, error: err };
     }
+}
+
+/**
+ * Helper to fetch lecturer name
+ */
+async function getLecturerName(lecturerId: string): Promise<string> {
+    const { data } = await supabase.from('profiles').select('full_name').eq('user_id', lecturerId).single();
+    return data?.full_name || "Your Lecturer";
 }
 
 /**
@@ -332,7 +388,7 @@ export async function notifyAssignmentUpdated(
         }
 
         // Send notifications (createBulkNotifications handles master toggle check)
-        return await createBulkNotifications(studentIds, {
+        const result = await createBulkNotifications(studentIds, {
             title: "Assignment Updated",
             message: `"${assignmentTitle}" has been updated: ${updateDetails}`,
             type: "assignment",
@@ -341,6 +397,22 @@ export async function notifyAssignmentUpdated(
             senderId: lecturerId,
             actionType: 'updated',
         });
+
+        // Trigger Email Notification
+        const link = `https://eduspace-five.vercel.app/student/assignments`;
+        const lecturerName = await getLecturerName(lecturerId);
+
+        sendClassEmail({
+            classId: classId || '',
+            type: 'update',
+            title: `Assignment Updated: ${assignmentTitle}`,
+            body: `The assignment "${assignmentTitle}" has been updated: ${updateDetails}`,
+            link,
+            lecturerName
+        });
+
+        return result;
+
     } catch (err) {
         console.error("Error in notifyAssignmentUpdated:", err);
         return { success: false, error: err };
@@ -376,7 +448,7 @@ export async function notifyQuizPublished(
         }
 
         // Send notifications using bulk function (handles preference checking)
-        return await createBulkNotifications(studentIds, {
+        const result = await createBulkNotifications(studentIds, {
             title: "New Quiz Available",
             message: `Quiz "${quizTitle}" is now available. Good luck!`,
             type: "announcement",
@@ -385,6 +457,22 @@ export async function notifyQuizPublished(
             senderId: lecturerId,
             actionType: 'published',
         });
+
+        // Trigger Email Notification
+        const link = `https://eduspace-five.vercel.app/student/quizzes`;
+        const lecturerName = await getLecturerName(lecturerId);
+
+        sendClassEmail({
+            classId: classId,
+            type: 'quiz',
+            title: `New Quiz: ${quizTitle}`,
+            body: `A new quiz "${quizTitle}" is now available. Good luck!`,
+            link,
+            lecturerName
+        });
+
+        return result;
+
     } catch (err) {
         console.error("Error in notifyQuizPublished:", err);
         return { success: false, error: err };
@@ -458,7 +546,7 @@ export async function notifyScheduleCreated(
         }
 
         // Use createBulkNotifications which handles preference checking via profiles table
-        return await createBulkNotifications(studentIds, {
+        const result = await createBulkNotifications(studentIds, {
             title: "New Schedule Added",
             message: `${scheduleTitle}: ${scheduleDetails}`,
             type: "schedule",
@@ -467,6 +555,22 @@ export async function notifyScheduleCreated(
             senderId: lecturerId,
             actionType: 'created',
         });
+
+        // Trigger Email Notification
+        const link = `https://eduspace-five.vercel.app/schedule`;
+        const lecturerName = await getLecturerName(lecturerId);
+
+        sendClassEmail({
+            classId: classId || '',
+            type: 'schedule',
+            title: `New Schedule: ${scheduleTitle}`,
+            body: `New schedule event "${scheduleTitle}": ${scheduleDetails}`,
+            link,
+            lecturerName
+        });
+
+        return result;
+
     } catch (err) {
         console.error("Error in notifyScheduleCreated:", err);
         return { success: false, error: err };
@@ -491,7 +595,7 @@ export async function notifyScheduleUpdated(
         }
 
         // Use createBulkNotifications which handles preference checking via profiles table
-        return await createBulkNotifications(studentIds, {
+        const result = await createBulkNotifications(studentIds, {
             title: "Schedule Updated",
             message: `${scheduleTitle}: ${updateDetails}`,
             type: "schedule",
@@ -500,6 +604,22 @@ export async function notifyScheduleUpdated(
             senderId: lecturerId,
             actionType: 'updated',
         });
+
+        // Trigger Email Notification
+        const link = `https://eduspace-five.vercel.app/schedule`;
+        const lecturerName = await getLecturerName(lecturerId);
+
+        sendClassEmail({
+            classId: classId || '',
+            type: 'schedule',
+            title: `Schedule Updated: ${scheduleTitle}`,
+            body: `Schedule event "${scheduleTitle}" has been updated: ${updateDetails}`,
+            link,
+            lecturerName
+        });
+
+        return result;
+
     } catch (err) {
         console.error("Error in notifyScheduleUpdated:", err);
         return { success: false, error: err };
