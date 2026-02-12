@@ -6,6 +6,9 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 
 ![Project Status](https://img.shields.io/badge/Status-Active-success)
 
+[![Eduspace Demo](https://img.youtube.com/vi/TMe3jbI36OY/maxresdefault.jpg)](https://www.youtube.com/watch?v=TMe3jbI36OY&t=10s)
+
+
 
 ---
 
