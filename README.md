@@ -4,6 +4,10 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 
 <img width="1918" height="866" alt="image" src="https://github.com/user-attachments/assets/d7780a60-71c1-44de-9d55-28745701ac57" />
 
+<video src="public/Eduspace%20recording%20video.mp4" controls="controls" style="max-width: 100%;">
+  Your browser does not support the video tag.
+</video>
+
 ![Project Status](https://img.shields.io/badge/Status-Active-success)
 
 [![Eduspace Demo](https://img.youtube.com/vi/TMe3jbI36OY/maxresdefault.jpg)](https://www.youtube.com/watch?v=TMe3jbI36OY&t=10s)
