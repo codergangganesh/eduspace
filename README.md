@@ -1,4 +1,4 @@
-# 🎓 EduSpace - Advanced Learning Management System (LMS)
+#  EduSpace - Advanced Learning Management System (LMS)
 
 EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
