@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { CreateClassModal } from "@/components/lecturer/CreateClassModal";
 import { EditClassModal } from "@/components/lecturer/EditClassModal";
 import { SectionClassCard } from "@/components/common/SectionClassCard";
+import { GridSkeleton } from "@/components/skeletons/GridSkeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
     AlertDialog,
@@ -91,54 +92,51 @@ export default function CreateClass() {
                     </Button>
                 </div>
 
-                {/* Stats Cards - Dark Glass Design */}
+                {/* Stats Cards - Theme Aware Design */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
-                        <CardContent className="p-5 flex items-center gap-4 relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-                            <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/20 relative z-10">
-                                <BookOpen className="size-6 text-blue-400" />
+                    <Card className="bg-card border-border shadow-sm hover:shadow-md transition-all">
+                        <CardContent className="p-5 flex items-center gap-4">
+                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/10">
+                                <BookOpen className="size-6 text-blue-500" />
                             </div>
-                            <div className="relative z-10">
-                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                            <div>
+                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                                     Total Classes
                                 </p>
-                                <p className="text-2xl font-bold text-white">{totalClasses}</p>
-                                <p className="text-xs text-emerald-400 mt-0.5">{activeClasses} active</p>
+                                <p className="text-2xl font-bold text-foreground">{totalClasses}</p>
+                                <p className="text-xs text-emerald-500 mt-0.5">{activeClasses} active</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
-                        <CardContent className="p-5 flex items-center gap-4 relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
-                            <div className="p-3 bg-violet-500/20 rounded-xl border border-violet-500/20 relative z-10">
-                                <Users className="size-6 text-violet-400" />
+                    <Card className="bg-card border-border shadow-sm hover:shadow-md transition-all">
+                        <CardContent className="p-5 flex items-center gap-4">
+                            <div className="p-3 bg-violet-500/10 rounded-xl border border-violet-500/10">
+                                <Users className="size-6 text-violet-500" />
                             </div>
-                            <div className="relative z-10">
-                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                            <div>
+                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                                     Total Students
                                 </p>
-                                <p className="text-2xl font-bold text-white">{totalStudents}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Across all classes</p>
+                                <p className="text-2xl font-bold text-foreground">{totalStudents}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Across all classes</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl overflow-hidden">
-                        <CardContent className="p-5 flex items-center gap-4 relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                            <div className="p-3 bg-emerald-500/20 rounded-xl border border-emerald-500/20 relative z-10">
-                                <GraduationCap className="size-6 text-emerald-400" />
+                    <Card className="bg-card border-border shadow-sm hover:shadow-md transition-all">
+                        <CardContent className="p-5 flex items-center gap-4">
+                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/10">
+                                <GraduationCap className="size-6 text-emerald-500" />
                             </div>
-                            <div className="relative z-10">
-                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                            <div>
+                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                                     Avg. Class Size
                                 </p>
-                                <p className="text-2xl font-bold text-white">
+                                <p className="text-2xl font-bold text-foreground">
                                     {totalClasses > 0 ? Math.round(totalStudents / totalClasses) : 0}
                                 </p>
-                                <p className="text-xs text-slate-500 mt-0.5">Students per class</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Students per class</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -146,21 +144,7 @@ export default function CreateClass() {
 
                 {/* Classes Grid */}
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map((i) => (
-                            <Card key={i} className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 rounded-2xl">
-                                <CardContent className="p-6">
-                                    <div className="animate-pulse space-y-4">
-                                        <div className="h-24 bg-slate-800 rounded-xl"></div>
-                                        <div className="space-y-2">
-                                            <div className="h-4 bg-slate-800 rounded w-3/4"></div>
-                                            <div className="h-3 bg-slate-800 rounded w-1/2"></div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                    <GridSkeleton count={6} />
                 ) : classes.length === 0 ? (
                     <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 shadow-xl rounded-2xl">
                         <CardContent className="p-12">

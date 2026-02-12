@@ -135,7 +135,7 @@ export function ClassCard({ classData }: ClassCardProps) {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="size-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                         >
                                             <MoreVertical className="size-4" />
                                         </Button>
