@@ -2,6 +2,8 @@
 
 EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
+![Eduspace Dashboard](public/landing-preview.png)
+
 ![Project Status](https://img.shields.io/badge/Status-Active-success)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Tech Stack](https://img.shields.io/badge/Stack-MERN%20Hyper-blueviolet)
@@ -66,25 +68,29 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 ```text
 eduspace/
 ├── .env                    # Environment variables configuration
+├── public/                 # Static assets (images, icons)
 ├── src/
 │   ├── components/
 │   │   ├── admin/          # Admin-specific components
 │   │   ├── common/         # Shared components (loaders, errors)
 │   │   ├── layout/         # Layout wrappers (Sidebar, Topbar)
-│   │   ├── lecturer/       # Lecturer-specific components (ClassManager, StudentList)
-│   │   ├── student/        # Student-specific components (AssignmentView)
+│   │   ├── lecturer/       # Lecturer-specific components
+│   │   ├── student/        # Student-specific components
 │   │   └── ui/             # shadcn/ui primitive components
 │   ├── contexts/           # Global State (AuthContext, ThemeContext)
-│   ├── hooks/              # Custom React Hooks (useClasses, useAssignments)
+│   ├── hooks/              # Custom React Hooks
+│   ├── i18n/               # i18n configuration
 │   ├── integrations/       # Supabase client & DB types
-│   ├── lib/                # Utility functions (date formatting, cn)
+│   ├── lib/                # Utility functions & libraries
+│   ├── locales/            # Translation files
 │   ├── pages/              # Application Routes/Screens
-│   │   ├── Dashboard.tsx   # Student Dashboard
-│   │   ├── Lecturer.tsx    # Lecturer Dashboard
-│   │   └── ...
-│   └── App.tsx             # Main Application Entry Component
+│   ├── types/              # TypeScript type definitions
+│   ├── utils/              # General utility functions
+│   ├── App.tsx             # Main App Component
+│   └── main.tsx            # Entry Point
 ├── supabase/
-│   └── migrations/         # SQL migration files for database schema
+│   ├── functions/          # Supabase Edge Functions
+│   └── migrations/         # SQL migration files
 └── vite.config.ts          # Vite configuration
 ```
 
