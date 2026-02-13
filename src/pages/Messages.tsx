@@ -66,6 +66,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { useEligibleStudents } from "@/hooks/useEligibleStudents";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
+import { useCall } from "@/contexts/CallContext";
 import { ChatSkeleton } from "@/components/skeletons/ChatSkeleton";
 import { useClasses } from "@/hooks/useClasses";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -365,10 +366,10 @@ export default function Messages() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Add wallpaper state
-  const [wallpaper, setWallpaper] = useState<string>('');
+  const [wallpaper, setWallpaper] = useState<string>("");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
-  const [activeCall, setActiveCall] = useState<{ type: 'audio' | 'video', conversationId: string, isMeeting?: boolean } | null>(null);
+  const { startCall } = useCall();
 
   // Meeting State
   const [joinMeetingCode, setJoinMeetingCode] = useState("");
@@ -440,7 +441,7 @@ export default function Messages() {
   };
 
   const startMeeting = (code: string, type: 'audio' | 'video') => {
-    setActiveCall({ type, conversationId: code, isMeeting: true });
+    startCall({ type, conversationId: code, isMeeting: true });
     setIsCreateMeetingOpen(false);
     setIsJoinMeetingOpen(false);
     setJoinMeetingCode("");
@@ -1113,7 +1114,14 @@ export default function Messages() {
                       variant="ghost"
                       size="icon"
                       className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
-                      onClick={() => role === 'lecturer' ? handleCreateMeeting('audio') : setIsJoinMeetingOpen(true)}
+                      onClick={() => {
+                        const callType = 'audio';
+                        if (role === 'lecturer') {
+                          handleCreateMeeting(callType);
+                        } else {
+                          setIsJoinMeetingOpen(true);
+                        }
+                      }}
                     >
                       <Phone className="size-5" />
                     </Button>
@@ -1121,7 +1129,14 @@ export default function Messages() {
                       variant="ghost"
                       size="icon"
                       className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
-                      onClick={() => role === 'lecturer' ? handleCreateMeeting('video') : setIsJoinMeetingOpen(true)}
+                      onClick={() => {
+                        const callType = 'video';
+                        if (role === 'lecturer') {
+                          handleCreateMeeting(callType);
+                        } else {
+                          setIsJoinMeetingOpen(true);
+                        }
+                      }}
                     >
                       <Video className="size-5" />
                     </Button>
@@ -1529,16 +1544,6 @@ export default function Messages() {
           </DialogContent>
         </Dialog>
       </div>
-      {/* Call Modal */}
-      {activeCall && user && (
-        <CallModal
-          isOpen={!!activeCall}
-          onClose={() => setActiveCall(null)}
-          type={activeCall.type}
-          conversationId={activeCall.conversationId}
-          userName={profile?.full_name || user.email || 'User'}
-        />
-      )}
       {/* Create Meeting Dialog */}
       <Dialog open={isCreateMeetingOpen} onOpenChange={setIsCreateMeetingOpen}>
         <DialogContent>

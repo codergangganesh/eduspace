@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CallProvider } from "@/contexts/CallContext";
 import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
@@ -13,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
+import { GlobalCallManager } from "@/components/chat/GlobalCallManager";
 
 // Lazy load pages
 const Index = lazy(() => import("./pages/Index"));
@@ -76,273 +78,64 @@ const App = () => (
     <AuthProvider>
       <LanguageProvider>
         <ThemeProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <OfflineBanner />
-            <BrowserRouter>
-              <PWAInstallPrompt />
-              <PushNotificationManager />
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  {/* Public Profile Routes - MUST BE FIRST */}
-                  <Route path="/p/:id" element={<PublicProfile />} />
-                  <Route path="/profile/:id" element={<PublicProfile />} />
-                  <Route path="/share/:id" element={<PublicProfile />} />
-
-                  {/* Public Home Route */}
-                  <Route path="/" element={<Index />} />
-
-                  {/* Role-specific Auth Routes */}
-                  <Route path="/student/login" element={<StudentLogin />} />
-                  <Route path="/student/register" element={<StudentRegister />} />
-                  <Route path="/lecturer/login" element={<LecturerLogin />} />
-                  <Route path="/lecturer/register" element={<LecturerRegister />} />
-
-                  {/* Legacy Auth Routes (for backward compatibility) */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/update-password" element={<UpdatePassword />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-
-
-                  {/* Protected Student Routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/assignments"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <StudentAssignments />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/assignments/:id"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <StudentAssignmentDetail />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/quizzes"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <StudentQuizzes />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/quizzes/:quizId"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <TakeQuiz />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/student/quizzes/:classId/:quizId/results"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <QuizResultsView />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  <Route
-                    path="/student/quizzes/:quizId/details"
-                    element={
-                      <ProtectedRoute allowedRoles={["student", "admin"]}>
-                        <QuizAttemptDetails />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Protected Lecturer Routes */}
-                  <Route
-                    path="/lecturer-dashboard"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <LecturerDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  { }
-                  <Route
-                    path="/all-students"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <CreateClass />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/classes/:classId/students"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <AllStudents />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Lecturer Assignment Routes */}
-                  <Route
-                    path="/lecturer/timetable"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <LecturerTimeTable />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/assignments"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <LecturerClassesAssignments />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/assignments/:classId"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <ClassAssignmentsView />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/assignments/:classId/:assignmentId/submissions"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <AssignmentSubmissionsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  {/* Lecturer Quiz Routes */}
-                  <Route
-                    path="/lecturer/quizzes"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <LecturerClassesQuizzes />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/quizzes/:classId/create"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <CreateQuiz />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/quizzes/:classId/create-ai"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <CreateAIQuiz />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/quizzes/:classId"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <ClassQuizzesView />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/quizzes/:classId/:quizId/edit"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <EditQuiz />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/lecturer/quizzes/:classId/:quizId/results"
-                    element={
-                      <ProtectedRoute allowedRoles={["lecturer", "admin"]}>
-                        <QuizResultsView />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Protected Common Routes */}
-                  {/* Assignments Route */}
-                  <Route
-                    path="/assignments"
-                    element={
-                      <ProtectedRoute>
-                        <Assignments />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/assignments/:id/submit" // Keep legacy route if needed
-                    element={
-                      <ProtectedRoute>
-                        <AssignmentSubmit />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/messages"
-                    element={
-                      <ProtectedRoute>
-                        <Messages />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/schedule"
-                    element={
-                      <ProtectedRoute>
-                        <Schedule />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/notifications"
-                    element={
-                      <ProtectedRoute>
-                        <Notifications />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                    element={
-                      <ProtectedRoute>
-                        <Settings />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Catch-all */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </TooltipProvider>
+          <CallProvider>
+            <GlobalCallManager />
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <OfflineBanner />
+              <BrowserRouter>
+                <PWAInstallPrompt />
+                <PushNotificationManager />
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
+                    {/* ... routes ... */}
+                    <Route path="/p/:id" element={<PublicProfile />} />
+                    <Route path="/profile/:id" element={<PublicProfile />} />
+                    <Route path="/share/:id" element={<PublicProfile />} />
+                    <Route path="/" element={<Index />} />
+                    <Route path="/student/login" element={<StudentLogin />} />
+                    <Route path="/student/register" element={<StudentRegister />} />
+                    <Route path="/lecturer/login" element={<LecturerLogin />} />
+                    <Route path="/lecturer/register" element={<LecturerRegister />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/update-password" element={<UpdatePassword />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
+                    <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student", "admin"]}><Dashboard /></ProtectedRoute>} />
+                    <Route path="/student/assignments" element={<ProtectedRoute allowedRoles={["student", "admin"]}><StudentAssignments /></ProtectedRoute>} />
+                    <Route path="/student/assignments/:id" element={<ProtectedRoute allowedRoles={["student", "admin"]}><StudentAssignmentDetail /></ProtectedRoute>} />
+                    <Route path="/student/quizzes" element={<ProtectedRoute allowedRoles={["student", "admin"]}><StudentQuizzes /></ProtectedRoute>} />
+                    <Route path="/student/quizzes/:quizId" element={<ProtectedRoute allowedRoles={["student", "admin"]}><TakeQuiz /></ProtectedRoute>} />
+                    <Route path="/student/quizzes/:classId/:quizId/results" element={<ProtectedRoute allowedRoles={["student", "admin"]}><QuizResultsView /></ProtectedRoute>} />
+                    <Route path="/student/quizzes/:quizId/details" element={<ProtectedRoute allowedRoles={["student", "admin"]}><QuizAttemptDetails /></ProtectedRoute>} />
+                    <Route path="/lecturer-dashboard" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerDashboard /></ProtectedRoute>} />
+                    <Route path="/all-students" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateClass /></ProtectedRoute>} />
+                    <Route path="/classes/:classId/students" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><AllStudents /></ProtectedRoute>} />
+                    <Route path="/lecturer/timetable" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerTimeTable /></ProtectedRoute>} />
+                    <Route path="/lecturer/assignments" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerClassesAssignments /></ProtectedRoute>} />
+                    <Route path="/lecturer/assignments/:classId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><ClassAssignmentsView /></ProtectedRoute>} />
+                    <Route path="/lecturer/assignments/:classId/:assignmentId/submissions" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><AssignmentSubmissionsPage /></ProtectedRoute>} />
+                    <Route path="/lecturer/quizzes" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerClassesQuizzes /></ProtectedRoute>} />
+                    <Route path="/lecturer/quizzes/:classId/create" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateQuiz /></ProtectedRoute>} />
+                    <Route path="/lecturer/quizzes/:classId/create-ai" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateAIQuiz /></ProtectedRoute>} />
+                    <Route path="/lecturer/quizzes/:classId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><ClassQuizzesView /></ProtectedRoute>} />
+                    <Route path="/lecturer/quizzes/:classId/:quizId/edit" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><EditQuiz /></ProtectedRoute>} />
+                    <Route path="/lecturer/quizzes/:classId/:quizId/results" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><QuizResultsView /></ProtectedRoute>} />
+                    <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
+                    <Route path="/assignments/:id/submit" element={<ProtectedRoute><AssignmentSubmit /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                    <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+                    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </TooltipProvider>
+          </CallProvider>
         </ThemeProvider>
       </LanguageProvider>
     </AuthProvider>

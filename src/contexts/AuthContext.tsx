@@ -45,6 +45,12 @@ export interface Profile {
   theme: string | null;
   sidebar_mode: 'expanded' | 'collapsed' | 'hover' | null;
   last_selected_class_id: string | null;
+  active_call: {
+    type: 'audio' | 'video';
+    conversationId: string;
+    isMeeting?: boolean;
+    userName?: string;
+  } | null;
   created_at: string;
   updated_at: string;
 }
