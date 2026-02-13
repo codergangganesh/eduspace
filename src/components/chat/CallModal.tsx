@@ -201,7 +201,10 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
                             </div>
 
                             {/* Maximize Prompt Styled like the 'Join' button */}
-                            <div className="hidden md:flex items-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-8 py-2 md:py-3 rounded-xl font-bold text-sm shadow-xl transition-colors cursor-pointer" onClick={() => onMinimize?.(false)}>
+                            <div
+                                className="hidden md:flex items-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-8 py-2 md:py-3 rounded-xl font-bold text-sm shadow-xl transition-colors cursor-pointer"
+                                onClick={() => onMinimize?.(false)}
+                            >
                                 <span>Return to Call</span>
                                 <Maximize2 className="size-4 ml-2" />
                             </div>

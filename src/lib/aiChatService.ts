@@ -1,0 +1,225 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export type MessageRole = 'user' | 'assistant' | 'system';
+
+export interface AIChatMessage {
+    id: string;
+    conversation_id: string;
+    role: MessageRole;
+    content: string;
+    created_at: string;
+}
+
+export interface AIConversation {
+    id: string;
+    user_id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+    is_pinned?: boolean;
+    share_token?: string;
+}
+
+export const aiChatService = {
+    async getConversations() {
+        const { data, error } = await supabase
+            .from('ai_conversations')
+            .select('*')
+            .order('is_pinned', { ascending: false })
+            .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+        return data as AIConversation[];
+    },
+
+    async getMessages(conversationId: string) {
+        const { data, error } = await supabase
+            .from('ai_messages')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        return data as AIChatMessage[];
+    },
+
+    async createConversation(title: string = 'New Chat') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data, error } = await supabase
+            .from('ai_conversations')
+            .insert({
+                user_id: user.id,
+                title,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as AIConversation;
+    },
+
+    async deleteConversation(id: string) {
+        const { error } = await supabase
+            .from('ai_conversations')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async saveMessage(conversationId: string, role: MessageRole, content: string) {
+        const { data, error } = await supabase
+            .from('ai_messages')
+            .insert({
+                conversation_id: conversationId,
+                role,
+                content,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Also update the conversation's updated_at
+        await supabase
+            .from('ai_conversations')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', conversationId);
+
+        return data as AIChatMessage;
+    },
+
+    async updateConversationTitle(id: string, title: string) {
+        const { error } = await supabase
+            .from('ai_conversations')
+            .update({ title })
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async togglePin(id: string) {
+        const { data, error } = await supabase
+            .rpc('toggle_ai_conversation_pin', { conv_id: id });
+
+        if (error) throw error;
+        return data as boolean;
+    },
+
+    async toggleShare(id: string) {
+        const { data, error } = await supabase
+            .rpc('toggle_ai_conversation_share', { conv_id: id });
+
+        if (error) throw error;
+        return data as string | null;
+    },
+
+    async getSharedConversation(shareToken: string) {
+        // 1. Get the conversation
+        const { data: conv, error: convError } = await supabase
+            .from('ai_conversations')
+            .select('*')
+            .eq('share_token', shareToken)
+            .single();
+
+        if (convError) throw convError;
+
+        // 2. Get the owner's profile separately to avoid relationship errors
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', conv.user_id)
+            .single();
+
+        // 3. Get the messages
+        const { data: messages, error: msgError } = await supabase
+            .from('ai_messages')
+            .select('*')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: true });
+
+        if (msgError) throw msgError;
+
+        return {
+            conversation: { ...conv, profiles: profile } as (AIConversation & { profiles: { full_name: string, avatar_url: string } }),
+            messages: messages as AIChatMessage[]
+        };
+    },
+
+    async updateMessage(id: string, content: string) {
+        const { error } = await supabase
+            .from('ai_messages')
+            .update({ content })
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async streamChat(messages: { role: string; content: string }[], onToken: (token: string) => void) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Authentication required for AI chat.');
+
+            const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ messages, stream: true }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`AI Service Error: ${errorText}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('Response body is null');
+
+            const decoder = new TextDecoder();
+            let fullContent = '';
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+
+                    const data = trimmedLine.slice(6);
+                    if (data === '[DONE]') continue;
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        const token = parsed.choices?.[0]?.delta?.content || '';
+                        if (token) {
+                            fullContent += token;
+                            onToken(token);
+                        }
+                    } catch (e) {
+                        // Some keep-alive messages or other formats might slip through
+                        console.warn('Error parsing stream line:', e);
+                    }
+                }
+            }
+
+            return fullContent;
+
+        } catch (error: any) {
+            console.error('AI Chat Service Error:', error);
+            throw error;
+        }
+    }
+};

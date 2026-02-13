@@ -56,6 +56,8 @@ const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
 const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDetail"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
 const QuizAttemptDetails = lazy(() => import("./pages/QuizAttemptDetails"));
+const AIChat = lazy(() => import("./pages/AIChat"));
+const SharedAIChat = lazy(() => import("./pages/SharedAIChat"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -130,6 +132,8 @@ const App = () => (
                     <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
                     <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
+                    <Route path="/ai-chat/share/:token" element={<SharedAIChat />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>

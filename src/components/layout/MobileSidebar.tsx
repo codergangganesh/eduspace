@@ -20,6 +20,7 @@ const studentNavItems = [
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/student/assignments" },
   { icon: FileText, label: "Quizzes", path: "/student/quizzes" },
+  { icon: Sparkles, label: "AI Chat", path: "/ai-chat" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
@@ -30,7 +31,8 @@ const lecturerNavItems = [
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" },
-  { icon: Sparkles, label: "AI Quiz", path: "/lecturer/quizzes?mode=create-ai" },
+  { icon: Sparkles, label: "AI Chat", path: "/ai-chat" },
+  { icon: Sparkles, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
