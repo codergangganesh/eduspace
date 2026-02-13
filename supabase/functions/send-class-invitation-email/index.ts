@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
-    const appUrl = Deno.env.get("APP_URL") || "https://eduspace-five.vercel.app";
+    const appUrl = "https://eduspace-five.vercel.app";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
@@ -154,7 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
               </ul>
               
               <center>
-                <a href="https://eduspace-five.vercel.app/student/register" class="button" style="color: white;">Get Started</a>
+                <a href="${appUrl}/student/register" class="button" style="color: white;">Get Started</a>
               </center>
 
               <p style="margin-top: 30px; font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px;">

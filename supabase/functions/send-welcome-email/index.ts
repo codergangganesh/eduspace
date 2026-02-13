@@ -43,6 +43,8 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
 
+    const appUrl = "https://eduspace-five.vercel.app";
+
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
       throw new Error("Server configuration error: Missing SMTP credentials");
@@ -63,7 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
     const mailOptions = {
       from: `"EduSpace Support" <${smtpUser}>`,
       to: email,
-      subject: "Welcome to EduSpace! 🚀",
+      subject: "Welcome to EduSpace!",
       html: `
         <!DOCTYPE html>
         <html>
@@ -101,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
 
               <p>To get started, simply log in to your dashboard and complete your profile.</p>
               <center>
-                <a href="https://eduspace-five.vercel.app${role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'}" class="button" style="color: white;">Get Started</a>
+                <a href="${appUrl}${role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'}" class="button" style="color: white;">Get Started</a>
               </center>
               <p>If you have any questions, our support team is always here to help.</p>
               <p>Best regards,<br>The EduSpace Team</p>

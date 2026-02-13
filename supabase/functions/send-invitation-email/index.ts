@@ -27,10 +27,10 @@ const handler = async (req: Request): Promise<Response> => {
     if (!authHeader) {
       console.error("Missing authorization header");
       return new Response(
-        JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header" }),
+        JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header (DEBUG MODE: Returned 200 instead of 401)" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 401,
+          status: 200, // Return 200 to ensure client sees the error body
         }
       );
     }
@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
-    const appUrl = Deno.env.get("APP_URL") || "https://eduspace-five.vercel.app";
+    const appUrl = "https://eduspace-five.vercel.app";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
@@ -149,10 +149,10 @@ const handler = async (req: Request): Promise<Response> => {
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     console.error("Error sending invitation email:", errorMessage);
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: errorMessage, debug: { receivedBody: { inviteeEmail, lecturerName, lecturerEmail, personalMessage } } }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200, // Return 200 to ensure client sees the error body
       }
     );
   }

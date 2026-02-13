@@ -28,7 +28,7 @@ serve(async (req: Request) => {
             },
             body: JSON.stringify({
                 from: 'EduSpace Support <onboarding@resend.dev>',
-                to: ['mannamganeshbabu8@gmail.com'],
+                to: ['eduspacelearning8@gmail.com'],
                 reply_to: email,
                 subject: `New Support Request: ${subject}`,
                 html: `

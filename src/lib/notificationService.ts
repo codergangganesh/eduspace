@@ -1,9 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Helper to trigger class email via Edge Function
  */
+const BASE_URL = "https://eduspace-five.vercel.app";
+
 async function sendClassEmail(params: {
     classId: string;
     type: 'assignment' | 'quiz' | 'schedule' | 'update';
@@ -319,7 +320,7 @@ export async function notifyNewAssignment(
         });
 
         // Trigger Email Notification
-        const link = `https://eduspace-five.vercel.app/student/assignments`;
+        const link = `${BASE_URL}/student/assignments`;
         const lecturerName = await getLecturerName(lecturerId);
 
         sendClassEmail({
@@ -399,7 +400,7 @@ export async function notifyAssignmentUpdated(
         });
 
         // Trigger Email Notification
-        const link = `https://eduspace-five.vercel.app/student/assignments`;
+        const link = `${BASE_URL}/student/assignments`;
         const lecturerName = await getLecturerName(lecturerId);
 
         sendClassEmail({
@@ -459,7 +460,7 @@ export async function notifyQuizPublished(
         });
 
         // Trigger Email Notification
-        const link = `https://eduspace-five.vercel.app/student/quizzes`;
+        const link = `${BASE_URL}/student/quizzes`;
         const lecturerName = await getLecturerName(lecturerId);
 
         sendClassEmail({
@@ -557,7 +558,7 @@ export async function notifyScheduleCreated(
         });
 
         // Trigger Email Notification
-        const link = `https://eduspace-five.vercel.app/schedule`;
+        const link = `${BASE_URL}/schedule`;
         const lecturerName = await getLecturerName(lecturerId);
 
         sendClassEmail({
@@ -606,7 +607,7 @@ export async function notifyScheduleUpdated(
         });
 
         // Trigger Email Notification
-        const link = `https://eduspace-five.vercel.app/schedule`;
+        const link = `${BASE_URL}/schedule`;
         const lecturerName = await getLecturerName(lecturerId);
 
         sendClassEmail({
@@ -955,4 +956,3 @@ export async function notifyQuizUpdated(
         actionType: 'updated'
     });
 }
-
