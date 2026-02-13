@@ -22,7 +22,7 @@ export function DashboardLayout({ children, actions, fullHeight = false, hideHea
   // Sync with profile when it loads
   useEffect(() => {
     if (profile?.sidebar_mode) {
-      setSidebarMode(profile.sidebar_mode);
+      setSidebarMode(profile.sidebar_mode as 'expanded' | 'collapsed' | 'hover');
     }
   }, [profile?.sidebar_mode]);
 

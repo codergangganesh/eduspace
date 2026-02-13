@@ -8,8 +8,6 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  ChevronRight,
-  Maximize2,
   Minimize2,
   MousePointer2,
   PanelLeft,
@@ -17,6 +15,8 @@ import {
   User,
   Users,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Tooltip,
@@ -75,6 +75,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   const { signOut, role } = useAuth();
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
   const [showControls, setShowControls] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Fetch students ONLY if user is a lecturer
   const { students } = useLecturerStudents();
@@ -87,6 +88,23 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
     navigate("/login");
   };
 
+  const handleToggle = () => {
+    let msg = "";
+    if (mode === 'expanded') {
+      setMode('collapsed');
+      msg = "Slim View";
+    } else if (mode === 'collapsed') {
+      setMode('hover');
+      msg = "Hover View";
+    } else {
+      setMode('expanded');
+      msg = "Wide View";
+    }
+
+    setStatusMessage(msg);
+    setTimeout(() => setStatusMessage(null), 2000);
+  };
+
   const dashboardPath = isLecturer ? "/lecturer-dashboard" : "/dashboard";
 
   return (
@@ -94,7 +112,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
       onMouseEnter={() => mode === 'hover' && onHoverChange(true)}
       onMouseLeave={() => mode === 'hover' && onHoverChange(false)}
       className={cn(
-        "hidden lg:flex flex-col bg-surface border-r border-border h-screen fixed left-0 top-0 z-20 transition-all duration-300",
+        "hidden lg:flex flex-col bg-surface border-r border-border h-[100dvh] fixed left-0 top-0 z-20 transition-all duration-300",
         isCollapsed ? "w-20" : "w-72"
       )}
     >
@@ -113,36 +131,52 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
           </div>
 
           {/* Navigation */}
-          <nav className="flex flex-col gap-1">
-            {navItems.map((item) => {
-              let isActive = false;
+          <nav className="flex flex-col gap-1.5">
+            <TooltipProvider>
+              {navItems.map((item) => {
+                let isActive = false;
 
-              if (item.path.includes('?')) {
-                // For items with query params (like AI Quiz), require exact match including search
-                isActive = (location.pathname + location.search) === item.path;
-              } else {
-                // For standard items, match pathname but exclude if we're in a specific mode that has its own item
-                isActive = location.pathname === item.path;
-                if (item.path === '/lecturer/quizzes' && location.search.includes('mode=create-ai')) {
-                  isActive = false;
+                if (item.path.includes('?')) {
+                  isActive = (location.pathname + location.search) === item.path;
+                } else {
+                  isActive = location.pathname === item.path;
+                  if (item.path === '/lecturer/quizzes' && location.search.includes('mode=create-ai')) {
+                    isActive = false;
+                  }
                 }
-              }
-              return (
-                <Link
-                  key={item.path + item.label}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="size-5 shrink-0" />
-                  {!isCollapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
+
+                const content = (
+                  <Link
+                    key={item.path + item.label}
+                    to={item.path}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
+                    {!isCollapsed && <span>{item.label}</span>}
+                  </Link>
+                );
+
+                if (isCollapsed) {
+                  return (
+                    <Tooltip key={item.path + item.label} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        {content}
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="font-medium">
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return content;
+              })}
+            </TooltipProvider>
 
             {/* Dynamic Student List for Lecturers */}
             {isLecturer && !isCollapsed && students.length > 0 && (
@@ -183,155 +217,99 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
         </div>
 
         {/* Bottom Navigation */}
-        <div className="flex flex-col gap-1 mt-auto">
-          {bottomNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                <item.icon className="size-5 shrink-0" />
-                {!isCollapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full"
-          >
-            <LogOut className="size-5 shrink-0" />
-            {!isCollapsed && <span>Sign Out</span>}
-          </button>
-
-          <div className="mt-2 border-t border-border pt-4">
-            {isCollapsed ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center justify-center p-2.5 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-all w-full">
-                    <PanelLeft className="size-5 shrink-0" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 p-2 rounded-xl" side="right" sideOffset={10}>
-                  <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Sidebar Style</DropdownMenuLabel>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      onClick={() => setMode('expanded')}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all",
-                        mode === 'expanded' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      <Maximize2 className="size-4" />
-                      <span>Expanded</span>
-                    </button>
-                    <button
-                      onClick={() => setMode('collapsed')}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all",
-                        mode === 'collapsed' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      <Minimize2 className="size-4" />
-                      <span>Collapsed</span>
-                    </button>
-                    <button
-                      onClick={() => setMode('hover')}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all",
-                        mode === 'hover' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      <MousePointer2 className="size-4" />
-                      <span>Hover Mode</span>
-                    </button>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="px-1">
-                <button
-                  onClick={() => setShowControls(!showControls)}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all w-full group"
+        <div className="flex flex-col gap-1.5 mt-auto">
+          <TooltipProvider>
+            {bottomNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              const content = (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-background border border-border group-hover:border-primary/30 transition-colors">
-                      <PanelLeft className="size-4 text-primary" />
-                    </div>
-                    <span className="text-sm font-semibold">Sidebar Style</span>
-                  </div>
-                  {showControls ? <ChevronDown className="size-4 opacity-50" /> : <ChevronRight className="size-4 opacity-50" />}
+                  <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </Link>
+              );
+
+              if (isCollapsed) {
+                return (
+                  <Tooltip key={item.path} delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      {content}
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="font-medium">
+                      {item.label}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              return content;
+            })}
+
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full group"
+                >
+                  <LogOut className="size-5 shrink-0 group-hover:scale-110 transition-transform duration-200" />
+                  {!isCollapsed && <span>Sign Out</span>}
                 </button>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right" className="font-medium">
+                  Sign Out
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
 
-                {showControls && (
-                  <div className="mt-3 p-1.5 bg-secondary/20 rounded-2xl border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="grid grid-cols-3 gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => setMode('expanded')}
-                              className={cn(
-                                "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all",
-                                mode === 'expanded'
-                                  ? "bg-background text-primary shadow-sm ring-1 ring-border/50"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                              )}
-                            >
-                              <Maximize2 className="size-4" />
-                              <span className="text-[10px] font-bold uppercase tracking-tight">Full</span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Always expanded</p></TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => setMode('collapsed')}
-                              className={cn(
-                                "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all",
-                                mode === 'collapsed'
-                                  ? "bg-background text-primary shadow-sm ring-1 ring-border/50"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                              )}
-                            >
-                              <Minimize2 className="size-4" />
-                              <span className="text-[10px] font-bold uppercase tracking-tight">Slim</span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Always collapsed</p></TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => setMode('hover')}
-                              className={cn(
-                                "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all",
-                                mode === 'hover'
-                                  ? "bg-background text-primary shadow-sm ring-1 ring-border/50"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                              )}
-                            >
-                              <MousePointer2 className="size-4" />
-                              <span className="text-[10px] font-bold uppercase tracking-tight">Hover</span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Expand on hover</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-                )}
+          <div className="mt-2 border-t border-border pt-4 relative">
+            {statusMessage && (
+              <div className="absolute -top-6 left-0 w-full flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <span className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg backdrop-blur-sm">
+                  {statusMessage}
+                </span>
               </div>
             )}
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleToggle}
+                    className={cn(
+                      "flex items-center px-3 py-2.5 rounded-xl transition-all w-full group hover:bg-secondary/50",
+                      isCollapsed ? "justify-center" : "justify-end bg-secondary/30"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-1.5 rounded-lg bg-background border border-border group-hover:border-primary/30 transition-colors shadow-sm",
+                      isCollapsed && "border-primary/20"
+                    )}>
+                      {isCollapsed ? (
+                        <ChevronRight className="size-4 text-primary" />
+                      ) : (
+                        <ChevronLeft className="size-4 text-primary" />
+                      )}
+                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium text-xs">
+                  {mode === 'expanded'
+                    ? "Currently: Always Expanded (Click for Always Collapsed)"
+                    : mode === 'collapsed'
+                      ? "Currently: Always Collapsed (Click for Hover Mode)"
+                      : "Currently: Hover Mode (Click for Always Expanded)"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>
