@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import emailjs from '@emailjs/browser';
+import { supabase } from "@/integrations/supabase/client";
 
 interface ContactSupportDialogProps {
     open: boolean;
@@ -37,21 +37,17 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             return;
         }
 
-        const serviceID = 'service_vnh7euo';
-        const templateID = 'template_uor5a0b';
-        const publicKey = 'vIG3Qba7KllCKgQfv';
-
         try {
-            const templateParams = {
-                from_name: formData.name,
-                from_email: formData.email,
-                to_name: 'Admin', // Or whoever receives the support emails
-                message: formData.message,
-                subject: formData.subject,
-                reply_to: formData.email,
-            };
+            const { error: fnError } = await supabase.functions.invoke('contact-support', {
+                body: {
+                    name: formData.name,
+                    email: formData.email,
+                    subject: formData.subject,
+                    message: formData.message,
+                },
+            });
 
-            await emailjs.send(serviceID, templateID, templateParams, publicKey);
+            if (fnError) throw fnError;
 
             setIsSubmitting(false);
             setIsSubmitted(true);
@@ -66,7 +62,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
 
         } catch (error: any) {
             console.error('FAILED...', error);
-            toast.error("Failed to send message. Please check your configuration.");
+            toast.error("Failed to send message. Please ensure you are connected to the internet.");
             setIsSubmitting(false);
         }
 
@@ -80,51 +76,51 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden bg-background border-border">
-                <div className="flex flex-col md:flex-row h-full">
+            <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden bg-background border-border max-h-[85vh] overflow-y-auto">
+                <div className="flex flex-col-reverse md:flex-row h-full">
                     {/* Left Panel - Contact Information */}
-                    <div className="w-full md:w-2/5 bg-slate-900 p-8 text-white flex flex-col justify-between relative overflow-hidden">
+                    <div className="w-full md:w-2/5 bg-slate-900 p-6 md:p-8 text-white flex flex-col justify-between relative overflow-hidden shrink-0">
                         {/* Background Decoration */}
-                        <div className="absolute top-0 right-0 p-12 opacity-10">
+                        <div className="absolute top-0 right-0 p-12 opacity-10 hidden md:block">
                             <MessageSquare className="size-64 text-white transform translate-x-1/3 -translate-y-1/3" />
                         </div>
 
                         <div className="relative z-10 space-y-6">
                             <div>
-                                <h3 className="text-2xl font-bold mb-2">Contact Information</h3>
-                                <p className="text-slate-300">
+                                <h3 className="text-xl md:text-2xl font-bold mb-2">Contact Information</h3>
+                                <p className="text-slate-300 text-sm md:text-base">
                                     Fill up the form and our team will get back to you within 24 hours.
                                 </p>
                             </div>
 
-                            <div className="space-y-6 mt-8">
+                            <div className="space-y-4 md:space-y-6 mt-4 md:mt-8">
                                 <div className="flex items-start gap-4">
                                     <div className="p-2 bg-white/10 rounded-lg shrink-0">
-                                        <Mail className="size-5 text-blue-400" />
+                                        <Mail className="size-4 md:size-5 text-blue-400" />
                                     </div>
                                     <div>
-                                        <div className="font-medium text-blue-200 text-sm mb-1">Email</div>
-                                        <div className="text-sm">mannamganeshbabu8@gmail.com</div>
+                                        <div className="font-medium text-blue-200 text-xs md:text-sm mb-1">Email</div>
+                                        <div className="text-sm">eduspacelearning8@gmail.com</div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-4">
                                     <div className="p-2 bg-white/10 rounded-lg shrink-0">
-                                        <MessageSquare className="size-5 text-purple-400" />
+                                        <MessageSquare className="size-4 md:size-5 text-purple-400" />
                                     </div>
                                     <div>
-                                        <div className="font-medium text-purple-200 text-sm mb-1">Phone</div>
-                                        <div className="text-sm">+91 7670895485</div>
+                                        <div className="font-medium text-purple-200 text-xs md:text-sm mb-1">Phone</div>
+                                        <div className="text-xs md:text-sm">+91 7670895485</div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-4">
                                     <div className="p-2 bg-white/10 rounded-lg shrink-0">
-                                        <MessageSquare className="size-5 text-indigo-400" />
+                                        <MessageSquare className="size-4 md:size-5 text-indigo-400" />
                                     </div>
                                     <div>
-                                        <div className="font-medium text-indigo-200 text-sm mb-1">Address</div>
-                                        <div className="text-sm leading-relaxed text-slate-300">
+                                        <div className="font-medium text-indigo-200 text-xs md:text-sm mb-1">Address</div>
+                                        <div className="text-xs md:text-sm leading-relaxed text-slate-300">
                                             1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District,<br />
                                             Andhra Pradesh - 523225, India
                                         </div>
@@ -134,7 +130,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                         </div>
 
                         {/* Bottom Decoration */}
-                        <div className="relative z-10 mt-12 md:mt-0">
+                        <div className="relative z-10 mt-8 md:mt-12 hidden md:block">
                             <div className="flex gap-4">
                                 <div className="size-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
                                     <MessageSquare className="size-4" />

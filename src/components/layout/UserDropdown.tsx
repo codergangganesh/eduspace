@@ -10,12 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, ChevronDown } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Mail } from "lucide-react";
+import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
 
 export function UserDropdown() {
   const { profile, role, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -72,6 +74,14 @@ export function UserDropdown() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          onClick={() => setIsContactOpen(true)}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <Mail className="size-4" />
+          Contact Support
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
           onClick={handleSignOut}
           className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
         >
@@ -79,6 +89,7 @@ export function UserDropdown() {
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ContactSupportDialog open={isContactOpen} onOpenChange={setIsContactOpen} />
     </DropdownMenu>
   );
 }

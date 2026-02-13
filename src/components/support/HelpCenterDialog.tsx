@@ -208,7 +208,7 @@ export function HelpCenterDialog({ open, onOpenChange }: HelpCenterDialogProps) 
                                 Can't find what you're looking for? Our support team is here to help!
                             </p>
                             <ul className="space-y-2 text-muted-foreground">
-                                <li><strong>Email:</strong> mannamganeshbabu8@gmail.com</li>
+                                <li><strong>Email:</strong> eduspacelearning8@gmail.com</li>
                                 <li><strong>Phone:</strong> +91 7670895485</li>
                                 <li><strong>Address:</strong> 1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District, Andhra Pradesh - 523225, India</li>
                                 <li><strong>Response Time:</strong> Within 24 hours</li>

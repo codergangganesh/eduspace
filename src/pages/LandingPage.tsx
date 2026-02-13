@@ -33,7 +33,8 @@ import {
     Cloud,
     Smartphone,
     X,
-    Check
+    Check,
+    Headset
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleSelectionDialog } from "@/components/auth/RoleSelectionDialog";
@@ -177,12 +178,20 @@ export default function LandingPage() {
                             </div>
 
                             {/* Mobile Navigation Actions */}
-                            <div className="flex md:hidden items-center gap-3">
+                            <div className="flex md:hidden items-center gap-2 sm:gap-3">
                                 <ThemeToggle />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setShowContact(true)}
+                                    className="text-white hover:bg-white/10 size-5 sm:size-10"
+                                >
+                                    <Headset className="size-5" />
+                                </Button>
                                 <Button
                                     onClick={() => setShowRoleDialog(true)}
                                     size="sm"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 text-xs sm:text-sm px-3 sm:px-2"
                                 >
                                     Sign In / Up
                                 </Button>
@@ -1036,8 +1045,8 @@ export default function LandingPage() {
                                 <ul className="space-y-3">
                                     <li className="flex items-start gap-2 text-sm text-slate-200 dark:text-slate-400">
                                         <Mail className="size-4 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-                                        <a href="mailto:mannamganeshbabu8@gmail.com" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                                            mannamganeshbabu8@gmail.com
+                                        <a href="mailto:eduspacelearning8@gmail.com" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                            eduspacelearning8@gmail.com
                                         </a>
                                     </li>
                                     <li className="flex items-start gap-2 text-sm text-slate-200 dark:text-slate-400">
