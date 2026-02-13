@@ -1,4 +1,4 @@
-import { MessageRole } from "@/lib/aiChatService";
+import { MessageRole, MessageContent } from "@/lib/aiChatService";
 import { cn } from "@/lib/utils";
 import { User, Bot, Sparkles, Copy, Check, Pencil, X } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 interface AIMessageProps {
     messageId?: string;
     role: MessageRole;
-    content: string;
+    content: string | MessageContent[];
     profile?: {
         full_name?: string;
         avatar_url?: string;
@@ -25,16 +25,23 @@ interface AIMessageProps {
 export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly }: AIMessageProps) {
     const [copied, setCopied] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(content);
+    const [editValue, setEditValue] = useState(typeof content === 'string' ? content : '');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isAssistant = role === 'assistant';
 
-    const processedContent = isAssistant
-        ? content.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*$/gi, '').trim()
-        : content;
+    const getRawText = (c: string | MessageContent[]): string => {
+        if (typeof c === 'string') return c;
+        return c.map(item => item.type === 'text' ? item.text : '').join(' ');
+    };
+
+    const rawText = getRawText(content);
+
+    const processedText = isAssistant
+        ? rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*$/gi, '').trim()
+        : rawText;
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(processedContent);
+        navigator.clipboard.writeText(processedText);
         setCopied(true);
         toast.success("Copied to clipboard");
         setTimeout(() => setCopied(false), 2000);
@@ -143,7 +150,7 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                     variant="ghost"
                                     onClick={() => {
                                         setIsEditing(false);
-                                        setEditValue(content);
+                                        setEditValue(rawText);
                                     }}
                                     className="h-8 px-4 rounded-lg text-xs font-bold"
                                 >
@@ -152,47 +159,107 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                             </div>
                         </div>
                     ) : (
-                        <div className={cn(
-                            "prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed font-medium",
-                            "prose-p:mb-4 last:prose-p:mb-0",
-                            "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl"
-                        )}>
-                            <ReactMarkdown
-                                components={{
-                                    code({ node, inline, className, children, ...props }: any) {
-                                        const match = /language-(\w+)/.exec(className || '');
-                                        return !inline && match ? (
-                                            <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
-                                                <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                        {match[1]}
-                                                    </span>
-                                                    <div className="flex gap-1.5">
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
-                                                    </div>
-                                                </div>
-                                                <SyntaxHighlighter
-                                                    style={vscDarkPlus as any}
-                                                    language={match[1]}
-                                                    PreTag="div"
-                                                    className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
-                                                    {...props}
+                        <div className="space-y-4">
+                            {Array.isArray(content) ? (
+                                content.map((part, i) => (
+                                    <div key={i}>
+                                        {part.type === 'text' && (
+                                            <div className={cn(
+                                                "prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed font-medium",
+                                                "prose-p:mb-4 last:prose-p:mb-0",
+                                                "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl"
+                                            )}>
+                                                <ReactMarkdown
+                                                    components={{
+                                                        code({ node, inline, className, children, ...props }: any) {
+                                                            const match = /language-(\w+)/.exec(className || '');
+                                                            return !inline && match ? (
+                                                                <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+                                                                    <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
+                                                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                                                            {match[1]}
+                                                                        </span>
+                                                                        <div className="flex gap-1.5">
+                                                                            <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
+                                                                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
+                                                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
+                                                                        </div>
+                                                                    </div>
+                                                                    <SyntaxHighlighter
+                                                                        style={vscDarkPlus as any}
+                                                                        language={match[1]}
+                                                                        PreTag="div"
+                                                                        className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
+                                                                        {...props}
+                                                                    >
+                                                                        {String(children).replace(/\n$/, '')}
+                                                                    </SyntaxHighlighter>
+                                                                </div>
+                                                            ) : (
+                                                                <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            );
+                                                        }
+                                                    }}
                                                 >
-                                                    {String(children).replace(/\n$/, '')}
-                                                </SyntaxHighlighter>
+                                                    {part.text || ''}
+                                                </ReactMarkdown>
                                             </div>
-                                        ) : (
-                                            <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
-                                                {children}
-                                            </code>
-                                        );
-                                    }
-                                }}
-                            >
-                                {processedContent}
-                            </ReactMarkdown>
+                                        )}
+                                        {part.type === 'image_url' && (
+                                            <div className="my-4 max-w-lg">
+                                                <div className="rounded-2xl overflow-hidden border border-border/40 shadow-xl ring-1 ring-black/5">
+                                                    <img src={part.image_url?.url} alt="Uploaded content" className="w-full h-auto object-cover" />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className={cn(
+                                    "prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed font-medium",
+                                    "prose-p:mb-4 last:prose-p:mb-0",
+                                    "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl"
+                                )}>
+                                    <ReactMarkdown
+                                        components={{
+                                            code({ node, inline, className, children, ...props }: any) {
+                                                const match = /language-(\w+)/.exec(className || '');
+                                                return !inline && match ? (
+                                                    <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+                                                        <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                                                {match[1]}
+                                                            </span>
+                                                            <div className="flex gap-1.5">
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
+                                                            </div>
+                                                        </div>
+                                                        <SyntaxHighlighter
+                                                            style={vscDarkPlus as any}
+                                                            language={match[1]}
+                                                            PreTag="div"
+                                                            className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
+                                                            {...props}
+                                                        >
+                                                            {String(children).replace(/\n$/, '')}
+                                                        </SyntaxHighlighter>
+                                                    </div>
+                                                ) : (
+                                                    <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
+                                                        {children}
+                                                    </code>
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        {processedText}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

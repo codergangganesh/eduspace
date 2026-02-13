@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AIChatSidebar } from "./AIChatSidebar";
 import { AIChatInput } from "./AIChatInput";
 import { AIMessage } from "./AIMessage";
-import { aiChatService, AIConversation, AIChatMessage } from "@/lib/aiChatService";
+import { aiChatService, AIConversation, AIChatMessage, MessageContent } from "@/lib/aiChatService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle } from "lucide-react";
@@ -153,6 +153,15 @@ export default function AIChatWindow() {
         }
     };
 
+    const handleToggleTemporaryMode = () => {
+        const nextMode = !isTemporaryMode;
+        setIsTemporaryMode(nextMode);
+
+        // Always start fresh when toggling mode to ensure privacy/new session
+        setCurrentConversation(null);
+        setMessages([]);
+    };
+
     const handleUpdateMessage = async (id: string, newContent: string) => {
         try {
             await aiChatService.updateMessage(id, newContent);
@@ -188,7 +197,10 @@ export default function AIChatWindow() {
 
             const history = [
                 { role: 'system', content: 'You are EduSpace Assistant, a helpful and professional academic assistant. You help students with their studies, assignments, and questions about the platform. Provide clear, accurate, and supportive answers.' },
-                ...historyMessages.map(m => ({ role: m.role, content: m.content }))
+                ...historyMessages.map(m => ({
+                    role: m.role,
+                    content: m.content
+                }))
             ];
 
             const fullAIContent = await aiChatService.streamChat(history, (token) => {
@@ -206,11 +218,17 @@ export default function AIChatWindow() {
         }
     };
 
-    const handleSendMessage = async (content: string) => {
+    const handleSendMessage = async (content: string, imageUrl?: string) => {
         let conversationId = currentConversation?.id;
 
         try {
             setIsLoading(true);
+
+            // Construct content for user message
+            const messageContent: string | MessageContent[] = imageUrl ? [
+                { type: 'text', text: content || "What is in this image?" },
+                { type: 'image_url', image_url: { url: imageUrl } }
+            ] : content;
 
             if (isTemporaryMode) {
                 // Temporary Mode: Skip DB logic
@@ -218,7 +236,7 @@ export default function AIChatWindow() {
                     id: crypto.randomUUID(),
                     conversation_id: 'temporary',
                     role: 'user',
-                    content: content,
+                    content: messageContent,
                     created_at: new Date().toISOString()
                 };
                 setMessages(prev => [...prev, userMsg]);
@@ -229,7 +247,7 @@ export default function AIChatWindow() {
                 const history = [
                     { role: 'system', content: 'You are EduSpace Assistant in Temporary Mode. Nothing you say here will be saved or stored in history. Help the user with their quick task.' },
                     ...messages.map(m => ({ role: m.role, content: m.content })),
-                    { role: 'user', content }
+                    { role: 'user', content: messageContent }
                 ];
 
                 const fullAIContent = await aiChatService.streamChat(history, (token) => {
@@ -251,14 +269,14 @@ export default function AIChatWindow() {
             // Normal Mode: standard saving logic
             // 1. Create conversation if not exists
             if (!conversationId) {
-                const newConv = await aiChatService.createConversation(content.slice(0, 40) + (content.length > 40 ? "..." : ""));
+                const newConv = await aiChatService.createConversation(content.substring(0, 40) || (imageUrl ? "Image Analysis" : "New Chat"));
                 conversationId = newConv.id;
                 setCurrentConversation(newConv);
                 setConversations(prev => [newConv, ...prev]);
             }
 
             // 2. Save user message
-            const userMsg = await aiChatService.saveMessage(conversationId, 'user', content);
+            const userMsg = await aiChatService.saveMessage(conversationId, 'user', messageContent);
             setMessages(prev => {
                 if (prev.some(m => m.id === userMsg.id)) return prev;
                 return [...prev, userMsg];
@@ -271,7 +289,7 @@ export default function AIChatWindow() {
             const history = [
                 { role: 'system', content: 'You are EduSpace Assistant, a helpful and professional academic assistant. You help students with their studies, assignments, and questions about the platform. Provide clear, accurate, and supportive answers.' },
                 ...messages.map(m => ({ role: m.role, content: m.content })),
-                { role: 'user', content }
+                { role: 'user', content: messageContent }
             ];
 
             const fullAIContent = await aiChatService.streamChat(history, (token) => {
@@ -285,6 +303,7 @@ export default function AIChatWindow() {
                 return [...prev, assistantMsg];
             });
             setStreamingMessage("");
+            loadConversations();
 
         } catch (error: any) {
             console.error("Chat error:", error);
@@ -374,7 +393,7 @@ export default function AIChatWindow() {
                             <Menu className="h-5 w-5" />
                         </Button>
 
-                        <div className="size-8 md:size-9 rounded-xl overflow-hidden border border-border/40 shadow-lg shrink-0">
+                        <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
                             <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                         </div>
                         <div>
@@ -394,7 +413,7 @@ export default function AIChatWindow() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setIsTemporaryMode(!isTemporaryMode)}
+                            onClick={handleToggleTemporaryMode}
                             className={cn(
                                 "h-9 w-9 rounded-xl border transition-all",
                                 isTemporaryMode

@@ -2,11 +2,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
+export interface MessageContent {
+    type: 'text' | 'image_url';
+    text?: string;
+    image_url?: {
+        url: string;
+    };
+}
+
 export interface AIChatMessage {
     id: string;
     conversation_id: string;
     role: MessageRole;
-    content: string;
+    content: string | MessageContent[];
     created_at: string;
 }
 
@@ -69,7 +77,7 @@ export const aiChatService = {
         if (error) throw error;
     },
 
-    async saveMessage(conversationId: string, role: MessageRole, content: string) {
+    async saveMessage(conversationId: string, role: MessageRole, content: string | MessageContent[]) {
         const { data, error } = await supabase
             .from('ai_messages')
             .insert({
@@ -157,7 +165,23 @@ export const aiChatService = {
         if (error) throw error;
     },
 
-    async streamChat(messages: { role: string; content: string }[], onToken: (token: string) => void) {
+    async transcribeAudio(audioBlob: Blob) {
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'recording.wav');
+
+        const { data, error } = await supabase.functions.invoke('ai-transcribe', {
+            body: formData,
+        });
+
+        if (error) {
+            console.error('Transcription function error:', error);
+            throw new Error(`Transcription failed: ${error.message}`);
+        }
+
+        return data.text as string;
+    },
+
+    async streamChat(messages: { role: string; content: string | MessageContent[] }[], onToken: (token: string) => void) {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Authentication required for AI chat.');
@@ -175,42 +199,43 @@ export const aiChatService = {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`AI Service Error: ${errorText}`);
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch {
+                    errorData = { error: errorText };
+                }
+                console.error('AI Chat Error Details:', errorData);
+                throw new Error(errorData.details || errorData.error || 'AI Service Error');
             }
 
             const reader = response.body?.getReader();
             if (!reader) throw new Error('Response body is null');
 
             const decoder = new TextDecoder();
-            let fullContent = '';
-            let buffer = '';
+            let fullContent = "";
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-
-                buffer = lines.pop() || '';
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
 
                 for (const line of lines) {
-                    const trimmedLine = line.trim();
-                    if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
-
-                    const data = trimmedLine.slice(6);
-                    if (data === '[DONE]') continue;
-
-                    try {
-                        const parsed = JSON.parse(data);
-                        const token = parsed.choices?.[0]?.delta?.content || '';
-                        if (token) {
-                            fullContent += token;
-                            onToken(token);
+                    if (line.trim().startsWith('data: ')) {
+                        const dataStr = line.replace('data: ', '').trim();
+                        if (dataStr === '[DONE]') break;
+                        try {
+                            const parsed = JSON.parse(dataStr);
+                            const token = parsed.choices?.[0]?.delta?.content || "";
+                            if (token) {
+                                fullContent += token;
+                                onToken(token);
+                            }
+                        } catch (e) {
+                            // Partial chunk
                         }
-                    } catch (e) {
-                        // Some keep-alive messages or other formats might slip through
-                        console.warn('Error parsing stream line:', e);
                     }
                 }
             }
@@ -218,8 +243,8 @@ export const aiChatService = {
             return fullContent;
 
         } catch (error: any) {
-            console.error('AI Chat Service Error:', error);
+            console.error('Chat error:', error);
             throw error;
         }
-    }
+    },
 };

@@ -18,6 +18,8 @@ import {
   Bot,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  FileCheck,
 } from "lucide-react";
 import {
   Tooltip,
@@ -42,8 +44,8 @@ import {
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: FileText, label: "Assignments", path: "/student/assignments" },
-  { icon: FileText, label: "Quizzes", path: "/student/quizzes" },
+  { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
+  { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
   { icon: Bot, label: "AI Chat", path: "/ai-chat" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
@@ -53,8 +55,8 @@ const lecturerNavItems = [
   { icon: Users, label: "All Students", path: "/all-students" },
   { icon: Table, label: "Time Table", path: "/lecturer/timetable" }, // New Item
   { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: FileText, label: "Assignments", path: "/lecturer/assignments" },
-  { icon: FileText, label: "Quizzes", path: "/lecturer/quizzes" },
+  { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
+  { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
   { icon: Bot, label: "AI Chat", path: "/ai-chat" },
   { icon: Sparkles, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },

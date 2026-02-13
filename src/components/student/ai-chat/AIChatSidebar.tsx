@@ -90,7 +90,7 @@ export function AIChatSidebar({
         <div className="flex flex-col h-full w-full bg-card/20 backdrop-blur-md">
             <div className="p-4 md:p-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-xl overflow-hidden border border-border/40 shadow-sm shrink-0">
+                    <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
                         <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                     </div>
                     <span className="text-sm font-black uppercase tracking-[0.15em] text-foreground/90">
@@ -226,7 +226,7 @@ export function AIChatSidebar({
                                             </div>
                                         </div>
 
-                                        <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
+                                        <div className="absolute right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform scale-100 md:scale-90 md:group-hover:scale-100">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted rounded-lg">

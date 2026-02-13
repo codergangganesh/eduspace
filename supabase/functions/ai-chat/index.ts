@@ -17,8 +17,19 @@ const MODELS = [
     'gemma2-9b-it',
 ];
 
+const VISION_MODELS = [
+    'llama-3.2-11b-vision-preview',
+    'llama-3.2-90b-vision-preview',
+];
+
 function delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function hasImageContent(messages: any[]) {
+    return messages.some(m =>
+        Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
+    );
 }
 
 serve(async (req: Request) => {
@@ -45,13 +56,15 @@ serve(async (req: Request) => {
             });
         }
 
+        // Determine which models to try
+        const isVisionNeeded = hasImageContent(messages);
+        const modelsToTry = isVisionNeeded ? VISION_MODELS : MODELS;
+
+        console.log(`AI Request: Vision Needed = ${isVisionNeeded}`);
+
         // We will try models in order until one works
         let lastError = null;
         let successResponse = null;
-
-        // If the user requested a specific model (payload.model), we could try that first.
-        // But for this robust implementation, we'll iterate through our trusted list.
-        const modelsToTry = MODELS;
 
         for (const model of modelsToTry) {
             console.log(`Attempting AI chat with Groq model: ${model}`);
