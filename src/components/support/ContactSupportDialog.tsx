@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, MessageSquare, Send, CheckCircle2 } from "lucide-react";
+import { Mail, MessageSquare, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -37,6 +37,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             return;
         }
 
+        setIsSubmitting(true);
         try {
             const { error: fnError } = await supabase.functions.invoke('contact-support', {
                 body: {
@@ -232,7 +233,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                     >
                                         {isSubmitting ? (
                                             <>
-                                                <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                                                <Loader2 className="size-4 animate-spin mr-2" />
                                                 Sending...
                                             </>
                                         ) : (
