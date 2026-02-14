@@ -72,6 +72,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { BookOpen, GraduationCap, BarChart2 } from "lucide-react";
 import { PollBubble } from "@/components/chat/PollBubble";
+import { CallBubble } from "@/components/chat/CallBubble";
 import { ChatPollDialog } from "@/components/chat/ChatPollDialog";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
@@ -206,6 +207,14 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
             <div className="mb-2">
               {message.attachment.type === 'poll' ? (
                 <PollBubble pollId={message.attachment.url} />
+              ) : message.attachment.type === 'call' ? (
+                <CallBubble
+                  type={message.attachment.name?.toLowerCase().includes('video') ? 'video' : 'audio'}
+                  status={(message.attachment as any).status || 'ended'}
+                  duration={message.attachment.size}
+                  timestamp={message.timestamp}
+                  isOwn={message.isOwn}
+                />
               ) : message.attachment.type === 'audio' ? (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] min-w-[220px] max-w-full overflow-hidden">
                   <Button
@@ -808,24 +817,24 @@ export default function Messages() {
 
   if (loading) {
     return (
-      <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversationId && isMobileChatOpen}>
+      <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversation && isMobileChatOpen}>
         <ChatSkeleton />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversationId && isMobileChatOpen}>
+    <DashboardLayout fullHeight={true} hideHeaderOnMobile={!!selectedConversation && isMobileChatOpen}>
       <div className={cn(
         "flex h-full w-full bg-white dark:bg-[#111b21] overflow-hidden relative",
-        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 dark:md:border-slate-700"
+        "md:rounded-xl md:shadow-xl md:border md:border-slate-200 dark:md:border-slate-700 fade-in duration-300"
       )}>
 
         {/* Left Sidebar */}
         <div className={cn(
           "border-r border-slate-200 dark:border-slate-700/50 flex flex-col bg-white dark:bg-[#111b21]",
           "md:w-80 w-full shrink-0",
-          selectedConversationId && isMobileChatOpen ? "hidden md:flex" : "flex"
+          selectedConversation && isMobileChatOpen ? "hidden md:flex" : "flex"
         )}>
 
           {/* Sidebar Header */}
@@ -834,7 +843,7 @@ export default function Messages() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden size-8 text-slate-900 dark:text-slate-900 hover:text-emerald-900 mr-1"
+                className="md:hidden size-8 text-slate-700 dark:text-emerald-400 hover:text-emerald-900 mr-1"
                 onClick={() => window.history.back()}
               >
                 <ArrowLeft className="size-5" />
@@ -932,7 +941,7 @@ export default function Messages() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500 dark:text-slate-400" />
                 <Input
                   placeholder="Search or start new chat"
-                  className="pl-9 bg-slate-100 dark:bg-slate-700 border-0 rounded-lg h-9 text-sm"
+                  className="pl-9 bg-slate-100 dark:bg-slate-700 border-0 rounded-lg h-10 text-base md:text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1331,7 +1340,7 @@ export default function Messages() {
                         }}
                         onKeyDown={handleKeyPress}
                         placeholder="Type a message..."
-                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 text-sm w-full shadow-none text-slate-900 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 px-0"
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-10 text-base md:text-sm w-full shadow-none text-slate-900 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 px-0"
                       />
                     )}
                   </div>
