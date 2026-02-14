@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { SidebarSkeleton } from "./AIChatSkeleton";
-import { Plus, MessageSquare, Trash2, MoreVertical, Sparkles, Pencil, Check, X, Search, Bot, Pin, PinOff, Share2, Link } from "lucide-react";
+import { Plus, Folder, Trash2, MoreVertical, Sparkles, Pencil, Check, X, Search, Bot, Pin, PinOff, Share2, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -167,7 +167,7 @@ export function AIChatSidebar({
                     ) : filteredConversations.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                             <div className="h-10 w-10 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <MessageSquare className="h-5 w-5 text-muted-foreground/40" />
+                                <Folder className="h-5 w-5 text-muted-foreground/40" />
                             </div>
                             <p className="text-xs text-muted-foreground font-medium">
                                 {searchQuery ? "No matching chats found" : "No previous chats"}
@@ -185,7 +185,7 @@ export function AIChatSidebar({
                                 )}
                                 onClick={() => editingId !== chat.id && onSelectConversation(chat.id)}
                             >
-                                <MessageSquare className={cn(
+                                <Folder className={cn(
                                     "mr-3 h-4 w-4 shrink-0 transition-colors",
                                     currentConversationId === chat.id ? "text-primary" : "text-muted-foreground/60 group-hover:text-foreground"
                                 )} />
