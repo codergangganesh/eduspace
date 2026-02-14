@@ -214,6 +214,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                   duration={message.attachment.size}
                   timestamp={message.timestamp}
                   isOwn={message.isOwn}
+                  content={message.content}
                 />
               ) : message.attachment.type === 'audio' ? (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] min-w-[220px] max-w-full overflow-hidden">
@@ -302,7 +303,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
               </div>
             </div>
           ) : (
-            message.content && (
+            message.content && message.attachment?.type !== 'call' && (
               <p className="text-sm shadow-none whitespace-pre-wrap [word-break:break-word] leading-relaxed py-0.5">{message.content}</p>
             )
           )}
@@ -378,7 +379,8 @@ export default function Messages() {
   const [wallpaper, setWallpaper] = useState<string>("");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
-  const { startCall } = useCall();
+  const { startCall, activeCall } = useCall();
+  const activeCallRef = useRef<any>(null);
 
   // Meeting State
   const [joinMeetingCode, setJoinMeetingCode] = useState("");
@@ -450,11 +452,69 @@ export default function Messages() {
   };
 
   const startMeeting = (code: string, type: 'audio' | 'video') => {
-    startCall({ type, conversationId: code, isMeeting: true });
+    startCall({ type, conversationId: code, isMeeting: true, startTime: Date.now() });
     setIsCreateMeetingOpen(false);
     setIsJoinMeetingOpen(false);
     setJoinMeetingCode("");
   };
+
+  const handleDirectCall = async (type: 'audio' | 'video') => {
+    if (!selectedConversation || !user) return;
+
+    const otherUserId = selectedConversation.participant_1 === user.id
+      ? selectedConversation.participant_2
+      : selectedConversation.participant_1;
+
+    try {
+      // Send "Started" message
+      await sendMessage(otherUserId, "Call Started", {
+        type: 'call',
+        name: type === 'video' ? 'Video Call' : 'Voice Call',
+        status: 'started'
+      });
+
+      startCall({
+        type,
+        conversationId: selectedConversation.id,
+        userName: selectedConversation.other_user_name,
+        startTime: Date.now()
+      });
+    } catch (err) {
+      console.error("Failed to start call message:", err);
+      toast.error("Failed to start call");
+    }
+  };
+
+  // Monitor call ending to send "Ended" message
+  useEffect(() => {
+    if (activeCall) {
+      activeCallRef.current = activeCall;
+    } else if (activeCallRef.current) {
+      const call = activeCallRef.current;
+      const durationMs = Date.now() - (call.startTime || Date.now());
+      const minutes = Math.floor(durationMs / 60000);
+      const seconds = Math.floor((durationMs % 60000) / 1000);
+      const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+      // Only send message for non-meeting direct calls (where conversationId is a UUID)
+      if (!call.isMeeting && call.conversationId && call.conversationId.length > 30) {
+        const conv = conversations.find(c => c.id === call.conversationId);
+        if (conv && user) {
+          const otherUserId = conv.participant_1 === user.id
+            ? conv.participant_2
+            : conv.participant_1;
+
+          sendMessage(otherUserId, "Call Ended", {
+            type: 'call',
+            name: call.type === 'video' ? 'Video Call' : 'Voice Call',
+            status: 'ended',
+            size: durationStr
+          }).catch(err => console.error("Failed to send end call message:", err));
+        }
+      }
+      activeCallRef.current = null;
+    }
+  }, [activeCall, conversations, user, sendMessage]);
 
   const handleWallpaperUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1123,14 +1183,7 @@ export default function Messages() {
                       variant="ghost"
                       size="icon"
                       className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
-                      onClick={() => {
-                        const callType = 'audio';
-                        if (role === 'lecturer') {
-                          handleCreateMeeting(callType);
-                        } else {
-                          setIsJoinMeetingOpen(true);
-                        }
-                      }}
+                      onClick={() => handleDirectCall('audio')}
                     >
                       <Phone className="size-5" />
                     </Button>
@@ -1138,14 +1191,7 @@ export default function Messages() {
                       variant="ghost"
                       size="icon"
                       className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
-                      onClick={() => {
-                        const callType = 'video';
-                        if (role === 'lecturer') {
-                          handleCreateMeeting(callType);
-                        } else {
-                          setIsJoinMeetingOpen(true);
-                        }
-                      }}
+                      onClick={() => handleDirectCall('video')}
                     >
                       <Video className="size-5" />
                     </Button>

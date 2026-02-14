@@ -7,6 +7,7 @@ export interface CallState {
     conversationId: string;
     isMeeting?: boolean;
     userName?: string;
+    startTime?: number;
 }
 
 interface CallContextType {

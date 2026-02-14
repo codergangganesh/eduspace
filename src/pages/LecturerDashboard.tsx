@@ -1,5 +1,5 @@
 // Imports
-import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight } from "lucide-react";
+import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight, Megaphone, Heart, Send } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -98,13 +98,14 @@ export default function LecturerDashboard() {
         </div>
 
         {/* Stats Grid - Premium Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
           {stats.map((stat, i) => (
             <div
               key={stat.title}
               className={cn(
                 "group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1",
-                stat.borderColor
+                stat.borderColor,
+                i === 2 && "col-span-2 md:col-span-1"
               )}
             >
               <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", stat.gradient)} />
@@ -224,6 +225,7 @@ export default function LecturerDashboard() {
                 </CardContent>
               </Card>
             </div>
+
 
           </div>
         </div>

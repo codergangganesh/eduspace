@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus, Heart, Send, Megaphone } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -124,11 +124,8 @@ export default function Dashboard() {
         {/* Hero Section */}
         <DashboardHero />
 
-        {/* Pending Invitations Panel - Hidden, now shown in modal */}
-        {/* {hasPending && <PendingInvitationsPanel />} */}
-
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
             title="Assigned"
             value={stats.total}
@@ -149,7 +146,7 @@ export default function Dashboard() {
             value={stats.pending}
             icon={AlertCircle}
             subtitle="Require attention"
-            className="border-l-4 border-l-orange-500"
+            className="col-span-2 sm:col-span-1 border-l-4 border-l-orange-500"
           />
           <StatsCard
             title="Schedule"
@@ -177,13 +174,12 @@ export default function Dashboard() {
           {/* Right Column (Sidebar) */}
           <div className="space-y-6">
 
-            {/* Upcoming Classes Widget (Replacing Activity Feed position) */}
+            {/* Upcoming Classes Widget */}
             <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Clock className="size-4 text-purple-500" />
                 Upcoming Classes
               </h3>
-
               <div className="space-y-3">
                 {upcomingClasses.length > 0 ? (
                   upcomingClasses.map(cls => (
@@ -197,7 +193,6 @@ export default function Dashboard() {
                   <p className="text-sm text-muted-foreground text-center py-4">No upcoming classes</p>
                 )}
               </div>
-
               <Button
                 variant="ghost"
                 onClick={() => navigate("/schedule")}
@@ -227,6 +222,7 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+
 
           </div>
 

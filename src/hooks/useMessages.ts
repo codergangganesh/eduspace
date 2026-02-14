@@ -41,6 +41,7 @@ interface Attachment {
     url?: string;
     type?: string;
     size?: string;
+    status?: 'started' | 'ended' | 'missed' | 'declined';
 }
 
 export function useMessages() {

@@ -7,9 +7,10 @@ interface CallBubbleProps {
     duration?: string;
     timestamp: string;
     isOwn: boolean;
+    content?: string;
 }
 
-export function CallBubble({ type, status, duration, timestamp, isOwn }: CallBubbleProps) {
+export function CallBubble({ type, status, duration, timestamp, isOwn, content }: CallBubbleProps) {
     const isVideo = type === 'video';
     const isMissed = status === 'missed' || status === 'declined';
 
@@ -36,9 +37,9 @@ export function CallBubble({ type, status, duration, timestamp, isOwn }: CallBub
                     )}
                 </div>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex flex-col">
                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                        {isVideo ? 'Video Call' : 'Voice Call'}
+                        {content || (isVideo ? 'Video Call' : 'Voice Call')}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                         {isOwn ? (

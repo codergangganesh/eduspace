@@ -51,6 +51,7 @@ export interface Profile {
     isMeeting?: boolean;
     userName?: string;
   } | null;
+  last_feedback_prompt_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -10,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, ChevronDown, Mail } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck } from "lucide-react";
 import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
 
 export function UserDropdown() {
@@ -52,9 +53,24 @@ export function UserDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{displayName}</p>
-            <p className="text-xs leading-none text-muted-foreground">
+          <div className="flex flex-col space-y-2 py-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold leading-none tracking-tight">{displayName}</p>
+              <div className={cn(
+                "flex items-center gap-0.5 px-1 py-0 rounded-full text-[7px] font-bold uppercase tracking-widest border shadow-sm shrink-0",
+                role === "lecturer"
+                  ? "bg-indigo-500/10 text-indigo-600 border-indigo-200/50 dark:bg-indigo-400/10 dark:text-indigo-400 dark:border-indigo-400/20"
+                  : role === "admin"
+                    ? "bg-amber-500/10 text-amber-600 border-amber-200/50 dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/20"
+                    : "bg-emerald-500/10 text-emerald-600 border-emerald-200/50 dark:bg-emerald-400/10 dark:text-emerald-400 dark:border-emerald-400/20"
+              )}>
+                {role === "lecturer" ? <UserCheck className="size-2" /> :
+                  role === "admin" ? <ShieldCheck className="size-2" /> :
+                    <GraduationCap className="size-2" />}
+                {displayRole}
+              </div>
+            </div>
+            <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">
               {profile?.email || "No email"}
             </p>
           </div>

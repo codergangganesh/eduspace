@@ -46,8 +46,8 @@ export default function StudentQuizzes() {
             <div className="w-full flex flex-col gap-10 animate-in fade-in duration-500">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div>
-                        <h1 className="text-4xl font-bold tracking-tight">Available Assessments</h1>
-                        <p className="text-muted-foreground text-lg mt-2">Track and complete quizzes for your enrolled classes</p>
+                        <h1 className="text-4xl font-bold tracking-tight">Assigned Quizzes</h1>
+                        <p className="text-muted-foreground text-lg mt-2">Track and complete your assigned quizzes for your enrolled classes</p>
                     </div>
 
                 </div>
