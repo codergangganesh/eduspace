@@ -245,17 +245,31 @@ export default function CreateAIQuiz() {
             <div className="w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-3 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-hidden shadow-none md:shadow-sm filter-none">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                    <div className="flex items-start gap-3">
-
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(-1)}
+                            className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group shrink-0"
+                        >
+                            <ArrowLeft className="size-5 md:size-6 text-slate-600 dark:text-slate-400 group-hover:text-primary" />
+                        </Button>
                         <div className="flex flex-col gap-1">
                             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                                <h1 className="text-xl md:text-3xl font-bold tracking-tight">Create Quiz with AI</h1>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-xl dark:bg-indigo-500/20 shadow-inner">
+                                        <Brain className="size-6 sm:size-7 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                    <h1 className="text-xl md:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-400">
+                                        Create Quiz with AI
+                                    </h1>
+                                </div>
                                 <Badge className="w-fit bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none px-2 py-0.5 md:px-3 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg shadow-purple-500/20">
-                                    <Sparkles className="size-3 mr-1" />
+                                    <Brain className="size-3 mr-1" />
                                     AI Powered
                                 </Badge>
                             </div>
-                            <p className="text-muted-foreground text-xs md:text-sm">
+                            <p className="text-muted-foreground text-xs md:text-sm md:pl-14">
                                 Choose how you want AI to generate your quiz
                             </p>
                         </div>
@@ -302,7 +316,7 @@ export default function CreateAIQuiz() {
                             <Card className="shadow-lg">
                                 <CardHeader className="pb-4">
                                     <CardTitle className="text-lg flex items-center gap-2">
-                                        <Sparkles className="size-5 text-primary" />
+                                        <Brain className="size-5 text-primary" />
                                         Generation Method
                                     </CardTitle>
                                 </CardHeader>
@@ -466,7 +480,7 @@ export default function CreateAIQuiz() {
                                             {isGenerating ? (
                                                 <Loader2 className="size-5 mr-2 animate-spin" />
                                             ) : (
-                                                <Sparkles className="size-5 mr-2" />
+                                                <Brain className="size-5 mr-2" />
                                             )}
                                             {isGenerating ? 'Generating...' : 'Generate Questions with AI'}
                                         </Button>
@@ -586,7 +600,7 @@ export default function CreateAIQuiz() {
                                 </Badge>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
                                 {questions.map((question, index) => (
                                     editingQuestionId === question.id ? (
                                         <div key={question.id} className="bg-card border border-primary/20 p-6 rounded-xl animate-in slide-in-from-top-4 duration-300 shadow-md">
@@ -599,19 +613,19 @@ export default function CreateAIQuiz() {
                                         </div>
                                     ) : (
                                         <Card key={question.id} className="relative group hover:border-primary/50 transition-all shadow-sm">
-                                            <CardContent className="p-4 sm:p-5 flex gap-4 sm:gap-6 relative">
-                                                <div className="flex flex-col items-center justify-center p-2 sm:p-3 bg-muted rounded-xl w-10 h-10 sm:w-14 sm:h-14 shrink-0 border border-border font-bold text-lg sm:text-xl text-primary font-mono">
+                                            <CardContent className="p-2 sm:p-5 flex gap-2 sm:gap-6 relative">
+                                                <div className="flex flex-col items-center justify-center p-1 sm:p-3 bg-muted rounded-lg sm:rounded-xl size-7 sm:size-14 shrink-0 border border-border font-bold text-xs sm:text-xl text-primary font-mono">
                                                     {index + 1}
                                                 </div>
-                                                <div className="flex-1 space-y-2 sm:space-y-3 min-w-0 pr-12 sm:pr-0">
-                                                    <p className="font-semibold text-base sm:text-lg leading-tight">{question.question_text}</p>
-                                                    <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                                                        <Badge variant="outline" className="bg-muted px-2 py-0.5 sm:px-3 sm:py-1 border-border text-muted-foreground text-[10px] sm:text-xs">
-                                                            {question.marks} Points
+                                                <div className="flex-1 space-y-1 sm:space-y-3 min-w-0 pr-6 sm:pr-0">
+                                                    <p className="font-semibold text-[10px] sm:text-lg leading-tight line-clamp-3 sm:line-clamp-none">{question.question_text}</p>
+                                                    <div className="flex flex-wrap items-center gap-1 sm:gap-4">
+                                                        <Badge variant="outline" className="bg-muted px-1 py-0 sm:px-3 sm:py-1 border-border text-muted-foreground text-[8px] sm:text-xs">
+                                                            {question.marks} Pts
                                                         </Badge>
-                                                        <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
-                                                            <div className="size-1.5 rounded-full bg-muted-foreground/50" />
-                                                            {question.options.length} Choices
+                                                        <span className="text-[8px] sm:text-sm text-muted-foreground flex items-center gap-1">
+                                                            <div className="size-1 rounded-full bg-muted-foreground/50" />
+                                                            {question.options.length} Ch
                                                         </span>
                                                     </div>
                                                 </div>

@@ -101,81 +101,111 @@ export default function ClassAssignmentsView() {
     return (
         <DashboardLayout>
             <div className="flex flex-col gap-6">
-                {/* Breadcrumb & Header */}
-                <div className="flex flex-col gap-4">
-                    <Button
-                        variant="ghost"
-                        className="w-fit gap-2"
-                        onClick={() => navigate('/lecturer/assignments')}
-                    >
-                        <ArrowLeft className="size-4" />
-                        Back to Classes
-                    </Button>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                                {currentClass.class_name || currentClass.course_code}
-                            </h1>
-                            <p className="text-muted-foreground mt-1">
-                                {currentClass.course_code} • {currentClass.lecturer_department}
-                                {currentClass.semester && ` • ${currentClass.semester}`}
-                            </p>
+                {/* Header */}
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => navigate('/lecturer/assignments')}
+                                className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group shrink-0"
+                            >
+                                <ArrowLeft className="size-5 md:size-6 text-slate-600 dark:text-slate-400 group-hover:text-primary" />
+                            </Button>
+                            <div>
+                                <h1 className="text-xl md:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-400">
+                                    {currentClass.class_name || currentClass.course_code}
+                                </h1>
+                                <p className="text-muted-foreground mt-1 text-xs md:text-sm">
+                                    {currentClass.course_code} • {currentClass.lecturer_department}
+                                    {currentClass.semester && ` • ${currentClass.semester}`}
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => setIsSubjectsOpen(true)}>
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsSubjectsOpen(true)}
+                                className="hidden sm:flex rounded-xl h-10 px-4 md:h-12 border-slate-200 dark:border-slate-800 font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"
+                            >
                                 Manage Subjects
                             </Button>
+
+                            <Button
+                                onClick={() => setIsCreateOpen(true)}
+                                className="hidden sm:flex rounded-xl h-10 px-4 md:h-12 border-none font-bold transition-all shadow-lg hover:shadow-primary/20 bg-primary text-white gap-2"
+                            >
+                                <Plus className="size-5" />
+                                <span>Create Assignment</span>
+                            </Button>
+
                             <CreateClassAssignmentDialog
                                 classId={classId!}
                                 subjects={subjects}
                                 onManageSubjects={() => setIsSubjectsOpen(true)}
                                 open={isCreateOpen}
                                 onOpenChange={setIsCreateOpen}
+                                showTrigger={false}
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
-                    <Card className="relative overflow-hidden border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
-                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                <CheckCircle className="size-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                    <Card className="border-none bg-gradient-to-br from-emerald-600 to-teal-700 shadow-xl rounded-2xl overflow-hidden group">
+                        <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <CheckCircle className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Active</p>
-                                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <CheckCircle className="size-5 sm:size-7 text-white" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-xs text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
+                                    Active
+                                </p>
+                                <p className="text-xl sm:text-3xl font-black text-white">
                                     {assignments.filter((a) => a.status === 'active').length}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="relative overflow-hidden border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
-                            <div className="p-3 bg-slate-500/10 rounded-xl border border-slate-500/20">
-                                <XCircle className="size-6 text-slate-600 dark:text-slate-400" />
+                    <Card className="border-none bg-gradient-to-br from-slate-600 to-slate-800 shadow-xl rounded-2xl overflow-hidden group">
+                        <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <XCircle className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Closed</p>
-                                <p className="text-2xl font-bold text-slate-700 dark:text-slate-400">
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <XCircle className="size-5 sm:size-7 text-white" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-xs text-slate-100/80 font-semibold uppercase tracking-wider truncate">
+                                    Closed
+                                </p>
+                                <p className="text-xl sm:text-3xl font-black text-white">
                                     {assignments.filter((a) => a.status === 'closed').length}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 backdrop-blur-sm">
-                        <CardContent className="p-4 flex items-center gap-4 relative z-10">
-                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                                <Users className="size-6 text-blue-600 dark:text-blue-400" />
+                    <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group col-span-2 sm:col-span-1">
+                        <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <Users className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Students</p>
-                                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{currentClass.student_count || 0}</p>
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <Users className="size-5 sm:size-7 text-white" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-xs text-blue-100/80 font-semibold uppercase tracking-wider truncate">
+                                    Students
+                                </p>
+                                <p className="text-xl sm:text-3xl font-black text-white">{currentClass.student_count || 0}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -261,16 +291,39 @@ export default function ClassAssignmentsView() {
 
             </div >
 
-            {/* Mobile FAB */}
+            {/* Mobile FAB Menu */}
             <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <Button
-                    onClick={() => setIsCreateOpen(true)}
-                    size="icon"
-                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
-                    title="Create Assignment"
-                >
-                    <Plus className="size-8 text-white" />
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            size="icon"
+                            className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                            title="Create"
+                        >
+                            <Plus className="size-8 text-white" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top" className="w-64 p-2 rounded-2xl shadow-2xl border-none backdrop-blur-xl bg-white/95 dark:bg-slate-900/95 mb-4">
+                        <DropdownMenuItem onClick={() => setIsCreateOpen(true)} className="h-14 rounded-xl cursor-pointer gap-3 px-4">
+                            <div className="p-2.5 bg-primary/10 rounded-xl">
+                                <FileText className="size-5 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-base">Assignment</span>
+                                <span className="text-[11px] text-muted-foreground leading-tight">Create a new class task</span>
+                            </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsSubjectsOpen(true)} className="h-14 rounded-xl cursor-pointer gap-3 px-4">
+                            <div className="p-2.5 bg-emerald-500/10 rounded-xl">
+                                <Plus className="size-5 text-emerald-600" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-base">Subject</span>
+                                <span className="text-[11px] text-muted-foreground leading-tight">Add or edit subjects</span>
+                            </div>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             <DeleteConfirmDialog

@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2, Sparkles } from 'lucide-react';
+import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2, ArrowLeft, Brain } from 'lucide-react';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/contexts/AuthContext';
 import { LecturerQuizCard } from '@/components/lecturer/LecturerQuizCard';
@@ -54,10 +54,22 @@ export default function ClassQuizzesView() {
     return (
         <DashboardLayout>
             <div className="w-full flex flex-col gap-8 animate-in fade-in duration-500">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Class Quizzes</h1>
-                        <p className="text-muted-foreground mt-1 text-lg">Manage and track quizzes for this class</p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate('/lecturer/quizzes')}
+                            className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group shrink-0"
+                        >
+                            <ArrowLeft className="size-5 md:size-6 text-slate-600 dark:text-slate-400 group-hover:text-primary" />
+                        </Button>
+                        <div>
+                            <h1 className="text-xl md:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-400">
+                                Class Quizzes
+                            </h1>
+                            <p className="text-muted-foreground mt-1 text-xs md:text-sm">Manage and track quizzes for this class</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
@@ -82,7 +94,7 @@ export default function ClassQuizzesView() {
                         </div>
 
                         <Button onClick={() => navigate(`/lecturer/quizzes/${classId}/create-ai`)} className="hidden sm:flex gap-2 h-11 px-6 shadow-md transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-                            <Sparkles className="size-5" />
+                            <Brain className="size-5" />
                             AI Quiz
                         </Button>
                         <Button onClick={handleCreateQuiz} className="hidden sm:flex gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
@@ -115,7 +127,7 @@ export default function ClassQuizzesView() {
                 ) : (
                     <div className={cn(
                         viewMode === 'grid'
-                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-5"
+                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-5"
                             : "flex flex-col gap-4"
                     )}>
                         {quizzes.map((quiz) => (
@@ -243,7 +255,7 @@ export default function ClassQuizzesView() {
                             onClick={() => navigate(`/lecturer/quizzes/${classId}/create-ai`)}
                             className="h-12 cursor-pointer text-base font-medium bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 text-indigo-600 dark:text-indigo-400"
                         >
-                            <Sparkles className="size-5 mr-3" />
+                            <Brain className="size-5 mr-3" />
                             Create with AI
                         </DropdownMenuItem>
                     </DropdownMenuContent>

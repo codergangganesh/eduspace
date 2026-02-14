@@ -168,60 +168,104 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
                         </div>
                     )}
 
-                    {/* Subjects Table */}
+                    {/* Subjects Responsive List/Table */}
                     {loading ? (
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="size-6 animate-spin text-muted-foreground" />
                         </div>
                     ) : subjects.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed">
                             No subjects added yet. Click "Add Subject" to get started.
                         </div>
                     ) : (
-                        <div className="border rounded-lg">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Subject Name</TableHead>
-                                        <TableHead>Code</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {subjects.map((subject) => (
-                                        <TableRow key={subject.id}>
-                                            <TableCell className="font-medium">
-                                                {subject.name}
-                                            </TableCell>
-                                            <TableCell>{subject.code || '-'}</TableCell>
-                                            <TableCell className="max-w-[200px] truncate">
-                                                {subject.description || '-'}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleEdit(subject)}
-                                                        disabled={isAdding || editingId !== null}
-                                                    >
-                                                        <Edit className="size-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleDelete(subject.id)}
-                                                        disabled={isAdding || editingId !== null}
-                                                    >
-                                                        <Trash2 className="size-4 text-destructive" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
+                        <div className="space-y-3">
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block border rounded-2xl overflow-hidden">
+                                <Table>
+                                    <TableHeader className="bg-muted/50">
+                                        <TableRow>
+                                            <TableHead className="font-bold">Subject Name</TableHead>
+                                            <TableHead className="font-bold">Code</TableHead>
+                                            <TableHead className="font-bold">Description</TableHead>
+                                            <TableHead className="text-right font-bold">Actions</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {subjects.map((subject) => (
+                                            <TableRow key={subject.id}>
+                                                <TableCell className="font-bold text-slate-700 dark:text-slate-200">
+                                                    {subject.name}
+                                                </TableCell>
+                                                <TableCell className="font-medium text-muted-foreground">{subject.code || '-'}</TableCell>
+                                                <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                                                    {subject.description || '-'}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleEdit(subject)}
+                                                            disabled={isAdding || editingId !== null}
+                                                            className="h-8 w-8 rounded-full"
+                                                        >
+                                                            <Edit className="size-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleDelete(subject.id)}
+                                                            disabled={isAdding || editingId !== null}
+                                                            className="h-8 w-8 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3">
+                                {subjects.map((subject) => (
+                                    <div key={subject.id} className="p-4 rounded-2xl bg-muted/30 border border-border/50 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-black text-slate-800 dark:text-white">{subject.name}</p>
+                                                {subject.code && <p className="text-[10px] font-bold text-muted-foreground uppercase">{subject.code}</p>}
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleEdit(subject)}
+                                                    disabled={isAdding || editingId !== null}
+                                                    className="h-8 w-8 rounded-full bg-white dark:bg-slate-900 shadow-sm"
+                                                >
+                                                    <Edit className="size-3.5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDelete(subject.id)}
+                                                    disabled={isAdding || editingId !== null}
+                                                    className="h-8 w-8 rounded-full bg-white dark:bg-slate-900 shadow-sm text-destructive"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        {subject.description && (
+                                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed italic">
+                                                {subject.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

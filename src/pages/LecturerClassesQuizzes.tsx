@@ -8,7 +8,8 @@ import {
     Users,
     Search,
     CheckCircle,
-    Sparkles,
+    Bot,
+    Brain,
 } from 'lucide-react';
 import { useState } from 'react';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
@@ -69,7 +70,7 @@ export default function LecturerClassesQuizzes() {
                         <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3">
                             {isAICreateMode ? (
                                 <>
-                                    <Sparkles className="size-8 text-blue-500 fill-blue-500/20" />
+                                    <Bot className="size-8 text-blue-600 dark:text-blue-400 fill-blue-500/10" />
                                     Generate AI Quiz
                                 </>
                             ) : (
@@ -96,37 +97,37 @@ export default function LecturerClassesQuizzes() {
                 </div>
 
                 {/* Stats Overview - Premium Look */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group">
-                        <CardContent className="p-6 flex items-center gap-5 relative">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <BookOpen className="size-20 text-white" />
+                                <BookOpen className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div className="p-4 bg-white/10 rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm">
-                                <BookOpen className="size-7 text-white" />
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <BookOpen className="size-5 sm:size-7 text-white" />
                             </div>
-                            <div className="relative z-10">
-                                <p className="text-sm text-blue-100/80 font-semibold uppercase tracking-wider">
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-blue-100/80 font-semibold uppercase tracking-wider truncate">
                                     Total Classes
                                 </p>
-                                <p className="text-3xl font-black text-white">{classes.length}</p>
+                                <p className="text-xl sm:text-3xl font-black text-white">{classes.length}</p>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="border-none bg-gradient-to-br from-emerald-600 to-teal-700 shadow-xl rounded-2xl overflow-hidden group">
-                        <CardContent className="p-6 flex items-center gap-5 relative">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <CheckCircle className="size-20 text-white" />
+                                <CheckCircle className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div className="p-4 bg-white/10 rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm">
-                                <CheckCircle className="size-7 text-white" />
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <CheckCircle className="size-5 sm:size-7 text-white" />
                             </div>
-                            <div className="relative z-10">
-                                <p className="text-sm text-emerald-100/80 font-semibold uppercase tracking-wider">
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
                                     Active Quizzes
                                 </p>
-                                <p className="text-3xl font-black text-white">Live View</p>
+                                <p className="text-xl sm:text-3xl font-black text-white">Live View</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -159,12 +160,13 @@ export default function LecturerClassesQuizzes() {
                         </Card>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-6">
-                            {filteredClasses.map((classItem) => (
+                            {filteredClasses.map((classItem, index) => (
                                 <SectionClassCard
                                     key={classItem.id}
                                     classData={classItem}
                                     variant="quizzes"
                                     onAction={handleViewQuizzes}
+                                    index={index}
                                 />
                             ))}
                         </div>

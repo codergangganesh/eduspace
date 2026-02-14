@@ -56,48 +56,57 @@ export default function LecturerClassesAssignments() {
                 </div>
 
                 {/* Stats Overview - Dark Glass Design */}
-                {/* Stats Overview - Theme Aware Design */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="bg-card border-border shadow-sm hover:shadow-md transition-all">
-                        <CardContent className="p-5 flex items-center gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/10">
-                                <BookOpen className="size-6 text-blue-500" />
+                {/* Stats Overview - Premium Design */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <BookOpen className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <BookOpen className="size-5 sm:size-7 text-white" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-blue-100/80 font-semibold uppercase tracking-wider truncate">
                                     Total Classes
                                 </p>
-                                <p className="text-2xl font-bold text-foreground">{classes.length}</p>
+                                <p className="text-xl sm:text-3xl font-black text-white">{classes.length}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card border-border shadow-sm hover:shadow-md transition-all">
-                        <CardContent className="p-5 flex items-center gap-4">
-                            <div className="p-3 bg-violet-500/10 rounded-xl border border-violet-500/10">
-                                <Users className="size-6 text-violet-500" />
+                    <Card className="border-none bg-gradient-to-br from-violet-600 to-purple-700 shadow-xl rounded-2xl overflow-hidden group">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <Users className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <Users className="size-5 sm:size-7 text-white" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-violet-100/80 font-semibold uppercase tracking-wider truncate">
                                     Total Students
                                 </p>
-                                <p className="text-2xl font-bold text-foreground">
+                                <p className="text-xl sm:text-3xl font-black text-white">
                                     {classes.reduce((sum, c) => sum + (c.student_count || 0), 0)}
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card border-border shadow-sm hover:shadow-md transition-all">
-                        <CardContent className="p-5 flex items-center gap-4">
-                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/10">
-                                <CheckCircle className="size-6 text-emerald-500" />
+                    <Card className="border-none bg-gradient-to-br from-emerald-600 to-teal-700 shadow-xl rounded-2xl overflow-hidden group col-span-2 sm:col-span-1">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <CheckCircle className="size-12 sm:size-20 text-white" />
                             </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <CheckCircle className="size-5 sm:size-7 text-white" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
                                     Active Status
                                 </p>
-                                <p className="text-2xl font-bold text-foreground">
+                                <p className="text-xl sm:text-3xl font-black text-white">
                                     {classes.length > 0 ? Math.round((classes.filter((c) => c.is_active).length / classes.length) * 100) : 0}%
                                 </p>
                             </div>
@@ -126,12 +135,13 @@ export default function LecturerClassesAssignments() {
                     </Card>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredClasses.map((classItem) => (
+                        {filteredClasses.map((classItem, index) => (
                             <SectionClassCard
                                 key={classItem.id}
                                 classData={classItem}
                                 variant="assignments"
                                 onAction={handleViewAssignments}
+                                index={index}
                             />
                         ))}
                     </div>

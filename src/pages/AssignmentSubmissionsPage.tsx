@@ -15,7 +15,8 @@ import {
     FileText,
     MoreVertical,
     Download,
-    AlertCircle
+    AlertCircle,
+    Trophy
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -136,26 +137,56 @@ export default function AssignmentSubmissionsPage() {
                         </div>
 
                         {/* Stats Cards - Responsive Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full lg:w-auto">
-                            <Card className="bg-card border-border shadow-sm">
-                                <CardContent className="p-3 sm:p-4">
-                                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">TOTAL</p>
-                                    <p className="text-xl sm:text-2xl font-black text-foreground">{stats.total}</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="bg-card border-border shadow-sm">
-                                <CardContent className="p-3 sm:p-4">
-                                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">PENDING</p>
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-xl sm:text-2xl font-black text-foreground">{stats.pending}</p>
-                                        <span className="size-1.5 sm:size-2 rounded-full bg-amber-400 animate-pulse" />
+                        {/* Stats Cards - Premium Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full lg:w-auto">
+                            <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group">
+                                <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <FileText className="size-12 sm:size-20 text-white" />
+                                    </div>
+                                    <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                        <FileText className="size-5 sm:size-7 text-white" />
+                                    </div>
+                                    <div className="relative z-10 min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-blue-100/80 font-semibold uppercase tracking-wider truncate">
+                                            Total
+                                        </p>
+                                        <p className="text-xl sm:text-3xl font-black text-white">{stats.total}</p>
                                     </div>
                                 </CardContent>
                             </Card>
-                            <Card className="bg-card border-border shadow-sm col-span-2 sm:col-span-1">
-                                <CardContent className="p-3 sm:p-4 flex flex-col justify-center items-center sm:items-start">
-                                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">AVG SCORE</p>
-                                    <p className="text-xl sm:text-2xl font-black text-foreground">{stats.avgScore}%</p>
+
+                            <Card className="border-none bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl rounded-2xl overflow-hidden group">
+                                <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <Clock className="size-12 sm:size-20 text-white" />
+                                    </div>
+                                    <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                        <Clock className="size-5 sm:size-7 text-white" />
+                                    </div>
+                                    <div className="relative z-10 min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-amber-100/80 font-semibold uppercase tracking-wider truncate">
+                                            Pending
+                                        </p>
+                                        <p className="text-xl sm:text-3xl font-black text-white">{stats.pending}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-none bg-gradient-to-br from-violet-600 to-purple-700 shadow-xl rounded-2xl overflow-hidden group col-span-2 sm:col-span-1">
+                                <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                        <Trophy className="size-12 sm:size-20 text-white" />
+                                    </div>
+                                    <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                        <Trophy className="size-5 sm:size-7 text-white" />
+                                    </div>
+                                    <div className="relative z-10 min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-violet-100/80 font-semibold uppercase tracking-wider truncate">
+                                            Avg Score
+                                        </p>
+                                        <p className="text-xl sm:text-3xl font-black text-white">{stats.avgScore}%</p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>

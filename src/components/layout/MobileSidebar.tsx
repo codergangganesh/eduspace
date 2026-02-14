@@ -14,6 +14,7 @@ import {
   ClipboardList,
   FileCheck,
   Bot,
+  Brain,
   Wand2,
   Orbit,
 } from "lucide-react";
@@ -26,7 +27,7 @@ const studentNavItems = [
   { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
   { icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
-  { icon: Bot, label: "AI Chat", path: "/ai-chat" },
+  { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
@@ -37,8 +38,8 @@ const lecturerNavItems = [
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
-  { icon: Bot, label: "AI Chat", path: "/ai-chat" },
-  { icon: Wand2, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
+  { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
+  { icon: Brain, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 

@@ -135,21 +135,23 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Import Students from Excel</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-none shadow-2xl">
+                <DialogHeader className="mb-4 sm:mb-6">
+                    <DialogTitle className="text-xl sm:text-2xl font-bold">Import Students</DialogTitle>
+                    <DialogDescription className="text-sm sm:text-base">
                         Upload an Excel file to bulk import students into this class
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4">
+                <div className="space-y-4 sm:space-y-6">
                     {/* Download Template Button */}
-                    <div className="flex items-center justify-between p-4 bg-secondary rounded-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-muted/50 rounded-2xl gap-4">
                         <div className="flex items-center gap-3">
-                            <FileSpreadsheet className="size-5 text-primary" />
+                            <div className="p-2 bg-primary/10 rounded-xl">
+                                <FileSpreadsheet className="size-5 text-primary" />
+                            </div>
                             <div>
-                                <p className="text-sm font-medium">Need a template?</p>
+                                <p className="text-sm font-bold">Need a template?</p>
                                 <p className="text-xs text-muted-foreground">Download our Excel template with sample data</p>
                             </div>
                         </div>
@@ -157,7 +159,7 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
                             variant="outline"
                             size="sm"
                             onClick={generateTemplate}
-                            className="gap-2"
+                            className="w-full sm:w-auto gap-2 rounded-xl font-bold h-10 border-slate-200 dark:border-slate-800"
                         >
                             <Download className="size-4" />
                             Download Template
@@ -165,17 +167,19 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
                     </div>
 
                     {/* File Upload */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         <label
                             htmlFor="file-upload"
-                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
+                            className="flex flex-col items-center justify-center w-full h-32 sm:h-40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:border-primary/50 transition-all bg-slate-50/50 dark:bg-slate-900/50"
                         >
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <Upload className="size-8 text-muted-foreground mb-2" />
-                                <p className="text-sm text-muted-foreground">
-                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                                <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm mb-3">
+                                    <Upload className="size-6 text-primary" />
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                    <span className="font-bold text-primary">Click to upload</span> or drag and drop
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                                     Excel (.xlsx, .xls) or CSV files
                                 </p>
                             </div>
@@ -188,34 +192,37 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
                             />
                         </label>
                         {file && (
-                            <p className="text-sm text-muted-foreground">
-                                Selected: <span className="font-medium">{file.name}</span>
-                            </p>
+                            <div className="flex items-center gap-2 px-1">
+                                <FileSpreadsheet className="size-4 text-emerald-500" />
+                                <p className="text-xs sm:text-sm font-medium truncate">
+                                    Selected: <span className="text-primary">{file.name}</span>
+                                </p>
+                            </div>
                         )}
                     </div>
 
                     {/* Loading State */}
                     {loading && (
-                        <div className="flex items-center justify-center p-8">
+                        <div className="flex items-center justify-center p-8 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                             <Loader2 className="size-6 animate-spin text-primary" />
-                            <span className="ml-2 text-sm text-muted-foreground">Parsing file...</span>
+                            <span className="ml-3 text-sm font-medium text-muted-foreground">Parsing file...</span>
                         </div>
                     )}
 
                     {/* Errors */}
                     {hasErrors && !loading && (
-                        <Alert variant="destructive">
+                        <Alert variant="destructive" className="rounded-2xl border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/20">
                             <AlertCircle className="size-4" />
                             <AlertDescription>
-                                <p className="font-semibold mb-2">Found {allErrors.length} error(s):</p>
-                                <ul className="list-disc list-inside space-y-1 text-xs">
+                                <p className="font-bold mb-2">Found {allErrors.length} error(s):</p>
+                                <ul className="list-disc list-inside space-y-1 text-[11px] sm:text-xs opacity-90">
                                     {allErrors.slice(0, 5).map((error, index) => (
                                         <li key={index}>
                                             Row {error.row}: {error.field} - {error.message}
                                         </li>
                                     ))}
                                     {allErrors.length > 5 && (
-                                        <li>...and {allErrors.length - 5} more errors</li>
+                                        <li className="font-bold">...and {allErrors.length - 5} more errors</li>
                                     )}
                                 </ul>
                             </AlertDescription>
@@ -224,9 +231,9 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
 
                     {/* Success Message */}
                     {parsedData.length > 0 && !hasErrors && !loading && (
-                        <Alert>
+                        <Alert className="rounded-2xl border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-950/20">
                             <CheckCircle2 className="size-4 text-emerald-500" />
-                            <AlertDescription>
+                            <AlertDescription className="text-emerald-700 dark:text-emerald-400 font-medium">
                                 Successfully parsed {parsedData.length} students. Ready to import!
                             </AlertDescription>
                         </Alert>
@@ -234,37 +241,39 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
 
                     {/* Preview Table */}
                     {parsedData.length > 0 && !loading && (
-                        <div className="border rounded-lg overflow-hidden">
-                            <div className="bg-secondary px-4 py-2 border-b">
-                                <p className="text-sm font-medium">Preview ({parsedData.length} students)</p>
+                        <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                            <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+                                <p className="text-xs sm:text-sm font-bold">Preview ({parsedData.length} students)</p>
                             </div>
-                            <div className="max-h-[300px] overflow-y-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Register #</TableHead>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Email</TableHead>
-                                            <TableHead>Department</TableHead>
-                                            <TableHead>Year</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {parsedData.slice(0, 10).map((student, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell className="font-mono text-xs">
-                                                    {student.registerNumber}
-                                                </TableCell>
-                                                <TableCell>{student.studentName}</TableCell>
-                                                <TableCell className="text-xs">{student.email}</TableCell>
-                                                <TableCell>{student.department}</TableCell>
-                                                <TableCell>{student.year}</TableCell>
+                            <div className="max-h-[250px] sm:max-h-[350px] overflow-auto">
+                                <div className="min-w-[600px] sm:min-w-0">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                                            <TableRow>
+                                                <TableHead className="text-[11px] uppercase tracking-wider font-bold">ID</TableHead>
+                                                <TableHead className="text-[11px] uppercase tracking-wider font-bold">Name</TableHead>
+                                                <TableHead className="text-[11px] uppercase tracking-wider font-bold">Email</TableHead>
+                                                <TableHead className="text-[11px] uppercase tracking-wider font-bold">Dept</TableHead>
+                                                <TableHead className="text-[11px] uppercase tracking-wider font-bold text-right pr-4">Year</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {parsedData.slice(0, 10).map((student, index) => (
+                                                <TableRow key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                                                    <TableCell className="font-mono text-[10px] sm:text-xs">
+                                                        {student.registerNumber}
+                                                    </TableCell>
+                                                    <TableCell className="text-[11px] sm:text-sm font-medium">{student.studentName}</TableCell>
+                                                    <TableCell className="text-[11px] sm:text-xs text-muted-foreground">{student.email}</TableCell>
+                                                    <TableCell className="text-[11px] sm:text-xs">{student.department}</TableCell>
+                                                    <TableCell className="text-[11px] sm:text-xs text-right pr-4">{student.year}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                                 {parsedData.length > 10 && (
-                                    <div className="p-2 text-center text-xs text-muted-foreground bg-secondary">
+                                    <div className="p-3 text-center text-[10px] sm:text-xs text-muted-foreground bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
                                         ...and {parsedData.length - 10} more students
                                     </div>
                                 )}
@@ -273,9 +282,9 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
                     )}
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => {
                             setParsedData([]);
                             setParseErrors([]);
@@ -284,14 +293,20 @@ export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: I
                             onOpenChange(false);
                         }}
                         disabled={importing}
+                        className="w-full sm:w-auto rounded-xl font-bold h-11"
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleImport}
                         disabled={parsedData.length === 0 || hasErrors || importing}
+                        className="w-full sm:w-auto rounded-xl font-black h-11 shadow-lg shadow-primary/20 transition-all active:scale-95"
                     >
-                        {importing && <Loader2 className="mr-2 size-4 animate-spin" />}
+                        {importing ? (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                        ) : (
+                            <CheckCircle2 className="mr-2 size-4" />
+                        )}
                         Import {parsedData.length} Students
                     </Button>
                 </DialogFooter>

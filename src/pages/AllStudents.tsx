@@ -28,7 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ImportStudentsModal } from "@/components/lecturer/ImportStudentsModal";
 import { AddStudentModal } from "@/components/lecturer/AddStudentModal";
@@ -65,6 +65,13 @@ import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 export default function AllStudents() {
     const { classId } = useParams<{ classId: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams.get('action') === 'import') {
+            setShowImportModal(true);
+        }
+    }, [searchParams]);
     const { toast } = useToast();
 
     const { classes } = useClasses();
@@ -395,86 +402,108 @@ export default function AllStudents() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Desktop View Buttons */}
                         <Button
                             variant="outline"
                             onClick={() => setShowAddStudentModal(true)}
-                            className="hidden sm:flex gap-2"
+                            className="hidden sm:flex rounded-xl h-10 px-4 md:h-12 border-slate-200 dark:border-slate-800 font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm gap-2"
                         >
                             <UserPlus className="size-4" />
                             Add Student
                         </Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowImportModal(true)}
-                            className="gap-2"
-                        >
-                            <Upload className="size-4" />
-                            Import Excel
-                        </Button>
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button
-                                    disabled={students.length === 0 || sendingRequests}
-                                    className="gap-2"
-                                >
-                                    <Send className="size-4" />
-                                    {sendingRequests ? "Sending..." : "Manage Requests"}
+                                <Button className="hidden sm:flex rounded-xl h-10 px-4 md:h-12 border-none font-bold transition-all shadow-lg hover:shadow-primary/20 bg-primary text-white gap-2">
+                                    <Plus className="size-5" />
+                                    <span>Manage Students</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuItem onClick={handleSendAllRequests}>
-                                    <Send className="size-4 mr-2" />
-                                    Send Request to All
+                            <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl border-none backdrop-blur-xl bg-white/95 dark:bg-slate-900/95">
+                                <DropdownMenuItem onClick={() => setShowImportModal(true)} className="h-12 rounded-xl cursor-pointer gap-3">
+                                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                        <FileSpreadsheet className="size-4 text-emerald-600" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-sm">Import Excel</span>
+                                        <span className="text-[10px] text-muted-foreground">Bulk upload data</span>
+                                    </div>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleResendAllRequests}>
-                                    <Send className="size-4 mr-2" />
-                                    Resend Request to All
+                                <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
+                                <DropdownMenuItem onClick={handleSendAllRequests} disabled={students.length === 0 || sendingRequests} className="h-12 rounded-xl cursor-pointer gap-3">
+                                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                                        <Send className="size-4 text-blue-600" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="font-bold text-sm">Send Requests</span>
+                                        <span className="text-[10px] text-muted-foreground">Invite all students</span>
+                                    </div>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleResendAllRequests} disabled={students.length === 0 || sendingRequests} className="h-12 rounded-xl cursor-pointer gap-3">
+                                    <div className="p-2 bg-amber-500/10 rounded-lg">
+                                        <Users className="size-4 text-amber-600" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="font-bold text-sm">Resend Requests</span>
+                                        <span className="text-[10px] text-muted-foreground">Remind pending students</span>
+                                    </div>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
+                        {/* Mobile view handled by FAB or simple header icon could remain here if specifically asked */}
                     </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Total Students</p>
-                                    <p className="text-3xl font-bold text-foreground">{totalStudents}</p>
-                                </div>
-                                <div className="p-3 bg-blue-500/10 rounded-lg">
-                                    <Users className="size-6 text-blue-500" />
-                                </div>
+                {/* Stats Cards - Premium Design */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative text-white">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <Users className="size-12 sm:size-20" />
+                            </div>
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <Users className="size-5 sm:size-7" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-blue-100/80 font-semibold uppercase tracking-wider truncate">
+                                    Total Students
+                                </p>
+                                <p className="text-xl sm:text-3xl font-black">{totalStudents}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Accepted</p>
-                                    <p className="text-3xl font-bold text-foreground">{acceptedStudents}</p>
-                                </div>
-                                <div className="p-3 bg-emerald-500/10 rounded-lg">
-                                    <Users className="size-6 text-emerald-500" />
-                                </div>
+                    <Card className="border-none bg-gradient-to-br from-emerald-600 to-teal-700 shadow-xl rounded-2xl overflow-hidden group">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative text-white">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <Users className="size-12 sm:size-20" />
+                            </div>
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <Users className="size-5 sm:size-7" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
+                                    Accepted
+                                </p>
+                                <p className="text-xl sm:text-3xl font-black">{acceptedStudents}</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground font-medium">Pending Requests</p>
-                                    <p className="text-3xl font-bold text-foreground">{pendingRequests}</p>
-                                </div>
-                                <div className="p-3 bg-yellow-500/10 rounded-lg">
-                                    <Send className="size-6 text-yellow-500" />
-                                </div>
+                    <Card className="border-none bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl rounded-2xl overflow-hidden group col-span-2 sm:col-span-1">
+                        <CardContent className="p-3 sm:p-6 flex items-center gap-2 sm:gap-5 relative text-white">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <Send className="size-12 sm:size-20" />
+                            </div>
+                            <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                <Send className="size-5 sm:size-7" />
+                            </div>
+                            <div className="relative z-10 min-w-0">
+                                <p className="text-[10px] sm:text-sm text-amber-100/80 font-semibold uppercase tracking-wider truncate">
+                                    Pending Requests
+                                </p>
+                                <p className="text-xl sm:text-3xl font-black">{pendingRequests}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -691,6 +720,50 @@ export default function AllStudents() {
                 >
                     <Plus className="size-8 text-white" />
                 </Button>
+            </div>
+            {/* Mobile FAB Menu */}
+            <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            size="icon"
+                            className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
+                            title="Actions"
+                        >
+                            <Plus className="size-8 text-white" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top" className="w-64 p-2 rounded-2xl shadow-2xl border-none backdrop-blur-xl bg-white/95 dark:bg-slate-900/95 mb-4">
+                        <DropdownMenuItem onClick={() => setShowAddStudentModal(true)} className="h-14 rounded-xl cursor-pointer gap-3 px-4">
+                            <div className="p-2.5 bg-primary/10 rounded-xl">
+                                <UserPlus className="size-5 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-base">Add Student</span>
+                                <span className="text-[11px] text-muted-foreground leading-tight">Add a single student manually</span>
+                            </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowImportModal(true)} className="h-14 rounded-xl cursor-pointer gap-3 px-4">
+                            <div className="p-2.5 bg-emerald-500/10 rounded-xl">
+                                <FileSpreadsheet className="size-5 text-emerald-600" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-base">Import Excel</span>
+                                <span className="text-[11px] text-muted-foreground leading-tight">Bulk upload student data</span>
+                            </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
+                        <DropdownMenuItem onClick={handleSendAllRequests} disabled={students.length === 0 || sendingRequests} className="h-14 rounded-xl cursor-pointer gap-3 px-4">
+                            <div className="p-2.5 bg-blue-500/10 rounded-xl">
+                                <Send className="size-5 text-blue-600" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-base">Send All Requests</span>
+                                <span className="text-[11px] text-muted-foreground leading-tight">Invite all pending students</span>
+                            </div>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </DashboardLayout>
     );
