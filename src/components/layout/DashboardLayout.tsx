@@ -5,6 +5,9 @@ import { MobileSidebar } from "./MobileSidebar";
 import PageTransition from "./PageTransition";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
+import { Button } from "@/components/ui/button";
+import { UserPlus } from "lucide-react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -14,10 +17,13 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, actions, fullHeight = false, hideHeaderOnMobile = false }: DashboardLayoutProps) {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, role, updateProfile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sidebarMode, setSidebarMode] = useState<'expanded' | 'collapsed' | 'hover'>('expanded');
   const [isHovered, setIsHovered] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  const isLecturer = role === "lecturer";
 
   // Sync with profile when it loads
   useEffect(() => {
@@ -30,6 +36,9 @@ export function DashboardLayout({ children, actions, fullHeight = false, hideHea
     setSidebarMode(newMode);
     await updateProfile({ sidebar_mode: newMode });
   };
+
+  // Combine global actions with page-specific ones
+  const combinedActions = actions;
 
   const isCollapsed = sidebarMode === 'collapsed' || (sidebarMode === 'hover' && !isHovered);
 
@@ -47,10 +56,20 @@ export function DashboardLayout({ children, actions, fullHeight = false, hideHea
         "flex-1 flex flex-col min-h-0 w-full transition-all duration-300",
         isCollapsed ? "lg:pl-20" : "lg:pl-72"
       )}>
-        {!hideHeaderOnMobile && <DashboardHeader onMenuClick={() => setIsMobileMenuOpen(true)} actions={actions} />}
+        {!hideHeaderOnMobile && (
+          <DashboardHeader
+            onMenuClick={() => setIsMobileMenuOpen(true)}
+            actions={combinedActions}
+            onInviteClick={isLecturer ? () => setInviteDialogOpen(true) : undefined}
+          />
+        )}
         {hideHeaderOnMobile && (
           <div className="hidden lg:block">
-            <DashboardHeader onMenuClick={() => setIsMobileMenuOpen(true)} actions={actions} />
+            <DashboardHeader
+              onMenuClick={() => setIsMobileMenuOpen(true)}
+              actions={combinedActions}
+              onInviteClick={isLecturer ? () => setInviteDialogOpen(true) : undefined}
+            />
           </div>
         )}
         <main
@@ -64,6 +83,16 @@ export function DashboardLayout({ children, actions, fullHeight = false, hideHea
           </PageTransition>
         </main>
       </div>
+
+      {/* Persistent Global Dialogs */}
+      {isLecturer && (
+        <InviteUserDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          lecturerName={profile?.full_name || "Lecturer"}
+          lecturerEmail={user?.email || ""}
+        />
+      )}
     </div>
   );
 }

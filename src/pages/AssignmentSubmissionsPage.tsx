@@ -125,42 +125,37 @@ export default function AssignmentSubmissionsPage() {
                         Back to Courses
                     </Button>
 
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                        <div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                                    {/* Ideally fetch Class Name too, but sticking to design mock */}
-                                </div>
-                            </div>
-                            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground mb-2">
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                        <div className="space-y-1">
+                            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground leading-tight">
                                 Assignment Submissions
                             </h1>
-                            <p className="text-lg text-slate-500 font-medium">
-                                {assignment?.title || "Final Essay: 'The Hero's Journey in Modern Fiction'"}
+                            <p className="text-base sm:text-lg text-slate-500 font-bold uppercase tracking-tight">
+                                {assignment?.title || "Assignment Review"}
                             </p>
                         </div>
 
-                        {/* Stats Cards */}
-                        <div className="flex gap-4">
-                            <Card className="bg-card border-border shadow-sm min-w-[120px]">
-                                <CardContent className="p-4">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">TOTAL</p>
-                                    <p className="text-2xl font-black text-foreground">{stats.total}</p>
+                        {/* Stats Cards - Responsive Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full lg:w-auto">
+                            <Card className="bg-card border-border shadow-sm">
+                                <CardContent className="p-3 sm:p-4">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">TOTAL</p>
+                                    <p className="text-xl sm:text-2xl font-black text-foreground">{stats.total}</p>
                                 </CardContent>
                             </Card>
-                            <Card className="bg-card border-border shadow-sm min-w-[120px]">
-                                <CardContent className="p-4">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">PENDING</p>
+                            <Card className="bg-card border-border shadow-sm">
+                                <CardContent className="p-3 sm:p-4">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">PENDING</p>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-2xl font-black text-foreground">{stats.pending}</p>
-                                        <span className="size-2 rounded-full bg-amber-400" />
+                                        <p className="text-xl sm:text-2xl font-black text-foreground">{stats.pending}</p>
+                                        <span className="size-1.5 sm:size-2 rounded-full bg-amber-400 animate-pulse" />
                                     </div>
                                 </CardContent>
                             </Card>
-                            <Card className="bg-card border-border shadow-sm min-w-[120px]">
-                                <CardContent className="p-4">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">AVG SCORE</p>
-                                    <p className="text-2xl font-black text-foreground">{stats.avgScore}%</p>
+                            <Card className="bg-card border-border shadow-sm col-span-2 sm:col-span-1">
+                                <CardContent className="p-3 sm:p-4 flex flex-col justify-center items-center sm:items-start">
+                                    <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">AVG SCORE</p>
+                                    <p className="text-xl sm:text-2xl font-black text-foreground">{stats.avgScore}%</p>
                                 </CardContent>
                             </Card>
                         </div>
@@ -168,32 +163,32 @@ export default function AssignmentSubmissionsPage() {
                 </div>
 
                 {/* Filter Bar */}
-                <div className="bg-card/50 p-2 rounded-2xl border border-border flex flex-col sm:flex-row gap-2 shadow-sm">
+                <div className="bg-card/50 p-1.5 rounded-2xl border border-border flex flex-col sm:flex-row gap-2 shadow-sm">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search by student name or ID..."
-                            className="pl-10 border-0 bg-transparent focus-visible:ring-0 text-base"
+                            placeholder="Search students..."
+                            className="pl-9 border-0 bg-transparent focus-visible:ring-0 text-sm sm:text-base h-10"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-1 bg-muted p-1 rounded-xl">
+                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
                         <Button
                             variant={filter === 'all' ? 'default' : 'ghost'}
                             size="sm"
-                            className={cn("rounded-lg text-xs font-bold", filter === 'all' ? "shadow-sm" : "text-muted-foreground")}
+                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'all' ? "shadow-sm" : "text-muted-foreground")}
                             onClick={() => setFilter('all')}
                         >
-                            All Submissions
+                            All
                         </Button>
                         <Button
                             variant={filter === 'on_time' ? 'default' : 'ghost'}
                             size="sm"
-                            className={cn("rounded-lg text-xs font-bold", filter === 'on_time' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm text-white" : "text-muted-foreground")}
+                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'on_time' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm text-white" : "text-muted-foreground")}
                             onClick={() => setFilter('on_time')}
                         >
-                            Submitted On Time
+                            On Time
                         </Button>
                     </div>
                 </div>
@@ -201,37 +196,40 @@ export default function AssignmentSubmissionsPage() {
                 {/* Submissions List */}
                 <div className="flex flex-col gap-3">
                     {filteredSubmissions.map((student) => (
-                        <div key={student.student_id} className="flex flex-col sm:flex-row items-center gap-4 bg-card p-4 rounded-3xl border border-border shadow-sm hover:shadow-md transition-all group">
-                            {/* Student Info */}
-                            <div className="flex items-center gap-4 min-w-[200px]">
-                                <Avatar className="size-12 border-2 border-border shadow-sm rounded-full overflow-hidden">
-                                    <AvatarImage
-                                        src={student.profile_image || undefined}
-                                        alt={student.student_name}
-                                        className="object-cover"
-                                    />
-                                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold w-full h-full flex items-center justify-center">
-                                        {student.student_name.substring(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h4 className="font-bold text-base text-foreground leading-tight">{student.student_name}</h4>
+                        <div key={student.student_id} className="flex flex-col sm:flex-row items-center gap-4 bg-card p-4 rounded-2xl sm:rounded-3xl border border-border shadow-sm hover:shadow-md transition-all group">
+                            {/* Student Info & Status Toggle for Mobile */}
+                            <div className="flex items-center justify-between w-full sm:w-auto sm:min-w-[200px] gap-4">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="size-10 sm:size-12 border-2 border-border shadow-sm rounded-full overflow-hidden">
+                                        <AvatarImage
+                                            src={student.profile_image || undefined}
+                                            alt={student.student_name}
+                                            className="object-cover"
+                                        />
+                                        <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm font-bold w-full h-full flex items-center justify-center">
+                                            {student.student_name.substring(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <h4 className="font-bold text-sm sm:text-base text-foreground leading-tight truncate max-w-[150px]">{student.student_name}</h4>
+                                </div>
+                                <div className="sm:hidden">
+                                    {getStatusBadge(student)}
                                 </div>
                             </div>
 
                             {/* File Block */}
                             <div className={cn(
-                                "flex-1 flex items-center gap-4 px-5 py-3 rounded-2xl border-2 transition-all w-full",
+                                "flex-1 flex items-center gap-3 sm:gap-4 px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-2 transition-all w-full",
                                 student.file_url
-                                    ? "bg-muted/40 border-border hover:border-primary/30"
-                                    : "bg-muted/20 border-border/50"
+                                    ? "bg-slate-50 dark:bg-slate-900 border-border hover:border-primary/30"
+                                    : "bg-muted/10 border-border/50"
                             )}>
                                 {student.file_url ? (
                                     <>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-foreground truncate">{student.file_name}</p>
-                                            <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                                {getFileTypeDisplay(student.file_type) || getFileExtension(student.file_name)}
+                                            <p className="text-xs sm:text-sm font-bold text-foreground truncate">{student.file_name}</p>
+                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-0.5">
+                                                {getFileTypeDisplay(student.file_type) || "FILE"}
                                                 {student.file_size && ` • ${formatFileSize(student.file_size)}`}
                                             </p>
                                         </div>
@@ -239,14 +237,14 @@ export default function AssignmentSubmissionsPage() {
                                             href={student.file_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary shrink-0"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <Download className="size-5" />
+                                            <Download className="size-4 sm:size-5" />
                                         </a>
                                     </>
                                 ) : (
-                                    <p className="text-sm text-slate-400 italic font-medium w-full text-center">No file uploaded yet</p>
+                                    <p className="text-[10px] text-slate-400 italic font-bold uppercase tracking-wider w-full text-center">No Submission</p>
                                 )}
                             </div>
 

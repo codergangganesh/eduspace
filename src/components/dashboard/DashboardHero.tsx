@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, CalendarDays, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { TypewriterName } from "../common/TypewriterName";
+
 export function DashboardHero() {
     const { profile } = useAuth();
     const navigate = useNavigate();
@@ -24,7 +26,7 @@ export function DashboardHero() {
                         <span className="text-[10px] sm:text-sm font-medium uppercase tracking-wider">{dateString}</span>
                     </div>
                     <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
-                        Welcome, <span className="text-indigo-600 dark:text-indigo-400">{fullName}!</span>
+                        Welcome, <TypewriterName name={fullName} className="text-indigo-600 dark:text-indigo-400" />!
                     </h1>
                     <p className="text-slate-500 dark:text-indigo-100/80 font-semibold text-xs sm:text-base max-w-xl">
                         <span className="inline sm:hidden">Academic Overview</span>

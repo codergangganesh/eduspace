@@ -23,13 +23,72 @@ export default function AIChatWindow() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [streamingMessage, setStreamingMessage] = useState("");
     const [isInitialLoading, setIsInitialLoading] = useState(true);
-    const [userProfile, setUserProfile] = useState<{ full_name?: string; avatar_url?: string } | null>(null);
+    const [userProfile, setUserProfile] = useState<{ full_name?: string; avatar_url?: string; role?: string } | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isTemporaryMode, setIsTemporaryMode] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const chatIdFromUrl = searchParams.get('id');
+
+    // Typewriter effect for slogans
+    // Typewriter effect for slogans with role-specific phrases
+    const studentSlogans = [
+        "Your Personalized Learning Partner",
+        "Learn Smarter with Eduspace",
+        "Your Academic Journey, Redefined",
+        "Empowering Every Student to Succeed",
+        "Where Curiosity Meets Intelligence",
+        "Unlock Your Full Potential",
+        "The Smartest Way to Study"
+    ];
+
+    const lecturerSlogans = [
+        "Enhance Your Teaching Experience",
+        "Streamline Your Course Management",
+        "Empowering Educators with AI",
+        "Insightful Analytics for Your Classes",
+        "Revolutionize the Way You Teach",
+        "Manage Your Students Smarter",
+        "Your AI-Powered Teaching Assistant"
+    ];
+
+    const slogans = userProfile?.role === 'lecturer' ? lecturerSlogans : studentSlogans;
+
+    const [currentSloganIndex, setCurrentSloganIndex] = useState(0);
+    const [displayText, setDisplayText] = useState("");
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [typingSpeed, setTypingSpeed] = useState(150);
+
+    useEffect(() => {
+        if (messages.length > 0) return; // Only animate in empty state
+
+        const handleTyping = () => {
+            const fullSlogan = slogans[currentSloganIndex];
+
+            if (!isDeleting) {
+                setDisplayText(fullSlogan.substring(0, displayText.length + 1));
+                setTypingSpeed(100);
+
+                if (displayText === fullSlogan) {
+                    setIsDeleting(true);
+                    setTypingSpeed(2000); // Pause at the end
+                }
+            } else {
+                setDisplayText(fullSlogan.substring(0, displayText.length - 1));
+                setTypingSpeed(50);
+
+                if (displayText === "") {
+                    setIsDeleting(false);
+                    setCurrentSloganIndex((prev) => (prev + 1) % slogans.length);
+                    setTypingSpeed(500);
+                }
+            }
+        };
+
+        const timer = setTimeout(handleTyping, typingSpeed);
+        return () => clearTimeout(timer);
+    }, [displayText, isDeleting, currentSloganIndex, slogans.length, typingSpeed, messages.length]);
 
     useEffect(() => {
         loadConversations();
@@ -75,7 +134,7 @@ export default function AIChatWindow() {
             if (user) {
                 const { data } = await supabase
                     .from('profiles')
-                    .select('full_name, avatar_url')
+                    .select('full_name, avatar_url, role')
                     .eq('user_id', user.id)
                     .single();
 
@@ -491,9 +550,13 @@ export default function AIChatWindow() {
                                     </div>
                                 </motion.div>
 
-                                <div className="space-y-6 max-w-xl mx-auto">
-                                    <h1 className="text-4xl md:text-5xl font-black tracking-tight text-foreground leading-[1.1]">
-                                        Your Personalized <br /> <span className="text-primary">Learning Partner</span>
+                                <div className="space-y-6 max-w-2xl mx-auto">
+                                    <h1 className="text-3xl md:text-5xl font-black tracking-tight text-foreground leading-[1.1] min-h-[3.3em] flex flex-wrap justify-center items-center">
+                                        <span className="text-secondary-foreground">{displayText.split(' ').slice(0, -2).join(' ')} </span>
+                                        <span className="text-primary ml-2">
+                                            {displayText.split(' ').slice(-2).join(' ')}
+                                            <span className="inline-block w-1.5 h-8 md:h-12 bg-primary/40 ml-1 animate-pulse align-middle" />
+                                        </span>
                                     </h1>
                                 </div>
 

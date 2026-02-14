@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { SidebarSkeleton } from "./AIChatSkeleton";
-import { Plus, Folder, Trash2, MoreVertical, Sparkles, Pencil, Check, X, Search, Bot, Pin, PinOff, Share2, Link } from "lucide-react";
+import { Plus, Folder, Trash2, MoreVertical, Sparkles, Pencil, Check, X, Search, Bot, Pin, PinOff, Share2, Link, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -43,6 +45,8 @@ export function AIChatSidebar({
     onClose,
     isLoading,
 }: AIChatSidebarProps) {
+    const navigate = useNavigate();
+    const { role } = useAuth();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
@@ -108,6 +112,7 @@ export function AIChatSidebar({
                         onClick={onNewChat}
                         className="h-8 w-8 md:h-9 md:w-9 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm shadow-primary/5"
                         variant="outline"
+                        title="New Chat"
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -323,7 +328,16 @@ export function AIChatSidebar({
                 </div>
             </ScrollArea>
 
-            <div className="p-4 border-t border-border/40 bg-background/20 mt-auto">
+            <div className="p-4 border-t border-border/40 bg-background/20 mt-auto space-y-4">
+                <Button
+                    onClick={() => navigate(role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard')}
+                    variant="outline"
+                    className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border-border/60 bg-background/50 hover:bg-muted text-sm font-bold transition-all shadow-sm active:scale-[0.98]"
+                >
+                    <Home className="h-4 w-4" />
+                    <span>Back to Dashboard</span>
+                </Button>
+
                 <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.1em] text-center leading-relaxed">
                     Chat history is automatically cleared <br /> after 10 days of inactivity
                 </p>

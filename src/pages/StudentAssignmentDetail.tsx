@@ -272,75 +272,76 @@ export default function StudentAssignmentDetail() {
 
     return (
         <DashboardLayout>
-            <div className="min-h-full bg-slate-50/50 dark:bg-slate-950/20 p-0 lg:p-4 animate-in fade-in duration-500">
-                <div className="max-w-7xl mx-auto space-y-5 p-4 lg:p-4">
+            <div className="min-h-full bg-slate-50/50 dark:bg-slate-950/20 p-0 sm:p-4 animate-in fade-in duration-500">
+                <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 p-4 sm:p-6">
                     {/* Header Navigation */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => navigate('/student/assignments')}
-                            className="size-10 rounded-full hover:bg-white dark:hover:bg-slate-900 shadow-sm"
+                            className="w-fit h-9 px-3 rounded-xl hover:bg-white dark:hover:bg-slate-900 shadow-sm gap-2"
                         >
-                            <ArrowLeft className="size-5" />
+                            <ArrowLeft className="size-4" />
+                            <span className="text-xs font-bold uppercase tracking-wider">Back</span>
                         </Button>
-                        <Badge variant="outline" className={cn("px-4 py-1.5 rounded-full font-bold text-xs border-none shadow-sm capitalize", statusConfig.color)}>
-                            <div className="size-2 rounded-full bg-current mr-2 animate-pulse" />
+                        <Badge variant="outline" className={cn("w-fit px-4 py-1.5 rounded-full font-bold text-[10px] sm:text-xs border-none shadow-sm capitalize", statusConfig.color)}>
+                            <div className="size-1.5 sm:size-2 rounded-full bg-current mr-2 animate-pulse" />
                             {statusConfig.label}
                         </Badge>
                     </div>
 
                     {/* Title Section */}
-                    <div className="space-y-2">
-                        <h1 className="text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                    <div className="space-y-1.5">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                             {assignment.title}
                         </h1>
                         {assignment.lecturer_name && (
-                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium">
-                                <User className="size-4" />
+                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold text-xs sm:text-sm">
+                                <User className="size-3.5 sm:size-4" />
                                 <span>Prof. {assignment.lecturer_name}</span>
                             </div>
                         )}
                     </div>
 
                     {/* Key Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden group">
-                            <CardContent className="p-4 flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300">
-                                    <Calendar className="size-6" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
+                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-2xl sm:rounded-3xl overflow-hidden group">
+                            <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+                                <div className="size-10 sm:size-12 rounded-xl sm:rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                                    <Calendar className="size-5 sm:size-6" />
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Due Date</p>
-                                    <p className="text-lg font-black text-slate-900 dark:text-white">
-                                        {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, yyyy") : "No date"}
+                                <div className="min-w-0">
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Due Date</p>
+                                    <p className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                                        {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : "No date"}
                                     </p>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden group">
-                            <CardContent className="p-4 flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
-                                    <Clock className="size-6" />
+                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-2xl sm:rounded-3xl overflow-hidden group">
+                            <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+                                <div className="size-10 sm:size-12 rounded-xl sm:rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                                    <Clock className="size-5 sm:size-6" />
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Due Time</p>
-                                    <p className="text-lg font-black text-slate-900 dark:text-white">
+                                <div className="min-w-0">
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Time</p>
+                                    <p className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">
                                         {assignment.due_date ? format(new Date(assignment.due_date), "h:mm a") : "N/A"}
                                     </p>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden group">
-                            <CardContent className="p-4 flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform duration-300">
-                                    <Trophy className="size-6" />
+                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-2xl sm:rounded-3xl overflow-hidden group col-span-2 sm:col-span-1">
+                            <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4 justify-center sm:justify-start">
+                                <div className="size-10 sm:size-12 rounded-xl sm:rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform duration-300">
+                                    <Trophy className="size-5 sm:size-6" />
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Points</p>
-                                    <p className="text-lg font-black text-slate-900 dark:text-white">
+                                <div className="min-w-0">
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 text-center sm:text-left">Max Score</p>
+                                    <p className="text-sm sm:text-lg font-black text-slate-900 dark:text-white">
                                         {assignment.max_points} pts
                                     </p>
                                 </div>
@@ -350,40 +351,40 @@ export default function StudentAssignmentDetail() {
 
                     {/* Assignment Details */}
                     <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden">
-                        <CardHeader className="p-6 pb-2">
-                            <CardTitle className="flex items-center gap-3 text-lg font-black">
+                        <CardHeader className="p-5 sm:p-6 pb-2">
+                            <CardTitle className="flex items-center gap-3 text-base sm:text-lg font-black">
                                 <FileText className="size-5 text-blue-500" />
                                 Assignment Details
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-6 pt-0 space-y-4">
+                        <CardContent className="p-5 sm:p-6 pt-0 space-y-5">
                             {assignment.description && (
-                                <div className="space-y-3">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Description</p>
-                                    <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed whitespace-pre-wrap">
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</p>
+                                    <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed whitespace-pre-wrap">
                                         {assignment.description}
                                     </p>
                                 </div>
                             )}
 
                             {assignment.attachment_url && (
-                                <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-slate-800">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attachment</p>
-                                    <div className="flex flex-col sm:flex-row items-center gap-4 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 group transition-all">
-                                        <div className="size-12 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-blue-500 shadow-sm border border-slate-100 dark:border-slate-800">
-                                            <FileText className="size-6" />
+                                <div className="space-y-4 pt-5 border-t border-slate-100 dark:border-slate-800">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resource Material</p>
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 group transition-all">
+                                        <div className="size-10 sm:size-12 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-blue-500 shadow-sm border border-slate-100 dark:border-slate-800">
+                                            <FileText className="size-5 sm:size-6" />
                                         </div>
                                         <div className="flex-1 text-center sm:text-left min-w-0">
-                                            <p className="font-bold text-slate-900 dark:text-white truncate">
-                                                {assignment.attachment_name || 'Assignment_Instructions.pdf'}
+                                            <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                                                {assignment.attachment_name || 'Instructions.pdf'}
                                             </p>
-                                            <p className="text-xs text-slate-500 font-medium">Click to download resource</p>
+                                            <p className="text-xs text-slate-500 font-bold uppercase tracking-tight">Support Resource</p>
                                         </div>
                                         <Button
                                             onClick={() => window.open(assignment.attachment_url!, '_blank')}
-                                            className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white px-6 rounded-xl font-bold gap-2"
+                                            className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white px-5 h-10 rounded-xl font-bold gap-2 text-xs"
                                         >
-                                            <Download className="size-4" />
+                                            <Download className="size-3.5" />
                                             Download
                                         </Button>
                                     </div>
@@ -395,39 +396,39 @@ export default function StudentAssignmentDetail() {
                     {/* Submission Section */}
                     {submission ? (
                         <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden">
-                            <CardHeader className="p-6 pb-2">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-3 text-lg font-black text-emerald-600 dark:text-emerald-400">
+                            <CardHeader className="p-5 sm:p-6 pb-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <CardTitle className="flex items-center gap-3 text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
                                         <CheckCircle className="size-5" />
                                         Your Submission
                                     </CardTitle>
                                     {new Date(submission.submitted_at) <= new Date(assignment.due_date || submission.submitted_at) && (
-                                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none font-black text-[10px] px-3">
+                                        <Badge className="w-fit bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none font-black text-[9px] px-3">
                                             ON TIME
                                         </Badge>
                                     )}
                                 </div>
-                                <p className="text-slate-400 text-sm font-medium mt-1">
-                                    Submitted on {format(new Date(submission.submitted_at), "MMM d, yyyy 'at' h:mm a")}
+                                <p className="text-slate-400 text-xs sm:text-sm font-bold mt-1 uppercase tracking-tight">
+                                    Submitted {format(new Date(submission.submitted_at), "MMM d, h:mm a")}
                                 </p>
                             </CardHeader>
-                            <CardContent className="p-6 pt-2 space-y-6">
+                            <CardContent className="p-5 sm:p-6 pt-2 space-y-5">
                                 <div className="space-y-4">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Submitted File</p>
-                                    <div className="flex flex-col sm:flex-row items-center gap-4 p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 group transition-all">
-                                        <div className="size-12 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100 dark:border-emerald-800">
-                                            <FileText className="size-6" />
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 group transition-all">
+                                        <div className="size-10 sm:size-12 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100 dark:border-emerald-800">
+                                            <FileText className="size-5 sm:size-6" />
                                         </div>
                                         <div className="flex-1 text-center sm:text-left min-w-0">
-                                            <p className="font-bold text-slate-900 dark:text-white truncate">
+                                            <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
                                                 {submission.attachment_name || 'My_Submission.pdf'}
                                             </p>
                                             <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
-                                                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider py-0 px-2 bg-slate-900 text-white border-none">
+                                                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider py-0 px-2 bg-slate-900 text-white border-none">
                                                     {getFileTypeDisplay(submission.file_type) || "PDF"}
                                                 </Badge>
                                                 {submission.file_size && (
-                                                    <span className="text-xs text-slate-400 font-medium">
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">
                                                         {formatFileSize(submission.file_size)}
                                                     </span>
                                                 )}
@@ -436,18 +437,20 @@ export default function StudentAssignmentDetail() {
                                         <div className="flex gap-2 w-full sm:w-auto">
                                             <Button
                                                 variant="outline"
+                                                size="sm"
                                                 onClick={() => window.open(submission.attachment_url!, '_blank')}
-                                                className="flex-1 sm:flex-none border-slate-200 dark:border-slate-800 rounded-xl font-bold gap-2"
+                                                className="flex-1 sm:flex-none border-slate-200 dark:border-slate-800 rounded-xl font-bold gap-2 h-10 px-4 text-xs"
                                             >
-                                                <Eye className="size-4" />
+                                                <Eye className="size-3.5" />
                                                 View
                                             </Button>
                                             <Button
                                                 asChild
-                                                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold gap-2 shadow-lg shadow-emerald-500/20"
+                                                size="sm"
+                                                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold gap-2 shadow-lg shadow-emerald-500/20 h-10 px-4 text-xs"
                                             >
                                                 <a href={submission.attachment_url!} target="_blank" rel="noreferrer" download>
-                                                    <Download className="size-4" />
+                                                    <Download className="size-3.5" />
                                                     Download
                                                 </a>
                                             </Button>
@@ -488,15 +491,15 @@ export default function StudentAssignmentDetail() {
                                         </div>
 
                                         {submission.feedback && (
-                                            <div className="p-8 rounded-3xl bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 relative overflow-hidden group">
+                                            <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 relative overflow-hidden group">
                                                 <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                                                    <MessageSquare className="size-32" />
+                                                    <MessageSquare className="size-20 sm:size-32" />
                                                 </div>
-                                                <div className="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400 relative z-10">
-                                                    <MessageSquare className="size-4" />
-                                                    <span className="text-xs font-bold uppercase tracking-widest">Instructor Feedback</span>
+                                                <div className="flex items-center gap-2 mb-3 text-blue-600 dark:text-blue-400 relative z-10">
+                                                    <MessageSquare className="size-3.5 sm:size-4" />
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest">Instructor Feedback</span>
                                                 </div>
-                                                <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed italic relative z-10">
+                                                <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed italic relative z-10">
                                                     "{submission.feedback}"
                                                 </p>
                                             </div>
@@ -506,25 +509,25 @@ export default function StudentAssignmentDetail() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden text-center p-12 lg:p-20">
-                            <div className="size-24 rounded-3xl bg-blue-500/10 flex items-center justify-center text-blue-600 mx-auto mb-8 animate-bounce">
-                                <Upload className="size-10" />
+                        <Card className="border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden text-center p-8 sm:p-12 lg:p-20">
+                            <div className="size-16 sm:size-24 rounded-2xl sm:rounded-3xl bg-blue-500/10 flex items-center justify-center text-blue-600 mx-auto mb-6 sm:mb-8 animate-bounce">
+                                <Upload className="size-8 sm:size-10" />
                             </div>
-                            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Ready to submit?</h2>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium max-w-md mx-auto mb-10 text-lg">
+                            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-3 sm:mb-4">Ready to submit?</h2>
+                            <p className="text-slate-500 dark:text-slate-400 font-bold max-w-md mx-auto mb-8 sm:mb-10 text-sm sm:text-lg">
                                 Upload your assignment file to submit your work. Review all instructions before finalizing.
                             </p>
                             <Button
                                 size="lg"
                                 onClick={() => setIsSubmitOpen(true)}
                                 className={cn(
-                                    "h-16 px-12 rounded-2xl font-black text-lg gap-3 transition-all active:scale-95 shadow-2xl",
+                                    "w-full sm:w-auto h-14 sm:h-16 px-10 sm:px-12 rounded-2xl font-black text-base sm:text-lg gap-3 transition-all active:scale-95 shadow-2xl",
                                     assignment.due_date && new Date(assignment.due_date) < new Date()
                                         ? "bg-red-500 hover:bg-red-600 shadow-red-500/20"
                                         : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
                                 )}
                             >
-                                <Upload className="size-6" />
+                                <Upload className="size-5 sm:size-6" />
                                 {assignment.due_date && new Date(assignment.due_date) < new Date()
                                     ? "Submit Late"
                                     : "Submit Now"}

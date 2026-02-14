@@ -1,4 +1,4 @@
-import { Menu, Sun, Moon } from "lucide-react";
+import { Menu, Sun, Moon, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
@@ -10,9 +10,10 @@ import { StudentNotesDrawer } from "@/components/student/StudentNotesDrawer";
 interface DashboardHeaderProps {
   onMenuClick: () => void;
   actions?: ReactNode;
+  onInviteClick?: () => void;
 }
 
-export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) {
+export function DashboardHeader({ onMenuClick, actions, onInviteClick }: DashboardHeaderProps) {
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
 
@@ -31,6 +32,18 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
       </Button>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        {onInviteClick && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onInviteClick}
+            className="h-9 px-3 gap-2 shadow-sm shrink-0"
+            title="Invite Student"
+          >
+            <UserPlus className="size-4" />
+            <span className="hidden md:inline text-xs font-bold uppercase tracking-wider">Invite</span>
+          </Button>
+        )}
         {actions}
 
         <StudentNotesDrawer />

@@ -13,13 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { PerformanceTrendChart } from "@/components/dashboard/PerformanceTrendChart";
+import { TypewriterName } from "@/components/common/TypewriterName";
 
 
 export default function LecturerDashboard() {
   const { profile } = useAuth();
   const { stats: dataStats, upcomingClasses, loading } = useLecturerData();
   const navigate = useNavigate();
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Listen for real-time rejection notifications
   useRealtimeRejections();
@@ -69,20 +69,7 @@ export default function LecturerDashboard() {
   }
 
   return (
-    <DashboardLayout
-      actions={
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setInviteDialogOpen(true)}
-          className="w-9 px-0 md:w-auto md:px-3 gap-2 shadow-sm"
-          title="Invite Student"
-        >
-          <UserPlus className="size-4" />
-          <span className="hidden md:inline">Invite Student</span>
-        </Button>
-      }
-    >
+    <DashboardLayout>
       <div className="flex flex-col gap-8 pb-8">
 
         {/* Modern Hero Section */}
@@ -101,7 +88,7 @@ export default function LecturerDashboard() {
                 Academic Dashboard
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Welcome back, <span className="text-indigo-600 dark:text-indigo-400">{title}</span>
+                Welcome back, <TypewriterName name={title} className="text-indigo-600 dark:text-indigo-400" />
               </h1>
               <p className="text-slate-500 dark:text-slate-300 text-base max-w-lg">
                 Your daily overview of student progress and upcoming classes.
@@ -242,13 +229,6 @@ export default function LecturerDashboard() {
         </div>
       </div>
 
-      {/* Invite User Dialog */}
-      <InviteUserDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        lecturerName={profile?.full_name || "Lecturer"}
-        lecturerEmail={profile?.email || ""}
-      />
     </DashboardLayout >
   );
 }
