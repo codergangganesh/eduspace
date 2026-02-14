@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
+import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Calendar, Clock, FileText, CheckCircle, AlertCircle, TrendingUp, BookOpen, CheckCircle2, GraduationCap, Search, LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -109,63 +110,33 @@ export default function StudentAssignments() {
 
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
-                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-100 dark:border-blue-900/50">
-                        <CardContent className="p-3 sm:p-6">
-                            <div className="flex items-center gap-2 sm:gap-4">
-                                <div className="p-2 sm:p-3 bg-blue-500/10 rounded-xl">
-                                    <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-blue-600" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] sm:text-sm font-medium text-blue-600 dark:text-blue-400">Total</p>
-                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</h3>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-100 dark:border-emerald-900/50">
-                        <CardContent className="p-3 sm:p-6">
-                            <div className="flex items-center gap-2 sm:gap-4">
-                                <div className="p-2 sm:p-3 bg-emerald-500/10 rounded-xl">
-                                    <CheckCircle2 className="w-5 h-5 sm:w-8 sm:h-8 text-emerald-600" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] sm:text-sm font-medium text-emerald-600 dark:text-emerald-400">Completed</p>
-                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.completed}</h3>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-100 dark:border-amber-900/50">
-                        <CardContent className="p-3 sm:p-6">
-                            <div className="flex items-center gap-2 sm:gap-4">
-                                <div className="p-2 sm:p-3 bg-amber-500/10 rounded-xl">
-                                    <Clock className="w-5 h-5 sm:w-8 sm:h-8 text-amber-600" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] sm:text-sm font-medium text-amber-600 dark:text-amber-400">Pending</p>
-                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.pending}</h3>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 border-violet-100 dark:border-violet-900/50">
-                        <CardContent className="p-3 sm:p-6">
-                            <div className="flex items-center gap-2 sm:gap-4">
-                                <div className="p-2 sm:p-3 bg-violet-500/10 rounded-xl">
-                                    <GraduationCap className="w-5 h-5 sm:w-8 sm:h-8 text-violet-600" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] sm:text-sm font-medium text-violet-600 dark:text-violet-400">Avg Grade</p>
-                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.averageGrade || 0}%</h3>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* Premium Stats Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
+                    <PremiumStatsCard
+                        title="TOTAL"
+                        value={stats.total}
+                        subtitle="Active assignments"
+                        icon={BookOpen}
+                        backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
+                        iconBackgroundColor="bg-white/10"
+                    />
+                    <PremiumStatsCard
+                        title="COMPLETED"
+                        value={stats.completed}
+                        subtitle="Tasks finished"
+                        icon={CheckCircle2}
+                        backgroundColor="bg-gradient-to-br from-green-600 to-emerald-700"
+                        iconBackgroundColor="bg-white/10"
+                    />
+                    <PremiumStatsCard
+                        title="PENDING"
+                        value={stats.pending}
+                        subtitle="Require attention"
+                        icon={Clock}
+                        backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
+                        iconBackgroundColor="bg-white/10"
+                        className="col-span-2 sm:col-span-1"
+                    />
                 </div>
 
                 {loading && (enrolledClasses?.length === 0) ? (

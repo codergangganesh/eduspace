@@ -62,7 +62,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                             )}
                         </div>
                         <div className="flex flex-col">
-                            <Badge variant="outline" className="w-fit mb-1 border-slate-200 dark:border-slate-700 text-[10px] font-bold">
+                            <Badge variant="secondary" className="w-fit mb-1 bg-blue-400 hover:bg-blue-500 text-blue-950 border-none text-[10px] font-bold">
                                 {quiz.classes?.course_code || 'COURSE'}
                             </Badge>
                             <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">
@@ -148,7 +148,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                 <div className="absolute -top-10 -right-10 size-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
                 <div className="flex justify-between items-start relative z-10">
-                    <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md font-bold tracking-wider uppercase text-[8px] sm:text-[10px] px-2 md:px-2.5 py-1 sm:py-1.5 rounded-lg truncate max-w-[100px] sm:max-w-none">
+                    <Badge variant="secondary" className="bg-blue-400 hover:bg-blue-500 text-blue-950 border-none backdrop-blur-md font-bold tracking-wider uppercase text-[8px] sm:text-[10px] px-2 md:px-2.5 py-1 sm:py-1.5 rounded-lg truncate max-w-[100px] sm:max-w-none">
                         {quiz.classes?.course_code || 'COURSE'}
                     </Badge>
 

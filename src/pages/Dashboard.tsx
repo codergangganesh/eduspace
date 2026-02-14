@@ -8,6 +8,7 @@ import { DashboardAssignmentList } from "@/components/dashboard/DashboardAssignm
 import { useSchedule } from "@/hooks/useSchedule";
 import { useNavigate } from "react-router-dom";
 import { StatsCard } from "@/components/dashboard/StatsCard";
+import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
@@ -124,37 +125,42 @@ export default function Dashboard() {
         {/* Hero Section */}
         <DashboardHero />
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Assigned"
+        {/* Premium Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <PremiumStatsCard
+            title="ASSIGNED"
             value={stats.total}
-            icon={FileText}
             subtitle="Total active tasks"
-            className="border-l-4 border-l-blue-500"
+            icon={FileText}
+            backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
+            iconBackgroundColor="bg-white/10"
           />
-          <StatsCard
-            title="Completed"
+          <PremiumStatsCard
+            title="COMPLETED"
             value={stats.completed}
-            icon={CheckCircle}
             subtitle="Tasks finished"
-            trend={{ value: 12, isPositive: true }}
-            className="border-l-4 border-l-green-500"
+            icon={CheckCircle}
+            backgroundColor="bg-gradient-to-br from-green-600 to-emerald-700"
+            iconBackgroundColor="bg-white/10"
           />
-          <StatsCard
-            title="Pending"
+          <PremiumStatsCard
+            title="PENDING"
             value={stats.pending}
-            icon={AlertCircle}
             subtitle="Require attention"
-            className="col-span-2 sm:col-span-1 border-l-4 border-l-orange-500"
+            icon={AlertCircle}
+            backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
+            iconBackgroundColor="bg-white/10"
+            className="col-span-2 sm:col-span-1"
           />
-          <StatsCard
-            title="Schedule"
+          <PremiumStatsCard
+            title="SCHEDULE"
             value="View"
-            icon={Calendar}
             subtitle="Upcoming classes"
-            className="hidden sm:block border-l-4 border-l-purple-500 hover:border-l-purple-600 dark:border-l-purple-600"
+            icon={Calendar}
+            backgroundColor="bg-gradient-to-br from-purple-600 to-violet-700"
+            iconBackgroundColor="bg-white/10"
             onClick={() => navigate("/schedule")}
+            className="hidden sm:block"
           />
         </div>
 

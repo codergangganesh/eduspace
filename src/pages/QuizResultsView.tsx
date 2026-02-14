@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { useAuth } from '@/contexts/AuthContext';
+import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -253,37 +254,31 @@ export default function QuizResultsView() {
 
                 <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8">
                     {/* Stats Overview */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        <StatCard
-                            title="Average Score"
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <PremiumStatsCard
+                            title="AVERAGE SCORE"
                             value={`${stats?.averageScore || 0}`}
-                            subValue={`/ ${stats?.maxMarks}`}
+                            subtitle={`/ ${stats?.maxMarks} marks`}
                             icon={BarChart3}
-                            trend="Class Mean"
+                            backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
+                            iconBackgroundColor="bg-white/10"
                         />
-                        <StatCard
-                            title="Pass Rate"
+                        <PremiumStatsCard
+                            title="PASS RATE"
                             value={`${stats?.passRate || 0}%`}
-                            subValue={`${stats?.passCount} Passed`}
+                            subtitle={`${stats?.passCount} Passed`}
                             icon={CheckCircle2}
-                            trend="Performance"
-                            trendColor="text-emerald-600"
+                            backgroundColor="bg-gradient-to-br from-green-600 to-emerald-700"
+                            iconBackgroundColor="bg-white/10"
                         />
-                        <StatCard
-                            title="Participation"
-                            value={`${Math.round((stats?.totalSubmissions / (stats?.totalStudents || 1)) * 100)}%`}
-                            subValue={`${stats?.totalSubmissions}/${stats?.totalStudents} Students`}
-                            icon={Users}
-                            trend="Turnout"
-                            trendColor="text-blue-600"
-                        />
-                        <StatCard
-                            title="Highest Score"
+                        <PremiumStatsCard
+                            title="HIGHEST SCORE"
                             value={`${submissions[0]?.total_obtained || 0}`}
-                            subValue={`Top Result`}
+                            subtitle="Top Result"
                             icon={Trophy}
-                            trend="Record"
-                            trendColor="text-amber-600"
+                            backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
+                            iconBackgroundColor="bg-white/10"
+                            className="col-span-2 sm:col-span-1"
                         />
                     </div>
 
