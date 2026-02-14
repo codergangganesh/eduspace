@@ -45,7 +45,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
     if (viewMode === 'list') {
         return (
             <Card className={cn(
-                "group relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-xl bg-[#3c3744] text-white border border-white/5",
+                "group relative overflow-hidden border shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-xl bg-white dark:bg-[#3c3744] text-slate-900 dark:text-white border-slate-200 dark:border-white/5",
                 className
             )}>
                 <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
@@ -65,7 +65,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                             <Badge variant="outline" className="w-fit mb-1 border-slate-200 dark:border-slate-700 text-[10px] font-bold">
                                 {quiz.classes?.course_code || 'COURSE'}
                             </Badge>
-                            <span className="text-xs font-semibold text-muted-foreground">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">
                                 {showAttemptedState ? quiz.my_submission?.status?.toUpperCase() : 'NOT STARTED'}
                             </span>
                         </div>
@@ -73,12 +73,12 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
 
                     {/* Middle: Title & Instructor */}
                     <div className="flex-1 min-w-0 text-center md:text-left">
-                        <h3 className="font-bold text-lg leading-tight text-white truncate">
+                        <h3 className="font-bold text-lg leading-tight text-slate-900 dark:text-white truncate">
                             {quiz.title}
                         </h3>
                         {quiz.instructor && (
                             <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
-                                <span className="text-xs font-medium text-slate-300">
+                                <span className="text-xs font-medium text-slate-500 dark:text-slate-300">
                                     by {quiz.instructor.full_name}
                                 </span>
                             </div>
@@ -86,18 +86,18 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                     </div>
 
                     {/* Right: Metrics */}
-                    <div className="flex items-center gap-2 text-sm text-slate-300 shrink-0 border-r border-white/10 pr-4 mr-2 hidden md:flex">
+                    <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-300 shrink-0 border-r border-slate-200 dark:border-white/10 pr-4 mr-2 hidden md:flex">
                         <div className="flex items-center gap-1.5" title="Questions">
                             <FileText className="size-4" />
-                            <span className="font-medium text-white">{quiz._count?.questions || 0}</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{quiz._count?.questions || 0}</span>
                         </div>
                         <div className="flex items-center gap-1.5" title="Total Points">
                             <Trophy className="size-4" />
-                            <span className="font-medium text-white">{quiz.total_marks} Pts</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{quiz.total_marks} Pts</span>
                         </div>
                         <div className="flex items-center gap-1.5" title="Pass Score">
                             <CheckCircle className="size-4" />
-                            <span className="font-medium text-white">{quiz.pass_percentage}% Pass</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{quiz.pass_percentage}% Pass</span>
                         </div>
                     </div>
 
@@ -139,7 +139,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
 
     return (
         <Card className={cn(
-            "group relative overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744] text-white sm:max-w-md md:max-w-full",
+            "group relative overflow-hidden border shadow-md hover:shadow-xl transition-all duration-300 w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] text-slate-900 dark:text-white border-slate-200 dark:border-white/5",
             className
         )}>
             {/* Header Section - Blue Gradient */}
@@ -165,7 +165,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
             <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
                 {/* Title */}
                 <div>
-                    <h3 className="font-extrabold text-2xl leading-tight line-clamp-2 mb-3 text-white">
+                    <h3 className="font-extrabold text-2xl leading-tight line-clamp-2 mb-3 text-slate-900 dark:text-white">
                         {quiz.title}
                     </h3>
 
@@ -178,7 +178,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                     {quiz.instructor.full_name?.charAt(0) || 'I'}
                                 </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm font-semibold text-slate-200">
+                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-200">
                                 {quiz.instructor.full_name}
                             </span>
                         </div>
@@ -188,27 +188,27 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-3 gap-3">
                     {/* Questions */}
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20">
-                        <div className="p-1.5 rounded-full bg-white/10 text-white mb-1.5">
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-black/20">
+                        <div className="p-1.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white mb-1.5">
                             <FileText className="size-3.5" />
                         </div>
-                        <span className="text-xs font-bold text-white">{quiz._count?.questions || 0} Qs</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{quiz._count?.questions || 0} Qs</span>
                     </div>
 
                     {/* Pass Percentage */}
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20">
-                        <div className="p-1.5 rounded-full bg-white/10 text-white mb-1.5">
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-black/20">
+                        <div className="p-1.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white mb-1.5">
                             <CheckCircle className="size-3.5" />
                         </div>
-                        <span className="text-xs font-bold text-white">Pass: {quiz.pass_percentage}%</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">Pass: {quiz.pass_percentage}%</span>
                     </div>
 
                     {/* Points */}
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20">
-                        <div className="p-1.5 rounded-full bg-white/10 text-white mb-1.5">
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-black/20">
+                        <div className="p-1.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white mb-1.5">
                             <Trophy className="size-3.5" />
                         </div>
-                        <span className="text-xs font-bold text-white">{quiz.total_marks} Pts</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{quiz.total_marks} Pts</span>
                     </div>
                 </div>
 
@@ -218,14 +218,14 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                         <div className="flex gap-3">
                             <Button
                                 onClick={() => onViewDetails(quiz.id)}
-                                className="flex-1 rounded-xl font-bold bg-white/10 border-2 border-white/5 text-white hover:bg-white/20 hover:text-white hover:border-white/10 shadow-sm h-12"
+                                className="flex-1 rounded-xl font-bold bg-slate-100 dark:bg-white/10 border-2 border-slate-200 dark:border-white/5 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/20 shadow-sm h-12"
                             >
                                 <Eye className="size-4 mr-2" />
                                 Details
                             </Button>
                             <Button
                                 onClick={() => onViewLeaderboard(quiz.id, quiz.class_id)}
-                                className="rounded-xl font-bold bg-white/10 border-2 border-white/5 text-white hover:bg-white/20 hover:text-white hover:border-white/10 shadow-sm h-12 w-12 px-0"
+                                className="rounded-xl font-bold bg-slate-100 dark:bg-white/10 border-2 border-slate-200 dark:border-white/5 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/20 shadow-sm h-12 w-12 px-0"
                                 title="Leaderboard"
                             >
                                 <Trophy className="size-5 text-amber-500" />

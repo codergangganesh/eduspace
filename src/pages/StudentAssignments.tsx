@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/layout/DeleteConfirmDialog";
 
-type FilterType = "all" | "pending" | "submitted" | "graded" | "overdue";
+type FilterType = "all" | "pending" | "submitted" | "overdue";
 
 export default function StudentAssignments() {
     const navigate = useNavigate();
@@ -106,61 +106,62 @@ export default function StudentAssignments() {
                             Stay on top of your coursework and deadlines
                         </p>
                     </div>
+
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
                     <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-100 dark:border-blue-900/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-blue-500/10 rounded-xl">
-                                    <BookOpen className="w-8 h-8 text-blue-600" />
+                        <CardContent className="p-3 sm:p-6">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="p-2 sm:p-3 bg-blue-500/10 rounded-xl">
+                                    <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-blue-600" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Assignments</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</h3>
+                                    <p className="text-[10px] sm:text-sm font-medium text-blue-600 dark:text-blue-400">Total</p>
+                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</h3>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-100 dark:border-emerald-900/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-emerald-500/10 rounded-xl">
-                                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                        <CardContent className="p-3 sm:p-6">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="p-2 sm:p-3 bg-emerald-500/10 rounded-xl">
+                                    <CheckCircle2 className="w-5 h-5 sm:w-8 sm:h-8 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Completed</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.completed}</h3>
+                                    <p className="text-[10px] sm:text-sm font-medium text-emerald-600 dark:text-emerald-400">Completed</p>
+                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.completed}</h3>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-100 dark:border-amber-900/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-amber-500/10 rounded-xl">
-                                    <Clock className="w-8 h-8 text-amber-600" />
+                        <CardContent className="p-3 sm:p-6">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="p-2 sm:p-3 bg-amber-500/10 rounded-xl">
+                                    <Clock className="w-5 h-5 sm:w-8 sm:h-8 text-amber-600" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Pending</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.pending}</h3>
+                                    <p className="text-[10px] sm:text-sm font-medium text-amber-600 dark:text-amber-400">Pending</p>
+                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.pending}</h3>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 border-violet-100 dark:border-violet-900/50">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-violet-500/10 rounded-xl">
-                                    <GraduationCap className="w-8 h-8 text-violet-600" />
+                        <CardContent className="p-3 sm:p-6">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="p-2 sm:p-3 bg-violet-500/10 rounded-xl">
+                                    <GraduationCap className="w-5 h-5 sm:w-8 sm:h-8 text-violet-600" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-violet-600 dark:text-violet-400">Average Grade</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.averageGrade || 0}%</h3>
+                                    <p className="text-[10px] sm:text-sm font-medium text-violet-600 dark:text-violet-400">Avg Grade</p>
+                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.averageGrade || 0}%</h3>
                                 </div>
                             </div>
                         </CardContent>
@@ -174,22 +175,26 @@ export default function StudentAssignments() {
                             : "flex flex-col gap-3 max-w-4xl mx-auto"
                     )}>
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]">
+                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
                                 <CardContent className="p-0">
-                                    <div className="h-32 w-full bg-white/5 animate-pulse" />
-                                    <div className="p-6 space-y-4">
+                                    <div className="h-32 w-full bg-slate-100 dark:bg-white/5 animate-pulse" />
+                                    <div className="p-6 space-y-6">
                                         <div className="flex justify-between items-start">
-                                            <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
-                                            <div className="h-6 w-24 bg-white/10 rounded-full animate-pulse" />
+                                            <div className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+                                            <div className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
                                         </div>
-                                        <div className="space-y-2">
-                                            <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse" />
-                                            <div className="h-4 w-1/2 bg-white/10 rounded animate-pulse" />
+                                        <div className="space-y-3">
+                                            <div className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
+                                                <div className="h-4 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
+                                            </div>
                                         </div>
-                                        <div className="pt-4 border-t border-white/5 flex justify-between items-center">
-                                            <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
-                                            <div className="h-9 w-24 bg-white/10 rounded animate-pulse" />
+                                        <div className="grid grid-cols-3 gap-3 pt-2">
+                                            <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse col-span-2" />
+                                            <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse" />
                                         </div>
+                                        <div className="mt-auto h-12 bg-slate-100 dark:bg-white/10 rounded-xl animate-pulse" />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -204,27 +209,27 @@ export default function StudentAssignments() {
                                         key={cls.id}
                                         value={cls.id}
                                         className={cn(
-                                            "relative flex items-center gap-3 pl-2 pr-6 py-2 rounded-full border transition-all duration-300 min-w-[160px] snap-start",
+                                            "relative flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2 pr-3 sm:pr-6 py-1.5 sm:py-2 rounded-full border transition-all duration-300 min-w-0 sm:min-w-[160px] snap-start",
                                             "data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/20",
                                             "data-[state=inactive]:bg-white dark:data-[state=inactive]:bg-slate-800/80 data-[state=inactive]:hover:bg-slate-50 dark:data-[state=inactive]:hover:bg-slate-800 data-[state=inactive]:border-slate-200 dark:data-[state=inactive]:border-slate-700 data-[state=inactive]:text-slate-600 dark:data-[state=inactive]:text-slate-400",
                                             "group overflow-hidden tap-highlight-transparent"
                                         )}
                                     >
                                         <div className={cn(
-                                            "flex items-center justify-center w-10 h-10 rounded-full font-bold text-xs shrink-0 transition-colors",
+                                            "flex items-center justify-center w-7 h-7 sm:w-10 sm:h-10 rounded-full font-bold text-[10px] sm:text-xs shrink-0 transition-colors",
                                             selectedClassId === cls.id
                                                 ? "bg-white/20 text-white"
                                                 : "bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
                                         )}>
                                             {cls.course_code.slice(0, 2).toUpperCase()}
                                         </div>
-                                        <div className="flex flex-col items-start text-left truncate">
+                                        <div className="flex flex-col items-start text-left truncate min-w-0 flex-1">
                                             <span className={cn(
-                                                "font-bold text-[10px] uppercase tracking-wider mb-0.5 opacity-70",
+                                                "font-bold text-[7px] sm:text-[10px] uppercase tracking-wider mb-0 sm:mb-0.5 opacity-70",
                                             )}>
                                                 {cls.course_code}
                                             </span>
-                                            <span className="font-bold text-sm truncate w-full max-w-[120px] leading-none">
+                                            <span className="font-bold text-[10px] sm:text-sm truncate w-full sm:max-w-[120px] leading-none">
                                                 {cls.class_name}
                                             </span>
                                         </div>
@@ -237,16 +242,18 @@ export default function StudentAssignments() {
                         <div className="mt-2 space-y-6">
                             {(assignments.length > 0 || loading) && (
                                 <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-1">
-                                    <div className="flex items-center gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 no-scrollbar">
-                                        {(['all', 'pending', 'submitted', 'graded', 'overdue'] as FilterType[]).map((f) => (
+                                    <div className="grid grid-cols-4 sm:flex items-center gap-1 sm:gap-2 w-full sm:w-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl shrink-0">
+                                        {(['all', 'pending', 'submitted', 'overdue'] as FilterType[]).map((f) => (
                                             <Button
                                                 key={f}
-                                                variant={filter === f ? "default" : "outline"}
+                                                variant={filter === f ? "default" : "ghost"}
                                                 size="sm"
                                                 onClick={() => setFilter(f)}
                                                 className={cn(
-                                                    "capitalize whitespace-nowrap rounded-lg px-4 hover:bg-muted font-medium border-transparent bg-transparent text-muted-foreground",
-                                                    filter === f && "bg-background shadow-sm text-foreground border-border"
+                                                    "capitalize whitespace-nowrap rounded-lg px-0.5 sm:px-4 text-[10px] sm:text-sm font-black transition-all h-8 flex-1 sm:flex-none",
+                                                    filter === f
+                                                        ? "bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400"
+                                                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                                                 )}
                                             >
                                                 {f}
@@ -254,7 +261,7 @@ export default function StudentAssignments() {
                                         ))}
                                     </div>
 
-                                    <div className="flex items-center gap-3 w-full xl:w-auto">
+                                    <div className="flex items-center gap-3 w-full xl:w-auto overflow-hidden">
                                         <div className="relative flex-1 xl:w-72">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                             <Input
@@ -263,6 +270,25 @@ export default function StudentAssignments() {
                                                 value={searchQuery}
                                                 onChange={(e: any) => setSearchQuery(e.target.value)}
                                             />
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl sm:hidden shrink-0">
+                                            <Button
+                                                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                                size="sm"
+                                                onClick={() => setViewMode('grid')}
+                                                className={cn("h-8 w-10 px-0 rounded-lg transition-all", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500")}
+                                            >
+                                                <LayoutGrid className="size-4" />
+                                            </Button>
+                                            <Button
+                                                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                                size="sm"
+                                                onClick={() => setViewMode('list')}
+                                                className={cn("h-8 w-10 px-0 rounded-lg transition-all", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500")}
+                                            >
+                                                <List className="size-4" />
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -275,32 +301,36 @@ export default function StudentAssignments() {
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white/5 dark:bg-slate-900/50">
+                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
                                             {viewMode === 'list' ? (
                                                 <div className="p-4 flex items-center gap-4 w-full">
-                                                    <Skeleton className="h-10 w-10 rounded-xl bg-slate-200/50 dark:bg-white/5 shrink-0" />
+                                                    <Skeleton className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0" />
                                                     <div className="flex-1 space-y-2">
-                                                        <Skeleton className="h-5 w-1/3 bg-slate-200/50 dark:bg-white/5" />
-                                                        <Skeleton className="h-4 w-1/4 bg-slate-200/50 dark:bg-white/5" />
+                                                        <Skeleton className="h-5 w-1/3 bg-slate-200 dark:bg-white/5" />
+                                                        <Skeleton className="h-4 w-1/4 bg-slate-200 dark:bg-white/5" />
                                                     </div>
-                                                    <Skeleton className="h-8 w-16 bg-slate-200/50 dark:bg-white/5 shrink-0" />
+                                                    <Skeleton className="h-8 w-16 bg-slate-200 dark:bg-white/5 shrink-0" />
                                                 </div>
                                             ) : (
                                                 <CardContent className="p-0">
-                                                    <Skeleton className="h-32 w-full bg-slate-200/50 dark:bg-white/5" />
-                                                    <div className="p-6 space-y-4">
+                                                    <Skeleton className="h-32 w-full bg-slate-100 dark:bg-white/5 rounded-none" />
+                                                    <div className="p-6 space-y-6">
                                                         <div className="flex justify-between items-start">
-                                                            <Skeleton className="h-4 w-20 bg-slate-200/50 dark:bg-white/5" />
-                                                            <Skeleton className="h-6 w-24 rounded-full bg-slate-200/50 dark:bg-white/5" />
+                                                            <Skeleton className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full" />
+                                                            <Skeleton className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full" />
                                                         </div>
-                                                        <div className="space-y-2">
-                                                            <Skeleton className="h-6 w-3/4 bg-slate-200/50 dark:bg-white/5" />
-                                                            <Skeleton className="h-4 w-1/2 bg-slate-200/50 dark:bg-white/5" />
+                                                        <div className="space-y-3">
+                                                            <Skeleton className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                                                            <div className="flex items-center gap-2">
+                                                                <Skeleton className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10" />
+                                                                <Skeleton className="h-4 w-32 bg-slate-200 dark:bg-white/10" />
+                                                            </div>
                                                         </div>
-                                                        <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex justify-between items-center">
-                                                            <Skeleton className="h-8 w-8 rounded-full bg-slate-200/50 dark:bg-white/5" />
-                                                            <Skeleton className="h-9 w-24 bg-slate-200/50 dark:bg-white/5" />
+                                                        <div className="grid grid-cols-3 gap-3 pt-2">
+                                                            <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 col-span-2" />
+                                                            <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5" />
                                                         </div>
+                                                        <Skeleton className="h-12 w-full rounded-xl bg-slate-100 dark:bg-white/10 mt-auto" />
                                                     </div>
                                                 </CardContent>
                                             )}

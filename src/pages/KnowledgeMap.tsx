@@ -254,13 +254,13 @@ export default function KnowledgeMap() {
                         key={filter.id}
                         onClick={() => setActiveFilter(filter.id as any)}
                         className={cn(
-                            "px-4 py-1.5 rounded-xl text-[11px] font-black transition-all flex items-center gap-2",
+                            "px-3 py-1 rounded-[10px] text-[10px] font-black transition-all flex items-center gap-1.5",
                             activeFilter === filter.id
                                 ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                 : "text-slate-500 hover:bg-white hover:text-slate-700"
                         )}
                     >
-                        <span className="text-[14px] opacity-90 leading-none">{filter.icon}</span>
+                        <span className="text-[12px] opacity-90 leading-none">{filter.icon}</span>
                         <span className="uppercase tracking-wider">{filter.label}</span>
                     </button>
                 ))}

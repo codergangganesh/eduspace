@@ -101,9 +101,6 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
     if (mode === 'expanded') {
       setMode('collapsed');
       msg = "Slim View";
-    } else if (mode === 'collapsed') {
-      setMode('hover');
-      msg = "Hover View";
     } else {
       setMode('expanded');
       msg = "Wide View";
@@ -117,8 +114,6 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
 
   return (
     <aside
-      onMouseEnter={() => mode === 'hover' && onHoverChange(true)}
-      onMouseLeave={() => mode === 'hover' && onHoverChange(false)}
       className={cn(
         "hidden lg:flex flex-col bg-surface border-r border-border h-[100dvh] fixed left-0 top-0 z-20 transition-all duration-300",
         isCollapsed ? "w-20" : "w-72"
@@ -311,10 +306,8 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium text-xs">
                   {mode === 'expanded'
-                    ? "Currently: Always Expanded (Click for Always Collapsed)"
-                    : mode === 'collapsed'
-                      ? "Currently: Always Collapsed (Click for Hover Mode)"
-                      : "Currently: Hover Mode (Click for Always Expanded)"}
+                    ? "Currently: Wide View (Click for Slim View)"
+                    : "Currently: Slim View (Click for Wide View)"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

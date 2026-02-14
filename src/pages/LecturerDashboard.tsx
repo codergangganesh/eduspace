@@ -101,7 +101,7 @@ export default function LecturerDashboard() {
                 Academic Dashboard
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Welcome back, <span className="text-emerald-600 dark:text-emerald-400">{title}</span>
+                Welcome back, <span className="text-indigo-600 dark:text-indigo-400">{title}</span>
               </h1>
               <p className="text-slate-500 dark:text-slate-300 text-base max-w-lg">
                 Your daily overview of student progress and upcoming classes.

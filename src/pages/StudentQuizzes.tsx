@@ -50,7 +50,6 @@ export default function StudentQuizzes() {
                         <p className="text-muted-foreground text-lg mt-2">Track and complete quizzes for your enrolled classes</p>
                     </div>
 
-
                 </div>
 
                 {loading && enrolledClasses.length === 0 ? (
@@ -60,22 +59,25 @@ export default function StudentQuizzes() {
                             : "flex flex-col gap-3 max-w-4xl mx-auto"
                     )}>
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]">
-                                <div className="relative h-32 bg-white/5 animate-pulse p-6"></div>
+                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
+                                <div className="relative h-32 bg-slate-100 dark:bg-white/5 animate-pulse p-6"></div>
                                 <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
+                                    <div className="flex justify-between items-start">
+                                        <div className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+                                        <div className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+                                    </div>
                                     <div className="space-y-3">
-                                        <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse" />
+                                        <div className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
                                         <div className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
-                                            <div className="h-4 w-1/3 bg-white/10 rounded animate-pulse" />
+                                            <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
+                                            <div className="h-4 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {[1, 2, 3].map((j) => (
-                                            <div key={j} className="h-16 rounded-2xl bg-white/5 animate-pulse" />
-                                        ))}
+                                    <div className="grid grid-cols-3 gap-3 pt-2">
+                                        <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse col-span-2" />
+                                        <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse" />
                                     </div>
-                                    <div className="mt-auto h-12 bg-white/10 rounded-xl animate-pulse" />
+                                    <div className="mt-auto h-12 bg-slate-100 dark:bg-white/10 rounded-xl animate-pulse" />
                                 </CardContent>
                             </Card>
                         ))}
@@ -89,27 +91,27 @@ export default function StudentQuizzes() {
                                         key={cls.id}
                                         value={cls.id}
                                         className={cn(
-                                            "relative flex items-center gap-3 pl-2 pr-6 py-2 rounded-full border transition-all duration-300 min-w-[160px] snap-start",
+                                            "relative flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2 pr-3 sm:pr-6 py-1.5 sm:py-2 rounded-full border transition-all duration-300 min-w-0 sm:min-w-[160px] snap-start",
                                             "data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/20",
                                             "data-[state=inactive]:bg-white dark:data-[state=inactive]:bg-slate-800/80 data-[state=inactive]:hover:bg-slate-50 dark:data-[state=inactive]:hover:bg-slate-800 data-[state=inactive]:border-slate-200 dark:data-[state=inactive]:border-slate-700 data-[state=inactive]:text-slate-600 dark:data-[state=inactive]:text-slate-400",
                                             "group overflow-hidden tap-highlight-transparent"
                                         )}
                                     >
                                         <div className={cn(
-                                            "flex items-center justify-center w-10 h-10 rounded-full font-bold text-xs shrink-0 transition-colors",
+                                            "flex items-center justify-center w-7 h-7 sm:w-10 sm:h-10 rounded-full font-bold text-[10px] sm:text-xs shrink-0 transition-colors",
                                             selectedClassId === cls.id
                                                 ? "bg-white/20 text-white"
                                                 : "bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
                                         )}>
                                             {cls.course_code.slice(0, 2).toUpperCase()}
                                         </div>
-                                        <div className="flex flex-col items-start text-left truncate">
+                                        <div className="flex flex-col items-start text-left truncate min-w-0 flex-1">
                                             <span className={cn(
-                                                "font-bold text-[10px] uppercase tracking-wider mb-0.5 opacity-70",
+                                                "font-bold text-[7px] sm:text-[10px] uppercase tracking-wider mb-0 sm:mb-0.5 opacity-70",
                                             )}>
                                                 {cls.course_code}
                                             </span>
-                                            <span className="font-bold text-sm truncate w-full max-w-[120px] leading-none">
+                                            <span className="font-bold text-[10px] sm:text-sm truncate w-full sm:max-w-[120px] leading-none">
                                                 {cls.class_name}
                                             </span>
                                         </div>
@@ -119,7 +121,27 @@ export default function StudentQuizzes() {
                         </div>
 
                         {/* Content Area - Rendered directly based on selection, not inside TabsContent to ensure updates */}
-                        <div className="mt-2">
+                        <div className="mt-4">
+                            <div className="flex justify-end mb-4 sm:hidden">
+                                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+                                    <Button
+                                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('grid')}
+                                        className={cn("h-8 w-10 px-0 rounded-lg transition-all", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500")}
+                                    >
+                                        <LayoutGrid className="size-4" />
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('list')}
+                                        className={cn("h-8 w-10 px-0 rounded-lg transition-all", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500")}
+                                    >
+                                        <List className="size-4" />
+                                    </Button>
+                                </div>
+                            </div>
                             {loading ? (
                                 <div className={cn(
                                     viewMode === 'grid'
@@ -127,22 +149,25 @@ export default function StudentQuizzes() {
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-md mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744]/50 dark:bg-[#1A1C24]">
-                                            <Skeleton className="h-32 w-full rounded-t-2xl bg-white/5" />
+                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-md mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
+                                            <Skeleton className="h-32 w-full bg-slate-100 dark:bg-white/5 rounded-none" />
                                             <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
+                                                <div className="flex justify-between items-start">
+                                                    <Skeleton className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full" />
+                                                    <Skeleton className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full" />
+                                                </div>
                                                 <div className="space-y-3">
-                                                    <Skeleton className="h-6 w-3/4 bg-white/5" />
+                                                    <Skeleton className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg" />
                                                     <div className="flex items-center gap-2">
-                                                        <Skeleton className="size-8 rounded-full bg-white/5" />
-                                                        <Skeleton className="h-4 w-1/3 bg-white/5" />
+                                                        <Skeleton className="size-8 rounded-full bg-slate-200 dark:bg-white/10" />
+                                                        <Skeleton className="h-4 w-32 bg-slate-200 dark:bg-white/10" />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-3">
-                                                    {[1, 2, 3].map((j) => (
-                                                        <Skeleton key={j} className="h-16 rounded-2xl bg-white/5" />
-                                                    ))}
+                                                    <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 col-span-2" />
+                                                    <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5" />
                                                 </div>
-                                                <Skeleton className="h-12 w-full rounded-xl bg-white/5 mt-auto" />
+                                                <Skeleton className="h-12 w-full rounded-xl bg-slate-100 dark:bg-white/10 mt-auto" />
                                             </CardContent>
                                         </Card>
                                     ))}

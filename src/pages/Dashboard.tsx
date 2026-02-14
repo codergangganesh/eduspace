@@ -156,7 +156,7 @@ export default function Dashboard() {
             value="View"
             icon={Calendar}
             subtitle="Upcoming classes"
-            className="border-l-4 border-l-purple-500 hover:border-l-purple-600 dark:border-l-purple-600"
+            className="hidden sm:block border-l-4 border-l-purple-500 hover:border-l-purple-600 dark:border-l-purple-600"
             onClick={() => navigate("/schedule")}
           />
         </div>

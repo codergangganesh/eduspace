@@ -88,7 +88,7 @@ export function AssignmentCard({
         if (isGraded) return { label: 'GRADED', color: 'bg-emerald-400 text-emerald-950', icon: CheckCircle2 };
         if (isSubmitted) return { label: 'SUBMITTED', color: 'bg-blue-400 text-blue-950', icon: CheckCircle2 };
         if (isOverdue || isLate) return { label: 'OVERDUE', color: 'bg-red-400 text-red-950', icon: AlertCircle };
-        return { label: 'PENDING', color: 'bg-white/20 hover:bg-white/30 text-white', icon: Clock };
+        return { label: 'PENDING', color: 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white', icon: Clock };
     };
 
     const statusInfo = getStatusDetails();
@@ -96,17 +96,22 @@ export function AssignmentCard({
     if (viewMode === 'list') {
         return (
             <Card className={cn(
-                "group relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-xl bg-[#3c3744] text-white border border-white/5",
+                "group relative overflow-hidden border shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-xl bg-white dark:bg-[#3c3744] text-slate-900 dark:text-white border-slate-200 dark:border-white/5",
                 className
             )}>
                 <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
                     {/* Left: Status & Course */}
                     <div className="flex items-center gap-3 md:w-48 shrink-0">
-                        <div className={cn("p-3 rounded-xl", statusInfo.color.replace('bg-', 'bg-opacity-20 '))} >
+                        <div className={cn(
+                            "p-3 rounded-xl",
+                            status === 'pending'
+                                ? "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400"
+                                : statusInfo.color.replace('bg-', 'bg-opacity-20 ')
+                        )} >
                             <statusInfo.icon className="size-6" />
                         </div>
                         <div className="flex flex-col">
-                            <Badge variant="outline" className="w-fit mb-1 border-slate-200 dark:border-slate-700 text-[10px] font-bold">
+                            <Badge variant="outline" className="w-fit mb-1 border-slate-200 dark:border-slate-700 text-[10px] font-bold truncate max-w-[120px]">
                                 {assignment.course_code || assignment.class_name || 'COURSE'}
                             </Badge>
                             <span className="text-xs font-semibold text-muted-foreground uppercase">
@@ -117,10 +122,10 @@ export function AssignmentCard({
 
                     {/* Middle: Title & Instructor */}
                     <div className="flex-1 min-w-0 text-center md:text-left">
-                        <h3 className="font-bold text-lg leading-tight text-white truncate mb-1" title={assignment.title}>
+                        <h3 className="font-bold text-lg leading-tight text-slate-900 dark:text-white truncate mb-1" title={assignment.title}>
                             {assignment.title}
                         </h3>
-                        <div className="flex items-center justify-center md:justify-start gap-3 text-xs text-slate-300">
+                        <div className="flex items-center justify-center md:justify-start gap-3 text-xs text-slate-500 dark:text-slate-300">
                             {assignment.lecturer_name && (
                                 <span className="flex items-center gap-1">
                                     <Avatar className="h-4 w-4">
@@ -138,10 +143,10 @@ export function AssignmentCard({
                     </div>
 
                     {/* Right: Metrics */}
-                    <div className="flex items-center gap-4 text-sm text-slate-300 shrink-0 border-r border-white/10 pr-4 mr-2 hidden md:flex">
+                    <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-300 shrink-0 border-r border-slate-200 dark:border-white/10 pr-4 mr-2 hidden md:flex">
                         <div className="flex items-center gap-1.5" title="Points">
                             <Trophy className="size-4" />
-                            <span className="font-medium text-white">{assignment.points || 100} Pts</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{assignment.points || 100} Pts</span>
                         </div>
                     </div>
 
@@ -208,13 +213,13 @@ export function AssignmentCard({
 
     return (
         <Card className={cn(
-            "group relative overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-[#3c3744] text-white",
+            "group relative overflow-hidden border shadow-md hover:shadow-xl transition-all duration-300 w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] text-slate-900 dark:text-white border-slate-200 dark:border-white/5",
             className
         )}>
             {/* Header Section - Violet/Purple Gradient for Assignments */}
             <div className="relative h-32 bg-gradient-to-br from-violet-500 to-fuchsia-600 p-6 flex flex-col justify-between">
                 <div className="flex justify-between items-start">
-                    <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-sm font-bold tracking-wider uppercase text-[10px] px-2.5 py-1">
+                    <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-sm font-bold tracking-wider uppercase text-[10px] px-2.5 py-1 truncate max-w-[140px] shrink-0">
                         {assignment.course_code || assignment.class_name || 'COURSE'}
                     </Badge>
 
@@ -278,7 +283,7 @@ export function AssignmentCard({
                                     {assignment.lecturer_name?.charAt(0) || 'L'}
                                 </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm font-semibold text-slate-200 line-clamp-1">
+                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-200 line-clamp-1">
                                 {assignment.lecturer_name} {assignment.subject_name ? `• ${assignment.subject_name}` : ''}
                             </span>
                         </div>
@@ -288,25 +293,25 @@ export function AssignmentCard({
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-3 gap-3">
                     {/* Due Date */}
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20 col-span-2">
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-black/20 col-span-2">
                         <div className="flex items-center gap-2 mb-1">
-                            <div className="p-1 rounded-full bg-white/10 text-white">
+                            <div className="p-1 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white">
                                 <Calendar className="size-3" />
                             </div>
-                            <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">Due Date</span>
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Due Date</span>
                         </div>
 
-                        <span className="text-xs font-bold text-white truncate w-full text-center">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate w-full text-center">
                             {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, h:mm a") : "No Due Date"}
                         </span>
                     </div>
 
                     {/* Points */}
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-black/20">
-                        <div className="p-1.5 rounded-full bg-white/10 text-white mb-1.5">
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-black/20">
+                        <div className="p-1.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white mb-1.5">
                             <Trophy className="size-3.5" />
                         </div>
-                        <span className="text-xs font-bold text-white">{assignment.points || 100} Pts</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{assignment.points || 100} Pts</span>
                     </div>
                 </div>
 
@@ -335,7 +340,7 @@ export function AssignmentCard({
                                     e.stopPropagation();
                                     onView?.(assignment.id);
                                 }}
-                                className="w-full rounded-xl font-bold bg-white/10 border-2 border-white/5 text-white hover:bg-white/20 hover:text-white hover:border-white/10 shadow-sm h-12"
+                                className="w-full rounded-xl font-bold bg-slate-100 dark:bg-white/10 border-2 border-slate-200 dark:border-white/5 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/20 shadow-sm h-12"
                             >
                                 <Eye className="size-4 mr-2" />
                                 {role === 'lecturer' ? 'View Submissions' : 'View Details'}
