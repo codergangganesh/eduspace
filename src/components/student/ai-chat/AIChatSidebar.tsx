@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { SidebarSkeleton } from "./AIChatSkeleton";
 import { Plus, MessageSquare, Trash2, MoreVertical, Sparkles, Pencil, Check, X, Search, Bot, Pin, PinOff, Share2, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,7 +25,9 @@ interface AIChatSidebarProps {
     onUpdateTitle?: (id: string, newTitle: string) => void;
     onTogglePin?: (id: string) => void;
     onToggleShare?: (id: string) => void;
+    onCopyShareLink?: (shareToken: string) => void;
     onClose?: () => void;
+    isLoading?: boolean;
 }
 
 export function AIChatSidebar({
@@ -36,7 +39,9 @@ export function AIChatSidebar({
     onUpdateTitle,
     onTogglePin,
     onToggleShare,
+    onCopyShareLink,
     onClose,
+    isLoading,
 }: AIChatSidebarProps) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
@@ -157,7 +162,9 @@ export function AIChatSidebar({
 
             <ScrollArea className="flex-1 px-3">
                 <div className="space-y-1.5 py-2">
-                    {filteredConversations.length === 0 ? (
+                    {isLoading ? (
+                        <SidebarSkeleton />
+                    ) : filteredConversations.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                             <div className="h-10 w-10 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <MessageSquare className="h-5 w-5 text-muted-foreground/40" />
@@ -221,7 +228,18 @@ export function AIChatSidebar({
                                                     <Pin className="h-2.5 w-2.5 text-primary rotate-45" />
                                                 )}
                                                 {chat.share_token && (
-                                                    <Link className="h-2.5 w-2.5 text-emerald-500" />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-5 w-5 p-0 hover:bg-emerald-500/10 text-emerald-500 rounded-md transition-colors"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onCopyShareLink?.(chat.share_token!);
+                                                        }}
+                                                        title="Copy Share Link"
+                                                    >
+                                                        <Link className="h-2.5 w-2.5" />
+                                                    </Button>
                                                 )}
                                             </div>
                                         </div>
@@ -244,6 +262,18 @@ export function AIChatSidebar({
                                                         <Share2 className="mr-3 h-4 w-4" />
                                                         <span>{chat.share_token ? "Stop Sharing" : "Share Chat"}</span>
                                                     </DropdownMenuItem>
+                                                    {chat.share_token && (
+                                                        <DropdownMenuItem
+                                                            className="rounded-lg cursor-pointer py-2.5 font-semibold text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onCopyShareLink?.(chat.share_token!);
+                                                            }}
+                                                        >
+                                                            <Link className="mr-3 h-4 w-4" />
+                                                            <span>Copy Link</span>
+                                                        </DropdownMenuItem>
+                                                    )}
                                                     <DropdownMenuItem
                                                         className="rounded-lg cursor-pointer py-2.5 font-semibold"
                                                         onClick={(e) => {

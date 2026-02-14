@@ -30,9 +30,13 @@ export interface AIConversation {
 
 export const aiChatService = {
     async getConversations() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
         const { data, error } = await supabase
             .from('ai_conversations')
             .select('*')
+            .eq('user_id', user.id)
             .order('is_pinned', { ascending: false })
             .order('updated_at', { ascending: false });
 
@@ -69,10 +73,14 @@ export const aiChatService = {
     },
 
     async deleteConversation(id: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { error } = await supabase
             .from('ai_conversations')
             .delete()
-            .eq('id', id);
+            .eq('id', id)
+            .eq('user_id', user.id);
 
         if (error) throw error;
     },
@@ -100,25 +108,39 @@ export const aiChatService = {
     },
 
     async updateConversationTitle(id: string, title: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { error } = await supabase
             .from('ai_conversations')
             .update({ title })
-            .eq('id', id);
+            .eq('id', id)
+            .eq('user_id', user.id);
 
         if (error) throw error;
     },
 
     async togglePin(id: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { data, error } = await supabase
-            .rpc('toggle_ai_conversation_pin', { conv_id: id });
+            .rpc('toggle_ai_conversation_pin', {
+                conv_id: id
+            });
 
         if (error) throw error;
         return data as boolean;
     },
 
     async toggleShare(id: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { data, error } = await supabase
-            .rpc('toggle_ai_conversation_share', { conv_id: id });
+            .rpc('toggle_ai_conversation_share', {
+                conv_id: id
+            });
 
         if (error) throw error;
         return data as string | null;

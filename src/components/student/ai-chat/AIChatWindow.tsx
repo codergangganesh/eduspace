@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { AIChatSidebar } from "./AIChatSidebar";
 import { AIChatInput } from "./AIChatInput";
 import { AIMessage } from "./AIMessage";
+import { AIChatSkeleton } from "./AIChatSkeleton";
 import { aiChatService, AIConversation, AIChatMessage, MessageContent } from "@/lib/aiChatService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle } from "lucide-react";
+import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle, Link } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -140,17 +141,18 @@ export default function AIChatWindow() {
         try {
             const shareToken = await aiChatService.toggleShare(id);
             setConversations(prev => prev.map(c => c.id === id ? { ...c, share_token: shareToken || undefined } : c));
-
-            if (shareToken) {
-                const shareUrl = `${window.location.origin}/ai-chat/share/${shareToken}`;
-                await navigator.clipboard.writeText(shareUrl);
-                toast.success("Share link copied to clipboard!");
-            } else {
-                toast.success("Sharing disabled");
-            }
         } catch (error) {
             toast.error("Failed to update sharing settings");
         }
+    };
+
+    const handleCopyShareLink = (shareToken: string) => {
+        const shareUrl = `${window.location.origin}/ai-chat/share/${shareToken}`;
+        navigator.clipboard.writeText(shareUrl);
+        toast.info("Share link copied to clipboard", {
+            icon: <Link className="h-4 w-4" />,
+            duration: 2000
+        });
     };
 
     const handleToggleTemporaryMode = () => {
@@ -315,12 +317,7 @@ export default function AIChatWindow() {
     };
 
     if (isInitialLoading) {
-        return (
-            <div className="flex h-full w-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Initializing chat...</span>
-            </div>
-        );
+        return <AIChatSkeleton />;
     }
 
     return (
@@ -358,7 +355,9 @@ export default function AIChatWindow() {
                                 onUpdateTitle={handleUpdateTitle}
                                 onTogglePin={handleTogglePin}
                                 onToggleShare={handleToggleShare}
+                                onCopyShareLink={handleCopyShareLink}
                                 onClose={() => setIsMobileMenuOpen(false)}
+                                isLoading={isInitialLoading}
                             />
                         </motion.div>
                     </>
@@ -376,6 +375,8 @@ export default function AIChatWindow() {
                     onUpdateTitle={handleUpdateTitle}
                     onTogglePin={handleTogglePin}
                     onToggleShare={handleToggleShare}
+                    onCopyShareLink={handleCopyShareLink}
+                    isLoading={isInitialLoading}
                 />
             </div>
 

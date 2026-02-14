@@ -14,6 +14,7 @@ import {
   ClipboardList,
   FileCheck,
   Bot,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +36,7 @@ const lecturerNavItems = [
   { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
   { icon: Bot, label: "AI Chat", path: "/ai-chat" },
-  { icon: Sparkles, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
+  { icon: Wand2, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
