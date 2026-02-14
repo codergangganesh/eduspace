@@ -47,7 +47,7 @@ export function MessagesSkeleton() {
 
 export function AIChatSkeleton() {
     return (
-        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background">
+        <div className="flex h-full overflow-hidden bg-background">
             {/* Sidebar Skeleton - Desktop */}
             <div className="hidden md:block w-72 shrink-0 h-full border-r border-border/40 bg-card/10">
                 <div className="p-4 md:p-6 flex items-center gap-3">

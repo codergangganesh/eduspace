@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 export default function AIChatPage() {
     return (
-        <DashboardLayout fullHeight>
+        <DashboardLayout fullHeight hideHeaderOnMobile>
             <AIChatWindow />
         </DashboardLayout>
     );

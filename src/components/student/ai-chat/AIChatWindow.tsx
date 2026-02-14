@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AIChatSidebar } from "./AIChatSidebar";
 import { AIChatInput } from "./AIChatInput";
 import { AIMessage } from "./AIMessage";
-import { AIChatSkeleton } from "./AIChatSkeleton";
+import { AIChatSkeleton, MessagesSkeleton } from "./AIChatSkeleton";
 import { aiChatService, AIConversation, AIChatMessage, MessageContent } from "@/lib/aiChatService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -26,11 +27,25 @@ export default function AIChatWindow() {
     const [isTemporaryMode, setIsTemporaryMode] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const chatIdFromUrl = searchParams.get('id');
 
     useEffect(() => {
         loadConversations();
         loadUserProfile();
     }, []);
+
+    // Sync current conversation with URL id
+    useEffect(() => {
+        if (conversations.length > 0 && chatIdFromUrl) {
+            const conv = conversations.find(c => c.id === chatIdFromUrl);
+            if (conv && (!currentConversation || currentConversation.id !== conv.id)) {
+                setCurrentConversation(conv);
+            }
+        } else if (!chatIdFromUrl && currentConversation) {
+            setCurrentConversation(null);
+        }
+    }, [chatIdFromUrl, conversations]);
 
     useEffect(() => {
         if (currentConversation) {
@@ -75,6 +90,12 @@ export default function AIChatWindow() {
         try {
             const data = await aiChatService.getConversations();
             setConversations(data);
+
+            // If we have an ID in the URL, select it immediately
+            if (chatIdFromUrl) {
+                const conv = data.find(c => c.id === chatIdFromUrl);
+                if (conv) setCurrentConversation(conv);
+            }
         } catch (error) {
             console.error("Failed to load conversations:", error);
         } finally {
@@ -98,7 +119,7 @@ export default function AIChatWindow() {
     const handleNewChat = () => {
         setCurrentConversation(null);
         setMessages([]);
-        setIsTemporaryMode(false);
+        setSearchParams({});
     };
 
     const handleDeleteConversation = async (id: string) => {
@@ -162,6 +183,7 @@ export default function AIChatWindow() {
         // Always start fresh when toggling mode to ensure privacy/new session
         setCurrentConversation(null);
         setMessages([]);
+        setSearchParams({});
     };
 
     const handleUpdateMessage = async (id: string, newContent: string) => {
@@ -275,6 +297,7 @@ export default function AIChatWindow() {
                 conversationId = newConv.id;
                 setCurrentConversation(newConv);
                 setConversations(prev => [newConv, ...prev]);
+                setSearchParams({ id: newConv.id });
             }
 
             // 2. Save user message
@@ -321,7 +344,7 @@ export default function AIChatWindow() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background relative">
+        <div className="flex h-full overflow-hidden bg-background relative">
             {/* Mobile Sidebar Overlay - Local to this container */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
@@ -331,20 +354,20 @@ export default function AIChatWindow() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className="absolute inset-0 bg-background/20 backdrop-blur-[2px] z-40 md:hidden"
+                            className="absolute inset-0 bg-background/60 backdrop-blur-sm z-40 md:hidden"
                         />
                         <motion.div
                             initial={{ x: "-100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="absolute inset-y-0 left-0 w-72 bg-card z-50 md:hidden border-r border-border/40 shadow-2xl"
+                            className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-card z-50 md:hidden border-r border-border/40 shadow-2xl"
                         >
                             <AIChatSidebar
                                 conversations={conversations}
                                 currentConversationId={currentConversation?.id}
                                 onSelectConversation={(id) => {
-                                    setCurrentConversation(conversations.find(c => c.id === id) || null);
+                                    setSearchParams({ id });
                                     setIsMobileMenuOpen(false);
                                 }}
                                 onNewChat={() => {
@@ -369,7 +392,7 @@ export default function AIChatWindow() {
                 <AIChatSidebar
                     conversations={conversations}
                     currentConversationId={currentConversation?.id}
-                    onSelectConversation={(id) => setCurrentConversation(conversations.find(c => c.id === id) || null)}
+                    onSelectConversation={(id) => setSearchParams({ id })}
                     onNewChat={handleNewChat}
                     onDeleteConversation={handleDeleteConversation}
                     onUpdateTitle={handleUpdateTitle}
@@ -388,7 +411,7 @@ export default function AIChatWindow() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="md:hidden"
+                            className="md:hidden -ml-2 h-9 w-9"
                             onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu className="h-5 w-5" />
@@ -433,8 +456,10 @@ export default function AIChatWindow() {
                 </div>
 
                 <ScrollArea className="flex-1" viewportRef={scrollAreaRef as any}>
-                    <div className="max-w-4xl mx-auto w-full">
-                        {messages.length === 0 && !isStreaming ? (
+                    <div className="max-w-4xl mx-auto w-full min-h-full">
+                        {isLoading && messages.length === 0 ? (
+                            <MessagesSkeleton />
+                        ) : messages.length === 0 && !isStreaming ? (
                             <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center space-y-12">
                                 <motion.div
                                     initial={{ scale: 0.9, opacity: 0 }}
@@ -442,18 +467,18 @@ export default function AIChatWindow() {
                                     className="relative"
                                 >
                                     <div className="absolute -inset-4 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded-full blur-2xl animate-pulse" />
-                                    <div className="relative h-24 w-24 rounded-3xl overflow-hidden border border-border shadow-2xl">
+                                    <div className="relative h-24 w-24 rounded-3xl overflow-hidden border border-border shadow-2xl mx-auto">
                                         <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                                     </div>
                                 </motion.div>
 
-                                <div className="space-y-6 max-w-xl">
+                                <div className="space-y-6 max-w-xl mx-auto">
                                     <h1 className="text-4xl md:text-5xl font-black tracking-tight text-foreground leading-[1.1]">
                                         Your Personalized <br /> <span className="text-primary">Learning Partner</span>
                                     </h1>
                                 </div>
 
-                                <div className="w-full max-w-2xl px-6">
+                                <div className="w-full max-w-2xl px-6 mx-auto">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                                         {[
                                             { label: "Summarize notes", icon: "📝", desc: "Get key takeaways" },
@@ -482,12 +507,11 @@ export default function AIChatWindow() {
                                                 <ChevronRight className="h-4 w-4 text-muted-foreground/30 md:hidden" />
                                             </motion.button>
                                         ))}
-
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <div className="pb-48 px-4 pt-4">
+                            <div className="pb-32 md:pb-48 px-4 pt-4">
                                 <AnimatePresence initial={false}>
                                     {messages.map((msg) => (
                                         <motion.div
@@ -529,7 +553,7 @@ export default function AIChatWindow() {
                     </div>
                 </ScrollArea>
 
-                <div className="absolute inset-x-0 bottom-0 pointer-events-none">
+                <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20">
                     <div className="h-32 bg-gradient-to-t from-background via-background/90 to-transparent" />
                     <div className="bg-background pb-4 md:pb-6 pt-2 px-4 md:px-6 pointer-events-auto">
                         <div className="max-w-4xl mx-auto">
