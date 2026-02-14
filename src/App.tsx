@@ -58,6 +58,7 @@ const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
 const QuizAttemptDetails = lazy(() => import("./pages/QuizAttemptDetails"));
 const AIChat = lazy(() => import("./pages/AIChat"));
 const SharedAIChat = lazy(() => import("./pages/SharedAIChat"));
+const KnowledgeMap = lazy(() => import("@/pages/KnowledgeMap"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -112,6 +113,7 @@ const App = () => (
                     <Route path="/student/quizzes/:quizId" element={<ProtectedRoute allowedRoles={["student", "admin"]}><TakeQuiz /></ProtectedRoute>} />
                     <Route path="/student/quizzes/:classId/:quizId/results" element={<ProtectedRoute allowedRoles={["student", "admin"]}><QuizResultsView /></ProtectedRoute>} />
                     <Route path="/student/quizzes/:quizId/details" element={<ProtectedRoute allowedRoles={["student", "admin"]}><QuizAttemptDetails /></ProtectedRoute>} />
+                    <Route path="/student/knowledge-map" element={<ProtectedRoute allowedRoles={["student"]}><KnowledgeMap /></ProtectedRoute>} />
                     <Route path="/lecturer-dashboard" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerDashboard /></ProtectedRoute>} />
                     <Route path="/all-students" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateClass /></ProtectedRoute>} />
                     <Route path="/classes/:classId/students" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><AllStudents /></ProtectedRoute>} />

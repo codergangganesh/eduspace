@@ -15,6 +15,7 @@ import {
   FileCheck,
   Bot,
   Wand2,
+  Orbit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,7 @@ const studentNavItems = [
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
+  { icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
   { icon: Bot, label: "AI Chat", path: "/ai-chat" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];

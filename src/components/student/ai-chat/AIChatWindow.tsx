@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { knowledgeService } from "@/lib/knowledgeService";
 
 export default function AIChatWindow() {
     const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -129,6 +130,7 @@ export default function AIChatWindow() {
             if (currentConversation?.id === id) {
                 handleNewChat();
             }
+            knowledgeService.deleteKnowledgeNode(id);
             toast.success("Conversation deleted");
         } catch (error) {
             toast.error("Failed to delete conversation");
@@ -234,6 +236,14 @@ export default function AIChatWindow() {
             const assistantMsg = await aiChatService.saveMessage(currentConversation.id, 'assistant', fullAIContent);
             setMessages(prev => [...prev, assistantMsg]);
             setStreamingMessage("");
+
+            // Update Knowledge Map
+            knowledgeService.upsertKnowledgeNode({
+                type: 'chat',
+                sourceId: currentConversation.id,
+                label: currentConversation.title,
+                text: `${messages[messages.length - 1]?.content}\n${fullAIContent}`
+            });
         } catch (error: any) {
             toast.error(error.message || "Regeneration failed");
         } finally {
@@ -328,6 +338,15 @@ export default function AIChatWindow() {
                 return [...prev, assistantMsg];
             });
             setStreamingMessage("");
+
+            // Update Knowledge Map
+            knowledgeService.upsertKnowledgeNode({
+                type: 'chat',
+                sourceId: conversationId,
+                label: currentConversation?.title || content.substring(0, 40),
+                text: `${content}\n${fullAIContent}`
+            });
+
             loadConversations();
 
         } catch (error: any) {

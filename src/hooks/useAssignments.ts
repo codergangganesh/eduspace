@@ -668,6 +668,10 @@ export function useAssignments(selectedClassId?: string) {
                 .eq('student_id', user.id); // Security check
 
             if (error) throw error;
+
+            const { knowledgeService } = await import('@/lib/knowledgeService');
+            await knowledgeService.deleteKnowledgeNode(submissionId);
+
             return { success: true };
         } catch (error) {
             console.error('Error deleting submission:', error);
@@ -704,7 +708,7 @@ export function useAssignments(selectedClassId?: string) {
             const studentProfile = profileResult.data;
 
             // 2. Insert/Update submission including the snapshot fields
-            const { error } = await supabase
+            const { data: subData, error } = await supabase
                 .from('assignment_submissions')
                 .upsert({
                     assignment_id: assignmentId,
@@ -714,7 +718,9 @@ export function useAssignments(selectedClassId?: string) {
                     ...data,
                     submitted_at: new Date().toISOString(),
                     status: 'submitted',
-                });
+                })
+                .select('id')
+                .single();
 
             if (error) throw error;
 
@@ -734,6 +740,19 @@ export function useAssignments(selectedClassId?: string) {
                 }
             } catch (notifError) {
                 console.warn('Failed to send submission notification:', notifError);
+            }
+
+            // Sync with Knowledge Map
+            try {
+                const { knowledgeService } = await import('@/lib/knowledgeService');
+                await knowledgeService.upsertKnowledgeNode({
+                    type: 'assignment',
+                    sourceId: subData.id,
+                    label: assignment?.title || 'Assignment',
+                    text: assignment?.title || 'Assignment'
+                });
+            } catch (kmError) {
+                console.warn('Failed to sync assignment with Knowledge Map:', kmError);
             }
 
             return { success: true };

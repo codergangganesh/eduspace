@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { knowledgeService } from "@/lib/knowledgeService";
 
 interface Note {
     id: string;
@@ -55,18 +56,36 @@ export function StudentNotesDrawer() {
 
         try {
             if (isEditing) {
-                const { error } = await supabase
+                const { error: updateError } = await supabase
                     .from('student_notes')
                     .update({ title, content })
                     .eq('id', isEditing);
-                if (error) throw error;
+                if (updateError) throw updateError;
                 toast.success("Note updated");
+
+                knowledgeService.upsertKnowledgeNode({
+                    type: 'note',
+                    sourceId: isEditing,
+                    label: title,
+                    text: `${title}\n${content}`
+                });
             } else {
-                const { error } = await supabase
+                const { data, error: insertError } = await supabase
                     .from('student_notes')
-                    .insert({ user_id: user.id, title, content });
-                if (error) throw error;
+                    .insert({ user_id: user.id, title, content })
+                    .select();
+                if (insertError) throw insertError;
                 toast.success("Note created");
+
+                // Update Knowledge Map with new note
+                if (data?.[0]) {
+                    knowledgeService.upsertKnowledgeNode({
+                        type: 'note',
+                        sourceId: data[0].id,
+                        label: title,
+                        text: `${title}\n${content}`
+                    });
+                }
             }
 
             resetForm();
@@ -84,6 +103,7 @@ export function StudentNotesDrawer() {
         } else {
             toast.success("Note deleted");
             setNotes(prev => prev.filter(n => n.id !== id));
+            knowledgeService.deleteKnowledgeNode(id);
         }
     };
 

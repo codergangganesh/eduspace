@@ -437,6 +437,15 @@ export default function TakeQuiz() {
             if (timerRef.current) clearInterval(timerRef.current);
             toast.success('Quiz submitted successfully!');
 
+            // Add to Knowledge Map
+            const { knowledgeService } = await import('@/lib/knowledgeService');
+            knowledgeService.upsertKnowledgeNode({
+                type: 'quiz',
+                sourceId: submissionData.id,
+                label: quiz.title,
+                text: quiz.title
+            });
+
             // Notify Lecturer
             if (quiz.created_by && profile?.full_name) {
                 notifyQuizSubmission(
