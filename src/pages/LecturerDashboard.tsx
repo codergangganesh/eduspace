@@ -46,7 +46,8 @@ export default function LecturerDashboard() {
           <div className="absolute top-0 right-0 -mr-20 -mt-20 size-[500px] rounded-full bg-emerald-500/5 dark:bg-indigo-500/30 blur-3xl opacity-50 pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-[400px] rounded-full bg-blue-500/5 dark:bg-emerald-500/20 blur-3xl opacity-50 pointer-events-none" />
 
-          <div className="relative z-10 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="relative z-10 p-5 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+
             <div className="space-y-3 max-w-2xl text-center sm:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-white/10 backdrop-blur-md border border-emerald-100 dark:border-white/10 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                 <span className="relative flex size-2">
@@ -55,12 +56,19 @@ export default function LecturerDashboard() {
                 </span>
                 Academic Dashboard
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Welcome back, <TypewriterName name={title} className="text-indigo-600 dark:text-indigo-400" />
+              <h1 className="text-xl sm:text-4xl font-bold tracking-tight">
+                <span className="sm:hidden">Hi, </span>
+                <span className="hidden sm:inline">Welcome back, </span>
+                <TypewriterName name={title} className="text-indigo-600 dark:text-indigo-400" />
               </h1>
-              <p className="text-slate-500 dark:text-slate-300 text-base max-w-lg">
-                Your daily overview of student progress and upcoming classes.
+
+              <p className="text-slate-500 dark:text-slate-300 text-sm sm:text-base max-w-lg truncate">
+                <span className="sm:hidden">Check your daily updates here.</span>
+                <span className="hidden sm:inline">Your daily overview of student progress and upcoming classes.</span>
               </p>
+
+
+
             </div>
           </div>
         </div>
