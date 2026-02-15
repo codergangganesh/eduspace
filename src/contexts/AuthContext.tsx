@@ -52,9 +52,12 @@ export interface Profile {
     userName?: string;
   } | null;
   last_feedback_prompt_at: string | null;
+  cookie_consent_at: string | null;
+  cookie_consent_choice: 'allow' | 'reject' | 'dismissed' | null;
   created_at: string;
   updated_at: string;
 }
+
 
 interface AuthContextType {
   user: User | null;
@@ -93,7 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching profile:", error);
       return null;
     }
-    return data as Profile | null;
+    return data as any as Profile | null;
+
   };
 
   const fetchRole = async (userId: string) => {
@@ -338,7 +342,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (Object.keys(filteredPublicData).length > 1) { // More than just user_id
       await supabase
         .from("public_profiles")
-        .upsert(filteredPublicData, { onConflict: 'user_id' });
+        .upsert(filteredPublicData as any, { onConflict: 'user_id' });
+
     }
 
     await refreshProfile();

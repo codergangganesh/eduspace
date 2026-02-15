@@ -26,7 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export interface CreateAssignmentDialogProps {
     courses: { id: string; title: string; course_code: string }[];
     onCreate: (data: CreateAssignmentDTO) => Promise<{ success: boolean; error?: string }>;
-    fetchSubjects: (courseId: string) => Promise<Subject[]>;
+    fetchSubjects: (classId: string) => Promise<Subject[]>;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
 }

@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { CookieConsent } from "@/components/legal/CookieConsent";
 import { AuthProvider } from "@/contexts/AuthContext";
+
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CallProvider } from "@/contexts/CallContext";
@@ -82,14 +84,16 @@ const queryClient = new QueryClient({
 });
 
 const FeedbackManager = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { showPrompt, setShowPrompt, submitFeedback, checkFeedbackStatus } = useFeedback();
 
+
   useEffect(() => {
-    if (user) {
+    if (user && profile) {
       checkFeedbackStatus();
     }
-  }, [user]);
+  }, [user, profile]);
+
 
   return (
     <FeedbackPrompt
@@ -116,7 +120,10 @@ const App = () => (
                 <BrowserRouter>
                   <PWAInstallPrompt />
                   <PushNotificationManager />
+                  <CookieConsent />
                   <Suspense fallback={<LoadingFallback />}>
+
+
                     <Routes>
                       {/* ... routes ... */}
                       <Route path="/p/:id" element={<PublicProfile />} />

@@ -18,56 +18,41 @@ interface FeedbackContextType {
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
-    const { user, profile } = useAuth();
+    const { user, profile, updateProfile, refreshProfile } = useAuth();
     const [showPrompt, setShowPrompt] = useState(false);
     const [hasChecked, setHasChecked] = useState(false);
 
     const checkFeedbackStatus = async () => {
-        if (!user || hasChecked) return;
+        if (!user || !profile || hasChecked) return;
 
         try {
             // 1. Check if it's past the prompt hour (e.g., 6 PM)
             const currentHour = new Date().getHours();
             if (currentHour < PROMPT_HOUR) {
-                // Not the right time yet, but don't mark as checked permanently 
-                // so we can check again if they refresh later in the day
                 return;
             }
 
-            // 2. Check Supabase Profile for last prompt date (cross-device daily logic)
-            const lastPromptedAt = profile?.last_feedback_prompt_at;
-            const today = new Date().toDateString();
+            // 2. Check Supabase Profile for last prompt date (7-day logic)
+            const lastPromptedAt = profile.last_feedback_prompt_at;
+            const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+            const now = new Date().getTime();
 
-            if (lastPromptedAt && new Date(lastPromptedAt).toDateString() === today) {
+            if (lastPromptedAt && (now - new Date(lastPromptedAt).getTime() < sevenDaysInMs)) {
                 setHasChecked(true);
                 return;
             }
 
-            // 3. Check Supabase for previous submission
-            const { data, error } = await supabase
-                .from("feedbacks")
-                .select("id")
-                .eq("user_id", user.id)
-                .maybeSingle();
-
-            if (error) throw error;
-
-            if (data) {
-                // User already submitted, never show again
-                setHasChecked(true);
-                return;
-            }
-
-            // Show prompt and update Supabase profile for last prompted date
+            // Show prompt
             setShowPrompt(true);
 
-            // Update profile with current timestamp so it won't show again today on any device
-            await supabase
-                .from("profiles")
-                .update({ last_feedback_prompt_at: new Date().toISOString() })
-                .eq("user_id", user.id);
+            // Update profile with current timestamp so it won't show again for 7 days
+            await updateProfile({
+                last_feedback_prompt_at: new Date().toISOString()
+            });
 
             setHasChecked(true);
+
+
         } catch (error) {
             console.error("Error checking feedback status:", error);
         }

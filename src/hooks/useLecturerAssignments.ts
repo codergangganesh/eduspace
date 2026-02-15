@@ -26,7 +26,7 @@ export interface Subject {
     id: string;
     name: string;
     code: string | null;
-    course_id: string;
+    class_id: string;
 }
 
 export interface CreateAssignmentDTO {
@@ -63,15 +63,15 @@ export function useLecturerAssignments() {
         }
     };
 
-    const fetchSubjects = async (courseId: string) => {
+    const fetchSubjects = async (classId: string): Promise<Subject[]> => {
         try {
             const { data, error } = await supabase
-                .from("subjects" as any)
+                .from("subjects")
                 .select("*")
-                .eq("course_id", courseId);
+                .eq("class_id", classId);
 
             if (error) throw error;
-            return data || [];
+            return (data || []) as Subject[];
         } catch (error) {
             console.error("Error fetching subjects:", error);
             return [];
