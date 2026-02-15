@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { PerformanceTrendChart } from "@/components/dashboard/PerformanceTrendChart";
 import { TypewriterName } from "@/components/common/TypewriterName";
+import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 
 
 export default function LecturerDashboard() {
@@ -26,39 +27,6 @@ export default function LecturerDashboard() {
 
   // Get display name for greeting
   const title = profile?.full_name || "Professor";
-
-  const stats = [
-    {
-      title: "Total Students",
-      value: dataStats.enrolledStudents,
-      label: "Unique students enrolled",
-      icon: Users,
-      color: "bg-blue-500",
-      lightColor: "bg-blue-500/10 text-blue-600",
-      gradient: "from-blue-500/20 to-blue-600/5",
-      borderColor: "border-blue-200 dark:border-blue-800"
-    },
-    {
-      title: "Submissions",
-      value: `${dataStats.submissionsReceived} / ${dataStats.totalExpectedSubmissions}`,
-      label: "Students submitted",
-      icon: FileText,
-      color: "bg-purple-500",
-      lightColor: "bg-purple-500/10 text-purple-600",
-      gradient: "from-purple-500/20 to-purple-600/5",
-      borderColor: "border-purple-200 dark:border-purple-800"
-    },
-    {
-      title: "Pending Submissions",
-      value: dataStats.pendingSubmissions,
-      label: "Students yet to submit",
-      icon: AlertCircle,
-      color: "bg-amber-500",
-      lightColor: "bg-amber-500/10 text-amber-600",
-      gradient: "from-amber-500/20 to-amber-600/5",
-      borderColor: "border-amber-200 dark:border-amber-800"
-    },
-  ];
 
   if (loading) {
     return (
@@ -98,29 +66,32 @@ export default function LecturerDashboard() {
         </div>
 
         {/* Stats Grid - Premium Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-          {stats.map((stat, i) => (
-            <div
-              key={stat.title}
-              className={cn(
-                "group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1",
-                stat.borderColor,
-                i === 2 && "col-span-2 md:col-span-1"
-              )}
-            >
-              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", stat.gradient)} />
-              <div className="relative z-10 flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <h3 className="mt-2 text-3xl font-bold tracking-tight text-foreground">{stat.value}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-                <div className={cn("rounded-xl p-3", stat.lightColor)}>
-                  <stat.icon className="size-6" />
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+          <PremiumStatsCard
+            title="TOTAL STUDENTS"
+            value={dataStats.enrolledStudents}
+            subtitle="Unique students enrolled"
+            icon={Users}
+            backgroundColor="bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700"
+            iconBackgroundColor="bg-white/10"
+          />
+          <PremiumStatsCard
+            title="SUBMISSIONS"
+            value={`${dataStats.submissionsReceived} / ${dataStats.totalExpectedSubmissions}`}
+            subtitle="Students submitted"
+            icon={FileText}
+            backgroundColor="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-700"
+            iconBackgroundColor="bg-white/10"
+          />
+          <PremiumStatsCard
+            title="PENDING"
+            value={dataStats.pendingSubmissions}
+            subtitle="Students yet to submit"
+            icon={AlertCircle}
+            backgroundColor="bg-gradient-to-br from-amber-400 via-orange-500 to-rose-600"
+            iconBackgroundColor="bg-white/10"
+            className="col-span-2 lg:col-span-1"
+          />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
