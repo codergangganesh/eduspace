@@ -129,6 +129,11 @@ export default {
             transform: "translateY(-50%)",
           },
         },
+        shimmer: {
+          "100%": {
+            transform: "translateX(100%)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -142,6 +147,7 @@ export default {
         third: "moveInCircle 40s linear infinite",
         fourth: "moveHorizontal 40s ease infinite",
         fifth: "moveInCircle 20s ease infinite",
+        shimmer: "shimmer 2s infinite",
       },
       boxShadow: {
         "primary-glow": "0 4px 10px rgba(19, 91, 236, 0.2)",

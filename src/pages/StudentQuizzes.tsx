@@ -2,21 +2,43 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { QuizCard } from '@/components/student/QuizCard';
 import { Button } from '@/components/ui/button';
-import { FileText, LayoutGrid, List } from 'lucide-react';
+import { FileText, LayoutGrid, List, Search, Filter } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentQuizzes } from '@/hooks/useStudentQuizzes';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumCardSkeleton } from "@/components/skeletons/PremiumCardSkeleton";
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function StudentQuizzes() {
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedClassId, setSelectedClassId] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filter, setFilter] = useState<"all" | "pending" | "submitted">("all");
     const { profile, updateProfile: syncProfile } = useAuth();
     const { quizzes, loading, enrolledClasses } = useStudentQuizzes(selectedClassId);
+
+    const filteredQuizzes = quizzes.filter((quiz) => {
+        const submissionStatus = quiz.my_submission?.status;
+        if (filter === "all") return true;
+        if (filter === "pending") return submissionStatus === "pending";
+        if (filter === "submitted") return submissionStatus === "passed" || submissionStatus === "failed";
+        return true;
+    }).filter(quiz =>
+        quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        quiz.classes?.course_code?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     // Initial load: Set class from profile or first available
     useEffect(() => {
@@ -43,13 +65,17 @@ export default function StudentQuizzes() {
 
     return (
         <DashboardLayout>
-            <div className="w-full flex flex-col gap-10 animate-in fade-in duration-500">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div>
-                        <h1 className="text-4xl font-bold tracking-tight">Assigned Quizzes</h1>
-                        <p className="text-muted-foreground text-lg mt-2">Track and complete your assigned quizzes for your enrolled classes</p>
+            <div className="w-full h-full flex flex-col gap-6 animate-in fade-in duration-500 overflow-y-auto">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-4 pt-4">
+                    <div className="flex items-center gap-3">
+                        <div className="size-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+                            <FileText className="size-6 text-white" />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black tracking-[0.2em] text-indigo-500 uppercase">Assessment</span>
+                            <h1 className="text-2xl font-black text-slate-800 dark:text-white">Active Quizzes</h1>
+                        </div>
                     </div>
-
                 </div>
 
                 {loading && enrolledClasses.length === 0 ? (
@@ -59,27 +85,7 @@ export default function StudentQuizzes() {
                             : "flex flex-col gap-3 max-w-4xl mx-auto"
                     )}>
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
-                                <div className="relative h-32 bg-slate-100 dark:bg-white/5 animate-pulse p-6"></div>
-                                <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
-                                    <div className="flex justify-between items-start">
-                                        <div className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
-                                        <div className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
-                                            <div className="h-4 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-3 pt-2">
-                                        <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse col-span-2" />
-                                        <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse" />
-                                    </div>
-                                    <div className="mt-auto h-12 bg-slate-100 dark:bg-white/10 rounded-xl animate-pulse" />
-                                </CardContent>
-                            </Card>
+                            <PremiumCardSkeleton key={i} viewMode={viewMode} />
                         ))}
                     </div>
                 ) : enrolledClasses.length > 0 ? (
@@ -120,10 +126,48 @@ export default function StudentQuizzes() {
                             </TabsList>
                         </div>
 
-                        {/* Content Area - Rendered directly based on selection, not inside TabsContent to ensure updates */}
-                        <div className="mt-4">
-                            <div className="flex justify-end mb-4 sm:hidden">
-                                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+                        <div className="mt-4 flex flex-col xl:flex-row gap-4 items-center justify-between p-1">
+                            <div className="flex items-center gap-3 w-full xl:flex-1 overflow-hidden">
+                                <div className="hidden sm:block">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9 shrink-0 gap-2 border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 rounded-xl font-bold text-slate-600 dark:text-slate-300"
+                                            >
+                                                <Filter className="size-4" />
+                                                <span className="hidden lg:inline capitalize">{filter}</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="w-48 rounded-xl p-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
+                                            <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">Filter Status</div>
+                                            <DropdownMenuRadioGroup value={filter} onValueChange={(val) => setFilter(val as any)}>
+                                                {['all', 'pending', 'submitted'].map((f) => (
+                                                    <DropdownMenuRadioItem
+                                                        key={f}
+                                                        value={f}
+                                                        className="capitalize rounded-lg focus:bg-indigo-500/10 focus:text-indigo-500 cursor-pointer font-bold"
+                                                    >
+                                                        {f}
+                                                    </DropdownMenuRadioItem>
+                                                ))}
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search quizzes..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-10 h-10 bg-white/50 dark:bg-slate-800/50 border-none shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500/20 text-sm rounded-xl"
+                                    />
+                                </div>
+
+                                <div className="flex sm:hidden items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
                                     <Button
                                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
                                         size="sm"
@@ -142,6 +186,10 @@ export default function StudentQuizzes() {
                                     </Button>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Content Area - Rendered directly based on selection, not inside TabsContent to ensure updates */}
+                        <div className="mt-4">
                             {loading ? (
                                 <div className={cn(
                                     viewMode === 'grid'
@@ -149,30 +197,10 @@ export default function StudentQuizzes() {
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-md mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
-                                            <Skeleton className="h-32 w-full bg-slate-100 dark:bg-white/5 rounded-none" />
-                                            <CardContent className="p-6 pt-6 flex flex-col h-full gap-6">
-                                                <div className="flex justify-between items-start">
-                                                    <Skeleton className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full" />
-                                                    <Skeleton className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full" />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <Skeleton className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg" />
-                                                    <div className="flex items-center gap-2">
-                                                        <Skeleton className="size-8 rounded-full bg-slate-200 dark:bg-white/10" />
-                                                        <Skeleton className="h-4 w-32 bg-slate-200 dark:bg-white/10" />
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 col-span-2" />
-                                                    <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5" />
-                                                </div>
-                                                <Skeleton className="h-12 w-full rounded-xl bg-slate-100 dark:bg-white/10 mt-auto" />
-                                            </CardContent>
-                                        </Card>
+                                        <PremiumCardSkeleton key={i} viewMode={viewMode} />
                                     ))}
                                 </div>
-                            ) : quizzes.length === 0 ? (
+                            ) : filteredQuizzes.length === 0 ? (
                                 <Card className="border-dashed border-2 bg-muted/20 rounded-3xl">
                                     <CardContent className="flex flex-col items-center justify-center py-24 text-center">
                                         <div className="p-6 rounded-full bg-primary/10 mb-6">
@@ -190,7 +218,7 @@ export default function StudentQuizzes() {
                                         ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
-                                    {quizzes.map((quiz) => (
+                                    {filteredQuizzes.map((quiz) => (
                                         <QuizCard
                                             key={quiz.id}
                                             quiz={quiz}

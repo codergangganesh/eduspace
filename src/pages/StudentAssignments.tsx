@@ -5,15 +5,23 @@ import { toast } from "sonner";
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Calendar, Clock, FileText, CheckCircle, AlertCircle, TrendingUp, BookOpen, CheckCircle2, GraduationCap, Search, LayoutGrid, List } from "lucide-react";
+import { Calendar, Clock, FileText, CheckCircle, AlertCircle, TrendingUp, BookOpen, CheckCircle2, GraduationCap, Search, LayoutGrid, List, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAssignments } from "@/hooks/useAssignments";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumCardSkeleton } from "@/components/skeletons/PremiumCardSkeleton";
 
 type FilterType = "all" | "pending" | "submitted" | "overdue";
 
@@ -137,29 +145,7 @@ export default function StudentAssignments() {
                             : "flex flex-col gap-3 max-w-4xl mx-auto"
                     )}>
                         {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
-                                <CardContent className="p-0">
-                                    <div className="h-32 w-full bg-slate-100 dark:bg-white/5 animate-pulse" />
-                                    <div className="p-6 space-y-6">
-                                        <div className="flex justify-between items-start">
-                                            <div className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
-                                            <div className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <div className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
-                                                <div className="h-4 w-32 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-3 pt-2">
-                                            <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse col-span-2" />
-                                            <div className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 animate-pulse" />
-                                        </div>
-                                        <div className="mt-auto h-12 bg-slate-100 dark:bg-white/10 rounded-xl animate-pulse" />
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <PremiumCardSkeleton key={i} viewMode={viewMode} />
                         ))}
                     </div>
                 ) : enrolledClasses && enrolledClasses.length > 0 ? (
@@ -204,7 +190,7 @@ export default function StudentAssignments() {
                         <div className="mt-2 space-y-6">
                             {(assignments.length > 0 || loading) && (
                                 <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-1">
-                                    <div className="grid grid-cols-4 sm:flex items-center gap-1 sm:gap-2 w-full sm:w-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl shrink-0">
+                                    <div className="grid grid-cols-4 sm:hidden items-center gap-1 sm:gap-2 w-full sm:w-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl shrink-0">
                                         {(['all', 'pending', 'submitted', 'overdue'] as FilterType[]).map((f) => (
                                             <Button
                                                 key={f}
@@ -223,8 +209,37 @@ export default function StudentAssignments() {
                                         ))}
                                     </div>
 
-                                    <div className="flex items-center gap-3 w-full xl:w-auto overflow-hidden">
-                                        <div className="relative flex-1 xl:w-72">
+                                    <div className="flex items-center gap-3 w-full xl:flex-1 overflow-hidden">
+                                        <div className="hidden sm:block">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-9 shrink-0 gap-2 border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 rounded-xl font-bold text-slate-600 dark:text-slate-300"
+                                                    >
+                                                        <Filter className="size-4" />
+                                                        <span className="hidden lg:inline capitalize">{filter}</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" className="w-48 rounded-xl p-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
+                                                    <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">Filter Status</div>
+                                                    <DropdownMenuRadioGroup value={filter} onValueChange={(val) => setFilter(val as FilterType)}>
+                                                        {(['all', 'pending', 'submitted', 'overdue'] as FilterType[]).map((f) => (
+                                                            <DropdownMenuRadioItem
+                                                                key={f}
+                                                                value={f}
+                                                                className="capitalize rounded-lg focus:bg-blue-500/10 focus:text-blue-500 cursor-pointer font-bold"
+                                                            >
+                                                                {f}
+                                                            </DropdownMenuRadioItem>
+                                                        ))}
+                                                    </DropdownMenuRadioGroup>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+
+                                        <div className="relative flex-1">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 placeholder="Search assignments..."
@@ -234,7 +249,7 @@ export default function StudentAssignments() {
                                             />
                                         </div>
 
-                                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl sm:hidden shrink-0">
+                                        <div className="flex sm:hidden items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
                                             <Button
                                                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                                                 size="sm"
@@ -263,40 +278,7 @@ export default function StudentAssignments() {
                                         : "flex flex-col gap-3 max-w-4xl mx-auto"
                                 )}>
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <Card key={i} className="group relative overflow-hidden border-none shadow-md w-full max-w-sm mx-auto flex flex-col h-full rounded-2xl bg-white dark:bg-[#3c3744] border border-slate-200 dark:border-white/5">
-                                            {viewMode === 'list' ? (
-                                                <div className="p-4 flex items-center gap-4 w-full">
-                                                    <Skeleton className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-white/5 shrink-0" />
-                                                    <div className="flex-1 space-y-2">
-                                                        <Skeleton className="h-5 w-1/3 bg-slate-200 dark:bg-white/5" />
-                                                        <Skeleton className="h-4 w-1/4 bg-slate-200 dark:bg-white/5" />
-                                                    </div>
-                                                    <Skeleton className="h-8 w-16 bg-slate-200 dark:bg-white/5 shrink-0" />
-                                                </div>
-                                            ) : (
-                                                <CardContent className="p-0">
-                                                    <Skeleton className="h-32 w-full bg-slate-100 dark:bg-white/5 rounded-none" />
-                                                    <div className="p-6 space-y-6">
-                                                        <div className="flex justify-between items-start">
-                                                            <Skeleton className="h-5 w-24 bg-slate-200 dark:bg-white/10 rounded-full" />
-                                                            <Skeleton className="h-6 w-20 bg-slate-200 dark:bg-white/10 rounded-full" />
-                                                        </div>
-                                                        <div className="space-y-3">
-                                                            <Skeleton className="h-8 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg" />
-                                                            <div className="flex items-center gap-2">
-                                                                <Skeleton className="h-8 w-8 rounded-full bg-slate-200 dark:bg-white/10" />
-                                                                <Skeleton className="h-4 w-32 bg-slate-200 dark:bg-white/10" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="grid grid-cols-3 gap-3 pt-2">
-                                                            <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5 col-span-2" />
-                                                            <Skeleton className="h-16 rounded-2xl bg-slate-50 dark:bg-white/5" />
-                                                        </div>
-                                                        <Skeleton className="h-12 w-full rounded-xl bg-slate-100 dark:bg-white/10 mt-auto" />
-                                                    </div>
-                                                </CardContent>
-                                            )}
-                                        </Card>
+                                        <PremiumCardSkeleton key={i} viewMode={viewMode} />
                                     ))}
                                 </div>
                             ) : filteredAssignments.length === 0 ? (
