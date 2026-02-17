@@ -17,6 +17,7 @@ import {
   Brain,
   Wand2,
   Orbit,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +29,7 @@ const studentNavItems = [
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
   { icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
   { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
+  { icon: Flame, label: "Academic Streak", path: "/streak" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 

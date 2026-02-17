@@ -23,6 +23,7 @@ import {
   Wand2,
   Orbit,
   Brain,
+  Flame,
 } from "lucide-react";
 import {
   Tooltip,
@@ -51,6 +52,7 @@ const studentNavItems = [
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
   { icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
   { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
+  { icon: Flame, label: "Academic Streak", path: "/streak" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
