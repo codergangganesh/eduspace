@@ -66,20 +66,8 @@ export function useAssignments(selectedClassId?: string) {
         if (!user || role !== 'student') return;
 
         try {
-            const studentEmail = user.email || '';
-            const emailFilter = studentEmail ? `,email.ilike.${studentEmail}` : '';
-
-            const { data: enrollments, error: enrollmentError } = await supabase
-                .from('class_students')
-                .select('class_id')
-                .or(`student_id.eq.${user.id}${emailFilter}`);
-
-            if (enrollmentError) {
-                console.error('Error fetching enrollments:', enrollmentError);
-                return;
-            }
-
-            const classIds = enrollments?.map(e => e.class_id).filter(Boolean) as string[] || [];
+            // Use the centralized helper to get robust enrollment IDs
+            const classIds = await getEnrolledClassIds(user.id);
 
             if (classIds.length === 0) {
                 setEnrolledClasses([]);
