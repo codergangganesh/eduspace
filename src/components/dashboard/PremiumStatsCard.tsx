@@ -12,15 +12,15 @@ interface PremiumStatsCardProps {
   onClick?: () => void;
 }
 
-export function PremiumStatsCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
+export function PremiumStatsCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
   backgroundColor,
   iconBackgroundColor,
   className,
-  onClick 
+  onClick
 }: PremiumStatsCardProps) {
   return (
     <div
@@ -32,19 +32,19 @@ export function PremiumStatsCard({
       )}
     >
       {/* Decorative icon in background */}
-      <div className="absolute top-2 right-2 p-2 sm:p-3 opacity-10">
-        <Icon className="size-8 sm:size-12 text-white" />
+      <div className="absolute top-1 right-1 p-2 sm:p-3 opacity-20">
+        <Icon className="size-12 sm:size-16 text-white" />
       </div>
-      
+
       {/* Main content */}
       <div className="relative z-10 flex items-center gap-3 sm:gap-4">
         <div className={cn(
-          "p-2 sm:p-3 rounded-xl border border-white/20 backdrop-blur-sm flex-shrink-0",
+          "p-2 sm:p-3.5 rounded-xl border border-white/20 backdrop-blur-sm flex-shrink-0 shadow-lg",
           iconBackgroundColor
         )}>
-          <Icon className="size-4 sm:size-5 text-white" />
+          <Icon className="size-6 sm:size-8 text-white" />
         </div>
-        
+
         <div className="min-w-0 flex-1">
           <p className="text-[8px] sm:text-[10px] text-white/80 font-semibold uppercase tracking-wider truncate">
             {title}

@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus, Heart, Send, Megaphone } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus, Heart, Send, Megaphone, Flame, Award, ChevronRight, Sparkles } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -14,20 +14,31 @@ import { Button } from "@/components/ui/button";
 import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
 import { PendingInvitationsPanel } from "@/components/student/PendingInvitationsPanel";
 import { JoinRequestModal } from "@/components/student/JoinRequestModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
 import { useRealtimeInvitations } from "@/hooks/useRealtimeInvitations";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { useStreak } from "@/contexts/StreakContext";
+import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Dashboard() {
   const { assignments, stats, loading: assignmentsLoading } = useAssignments();
   const { schedules, loading: scheduleLoading } = useSchedule();
+  const { streak, loading: streakLoading } = useStreak();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const { recordAcademicAction } = useStreak();
+
+  // Record daily visit streak
+  useEffect(() => {
+    if (user?.id) {
+      recordAcademicAction();
+    }
+  }, [user?.id, recordAcademicAction]);
 
   // Student onboarding and real-time invitations
   const {
@@ -53,7 +64,7 @@ export default function Dashboard() {
     }
   );
 
-  const loading = assignmentsLoading || scheduleLoading || isOnboarding;
+  const loading = assignmentsLoading || scheduleLoading || isOnboarding || streakLoading;
 
   if (loading) {
     return (
@@ -110,22 +121,25 @@ export default function Dashboard() {
   return (
     <DashboardLayout
       actions={
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setInviteDialogOpen(true)}
-          className="gap-2"
-        >
-          <UserPlus className="size-4" />
-          <span className="hidden sm:inline">Invite User</span>
-        </Button>
+        <div className="flex items-center gap-2">
+
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setInviteDialogOpen(true)}
+            className="gap-2"
+          >
+            <UserPlus className="size-4" />
+            <span className="hidden sm:inline">Invite User</span>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-8">
         {/* Hero Section */}
         <DashboardHero />
 
-        {/* Premium Stats Grid */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <PremiumStatsCard
             title="ASSIGNED"
@@ -134,6 +148,15 @@ export default function Dashboard() {
             icon={FileText}
             backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
             iconBackgroundColor="bg-white/10"
+          />
+          <PremiumStatsCard
+            title="STREAK"
+            value={streak?.current_streak || 0}
+            subtitle="Day blaze"
+            icon={Flame}
+            backgroundColor="bg-gradient-to-br from-orange-500 to-red-600"
+            iconBackgroundColor="bg-white/10"
+            onClick={() => navigate("/streak")}
           />
           <PremiumStatsCard
             title="COMPLETED"
@@ -150,17 +173,16 @@ export default function Dashboard() {
             icon={AlertCircle}
             backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
             iconBackgroundColor="bg-white/10"
-            className="col-span-2 sm:col-span-1"
           />
           <PremiumStatsCard
             title="SCHEDULE"
             value="View"
-            subtitle="Upcoming classes"
+            subtitle="Weekly plan"
             icon={Calendar}
             backgroundColor="bg-gradient-to-br from-purple-600 to-violet-700"
             iconBackgroundColor="bg-white/10"
             onClick={() => navigate("/schedule")}
-            className="hidden sm:block"
+            className="hidden"
           />
         </div>
 
@@ -169,6 +191,17 @@ export default function Dashboard() {
 
           {/* Left Column (Main Content) */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Daily Streak Weekly Visual - MOBILE ONLY (at top of main content) */}
+            <div className="space-y-3 lg:hidden">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="font-black text-[10px] text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Flame className="size-3.5 text-orange-500" />
+                  Momentum Tracker
+                </h3>
+              </div>
+              <DashboardStreakWeekly />
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-foreground">Current Assignments</h2>
@@ -179,6 +212,16 @@ export default function Dashboard() {
 
           {/* Right Column (Sidebar) */}
           <div className="space-y-6">
+            {/* Daily Streak Weekly Visual - DESKTOP ONLY (top of sidebar) */}
+            <div className="space-y-3 hidden lg:block">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="font-black text-[10px] text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Flame className="size-3.5 text-orange-500" />
+                  Momentum Tracker
+                </h3>
+              </div>
+              <DashboardStreakWeekly />
+            </div>
 
             {/* Upcoming Classes Widget */}
             <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">

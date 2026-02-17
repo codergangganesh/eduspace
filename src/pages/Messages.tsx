@@ -75,6 +75,7 @@ import { PollBubble } from "@/components/chat/PollBubble";
 import { CallBubble } from "@/components/chat/CallBubble";
 import { ChatPollDialog } from "@/components/chat/ChatPollDialog";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useStreak } from "@/contexts/StreakContext";
 
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -452,6 +453,10 @@ export default function Messages() {
   };
 
   const startMeeting = (code: string, type: 'audio' | 'video') => {
+    // Record academic action (Participating in class interaction)
+    if (role === 'student') {
+      recordAcademicAction();
+    }
     startCall({ type, conversationId: code, isMeeting: true, startTime: Date.now() });
     setIsCreateMeetingOpen(false);
     setIsJoinMeetingOpen(false);
@@ -460,6 +465,11 @@ export default function Messages() {
 
   const handleDirectCall = async (type: 'audio' | 'video') => {
     if (!selectedConversation || !user) return;
+
+    // Record academic action (Participating in class interaction)
+    if (role === 'student') {
+      recordAcademicAction();
+    }
 
     const otherUserId = selectedConversation.participant_1 === user.id
       ? selectedConversation.participant_2
@@ -661,10 +671,15 @@ export default function Messages() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const { recordAcademicAction } = useStreak();
+
   const handleSendMessage = async () => {
     if ((!messageInput.trim() && !selectedFile) || !selectedConversation || !user || isUploading) return;
 
-    setIsUploading(true);
+    // Record academic action (Participating in class interaction)
+    if (role === 'student') {
+      recordAcademicAction();
+    }
 
     const receiverId = selectedConversation.participant_1 === user.id
       ? selectedConversation.participant_2

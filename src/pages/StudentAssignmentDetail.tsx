@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
 import { useAssignments } from "@/hooks/useAssignments";
 import { formatFileSize, getFileTypeDisplay, getFileExtension } from "@/lib/fileUtils";
+import { useStreak } from "@/contexts/StreakContext";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -69,6 +70,7 @@ export default function StudentAssignmentDetail() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { submitAssignment } = useAssignments();
+    const { recordAcademicAction } = useStreak();
 
     const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
     const [submission, setSubmission] = useState<Submission | null>(null);
@@ -81,6 +83,9 @@ export default function StudentAssignmentDetail() {
         const fetchAssignmentDetails = async () => {
             setLoading(true);
             try {
+                // Record academic action
+                recordAcademicAction();
+
                 // Fetch assignment
                 const { data: assignmentData, error: assignmentError } = await supabase
                     .from('assignments')
@@ -98,10 +103,10 @@ export default function StudentAssignmentDetail() {
                 if (assignmentData.class_id) {
                     const { data: classData } = await supabase
                         .from('classes')
-                        .select('name')
+                        .select('class_name')
                         .eq('id', assignmentData.class_id)
                         .single();
-                    className = classData?.name;
+                    className = classData?.class_name;
                 }
 
                 if (assignmentData.subject_id) {
@@ -158,7 +163,7 @@ export default function StudentAssignmentDetail() {
                     table: 'assignment_submissions',
                     filter: `assignment_id=eq.${id}`,
                 },
-                async (payload) => {
+                async (payload: any) => {
                     console.log('[StudentAssignmentDetail] Submission update:', payload);
                     if (payload.new && 'student_id' in payload.new && payload.new.student_id === user.id) {
                         setSubmission(payload.new as Submission);
@@ -170,7 +175,7 @@ export default function StudentAssignmentDetail() {
         return () => {
             submissionSubscription.unsubscribe();
         };
-    }, [id, user]);
+    }, [id, user, recordAcademicAction]);
 
     const getStatusConfig = () => {
         if (submission) {
@@ -209,43 +214,25 @@ export default function StudentAssignmentDetail() {
             <DashboardLayout>
                 <div className="min-h-full bg-slate-50/50 dark:bg-slate-950/20 p-0 lg:p-4">
                     <div className="max-w-7xl mx-auto space-y-8 p-4 lg:p-6">
-                        {/* Header Navigation Skeleton */}
                         <div className="flex items-center justify-between">
                             <Skeleton className="size-10 rounded-full" />
                             <Skeleton className="h-8 w-24 rounded-full" />
                         </div>
-
-                        {/* Title Section Skeleton */}
                         <div className="space-y-3">
                             <Skeleton className="h-10 w-3/4 max-w-lg" />
                             <Skeleton className="h-5 w-40" />
                         </div>
-
-                        {/* Key Info Grid Skeleton */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                             <Skeleton className="h-32 rounded-3xl" />
                             <Skeleton className="h-32 rounded-3xl" />
                             <Skeleton className="h-32 rounded-3xl" />
                         </div>
-
-                        {/* Assignment Details Skeleton */}
                         <Card className="border-none shadow-xl shadow-slate-200/50 dark:shadow-none rounded-3xl overflow-hidden">
                             <CardContent className="p-8 space-y-6">
-                                <div className="space-y-4">
-                                    <Skeleton className="h-4 w-32" />
-                                    <Skeleton className="h-6 w-full" />
-                                    <Skeleton className="h-6 w-full" />
-                                    <Skeleton className="h-6 w-2/3" />
-                                </div>
-                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
-                                    <Skeleton className="h-4 w-24" />
-                                    <Skeleton className="h-24 w-full rounded-2xl" />
-                                </div>
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-24 w-full" />
                             </CardContent>
                         </Card>
-
-                        {/* Submission Section Skeleton */}
-                        <Skeleton className="h-64 rounded-3xl" />
                     </div>
                 </div>
             </DashboardLayout>

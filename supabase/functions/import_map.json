@@ -1,6 +1,8 @@
 {
     "imports": {
         "std/": "https://deno.land/std@0.190.0/",
-        "cors": "https://deno.land/x/cors@v2.0.0/mod.ts"
+        "cors": "https://deno.land/x/cors@v2.0.0/mod.ts",
+        "stripe": "https://esm.sh/stripe@14.16.0?target=deno",
+        "supabase": "https://esm.sh/@supabase/supabase-js@2.39.7"
     }
 }

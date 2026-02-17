@@ -8,6 +8,7 @@ import { Upload, X, FileText, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { uploadAssignmentFile, validateAssignmentFile } from "@/lib/supabaseStorage";
+import { useStreak } from "@/contexts/StreakContext";
 
 interface SubmitAssignmentDialogProps {
     isOpen: boolean;
@@ -41,7 +42,10 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit }
         }
     };
 
+    const { recordAcademicAction } = useStreak();
+
     const handleSubmit = async () => {
+        // ... validation ...
         if (!file) {
             toast.error("Please upload your assignment (PDF only).");
             return;
@@ -53,7 +57,7 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit }
 
         setSubmitting(true);
         try {
-            // Upload file to Supabase Storage
+            // ... upload ...
             const uploadResult = await uploadAssignmentFile(
                 file,
                 profile?.user_id || 'unknown',
@@ -63,6 +67,9 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit }
             if (!uploadResult.success || !uploadResult.url) {
                 throw new Error(uploadResult.error || 'Upload failed');
             }
+
+            // Record academic action
+            await recordAcademicAction();
 
             // Submit to DB with file metadata
             const result = await onSubmit(assignment.id, {

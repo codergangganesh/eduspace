@@ -248,7 +248,7 @@ export default function KnowledgeMap() {
         ];
 
         return (
-            <div className="flex items-center p-1 bg-white/50 backdrop-blur-md rounded-2xl border border-slate-200/50 shadow-sm">
+            <div className="flex items-center p-1 bg-background/50 backdrop-blur-md rounded-2xl border border-border shadow-sm">
                 {filters.map((filter) => (
                     <button
                         key={filter.id}
@@ -257,18 +257,18 @@ export default function KnowledgeMap() {
                             "px-3 py-1 rounded-[10px] text-[10px] font-black transition-all flex items-center gap-1.5",
                             activeFilter === filter.id
                                 ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                                : "text-slate-500 hover:bg-white hover:text-slate-700"
+                                : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         )}
                     >
                         <span className="text-[12px] opacity-90 leading-none">{filter.icon}</span>
                         <span className="uppercase tracking-wider">{filter.label}</span>
                     </button>
                 ))}
-                <div className="h-4 w-[1px] bg-slate-300/50 mx-2" />
+                <div className="h-4 w-[1px] bg-border mx-2" />
                 <button
                     onClick={syncExistingData}
                     disabled={isSyncing || loading}
-                    className="p-2 text-indigo-500 hover:bg-white rounded-xl transition-all active:scale-95"
+                    className="p-2 text-indigo-500 hover:bg-accent rounded-xl transition-all active:scale-95"
                     title="Sync History"
                 >
                     <RefreshCw className={cn("size-4", isSyncing && "animate-spin")} />
@@ -289,7 +289,7 @@ export default function KnowledgeMap() {
 
     return (
         <DashboardLayout fullHeight>
-            <div className="flex flex-col h-[100dvh] w-full bg-slate-50/30 md:bg-transparent overflow-hidden relative">
+            <div className="flex flex-col h-[100dvh] w-full bg-background/30 md:bg-transparent overflow-hidden relative">
                 {/* Premium Light Theme Pattern - Unified */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
                     style={{ backgroundImage: `radial-gradient(#4f46e5 1px, transparent 1px)`, backgroundSize: '24px 24px' }}
@@ -310,29 +310,29 @@ export default function KnowledgeMap() {
                 </div>
 
                 {/* Mobile Header (Unified Style) */}
-                <div className="flex md:hidden flex-col items-start pt-4 px-4 bg-white/40 backdrop-blur-sm z-20 relative">
+                <div className="flex md:hidden flex-col items-start pt-4 px-4 bg-background/40 backdrop-blur-sm z-20 relative">
                     <div className="w-full flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
                             <div className="size-10 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
                                 <Orbit className="size-6 text-white" />
                             </div>
-                            <h1 className="text-2xl font-black text-slate-800 tracking-tight">EduMatrix</h1>
+                            <h1 className="text-2xl font-black text-foreground tracking-tight">EduMatrix</h1>
                         </div>
                         <button
                             onClick={syncExistingData}
                             disabled={isSyncing || loading}
-                            className="size-10 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 text-indigo-500 active:scale-95 transition-all"
+                            className="size-10 flex items-center justify-center bg-background rounded-2xl shadow-sm border border-border text-indigo-500 active:scale-95 transition-all"
                         >
                             <RefreshCw className={cn("size-5", isSyncing && "animate-spin")} />
                         </button>
                     </div>
 
-                    <div className="w-full flex items-center p-1 bg-slate-100/80 rounded-[20px] mb-2 border border-slate-200/50 shadow-inner">
+                    <div className="w-full flex items-center p-1 bg-accent/40 rounded-[20px] mb-2 border border-border shadow-inner">
                         <button
                             onClick={() => setActiveFilter('all')}
                             className={cn(
                                 "flex-1 py-2 px-1 rounded-2xl text-[10px] font-black transition-all whitespace-nowrap",
-                                activeFilter === 'all' ? "bg-indigo-500 text-white shadow-md" : "text-slate-500 hover:text-slate-700"
+                                activeFilter === 'all' ? "bg-indigo-500 text-white shadow-md" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
                             All
@@ -348,7 +348,7 @@ export default function KnowledgeMap() {
                                 onClick={() => setActiveFilter(filter.id as any)}
                                 className={cn(
                                     "flex-1 py-2 px-1 rounded-2xl text-[10px] font-black transition-all whitespace-nowrap flex flex-col min-[380px]:flex-row items-center justify-center gap-0.5 min-[380px]:gap-1.5",
-                                    activeFilter === filter.id ? "bg-indigo-500 text-white shadow-md" : "text-slate-500 hover:text-slate-700"
+                                    activeFilter === filter.id ? "bg-indigo-500 text-white shadow-md" : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
                                 <span className="text-[14px] min-[380px]:text-[12px] opacity-70 leading-none">{filter.icon}</span>
@@ -488,7 +488,7 @@ export default function KnowledgeMap() {
 
                             {/* Branded Control Bar - Now on all devices & Higher Up */}
                             <div className="absolute bottom-24 inset-x-0 flex justify-center px-4 z-30 pointer-events-none">
-                                <div className="flex items-center justify-between w-full max-w-sm bg-white/70 backdrop-blur-xl border border-white/50 shadow-2xl rounded-[32px] p-2 pointer-events-auto">
+                                <div className="flex items-center justify-between w-full max-w-sm bg-background/80 backdrop-blur-xl border border-border shadow-2xl rounded-[32px] p-2 pointer-events-auto">
                                     <button
                                         className="flex-1 flex flex-col items-center gap-1.5 py-3 text-indigo-600 active:scale-90 transition-all"
                                         onClick={() => {
@@ -496,24 +496,24 @@ export default function KnowledgeMap() {
                                             fgRef.current.cameraPosition({ x: pos.x * 0.8, y: pos.y * 0.8, z: pos.z * 0.8 }, null, 500);
                                         }}
                                     >
-                                        <div className="size-11 flex items-center justify-center bg-indigo-50 rounded-2xl shadow-sm border border-indigo-100/50">
-                                            <Search className="size-6 text-indigo-600" />
+                                        <div className="size-11 flex items-center justify-center bg-indigo-500/10 rounded-2xl shadow-sm border border-indigo-500/20">
+                                            <Search className="size-6 text-indigo-500" />
                                         </div>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Zoom</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Zoom</span>
                                     </button>
-                                    <div className="w-[1px] h-8 bg-slate-200/50" />
+                                    <div className="w-[1px] h-8 bg-border" />
                                     <button
                                         className="flex-1 flex flex-col items-center gap-1.5 py-3 text-indigo-600 active:scale-90 transition-all"
                                         onClick={() => {
                                             fgRef.current.cameraPosition({ x: 0, y: 0, z: 200 }, { x: 0, y: 0, z: 0 }, 1000);
                                         }}
                                     >
-                                        <div className="size-11 flex items-center justify-center bg-indigo-50 rounded-2xl shadow-sm border border-indigo-100/50">
-                                            <Hand className="size-6 text-indigo-600" />
+                                        <div className="size-11 flex items-center justify-center bg-indigo-500/10 rounded-2xl shadow-sm border border-indigo-500/20">
+                                            <Hand className="size-6 text-indigo-500" />
                                         </div>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Pan</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Pan</span>
                                     </button>
-                                    <div className="w-[1px] h-8 bg-slate-200/50" />
+                                    <div className="w-[1px] h-8 bg-border" />
                                     <button
                                         className="flex-1 flex flex-col items-center gap-1.5 py-3 text-indigo-600 active:scale-90 transition-all"
                                         onClick={() => {
@@ -530,10 +530,10 @@ export default function KnowledgeMap() {
                                             }
                                         }}
                                     >
-                                        <div className="size-11 flex items-center justify-center bg-indigo-50 rounded-2xl shadow-sm border border-indigo-100/50">
-                                            <Target className="size-6 text-indigo-600" />
+                                        <div className="size-11 flex items-center justify-center bg-indigo-500/10 rounded-2xl shadow-sm border border-indigo-500/20">
+                                            <Target className="size-6 text-indigo-500" />
                                         </div>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Focus</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Focus</span>
                                     </button>
                                 </div>
                             </div>

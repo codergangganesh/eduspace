@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { QuizSkeleton } from '@/components/skeletons/QuizSkeleton';
 import { notifyQuizSubmission } from '@/lib/notificationService';
+import { useStreak } from '@/contexts/StreakContext';
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
@@ -99,6 +100,9 @@ export default function TakeQuiz() {
 
                 if (quizError) throw quizError;
                 setQuiz(quizData);
+
+                // Record academic action (Attempting a quiz)
+                recordAcademicAction();
 
                 // Check for existing ACTIVE submission (pending or completed, but not archived)
                 // This is the SINGLE SOURCE OF TRUTH for preventing reattempts
@@ -304,11 +308,14 @@ export default function TakeQuiz() {
         }
     };
 
+    const { recordAcademicAction } = useStreak();
+
     const handleSubmit = async () => {
         if (!user || !quiz) return;
         setIsConfirmSubmitOpen(false);
 
-        // CRITICAL: Prevent re-submission if already done (client-side safety)
+        // Record academic action (Submitting a quiz)
+        await recordAcademicAction();
         if (result || (submissionId && !answers)) {
             toast.error("You have already submitted this quiz.");
             navigate(`/student/quizzes/${quizId}/details`);

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,11 @@ import {
     Zap,
     Brain,
     FileText,
+    ShieldCheck,
+    Lock,
+    ArrowRight,
+    Shield,
+    Check
 } from 'lucide-react';
 import {
     generateFromTopic,
@@ -38,6 +43,8 @@ import {
     extractTextFromPDF,
     type Difficulty,
 } from '@/lib/aiQuizService';
+import { getSubscription, createCheckoutSession, simulateWebhookSuccess } from '@/lib/subscriptionService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type InputMethod = 'topic' | 'file';
 type Step = 'input' | 'generating' | 'review';
@@ -84,6 +91,73 @@ export default function CreateAIQuiz() {
     // Publishing
     const [saving, setSaving] = useState(false);
 
+    // Subscription status
+    const [isPremium, setIsPremium] = useState(false);
+    const [checkingSubscription, setCheckingSubscription] = useState(true);
+    const [isRedirecting, setIsRedirecting] = useState(false);
+
+    useEffect(() => {
+        const checkSub = async () => {
+            if (!user) return;
+            try {
+                const sub = await getSubscription(user.id);
+                setIsPremium(sub?.status === 'active' || sub?.plan_type === 'pro' || sub?.plan_type === 'pro_plus' || sub?.plan_type === 'premium');
+            } catch (error) {
+                console.error('Error checking subscription:', error);
+            } finally {
+                setCheckingSubscription(false);
+            }
+        };
+        checkSub();
+    }, [user]);
+
+    const handleUpgrade = async (planType: 'pro' | 'pro_plus' = 'pro') => {
+        if (!user || !user.email) {
+            toast.error('You must be logged in to upgrade.');
+            return;
+        }
+        setIsRedirecting(true);
+        try {
+            const url = await createCheckoutSession(user.id, user.email, planType);
+            window.location.href = url;
+        } catch (error: any) {
+            console.error('Upgrade error:', error);
+            toast.error(error.message || 'Failed to start checkout. Please try again.');
+            setIsRedirecting(false);
+        }
+    };
+
+    const handleSimulatePayment = async (planType: string = 'pro') => {
+        if (!user || !user.email) return;
+        setIsRedirecting(true);
+        const loadingToast = toast.loading(`Simulating ${planType} payment...`);
+        try {
+            await simulateWebhookSuccess(user.id, user.email, planType);
+            toast.success('Simulation successful!', { id: loadingToast });
+
+            // Re-check subscription status
+            const sub = await getSubscription(user.id);
+            setIsPremium(sub?.status === 'active' || sub?.plan_type === 'pro' || sub?.plan_type === 'pro_plus' || sub?.plan_type === 'premium');
+
+            if (sub?.status === 'active') {
+                toast.success('Premium features unlocked! You can now generate quizzes.');
+            }
+        } catch (error: any) {
+            console.error('Simulation error:', error);
+            toast.error('Simulation failed. Check Supabase logs.', { id: loadingToast });
+        } finally {
+            setIsRedirecting(false);
+        }
+    };
+
+    const handleTestSuccessPage = () => {
+        navigate('/payment-success?session_id=cs_test_mock_123');
+    };
+
+    const handleTestFailPage = () => {
+        navigate('/payment-fail');
+    };
+
     const calculateTotalMarks = () => questions.reduce((sum, q) => sum + q.marks, 0);
 
     // ---------- FILE HANDLING ----------
@@ -104,80 +178,56 @@ export default function CreateAIQuiz() {
         setSelectedFile(file);
     };
 
-    // ---------- GENERATION ----------
-    const handleGenerate = useCallback(async () => {
-        if (isGenerating) return; // Prevent double clicks
+    // ---------- ACTIONS ----------
+    const handleGenerate = async () => {
+        if (!isPremium) {
+            toast.error('Premium subscription required for AI generation.');
+            return;
+        }
 
         setIsGenerating(true);
         setStep('generating');
+        setGenerationProgress('Reading input data...');
 
         try {
-            let generated: QuizQuestion[];
+            let generatedQuestions: QuizQuestion[] = [];
 
             if (inputMethod === 'topic') {
-                if (!topic.trim()) {
-                    toast.error('Please enter a topic.');
-                    setStep('input');
-                    setIsGenerating(false);
-                    return;
-                }
-                setGenerationProgress('Analyzing topic and generating questions...');
-                generated = await generateFromTopic({ topic: topic.trim(), difficulty, count: questionCount });
-            } else {
-                if (!selectedFile) {
-                    toast.error('Please select a PDF file.');
-                    setStep('input');
-                    setIsGenerating(false);
-                    return;
-                }
+                setGenerationProgress(`Analyzing topic: ${topic}...`);
+                generatedQuestions = await generateFromTopic({ topic, difficulty, count: questionCount });
+            } else if (selectedFile) {
                 setGenerationProgress('Extracting text from PDF...');
-                const text = await extractTextFromPDF(selectedFile);
-
-                setGenerationProgress('Generating questions from document content...');
-                generated = await generateFromFile({ fileText: text, count: fileQuestionCount });
+                const pdfText = await extractTextFromPDF(selectedFile);
+                setGenerationProgress('Generating questions from content...');
+                generatedQuestions = await generateFromFile({ fileText: pdfText, count: fileQuestionCount });
             }
 
-            setQuestions(generated);
-
-            // Pre-fill title
-            if (inputMethod === 'topic' && !title) {
-                setTitle(`${topic.trim()} Quiz`);
-            } else if (inputMethod === 'file' && !title && selectedFile) {
-                setTitle(`${selectedFile.name.replace('.pdf', '')} Quiz`);
-            }
-
+            setQuestions(generatedQuestions);
             setStep('review');
-            toast.success(`${generated.length} questions generated successfully!`);
+            toast.success('Successfully generated quiz questions!');
         } catch (error: any) {
-            console.error('Generation error:', error);
-            toast.error(error.message || 'Unable to generate quiz. Please try again.');
+            console.error('Generation Error:', error);
+            toast.error(error.message || 'Failed to generate questions. Please try again.');
             setStep('input');
         } finally {
             setIsGenerating(false);
-            setGenerationProgress('');
         }
-    }, [isGenerating, inputMethod, topic, difficulty, questionCount, selectedFile, fileQuestionCount, title]);
+    };
 
-    // ---------- QUESTION EDITING ----------
-    const handleSaveQuestion = (question: QuizQuestion) => {
-        if (editingQuestionId) {
-            setQuestions(questions.map(q => q.id === editingQuestionId ? question : q));
-        }
+    const handleSaveQuestion = (updatedQuestion: QuizQuestion) => {
+        setQuestions(questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q));
         setEditingQuestionId(null);
+        toast.success('Question updated');
     };
 
     const handleDeleteQuestion = (id: string) => {
         setQuestions(questions.filter(q => q.id !== id));
+        toast.info('Question removed');
     };
 
-    // ---------- PUBLISH ----------
     const handlePublishQuiz = async () => {
         if (!title.trim()) {
-            toast.error('Please enter a quiz title.');
-            return;
-        }
-        if (questions.length === 0) {
-            toast.error('No questions to publish. Generate or add questions first.');
+            toast.error('Please enter a quiz title');
             return;
         }
 
@@ -208,7 +258,7 @@ export default function CreateAIQuiz() {
                 question_text: q.question_text,
                 question_type: q.question_type,
                 marks: q.marks,
-                options: q.options,
+                options: q.options as any,
                 correct_answer: q.correct_answer,
                 order_index: index
             }));
@@ -240,416 +290,524 @@ export default function CreateAIQuiz() {
     };
 
     // ========== RENDER ==========
+    if (checkingSubscription) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col h-[calc(100vh-4rem)] w-full items-center justify-center gap-4">
+                    <div className="relative">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                        <Brain className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-5 text-indigo-500" />
+                    </div>
+                    <p className="text-muted-foreground animate-pulse font-medium">Verifying your Eduspace access...</p>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     return (
         <DashboardLayout>
             <div className="w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-3 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-hidden shadow-none md:shadow-sm filter-none">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => navigate(-1)}
-                            className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group shrink-0"
-                        >
-                            <ArrowLeft className="size-5 md:size-6 text-slate-600 dark:text-slate-400 group-hover:text-primary" />
-                        </Button>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-xl dark:bg-indigo-500/20 shadow-inner">
-                                        <Brain className="size-6 sm:size-7 text-indigo-600 dark:text-indigo-400" />
+
+                <div className={`relative w-full ${!isPremium && step === 'input' ? 'overflow-hidden' : ''}`}>
+                    {/* Content Layer (Blurred if not premium) */}
+                    <div className={`transition-all duration-700 ${!isPremium && step === 'input' ? 'blur-md pointer-events-none select-none opacity-60 px-4 pt-10' : ''}`}>
+
+                        {/* Header */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => navigate(-1)}
+                                    className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 group shrink-0"
+                                >
+                                    <ArrowLeft className="size-5 md:size-6 text-slate-600 dark:text-slate-400 group-hover:text-primary" />
+                                </Button>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-xl dark:bg-indigo-500/20 shadow-inner">
+                                                <Brain className="size-6 sm:size-7 text-indigo-600 dark:text-indigo-400" />
+                                            </div>
+                                            <h1 className="text-xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                                                AI Quiz <span className="text-indigo-600 dark:text-indigo-400">Generator</span>
+                                            </h1>
+                                        </div>
+                                        <Badge variant="secondary" className="w-fit px-3 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 font-bold uppercase tracking-tighter text-[10px]">
+                                            <Sparkles className="size-3 mr-1.5 fill-current" />
+                                            Llama-3 Powered
+                                        </Badge>
                                     </div>
-                                    <h1 className="text-xl md:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-400">
-                                        Create Quiz with AI
-                                    </h1>
+                                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium md:pl-14">Create professional assessments in seconds using artificial intelligence</p>
                                 </div>
-                                <Badge className="w-fit bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none px-2 py-0.5 md:px-3 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg shadow-purple-500/20">
-                                    <Brain className="size-3 mr-1" />
-                                    AI Powered
-                                </Badge>
                             </div>
-                            <p className="text-muted-foreground text-xs md:text-sm md:pl-14">
-                                Choose how you want AI to generate your quiz
-                            </p>
-                        </div>
-                    </div>
 
-                    {/* Stepper */}
-                    <div className="flex items-center">
-                        {[
-                            { key: 'input', label: 'Configure', icon: Zap },
-                            { key: 'generating', label: 'Generate', icon: Brain },
-                            { key: 'review', label: 'Review & Publish', icon: CheckCircle },
-                        ].map((s, i, arr) => {
-                            const isActive = step === s.key;
-                            const isPast = ['generating', 'review'].indexOf(step) > ['input', 'generating', 'review'].indexOf(s.key as Step);
-                            const isFuture = !isActive && !isPast;
-
-                            return (
-                                <div key={s.key} className="flex items-center">
-                                    <div
-                                        className={`flex items-center gap-2 px-3 py-2 md:px-4 rounded-full text-[10px] md:text-xs font-semibold transition-all border ${isActive
-                                            ? 'bg-primary border-primary text-primary-foreground shadow-lg z-10'
-                                            : isPast
-                                                ? 'bg-muted border-muted-foreground/20 text-muted-foreground'
-                                                : 'bg-transparent border-muted-foreground/20 text-muted-foreground'
-                                            }`}
-                                    >
-                                        <s.icon className="size-3.5" />
-                                        <span className={`${isActive ? 'inline' : 'hidden sm:inline'}`}>{s.label}</span>
+                            {step === 'input' && (
+                                <div className="hidden md:flex items-center gap-3 px-6 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <div className="flex -space-x-3">
+                                        {[1, 2, 3].map((i) => (
+                                            <div key={i} className="size-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 10}`} alt="User" />
+                                            </div>
+                                        ))}
                                     </div>
-                                    {i < arr.length - 1 && (
-                                        <div className={`w-4 md:w-8 h-[2px] ${isPast ? 'bg-primary' : 'bg-muted'}`} />
-                                    )}
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Powering</span>
+                                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">5,000+ Educators</span>
+                                    </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* ============ STEP: INPUT ============ */}
-                {step === 'input' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto">
-                        {/* LEFT COLUMN: Generation Method */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <Card className="shadow-lg">
-                                <CardHeader className="pb-4">
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <Brain className="size-5 text-primary" />
-                                        Generation Method
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <button
-                                        onClick={() => setInputMethod('topic')}
-                                        className={`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${inputMethod === 'topic'
-                                            ? 'border-indigo-500 bg-indigo-500/10'
-                                            : 'border-border bg-card hover:bg-muted/50'
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className={`p-3 rounded-lg ${inputMethod === 'topic' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-muted text-muted-foreground'}`}>
-                                                <BookOpen className="size-6" />
-                                            </div>
-                                            <div>
-                                                <p className={`font-semibold text-sm ${inputMethod === 'topic' ? 'text-foreground' : 'text-muted-foreground'}`}>Topic-Based</p>
-                                                <p className="text-xs text-muted-foreground mt-1">Enter a topic and let AI generate questions</p>
-                                            </div>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={() => setInputMethod('file')}
-                                        className={`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${inputMethod === 'file'
-                                            ? 'border-indigo-500 bg-indigo-500/10'
-                                            : 'border-border bg-card hover:bg-muted/50'
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className={`p-3 rounded-lg ${inputMethod === 'file' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-muted text-muted-foreground'}`}>
-                                                <FileUp className="size-6" />
-                                            </div>
-                                            <div>
-                                                <p className={`font-semibold text-sm ${inputMethod === 'file' ? 'text-foreground' : 'text-muted-foreground'}`}>File-Based</p>
-                                                <p className="text-xs text-muted-foreground mt-1">Upload a PDF and generate from its content</p>
-                                            </div>
-                                        </div>
-                                    </button>
-                                </CardContent>
-                            </Card>
-
-
+                            )}
                         </div>
 
-                        {/* RIGHT COLUMN: Configuration */}
-                        <div className="lg:col-span-8">
-                            <Card className="shadow-lg h-full">
-                                <CardHeader className="pb-6">
-                                    <CardTitle className="text-xl flex items-center gap-2">
-                                        {inputMethod === 'topic' ? <BookOpen className="size-5 text-primary" /> : <FileUp className="size-5 text-primary" />}
-                                        {inputMethod === 'topic' ? 'Topic Configuration' : 'File Configuration'}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Specify the topic, difficulty, and number of questions
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-8">
-                                    {inputMethod === 'topic' ? (
-                                        <>
-                                            <div className="space-y-3">
-                                                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Topic Name</Label>
-                                                <Input
-                                                    placeholder="e.g., Photosynthesis, Data Structures – Trees, World War II"
-                                                    value={topic}
-                                                    onChange={(e) => setTopic(e.target.value)}
-                                                    className="h-12 md:h-14 text-base"
-                                                />
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div className="space-y-3">
-                                                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Difficulty Level</Label>
-                                                    <Select value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
-                                                        <SelectTrigger className="h-12 md:h-14 px-4">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="easy">Easy — Basic recall</SelectItem>
-                                                            <SelectItem value="medium">Medium — Application</SelectItem>
-                                                            <SelectItem value="hard">Hard — Critical thinking</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Number of Questions</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min={1}
-                                                        max={15}
-                                                        value={questionCount}
-                                                        onChange={(e) => setQuestionCount(Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
-                                                        className="h-12 md:h-14 font-mono text-lg"
-                                                    />
-                                                    <p className="text-[10px] text-muted-foreground">Between 1 and 15 questions</p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="space-y-3">
-                                                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Upload PDF</Label>
-                                                <div
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all hover:bg-muted/50 ${selectedFile ? 'border-primary bg-primary/5' : 'border-border bg-muted/20'}`}
-                                                >
-                                                    <input
-                                                        ref={fileInputRef}
-                                                        type="file"
-                                                        accept=".pdf"
-                                                        className="hidden"
-                                                        onChange={handleFileChange}
-                                                    />
-                                                    {selectedFile ? (
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            <div className="p-3 bg-primary/10 rounded-full">
-                                                                <FileText className="size-8 text-primary" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-lg">{selectedFile.name}</p>
-                                                                <p className="text-sm text-muted-foreground mt-1">
-                                                                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB — Click to change
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            <div className="p-4 bg-muted rounded-full">
-                                                                <Upload className="size-8 text-muted-foreground" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-lg">Click to upload a PDF</p>
-                                                                <p className="text-sm text-muted-foreground mt-1">Maximum file size: {MAX_FILE_SIZE_MB} MB</p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Number of Questions</Label>
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    max={15}
-                                                    value={fileQuestionCount}
-                                                    onChange={(e) => setFileQuestionCount(Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
-                                                    className="h-12 md:h-14 font-mono text-lg w-32"
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    <div className="pt-4">
-                                        <Button
-                                            onClick={handleGenerate}
-                                            disabled={isGenerating || (inputMethod === 'topic' && !topic.trim()) || (inputMethod === 'file' && !selectedFile)}
-                                            className="w-full h-12 md:h-14 text-lg font-bold shadow-xl shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-none rounded-xl"
+                        {/* Stepper */}
+                        {step !== 'generating' && (
+                            <div className="flex items-center gap-4 mb-10 md:pl-14 overflow-x-auto pb-2 scrollbar-hide">
+                                {[
+                                    { key: 'input', label: 'Configure', icon: Zap },
+                                    { key: 'generating', label: 'Generate', icon: Brain },
+                                    { key: 'review', label: 'Review & Publish', icon: CheckCircle },
+                                ].map((s) => (
+                                    <div key={s.key} className="flex items-center shrink-0">
+                                        <div
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border ${step === s.key
+                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'
+                                                }`}
                                         >
-                                            {isGenerating ? (
-                                                <Loader2 className="size-5 mr-2 animate-spin" />
-                                            ) : (
-                                                <Brain className="size-5 mr-2" />
-                                            )}
-                                            {isGenerating ? 'Generating...' : 'Generate Questions with AI'}
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                )}
-
-                {/* ============ STEP: GENERATING ============ */}
-                {step === 'generating' && (
-                    <div className="flex flex-col items-center justify-center py-32">
-                        <div className="relative">
-                            <div className="absolute inset-0 animate-ping">
-                                <div className="w-32 h-32 rounded-full bg-indigo-500/20" />
-                            </div>
-                            <div className="relative p-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full shadow-2xl shadow-indigo-500/30">
-                                <Brain className="size-16 text-white animate-pulse" />
-                            </div>
-                        </div>
-                        <h2 className="text-3xl font-bold mt-8 mb-3">AI is Working...</h2>
-                        <p className="text-muted-foreground text-lg mb-8">{generationProgress || 'Preparing your quiz...'}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-full border border-border">
-                            <Loader2 className="size-4 animate-spin text-primary" />
-                            <span>This usually takes 10–30 seconds</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* ============ STEP: REVIEW ============ */}
-                {step === 'review' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
-                        {/* Sidebar: Quiz Info */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <Card className="shadow-xl">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Edit2 className="size-5 text-primary" />
-                                        Quiz Overview
-                                    </CardTitle>
-                                    <CardDescription>Set quiz details before publishing</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-2.5">
-                                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Quiz Title</Label>
-                                        <Input
-                                            placeholder="e.g., Mid-Term Physics Assessment"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            className="h-11"
-                                        />
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Description</Label>
-                                        <Textarea
-                                            placeholder="Add instructions, rules, or learning objectives..."
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            className="min-h-[120px] resize-none"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 pt-2">
-                                        <div className="space-y-2.5">
-                                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pass Score (%)</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    max={100}
-                                                    value={passPercentage}
-                                                    onChange={(e) => setPassPercentage(parseInt(e.target.value) || 0)}
-                                                    className="h-11 pr-8 font-bold"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">%</span>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Points</Label>
-                                            <div className="h-11 px-4 bg-muted rounded-md border border-border font-bold flex items-center justify-center text-xl">
-                                                {calculateTotalMarks()}
-                                            </div>
+                                            <s.icon className="size-3.5" />
+                                            <span>{s.label}</span>
                                         </div>
                                     </div>
-
-                                    <Button
-                                        onClick={handlePublishQuiz}
-                                        disabled={saving || questions.length === 0 || !title.trim()}
-                                        className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/20 font-bold"
-                                    >
-                                        {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                                        Publish Quiz
-                                    </Button>
-
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => { setStep('input'); setQuestions([]); }}
-                                        className="w-full"
-                                    >
-                                        <RefreshCw className="mr-2 size-4" />
-                                        Discard & Regeneration
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Main: Questions Review */}
-                        <div className="lg:col-span-8 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-xl font-bold">Generated Questions</h3>
-                                    <p className="text-muted-foreground text-sm">{questions.length} questions ready for review</p>
-                                </div>
-                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 px-3 py-1.5 font-mono">
-                                    AI Generated
-                                </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
-                                {questions.map((question, index) => (
-                                    editingQuestionId === question.id ? (
-                                        <div key={question.id} className="bg-card border border-primary/20 p-6 rounded-xl animate-in slide-in-from-top-4 duration-300 shadow-md">
-                                            <QuestionEditor
-                                                question={question}
-                                                onSave={handleSaveQuestion}
-                                                onCancel={() => setEditingQuestionId(null)}
-                                                questionNumber={index + 1}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <Card key={question.id} className="relative group hover:border-primary/50 transition-all shadow-sm">
-                                            <CardContent className="p-2 sm:p-5 flex gap-2 sm:gap-6 relative">
-                                                <div className="flex flex-col items-center justify-center p-1 sm:p-3 bg-muted rounded-lg sm:rounded-xl size-7 sm:size-14 shrink-0 border border-border font-bold text-xs sm:text-xl text-primary font-mono">
-                                                    {index + 1}
-                                                </div>
-                                                <div className="flex-1 space-y-1 sm:space-y-3 min-w-0 pr-6 sm:pr-0">
-                                                    <p className="font-semibold text-[10px] sm:text-lg leading-tight line-clamp-3 sm:line-clamp-none">{question.question_text}</p>
-                                                    <div className="flex flex-wrap items-center gap-1 sm:gap-4">
-                                                        <Badge variant="outline" className="bg-muted px-1 py-0 sm:px-3 sm:py-1 border-border text-muted-foreground text-[8px] sm:text-xs">
-                                                            {question.marks} Pts
-                                                        </Badge>
-                                                        <span className="text-[8px] sm:text-sm text-muted-foreground flex items-center gap-1">
-                                                            <div className="size-1 rounded-full bg-muted-foreground/50" />
-                                                            {question.options.length} Ch
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-row sm:flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity absolute right-3 top-3 sm:static bg-background/80 sm:bg-transparent rounded-lg p-1 sm:p-0 backdrop-blur-sm sm:backdrop-blur-none border sm:border-none border-border shadow-sm sm:shadow-none">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingQuestionId(question.id)}>
-                                                        <Edit2 className="size-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                        onClick={() => setQuestionToDelete(question.id)}
-                                                    >
-                                                        <Trash2 className="size-4" />
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )
                                 ))}
                             </div>
-                        </div>
+                        )}
+
+                        {/* ============ STEP: INPUT ============ */}
+                        {step === 'input' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
+                                {/* LEFT COLUMN: Generation Method */}
+                                <div className="lg:col-span-4 space-y-6">
+                                    <Card className="shadow-lg border-slate-200 dark:border-slate-800">
+                                        <CardHeader className="pb-4">
+                                            <CardTitle className="text-lg flex items-center gap-2">
+                                                <Brain className="size-5 text-indigo-600" />
+                                                Generation Method
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <button
+                                                onClick={() => setInputMethod('topic')}
+                                                className={`w-full p-4 rounded-2xl border text-left transition-all ${inputMethod === 'topic'
+                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10'
+                                                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-xl ${inputMethod === 'topic' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                                                        <BookOpen className="size-6" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm">Topic-Based</p>
+                                                        <p className="text-xs text-slate-500 mt-0.5 tracking-tight">Enter any subject or topic</p>
+                                                    </div>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => setInputMethod('file')}
+                                                className={`w-full p-4 rounded-2xl border text-left transition-all ${inputMethod === 'file'
+                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10'
+                                                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-xl ${inputMethod === 'file' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                                                        <FileUp className="size-6" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm">File-Based</p>
+                                                        <p className="text-xs text-slate-500 mt-0.5 tracking-tight">Generate from your PDF documents</p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* RIGHT COLUMN: Configuration */}
+                                <div className="lg:col-span-8">
+                                    <Card className="shadow-lg border-slate-200 dark:border-slate-800 h-full">
+                                        <CardHeader className="pb-6">
+                                            <CardTitle className="text-xl flex items-center gap-2">
+                                                {inputMethod === 'topic' ? <BookOpen className="size-5 text-indigo-600" /> : <FileUp className="size-5 text-indigo-600" />}
+                                                Generation Settings
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Configure how you want the AI to create your assessment.
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-8">
+                                            {inputMethod === 'topic' ? (
+                                                <div className="space-y-6">
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Topic</Label>
+                                                        <Input
+                                                            placeholder="e.g., Photosynthesis in Plants, Quantum Mechanics Basics..."
+                                                            value={topic}
+                                                            onChange={(e) => setTopic(e.target.value)}
+                                                            className="h-14 text-base font-semibold bg-slate-50/50 dark:bg-slate-900/50 rounded-xl"
+                                                        />
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div className="space-y-3">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Difficulty</Label>
+                                                            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
+                                                                <SelectTrigger className="h-14 px-4 bg-slate-50/50 dark:bg-slate-900/50 rounded-xl">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="easy">Easy — Basic Concepts</SelectItem>
+                                                                    <SelectItem value="medium">Medium — Application</SelectItem>
+                                                                    <SelectItem value="hard">Hard — Synthesis</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Question Count</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min={1}
+                                                                max={15}
+                                                                value={questionCount}
+                                                                onChange={(e) => setQuestionCount(Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
+                                                                className="h-14 font-bold text-lg bg-slate-50/50 dark:bg-slate-900/50 rounded-xl"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-6">
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">PDF Selection</Label>
+                                                        <div
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/30 ${selectedFile ? 'border-indigo-500 bg-indigo-50/10' : 'border-slate-200 dark:border-slate-800'}`}
+                                                        >
+                                                            <input
+                                                                ref={fileInputRef}
+                                                                type="file"
+                                                                accept=".pdf"
+                                                                className="hidden"
+                                                                onChange={handleFileChange}
+                                                            />
+                                                            {selectedFile ? (
+                                                                <div className="flex flex-col items-center gap-4">
+                                                                    <div className="p-4 bg-indigo-600 text-white rounded-2xl shadow-xl">
+                                                                        <FileText className="size-10" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-black text-xl">{selectedFile.name}</p>
+                                                                        <p className="text-xs text-slate-500 font-bold uppercase mt-1 tracking-widest">
+                                                                            {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Click to change
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col items-center gap-4">
+                                                                    <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                                                                        <Upload className="size-10 text-slate-400" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-lg">Click to select PDF</p>
+                                                                        <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold font-mono">Max size 5MB</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount of Questions</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min={1}
+                                                            max={15}
+                                                            value={fileQuestionCount}
+                                                            onChange={(e) => setFileQuestionCount(Math.min(15, Math.max(1, parseInt(e.target.value) || 1)))}
+                                                            className="h-14 font-bold text-lg w-32 bg-slate-50/50 dark:bg-slate-900/50 rounded-xl"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="pt-6">
+                                                <Button
+                                                    onClick={handleGenerate}
+                                                    disabled={isGenerating}
+                                                    className="w-full h-16 text-xl font-black rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_12px_24px_-8px_rgba(79,70,229,0.5)] transition-all active:scale-[0.98]"
+                                                >
+                                                    <Zap className="size-6 mr-3 fill-current" />
+                                                    Generate Assessment
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ============ STEP: GENERATING ============ */}
+                        {step === 'generating' && (
+                            <div className="flex flex-col items-center justify-center py-20 px-4">
+                                <div className="size-32 relative mb-10">
+                                    <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-ping" />
+                                    <div className="absolute inset-2 rounded-full bg-indigo-500/20 animate-pulse" />
+                                    <div className="relative z-10 size-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl">
+                                        <Brain className="size-16 text-white" />
+                                    </div>
+                                </div>
+                                <h1 className="text-3xl font-black tracking-tight mb-2">Engines Firing...</h1>
+                                <p className="text-lg text-slate-500 font-medium mb-10">{generationProgress}</p>
+                                <div className="flex items-center gap-3 px-5 py-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm animate-bounce">
+                                    <Loader2 className="size-5 animate-spin text-indigo-600" />
+                                    <span className="text-sm font-bold">Llama-3 is analyzing content...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ============ STEP: REVIEW ============ */}
+                        {step === 'review' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 max-w-7xl mx-auto">
+                                <div className="lg:col-span-4 space-y-6">
+                                    <Card className="shadow-xl rounded-3xl border-slate-200 dark:border-slate-800 overflow-hidden">
+                                        <div className="h-2 bg-gradient-to-r from-indigo-500 to-purple-600" />
+                                        <CardHeader>
+                                            <CardTitle className="text-xl">Finalize Details</CardTitle>
+                                            <CardDescription>Give your quiz a name and description before students take it.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-6">
+                                            <div className="space-y-2.5">
+                                                <Label className="text-[10px] font-black uppercase text-slate-400">Quiz Title</Label>
+                                                <Input
+                                                    value={title}
+                                                    onChange={(e) => setTitle(e.target.value)}
+                                                    className="h-12 font-bold rounded-xl"
+                                                />
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <Label className="text-[10px] font-black uppercase text-slate-400">Description</Label>
+                                                <Textarea
+                                                    value={description}
+                                                    onChange={(e) => setDescription(e.target.value)}
+                                                    className="min-h-[120px] rounded-xl font-medium"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400">Pass Score (%)</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={passPercentage}
+                                                        onChange={(e) => setPassPercentage(parseInt(e.target.value) || 0)}
+                                                        className="h-12 font-bold rounded-xl"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400">Total Points</Label>
+                                                    <div className="h-12 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xl">
+                                                        {calculateTotalMarks()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                onClick={handlePublishQuiz}
+                                                disabled={saving || questions.length === 0}
+                                                className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-2xl shadow-xl shadow-emerald-500/20"
+                                            >
+                                                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                                                Publish to Class
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => { setStep('input'); setQuestions([]); }}
+                                                className="w-full h-12 rounded-2xl"
+                                            >
+                                                <RefreshCw className="mr-2 size-4" />
+                                                Start Over
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                <div className="lg:col-span-8 space-y-6">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-2xl font-black tracking-tight">Review Content</h3>
+                                        <Badge className="bg-indigo-600 text-white border-none py-1.5 px-4 font-black rounded-full text-[10px] uppercase">
+                                            {questions.length} Questions
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {questions.map((q, i) => (
+                                            <Card key={q.id} className="group border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-all rounded-3xl overflow-hidden shadow-sm hover:shadow-xl">
+                                                <CardContent className="p-6 flex gap-6">
+                                                    <div className="size-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-xl text-indigo-600 shrink-0">
+                                                        {i + 1}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="font-bold text-lg mb-4">{q.question_text}</p>
+                                                        <div className="flex items-center gap-4">
+                                                            <Badge variant="outline" className="rounded-full px-3 py-1 font-bold text-[10px] uppercase bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                                                {q.marks} Points
+                                                            </Badge>
+                                                            <span className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+                                                                {q.options.length} Options
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button variant="ghost" size="icon" className="size-10 rounded-xl hover:bg-indigo-500 hover:text-white" onClick={() => setEditingQuestionId(q.id)}>
+                                                            <Edit2 className="size-5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="size-10 rounded-xl hover:bg-rose-500 hover:text-white" onClick={() => setQuestionToDelete(q.id)}>
+                                                            <Trash2 className="size-5" />
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
+
+                    {/* Upsell Overlay (3-Tier Pricing) */}
+                    {!isPremium && step === 'input' && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 md:p-12 overflow-y-auto bg-slate-950/20 backdrop-blur-sm">
+                            <motion.div
+                                initial={{ opacity: 0, y: 40 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-3 gap-6 py-10"
+                            >
+                                {/* FREE PLAN */}
+                                <Card className="border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
+                                    <CardContent className="p-8 flex-1 flex flex-col">
+                                        <div className="mb-8">
+                                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none font-bold px-3 py-1 mb-4">Starter</Badge>
+                                            <h3 className="text-3xl font-black text-slate-900 dark:text-white">Free</h3>
+                                            <div className="flex items-baseline mt-2">
+                                                <span className="text-4xl font-black">$0</span>
+                                                <span className="text-slate-400 font-bold ml-1">/mo</span>
+                                            </div>
+                                        </div>
+                                        <ul className="space-y-4 mb-8 flex-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" /> Manual Quiz Creation</li>
+                                            <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" /> Basic Question Types</li>
+                                            <li className="flex items-center gap-2 opacity-40"><Lock className="size-4" /> 1 AI Trial / month</li>
+                                            <li className="flex items-center gap-2 opacity-40"><Lock className="size-4" /> No PDF Uploads</li>
+                                        </ul>
+                                        <Button variant="outline" className="h-14 w-full rounded-2xl border-slate-200 dark:border-slate-800 font-bold text-slate-400 cursor-not-allowed">
+                                            Current Plan
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+
+                                {/* PRO PLAN (Recommended) */}
+                                <Card className="border-4 border-indigo-600 bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl relative scale-105 z-10">
+                                    <div className="absolute top-0 inset-x-0 h-1.5 bg-indigo-600" />
+                                    <div className="absolute top-4 right-4">
+                                        <Badge className="bg-indigo-600 text-white border-none font-black px-3 py-1 animate-pulse">MOST POPULAR</Badge>
+                                    </div>
+                                    <CardContent className="p-10 flex-1 flex flex-col">
+                                        <div className="mb-8">
+                                            <Badge className="bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border-none font-bold px-3 py-1 mb-4">Professional</Badge>
+                                            <h3 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Pro Access</h3>
+                                            <div className="flex items-baseline mt-2">
+                                                <span className="text-5xl font-black text-indigo-600">₹399</span>
+                                                <span className="text-slate-400 font-bold ml-1">/mo</span>
+                                            </div>
+                                        </div>
+                                        <ul className="space-y-5 mb-10 flex-1 text-base font-bold text-slate-700 dark:text-slate-200">
+                                            <li className="flex items-center gap-3"><Zap className="size-5 text-indigo-500 fill-current" /> 50 AI Quizzes / month</li>
+                                            <li className="flex items-center gap-3"><FileUp className="size-5 text-indigo-500" /> Unlimited PDF Uploads</li>
+                                            <li className="flex items-center gap-3"><Brain className="size-5 text-indigo-500" /> Premium AI Models</li>
+                                            <li className="flex items-center gap-3"><ShieldCheck className="size-5 text-indigo-500" /> Priority Support</li>
+                                        </ul>
+                                        <Button
+                                            onClick={() => handleUpgrade('pro')}
+                                            disabled={isRedirecting}
+                                            className="h-16 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xl rounded-2xl shadow-xl shadow-indigo-600/20 group mb-3 transition-all active:scale-95"
+                                        >
+                                            {isRedirecting ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2 size-5 fill-current" />}
+                                            Get Pro Access
+                                            <ArrowRight className="ml-2 size-5 group-hover:translate-x-1 transition-transform" />
+                                        </Button>
+
+                                        <div className="flex flex-col gap-1">
+                                            <button
+                                                onClick={() => handleSimulatePayment('pro')}
+                                                disabled={isRedirecting}
+                                                className="w-full text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1.5 py-1"
+                                            >
+                                                <Shield className="size-3" />
+                                                Run Webhook Simulation
+                                            </button>
+                                            <div className="flex items-center justify-center gap-4">
+                                                <button
+                                                    onClick={handleTestSuccessPage}
+                                                    className="text-[9px] font-bold uppercase tracking-tighter text-emerald-500 hover:text-emerald-600 transition-colors underline underline-offset-2"
+                                                >
+                                                    Success Page
+                                                </button>
+                                                <button
+                                                    onClick={handleTestFailPage}
+                                                    className="text-[9px] font-bold uppercase tracking-tighter text-rose-500 hover:text-rose-600 transition-colors underline underline-offset-2"
+                                                >
+                                                    Fail Page
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* PRO PLUS PLAN */}
+                                <Card className="border border-slate-200 dark:border-slate-800 bg-black text-white rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
+                                    <CardContent className="p-8 flex-1 flex flex-col">
+                                        <div className="mb-8">
+                                            <Badge className="bg-amber-500 text-black border-none font-bold px-3 py-1 mb-4 text-xs font-black">ELITE</Badge>
+                                            <h3 className="text-3xl font-black uppercase tracking-tight">Pro Plus</h3>
+                                            <div className="flex items-baseline mt-2">
+                                                <span className="text-4xl font-black text-amber-500">₹999</span>
+                                                <span className="text-slate-500 font-bold ml-1">/mo</span>
+                                            </div>
+                                        </div>
+                                        <ul className="space-y-4 mb-8 flex-1 text-sm font-medium text-slate-300">
+                                            <li className="flex items-center gap-3"><Check className="size-5 text-amber-500" /> Everything in Pro</li>
+                                            <li className="flex items-center gap-3"><Sparkles className="size-5 text-amber-500 fill-current" /> Unlimited AI Quizzes</li>
+                                            <li className="flex items-center gap-3"><Zap className="size-5 text-amber-500 fill-current" /> Unlimited Course Gen</li>
+                                            <li className="flex items-center gap-3"><CreditCard className="size-5 text-amber-500" /> Early Access Features</li>
+                                        </ul>
+                                        <Button
+                                            onClick={() => handleUpgrade('pro_plus')}
+                                            className="h-14 w-full bg-amber-500 hover:bg-amber-600 text-black font-black text-lg rounded-2xl shadow-xl shadow-amber-500/20 transition-all active:scale-95 border-none"
+                                        >
+                                            <Zap className="mr-2 size-5 fill-current" />
+                                            Get Pro Plus
+                                        </Button>
+
+                                        <button
+                                            onClick={() => handleSimulatePayment('pro_plus')}
+                                            disabled={isRedirecting}
+                                            className="w-full text-[10px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors flex items-center justify-center gap-1.5 py-4"
+                                        >
+                                            <Shield className="size-3" />
+                                            Test Sub (Plus)
+                                        </button>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <DeleteConfirmDialog

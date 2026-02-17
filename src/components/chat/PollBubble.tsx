@@ -18,6 +18,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useStreak } from '@/contexts/StreakContext';
 
 interface PollData {
     id: string;
@@ -135,8 +136,13 @@ export function PollBubble({ pollId }: { pollId: string }) {
         };
     }, [pollId, user]);
 
+    const { recordAcademicAction } = useStreak();
+
     const handleVote = async (optionIndex: number) => {
         if (!user || !poll || voting || isEditing) return;
+
+        // Record academic action (Participating in class interaction)
+        recordAcademicAction();
 
         // Restriction: Poll creator cannot vote
         if (user.id === poll.createdBy) {

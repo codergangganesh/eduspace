@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { knowledgeService } from "@/lib/knowledgeService";
+import { useStreak } from "@/contexts/StreakContext";
 
 export default function AIChatWindow() {
     const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -311,10 +312,14 @@ export default function AIChatWindow() {
         }
     };
 
+    const { recordAcademicAction } = useStreak();
+
     const handleSendMessage = async (content: string, imageUrl?: string) => {
         let conversationId = currentConversation?.id;
 
         try {
+            // Record academic action
+            recordAcademicAction();
             setIsLoading(true);
 
             // Construct content for user message
