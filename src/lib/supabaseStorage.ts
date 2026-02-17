@@ -17,10 +17,15 @@ export async function uploadAssignmentFile(
     assignmentId: string
 ): Promise<UploadResult> {
     try {
-        // Generate unique filename to prevent overwrites
+        // Generate unique filename to prevent overwrites and caching issues
         const timestamp = Date.now();
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const fileName = `${timestamp}_${sanitizedName}`;
+        // Sanitize filename but keep extension
+        const fileExt = file.name.split('.').pop();
+        const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+        const sanitizedName = fileNameWithoutExt.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+        // Construct new filename with timestamp
+        const fileName = `${timestamp}_${sanitizedName}.${fileExt}`;
         const filePath = `${userId}/${assignmentId}/${fileName}`;
 
         console.log('Uploading file:', { fileName, filePath, size: file.size, type: file.type });

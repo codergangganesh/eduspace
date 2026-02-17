@@ -10,18 +10,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     Calendar,
-    FileText,
-    Clock,
+    CheckCircle, // Added CheckCircle
     CheckCircle2,
+    Clock,
+    Edit,
+    Eye,
+    FileText,
+    MoreVertical,
+    Trophy,
+    Trash2,
+    UploadCloud,
+    Users,
     XCircle,
     AlertCircle,
-    Trophy,
-    Eye,
-    UploadCloud,
-    MoreVertical,
-    Edit,
-    Trash2,
-    Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -153,7 +154,7 @@ export function AssignmentCard({
 
                     {/* Action Button */}
                     <div className="shrink-0 w-full md:w-auto flex items-center gap-2">
-                        {role === 'student' && !isSubmitted ? (
+                        {role === 'student' ? (
                             <Button
                                 size="sm"
                                 onClick={(e) => {
@@ -164,11 +165,13 @@ export function AssignmentCard({
                                     "w-full md:w-auto font-bold shadow-sm",
                                     isOverdue
                                         ? "bg-red-500 hover:bg-red-600 text-white"
-                                        : "bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
+                                        : isSubmitted
+                                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                            : "bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
                                 )}
                             >
-                                <UploadCloud className="size-4 mr-2" />
-                                {isOverdue ? 'Late' : 'Submit'}
+                                {isSubmitted ? <Eye className="size-4 mr-2" /> : <UploadCloud className="size-4 mr-2" />}
+                                {isSubmitted ? 'View Assignment' : (isOverdue ? 'Late Submit' : 'Submit')}
                             </Button>
                         ) : (
                             <Button
@@ -228,9 +231,11 @@ export function AssignmentCard({
                     </Badge>
 
                     <div className="flex gap-2">
-                        <Badge className={cn("border-none font-bold shadow-lg backdrop-blur-md px-3 py-1 rounded-lg text-[10px]", statusInfo.color)}>
-                            {statusInfo.label}
-                        </Badge>
+                        {role === 'student' && (
+                            <Badge className={cn("border-none font-bold shadow-lg backdrop-blur-md px-3 py-1 rounded-lg text-[10px]", statusInfo.color)}>
+                                {statusInfo.label}
+                            </Badge>
+                        )}
 
                         {(onEdit || onDelete) && (
                             <DropdownMenu>
@@ -347,22 +352,35 @@ export function AssignmentCard({
 
                 {/* Action Area */}
                 <div className="mt-auto pt-2">
-                    {role === 'student' && !isSubmitted ? (
-                        <Button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSubmit?.(assignment);
-                            }}
-                            className={cn(
-                                "w-full rounded-2xl font-black text-sm h-12 shadow-xl border-none transition-all hover:scale-[1.02] active:scale-95",
-                                isOverdue
-                                    ? "bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-red-500/20"
-                                    : "bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-indigo-500/20"
-                            )}
-                        >
-                            <UploadCloud className="size-4 mr-2" />
-                            {isOverdue ? 'Submit Late' : 'Submit Now'}
-                        </Button>
+                    {role === 'student' ? (
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSubmit?.(assignment);
+                                }}
+                                className={cn(
+                                    "w-full rounded-2xl font-black text-sm h-12 shadow-xl border-none transition-all hover:scale-[1.02] active:scale-95",
+                                    isOverdue && !isSubmitted
+                                        ? "bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-red-500/20"
+                                        : isSubmitted
+                                            ? "bg-white dark:bg-white/5 text-slate-700 dark:text-white border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10"
+                                            : "bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-indigo-500/20"
+                                )}
+                            >
+                                {isSubmitted ? (
+                                    <>
+                                        <Eye className="size-4 mr-2" />
+                                        View Assignment
+                                    </>
+                                ) : (
+                                    <>
+                                        <UploadCloud className="size-4 mr-2" />
+                                        {isOverdue ? 'Submit Late' : 'Submit Now'}
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     ) : (
                         <Button
                             onClick={(e) => {

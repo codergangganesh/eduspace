@@ -31,7 +31,7 @@ export default function AssignmentSubmissionsPage() {
     const navigate = useNavigate();
     const { submissions, loading: submissionsLoading } = useAssignmentSubmissions(assignmentId!, classId!);
     const [searchQuery, setSearchQuery] = useState("");
-    const [filter, setFilter] = useState<'all' | 'on_time' | 'late'>('all');
+    const [filter, setFilter] = useState<'all' | 'submitted' | 'not_submitted'>('all');
 
     // Fetch assignment details for the header
     const { data: assignment, isLoading: assignmentLoading } = useQuery({
@@ -71,8 +71,8 @@ export default function AssignmentSubmissionsPage() {
             if (!matchesSearch) return false;
 
             if (filter === 'all') return true;
-            if (filter === 'on_time') return student.status === 'submitted' || student.status === 'graded';
-            if (filter === 'late') return student.status === 'returned' || student.status === 'pending';
+            if (filter === 'submitted') return student.status !== 'pending';
+            if (filter === 'not_submitted') return student.status === 'pending';
 
             return true;
         });
@@ -99,6 +99,13 @@ export default function AssignmentSubmissionsPage() {
                     <Badge variant="outline" className="bg-amber-50/50 text-amber-600 border-amber-200 gap-1.5 px-3 py-1 font-bold text-[10px] uppercase tracking-wider">
                         <span className="size-1.5 rounded-full bg-amber-600" />
                         LATE
+                    </Badge>
+                );
+            case 'pending':
+                return (
+                    <Badge variant="outline" className="bg-slate-50/50 text-slate-400 border-slate-200 gap-1.5 px-3 py-1 font-bold text-[10px] uppercase tracking-wider">
+                        <span className="size-1.5 rounded-full bg-slate-300" />
+                        NOT SUBMITTED
                     </Badge>
                 );
         }
@@ -212,15 +219,23 @@ export default function AssignmentSubmissionsPage() {
                             className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'all' ? "shadow-sm" : "text-muted-foreground")}
                             onClick={() => setFilter('all')}
                         >
-                            All
+                            All Students
                         </Button>
                         <Button
-                            variant={filter === 'on_time' ? 'default' : 'ghost'}
+                            variant={filter === 'submitted' ? 'default' : 'ghost'}
                             size="sm"
-                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'on_time' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm text-white" : "text-muted-foreground")}
-                            onClick={() => setFilter('on_time')}
+                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'submitted' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm text-white" : "text-muted-foreground")}
+                            onClick={() => setFilter('submitted')}
                         >
-                            On Time
+                            Submitted
+                        </Button>
+                        <Button
+                            variant={filter === 'not_submitted' ? 'default' : 'ghost'}
+                            size="sm"
+                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'not_submitted' ? "bg-red-500 hover:bg-red-600 shadow-sm text-white" : "text-muted-foreground")}
+                            onClick={() => setFilter('not_submitted')}
+                        >
+                            Not Submitted
                         </Button>
                     </div>
                 </div>
@@ -321,7 +336,7 @@ export default function AssignmentSubmissionsPage() {
                     ))}
 
                     <div className="py-8 text-center text-muted-foreground text-sm font-medium">
-                        Showing <span className="text-foreground font-bold">{filteredSubmissions.length}</span> of <span className="text-foreground font-bold">{submissions.length}</span> submissions
+                        Showing <span className="text-foreground font-bold">{filteredSubmissions.length}</span> of <span className="text-foreground font-bold">{submissions.length}</span> students
                     </div>
                 </div>
             </div>

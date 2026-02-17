@@ -83,11 +83,10 @@ export default function LecturerAssignments() {
                                         <TableHead>Title</TableHead>
                                         <TableHead>Subject</TableHead>
                                         <TableHead>Due Date</TableHead>
-                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
-                                <TableSkeleton columns={5} rows={5} />
+                                <TableSkeleton columns={4} rows={5} />
                             </Table>
                         </CardContent>
                     </Card>
@@ -138,14 +137,13 @@ export default function LecturerAssignments() {
                                     <TableHead>Title</TableHead>
                                     <TableHead>Subject</TableHead>
                                     <TableHead>Due Date</TableHead>
-                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {assignments.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                             No assignments created yet.
                                         </TableCell>
                                     </TableRow>
@@ -173,11 +171,6 @@ export default function LecturerAssignments() {
                                                         {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, yyyy") : "No due date"}
                                                     </span>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium capitalize">
-                                                    {assignment.status || "Active"}
-                                                </span>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>

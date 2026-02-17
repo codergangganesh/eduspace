@@ -209,6 +209,7 @@ export function useAssignments(selectedClassId?: string) {
 
                         if (subError) throw subError;
                         mySubmissions = (submissionsData || []) as any[];
+                        console.log('[useAssignments] Fetched student submissions:', mySubmissions.length, mySubmissions);
                     }
                 }
             }
@@ -229,12 +230,20 @@ export function useAssignments(selectedClassId?: string) {
                     let grade = undefined;
                     let earnedPoints = undefined;
 
+                    console.log(`[useAssignments] Processing assignment "${a.title}":`, {
+                        assignmentId: a.id,
+                        hasSubmission: !!submission,
+                        submissionStatus: submission?.status,
+                        submissionId: submission?.id
+                    });
+
                     if (submission) {
                         studentStatus = submission.status === 'graded' ? 'graded' : 'submitted';
                         if (submission.grade !== null) {
                             grade = submission.grade;
                             earnedPoints = submission.grade;
                         }
+                        console.log(`[useAssignments] Assignment "${a.title}" status: ${studentStatus}`);
                     } else if (a.due_date && new Date(a.due_date) < new Date()) {
                         studentStatus = 'overdue';
                     }
@@ -680,7 +689,7 @@ export function useAssignments(selectedClassId?: string) {
         if (!user || role !== 'student') return { success: false, error: 'Unauthorized' };
 
         try {
-            // 1. Fetch assignment details (for class_id) and student profile (for register_number)
+            // 1. Fetch assignment details and student profile
             const [assignmentResult, profileResult] = await Promise.all([
                 supabase
                     .from('assignments')
@@ -689,7 +698,7 @@ export function useAssignments(selectedClassId?: string) {
                     .single(),
                 supabase
                     .from('profiles')
-                    .select('full_name, register_number')
+                    .select('full_name, student_id') // student_id is the register number field in profiles
                     .eq('user_id', user.id)
                     .single()
             ]);
@@ -698,21 +707,41 @@ export function useAssignments(selectedClassId?: string) {
             const studentProfile = profileResult.data;
 
             // 2. Insert/Update submission including the snapshot fields
+            console.log('[useAssignments] Upserting submission with data:', {
+                assignment_id: assignmentId,
+                student_id: user.id,
+                attachment_url: data.attachment_url,
+                attachment_name: data.attachment_name,
+                file_type: data.file_type,
+                file_size: data.file_size
+            });
+
             const { data: subData, error } = await supabase
                 .from('assignment_submissions')
                 .upsert({
                     assignment_id: assignmentId,
                     student_id: user.id,
                     class_id: assignment?.class_id,
-                    register_number: studentProfile?.register_number,
+                    register_number: studentProfile?.student_id, // Map student_id to register_number
                     ...data,
                     submitted_at: new Date().toISOString(),
                     status: 'submitted',
                 })
-                .select('id')
+                .select('*')
                 .single();
 
             if (error) throw error;
+
+            console.log('[useAssignments] Submission saved to database:', {
+                id: subData.id,
+                attachment_name: subData.attachment_name,
+                attachment_url: subData.attachment_url
+            });
+
+            // Manually refresh assignments to ensure UI updates immediately
+            console.log('[useAssignments] Triggering manual refresh...');
+            await fetchAssignments(true);
+            console.log('[useAssignments] Manual refresh complete');
 
             // 3. Send notification to lecturer
             try {
@@ -812,9 +841,8 @@ export function useAssignments(selectedClassId?: string) {
     return {
         assignments,
         submissions,
-        stats,
         loading,
-        error,
+        stats,
         createAssignment,
         updateAssignment,
         deleteAssignment,

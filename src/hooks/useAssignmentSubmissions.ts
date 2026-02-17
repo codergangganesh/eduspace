@@ -50,10 +50,27 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                 throw submissionsError;
             }
 
+            // 2.5 Fetch student emails for matching
+            const allSubmissionUserIds = [...new Set((submitted || []).map(s => s.student_id).filter(Boolean))] as string[];
+            let submittedEmailsMap: Record<string, string> = {}; // user_id -> email
+
+            if (allSubmissionUserIds.length > 0) {
+                const { data: profileEmails, error: emailsError } = await supabase
+                    .from('profiles')
+                    .select('user_id, email')
+                    .in('user_id', allSubmissionUserIds);
+
+                if (profileEmails) {
+                    profileEmails.forEach(p => {
+                        if (p.email) submittedEmailsMap[p.user_id] = p.email;
+                    });
+                }
+            }
+
             console.log('[useAssignmentSubmissions] Fetched submissions:', submitted?.length, submitted);
             console.log('[useAssignmentSubmissions] Total students:', students?.length);
 
-            // 2.5 Fetch profile images
+            // 2.6 Fetch profile images
             const studentIds = (students || []).map(s => s.student_id);
             let profileMap: Record<string, string> = {};
 
@@ -74,7 +91,21 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
 
             // 3. Merge data
             const combinedData: AssignmentSubmissionDetail[] = (students || []).map(student => {
-                const submission = submitted?.find(s => s.student_id === student.student_id);
+                const submission = submitted?.find(s => {
+                    // 1. Match by student_id (UUID)
+                    const matchId = (s.student_id && student.student_id && s.student_id === student.student_id);
+
+                    // 2. Match by register_number
+                    const matchReg = (s.register_number && student.register_number &&
+                        s.register_number.trim().toLowerCase() === student.register_number.trim().toLowerCase());
+
+                    // 3. Match by email (ultimate fallback)
+                    const submittedEmail = s.student_id ? submittedEmailsMap[s.student_id] : null;
+                    const matchEmail = (submittedEmail && student.email &&
+                        submittedEmail.trim().toLowerCase() === student.email.trim().toLowerCase());
+
+                    return matchId || matchReg || matchEmail;
+                });
 
                 return {
                     student_id: student.student_id || student.id,
@@ -94,6 +125,10 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     profile_image: profileMap[student.student_id] || null
                 };
             });
+
+            // Do not filter here, return all students to allow filtering in the UI
+            console.log('[useAssignmentSubmissions] Total students:', combinedData.length);
+            console.log('[useAssignmentSubmissions] Students with submissions:', submitted.length);
 
             setSubmissions(combinedData);
 
@@ -123,7 +158,13 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     table: 'assignment_submissions',
                     filter: `assignment_id=eq.${assignmentId}`
                 },
-                () => fetchData()
+                (payload) => {
+                    console.log('[useAssignmentSubmissions] Submission change detected:', payload.eventType, payload);
+                    if (payload.eventType === 'DELETE') {
+                        console.log('[useAssignmentSubmissions] Submission deleted, refreshing list...');
+                    }
+                    fetchData();
+                }
             )
             .subscribe();
 

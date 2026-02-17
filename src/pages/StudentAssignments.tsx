@@ -14,7 +14,6 @@ import { useAssignments } from "@/hooks/useAssignments";
 import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmentDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DeleteConfirmDialog } from "@/components/layout/DeleteConfirmDialog";
 
 type FilterType = "all" | "pending" | "submitted" | "overdue";
 
@@ -34,11 +33,11 @@ export default function StudentAssignments() {
     } = useAssignments(selectedClassId);
 
     const [filter, setFilter] = useState<FilterType>("all");
-    const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+    const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
     const [isSubmitOpen, setIsSubmitOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Initial load: Set class from profile or first available
     useEffect(() => {
@@ -68,18 +67,8 @@ export default function StudentAssignments() {
     );
 
     const handleSubmitClick = (assignment: any) => {
-        setSelectedAssignment(assignment);
+        setSelectedAssignmentId(assignment.id);
         setIsSubmitOpen(true);
-    };
-
-    const handleEditSubmission = (assignment: any) => {
-        console.log("Editing submission for:", assignment.title);
-        setSelectedAssignment(assignment);
-        setIsSubmitOpen(true);
-    };
-
-    const handleDeleteSubmission = (assignmentId: string) => {
-        setSubmissionToDelete(assignmentId);
     };
 
     const getStatusVariant = (status: string) => {
@@ -94,6 +83,8 @@ export default function StudentAssignments() {
                 return 'secondary';
         }
     };
+
+    const activeAssignment = assignments.find(a => a.id === selectedAssignmentId);
 
     return (
         <DashboardLayout>
@@ -265,7 +256,7 @@ export default function StudentAssignments() {
                                 </div>
                             )}
 
-                            {loading ? (
+                            {(loading || isDeleting) ? (
                                 <div className={cn(
                                     viewMode === 'grid'
                                         ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
@@ -345,8 +336,21 @@ export default function StudentAssignments() {
                                             viewMode={viewMode}
                                             onView={(id) => navigate(`/student/assignments/${id}`)}
                                             onSubmit={handleSubmitClick}
-                                            onEdit={assignment.studentStatus === 'submitted' ? handleEditSubmission : undefined}
-                                            onDelete={assignment.studentStatus === 'submitted' ? handleDeleteSubmission : undefined}
+                                            onDelete={assignment.studentStatus === 'submitted' ? async (id) => {
+                                                const submission = assignment.submission;
+                                                if (submission?.id) {
+                                                    setIsDeleting(true);
+                                                    const result = await deleteSubmission(submission.id);
+                                                    if (result.success) {
+                                                        toast.success("Submission deleted successfully");
+                                                        // Manually refresh to ensure UI updates
+                                                        await refreshAssignments(true);
+                                                    } else {
+                                                        toast.error(result.error || "Failed to delete submission");
+                                                    }
+                                                    setIsDeleting(false);
+                                                }
+                                            } : undefined}
                                         />
                                     ))}
                                 </div>
@@ -368,36 +372,28 @@ export default function StudentAssignments() {
                 )}
             </div>
 
-            {selectedAssignment && (
+            {activeAssignment && (
                 <SubmitAssignmentDialog
-                    isOpen={isSubmitOpen}
+                    isOpen={isSubmitOpen && !!activeAssignment}
                     onClose={() => setIsSubmitOpen(false)}
-                    assignment={selectedAssignment}
+                    assignment={activeAssignment}
                     onSubmit={submitAssignment}
+                    onDelete={async (submissionId) => {
+                        setIsDeleting(true);
+                        const result = await deleteSubmission(submissionId);
+                        if (result.success) {
+                            toast.success("Submission deleted successfully");
+                            setIsSubmitOpen(false);
+                            // Manually refresh to ensure UI updates
+                            await refreshAssignments(true);
+                        } else {
+                            toast.error(result.error || "Failed to delete submission");
+                        }
+                        setIsDeleting(false);
+                    }}
                 />
             )}
 
-            <DeleteConfirmDialog
-                open={!!submissionToDelete}
-                onOpenChange={(open) => !open && setSubmissionToDelete(null)}
-                onConfirm={async () => {
-                    if (submissionToDelete) {
-                        const assignment = assignments.find(a => a.id === submissionToDelete);
-                        if (assignment?.submission?.id) {
-                            const { success, error } = await deleteSubmission(assignment.submission.id);
-                            if (success) {
-                                toast.success("Submission deleted successfully");
-                            } else {
-                                toast.error("Failed to delete submission");
-                                console.error(error);
-                            }
-                        }
-                        setSubmissionToDelete(null);
-                    }
-                }}
-                title="Delete Submission?"
-                description="This will permanently delete your work and any feedback or grades you've received for this assignment. This action cannot be undone."
-            />
         </DashboardLayout>
     );
 }
