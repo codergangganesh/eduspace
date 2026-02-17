@@ -148,6 +148,7 @@ export default function Dashboard() {
             icon={FileText}
             backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
             iconBackgroundColor="bg-white/10"
+            onClick={() => navigate("/student/assignments")}
           />
           <PremiumStatsCard
             title="STREAK"
@@ -263,7 +264,7 @@ export default function Dashboard() {
                     <UpcomingTask
                       key={task.id}
                       {...task}
-                      onClick={() => navigate(`/student/assignments/${task.id}`)}
+                      onClick={() => navigate('/student/assignments')}
                     />
                   ))
                 ) : (

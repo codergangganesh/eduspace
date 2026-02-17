@@ -100,7 +100,7 @@ export function DashboardAssignmentList({ assignments }: DashboardAssignmentList
                             <TableRow
                                 key={assignment.id}
                                 className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => navigate(`/student/assignments/${assignment.id}`)}
+                                onClick={() => navigate('/student/assignments')}
                             >
                                 <TableCell className="font-medium">
                                     <div className="flex flex-col">
