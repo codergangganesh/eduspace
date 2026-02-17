@@ -39,30 +39,36 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
 
             if (studentsError) throw studentsError;
 
-            // 2. Fetch all submissions for this assignment using secure RPC
+            // 2. Fetch all submissions for this assignment directly (RLS protected)
             const { data: submitted, error: submissionsError } = await supabase
-                .rpc('get_assignment_submissions_for_lecturer', { p_assignment_id: assignmentId });
+                .from('assignment_submissions')
+                .select('*')
+                .eq('assignment_id', assignmentId);
 
-            if (submissionsError) throw submissionsError;
+            if (submissionsError) {
+                console.error('Error fetching submissions directly:', submissionsError);
+                throw submissionsError;
+            }
+
+            console.log('[useAssignmentSubmissions] Fetched submissions:', submitted?.length, submitted);
+            console.log('[useAssignmentSubmissions] Total students:', students?.length);
 
             // 2.5 Fetch profile images
             const studentIds = (students || []).map(s => s.student_id);
             let profileMap: Record<string, string> = {};
 
             if (studentIds.length > 0) {
-                if (studentIds.length > 0) {
-                    const { data: profiles, error: profilesError } = await supabase
-                        .from('student_profiles')
-                        .select('user_id, profile_image')
-                        .in('user_id', studentIds);
+                const { data: profiles, error: profilesError } = await supabase
+                    .from('student_profiles')
+                    .select('user_id, profile_image')
+                    .in('user_id', studentIds);
 
-                    if (!profilesError && profiles) {
-                        profiles.forEach(p => {
-                            if (p.profile_image) {
-                                profileMap[p.user_id] = p.profile_image;
-                            }
-                        });
-                    }
+                if (!profilesError && profiles) {
+                    profiles.forEach(p => {
+                        if (p.profile_image) {
+                            profileMap[p.user_id] = p.profile_image;
+                        }
+                    });
                 }
             }
 
@@ -76,14 +82,14 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     register_number: student.register_number || 'N/A',
                     email: student.email,
                     status: submission ? (submission.status as any) : 'pending',
-                    submitted_at: submission?.submitted_at || submission?.created_at,
+                    submitted_at: submission?.submitted_at,
                     file_url: submission?.attachment_url,
                     file_name: submission?.attachment_name,
                     file_type: submission?.file_type,
                     file_size: submission?.file_size,
                     submission_id: submission?.id,
                     submission_text: submission?.submission_text,
-                    grade: submission?.grade,
+                    grade: submission?.grade?.toString(),
                     feedback: submission?.feedback,
                     profile_image: profileMap[student.student_id] || null
                 };

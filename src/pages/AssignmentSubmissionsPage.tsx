@@ -16,7 +16,8 @@ import {
     MoreVertical,
     Download,
     AlertCircle,
-    Trophy
+    Trophy,
+    Eye
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -258,24 +259,54 @@ export default function AssignmentSubmissionsPage() {
                                 {student.file_url ? (
                                     <>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs sm:text-sm font-bold text-foreground truncate">{student.file_name}</p>
+                                            <p className="text-xs sm:text-sm font-bold text-foreground truncate">{student.file_name || "Assignment File"}</p>
                                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-0.5">
                                                 {getFileTypeDisplay(student.file_type) || "FILE"}
                                                 {student.file_size && ` • ${formatFileSize(student.file_size)}`}
                                             </p>
                                         </div>
-                                        <a
-                                            href={student.file_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary shrink-0"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <Download className="size-4 sm:size-5" />
-                                        </a>
+                                        <div className="flex gap-2">
+                                            <a
+                                                href={student.file_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary shrink-0"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Eye className="size-4 sm:size-5" />
+                                            </a>
+                                            <a
+                                                href={student.file_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                download
+                                                className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary shrink-0"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Download className="size-4 sm:size-5" />
+                                            </a>
+                                        </div>
                                     </>
+                                ) : student.submission_text ? (
+                                    <div className="flex-1 text-center">
+                                        <p className="text-xs font-bold text-slate-500 italic">Text Submission Only</p>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            className="h-auto p-0 text-[10px] uppercase font-bold"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                // Ideally show in modal, but for now just acknowledge
+                                                alert(student.submission_text);
+                                            }}
+                                        >
+                                            View Text
+                                        </Button>
+                                    </div>
                                 ) : (
-                                    <p className="text-[10px] text-slate-400 italic font-bold uppercase tracking-wider w-full text-center">No Submission</p>
+                                    <p className="text-[10px] text-slate-400 italic font-bold uppercase tracking-wider w-full text-center">
+                                        {student.status === 'submitted' ? 'Submission content missing' : 'No Submission'}
+                                    </p>
                                 )}
                             </div>
 
