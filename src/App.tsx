@@ -68,8 +68,6 @@ const AIChat = lazy(() => import("./pages/AIChat"));
 const SharedAIChat = lazy(() => import("./pages/SharedAIChat"));
 const KnowledgeMap = lazy(() => import("@/pages/KnowledgeMap"));
 const StreakPage = lazy(() => import("./pages/StreakPage"));
-const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
-const PaymentFail = lazy(() => import("./pages/PaymentFail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -175,8 +173,7 @@ const App = () => (
                         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                         <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
                         <Route path="/ai-chat/share/:token" element={<SharedAIChat />} />
-                        <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
-                        <Route path="/payment-fail" element={<ProtectedRoute><PaymentFail /></ProtectedRoute>} />
+
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>

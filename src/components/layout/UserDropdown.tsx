@@ -11,16 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck, CreditCard } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck } from "lucide-react";
 import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
-import { SubscriptionModal } from "@/components/subscription/SubscriptionModal";
 
 export function UserDropdown() {
   const { profile, role, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
-  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -90,18 +88,7 @@ export function UserDropdown() {
             Settings
           </Link>
         </DropdownMenuItem>
-        {role !== "student" && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setIsSubscriptionOpen(true)}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <CreditCard className="size-4" />
-              Billing & Plans
-            </DropdownMenuItem>
-          </>
-        )}
+
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => setIsContactOpen(true)}
@@ -120,7 +107,6 @@ export function UserDropdown() {
         </DropdownMenuItem>
       </DropdownMenuContent>
       <ContactSupportDialog open={isContactOpen} onOpenChange={setIsContactOpen} />
-      <SubscriptionModal open={isSubscriptionOpen} onOpenChange={setIsSubscriptionOpen} />
     </DropdownMenu>
   );
 }
