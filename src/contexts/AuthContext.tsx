@@ -129,39 +129,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let mounted = true;
+
+    // 1. Define initialization logic
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+
+          if (session?.user) {
+            // Await critical data before unblocking UI to prevent redirects
+            await Promise.all([
+              fetchProfile(session.user.id).then(d => mounted && setProfile(d)),
+              fetchRole(session.user.id).then(d => mounted && setRole(d))
+            ]);
+          } else {
+            console.log("No active session found during initialization.");
+          }
+        }
+      } catch (error) {
+        console.error("Auth initialization failed:", error);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    // 2. Run initialization
+    initializeAuth();
+
+    // 3. Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        if (!mounted) return;
+
+        console.log("Auth state change:", event);
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Defer Supabase calls with setTimeout
         if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id).then(setProfile);
-            fetchRole(session.user.id).then(setRole);
-          }, 0);
+          // Re-fetch on auth events to ensure freshness
+          // Note: using void to not block the event loop, as UI might already be rendered
+          void fetchProfile(session.user.id).then(d => mounted && setProfile(d));
+          void fetchRole(session.user.id).then(d => mounted && setRole(d));
         } else {
           setProfile(null);
           setRole(null);
         }
+
+        // Ensure loading is false after any auth event
         setIsLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
-        fetchRole(session.user.id).then(setRole);
-      }
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
