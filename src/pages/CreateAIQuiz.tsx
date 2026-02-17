@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { QuestionEditor } from '@/components/quizzes/QuestionEditor';
 import { QuizQuestion } from '@/types/quiz';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
+import { useClasses } from '@/hooks/useClasses';
 import {
     ArrowLeft,
     Sparkles,
@@ -35,7 +36,8 @@ import {
     Lock,
     ArrowRight,
     Shield,
-    Check
+    Check,
+    CreditCard
 } from 'lucide-react';
 import {
     generateFromTopic,
@@ -45,6 +47,7 @@ import {
 } from '@/lib/aiQuizService';
 import { getSubscription, createCheckoutSession, simulateWebhookSuccess } from '@/lib/subscriptionService';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PricingTable } from '@/components/subscription/PricingTable';
 
 type InputMethod = 'topic' | 'file';
 type Step = 'input' | 'generating' | 'review';
@@ -55,6 +58,7 @@ export default function CreateAIQuiz() {
     const { classId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { classes } = useClasses();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Step state
@@ -95,13 +99,15 @@ export default function CreateAIQuiz() {
     const [isPremium, setIsPremium] = useState(false);
     const [checkingSubscription, setCheckingSubscription] = useState(true);
     const [isRedirecting, setIsRedirecting] = useState(false);
+    const [dismissedUpgrade, setDismissedUpgrade] = useState(false);
 
     useEffect(() => {
         const checkSub = async () => {
             if (!user) return;
             try {
                 const sub = await getSubscription(user.id);
-                setIsPremium(sub?.status === 'active' || sub?.plan_type === 'pro' || sub?.plan_type === 'pro_plus' || sub?.plan_type === 'premium');
+                const premium = sub?.status === 'active' || sub?.plan_type === 'pro' || sub?.plan_type === 'pro_plus' || sub?.plan_type === 'premium';
+                setIsPremium(premium);
             } catch (error) {
                 console.error('Error checking subscription:', error);
             } finally {
@@ -226,6 +232,11 @@ export default function CreateAIQuiz() {
     };
 
     const handlePublishQuiz = async () => {
+        if (!classId) {
+            toast.error('No class context found. You can generate and preview quizes, but you must select a class from the list to publish.');
+            return;
+        }
+
         if (!title.trim()) {
             toast.error('Please enter a quiz title');
             return;
@@ -308,9 +319,9 @@ export default function CreateAIQuiz() {
         <DashboardLayout>
             <div className="w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-3 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-hidden shadow-none md:shadow-sm filter-none">
 
-                <div className={`relative w-full ${!isPremium && step === 'input' ? 'overflow-hidden' : ''}`}>
+                <div className={`relative w-full ${!isPremium ? 'overflow-hidden max-h-[calc(100vh-12rem)]' : ''}`}>
                     {/* Content Layer (Blurred if not premium) */}
-                    <div className={`transition-all duration-700 ${!isPremium && step === 'input' ? 'blur-md pointer-events-none select-none opacity-60 px-4 pt-10' : ''}`}>
+                    <div className={`transition-all duration-700 ${!isPremium ? 'blur-md pointer-events-none select-none opacity-40 px-4 pt-10' : ''}`}>
 
                         {/* Header */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -333,10 +344,46 @@ export default function CreateAIQuiz() {
                                                 AI Quiz <span className="text-indigo-600 dark:text-indigo-400">Generator</span>
                                             </h1>
                                         </div>
-                                        <Badge variant="secondary" className="w-fit px-3 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 font-bold uppercase tracking-tighter text-[10px]">
+                                        <Badge
+                                            variant="secondary"
+                                            className="w-fit px-3 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 font-bold uppercase tracking-tighter text-[10px] cursor-pointer hover:bg-indigo-100 transition-colors"
+                                            onClick={() => setDismissedUpgrade(false)}
+                                        >
                                             <Sparkles className="size-3 mr-1.5 fill-current" />
                                             Llama-3 Powered
                                         </Badge>
+                                        {!classId && (
+                                            <Badge variant="outline" className="w-fit px-3 py-1 bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800 font-bold uppercase tracking-tighter text-[10px]">
+                                                Preview Mode
+                                            </Badge>
+                                        )}
+                                        {!classId && classes.length > 0 && (
+                                            <div className="flex items-center gap-2 ml-4">
+                                                <Select onValueChange={(value) => navigate(`/lecturer/quizzes/${value}/create-ai`)}>
+                                                    <SelectTrigger className="w-[180px] h-8 text-[10px] font-bold uppercase tracking-wider bg-white/50 dark:bg-slate-900/50 border-indigo-100 dark:border-indigo-800 focus:ring-indigo-500/20">
+                                                        <SelectValue placeholder="Link to a Class" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {classes.map((cls) => (
+                                                            <SelectItem key={cls.id} value={cls.id} className="text-xs">
+                                                                {cls.course_code} - {cls.class_name || 'General'}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                        {!classId && classes.length === 0 && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => navigate('/all-students')}
+                                                className="h-8 text-[10px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                            >
+                                                <Plus className="size-3 mr-1.5" />
+                                                Create a Class
+                                            </Button>
+                                        )}
                                     </div>
                                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium md:pl-14">Create professional assessments in seconds using artificial intelligence</p>
                                 </div>
@@ -680,135 +727,27 @@ export default function CreateAIQuiz() {
                         )}
                     </div>
 
-                    {/* Upsell Overlay (3-Tier Pricing) */}
-                    {!isPremium && step === 'input' && (
-                        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 md:p-12 overflow-y-auto bg-slate-950/20 backdrop-blur-sm">
-                            <motion.div
-                                initial={{ opacity: 0, y: 40 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-3 gap-6 py-10"
-                            >
-                                {/* FREE PLAN */}
-                                <Card className="border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
-                                    <CardContent className="p-8 flex-1 flex flex-col">
-                                        <div className="mb-8">
-                                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none font-bold px-3 py-1 mb-4">Starter</Badge>
-                                            <h3 className="text-3xl font-black text-slate-900 dark:text-white">Free</h3>
-                                            <div className="flex items-baseline mt-2">
-                                                <span className="text-4xl font-black">$0</span>
-                                                <span className="text-slate-400 font-bold ml-1">/mo</span>
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-4 mb-8 flex-1 text-sm font-medium text-slate-600 dark:text-slate-400">
-                                            <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" /> Manual Quiz Creation</li>
-                                            <li className="flex items-center gap-2"><Check className="size-4 text-emerald-500" /> Basic Question Types</li>
-                                            <li className="flex items-center gap-2 opacity-40"><Lock className="size-4" /> 1 AI Trial / month</li>
-                                            <li className="flex items-center gap-2 opacity-40"><Lock className="size-4" /> No PDF Uploads</li>
-                                        </ul>
-                                        <Button variant="outline" className="h-14 w-full rounded-2xl border-slate-200 dark:border-slate-800 font-bold text-slate-400 cursor-not-allowed">
-                                            Current Plan
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-
-                                {/* PRO PLAN (Recommended) */}
-                                <Card className="border-4 border-indigo-600 bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl relative scale-105 z-10">
-                                    <div className="absolute top-0 inset-x-0 h-1.5 bg-indigo-600" />
-                                    <div className="absolute top-4 right-4">
-                                        <Badge className="bg-indigo-600 text-white border-none font-black px-3 py-1 animate-pulse">MOST POPULAR</Badge>
-                                    </div>
-                                    <CardContent className="p-10 flex-1 flex flex-col">
-                                        <div className="mb-8">
-                                            <Badge className="bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border-none font-bold px-3 py-1 mb-4">Professional</Badge>
-                                            <h3 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Pro Access</h3>
-                                            <div className="flex items-baseline mt-2">
-                                                <span className="text-5xl font-black text-indigo-600">₹399</span>
-                                                <span className="text-slate-400 font-bold ml-1">/mo</span>
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-5 mb-10 flex-1 text-base font-bold text-slate-700 dark:text-slate-200">
-                                            <li className="flex items-center gap-3"><Zap className="size-5 text-indigo-500 fill-current" /> 50 AI Quizzes / month</li>
-                                            <li className="flex items-center gap-3"><FileUp className="size-5 text-indigo-500" /> Unlimited PDF Uploads</li>
-                                            <li className="flex items-center gap-3"><Brain className="size-5 text-indigo-500" /> Premium AI Models</li>
-                                            <li className="flex items-center gap-3"><ShieldCheck className="size-5 text-indigo-500" /> Priority Support</li>
-                                        </ul>
-                                        <Button
-                                            onClick={() => handleUpgrade('pro')}
-                                            disabled={isRedirecting}
-                                            className="h-16 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xl rounded-2xl shadow-xl shadow-indigo-600/20 group mb-3 transition-all active:scale-95"
-                                        >
-                                            {isRedirecting ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2 size-5 fill-current" />}
-                                            Get Pro Access
-                                            <ArrowRight className="ml-2 size-5 group-hover:translate-x-1 transition-transform" />
-                                        </Button>
-
-                                        <div className="flex flex-col gap-1">
-                                            <button
-                                                onClick={() => handleSimulatePayment('pro')}
-                                                disabled={isRedirecting}
-                                                className="w-full text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1.5 py-1"
-                                            >
-                                                <Shield className="size-3" />
-                                                Run Webhook Simulation
-                                            </button>
-                                            <div className="flex items-center justify-center gap-4">
-                                                <button
-                                                    onClick={handleTestSuccessPage}
-                                                    className="text-[9px] font-bold uppercase tracking-tighter text-emerald-500 hover:text-emerald-600 transition-colors underline underline-offset-2"
-                                                >
-                                                    Success Page
-                                                </button>
-                                                <button
-                                                    onClick={handleTestFailPage}
-                                                    className="text-[9px] font-bold uppercase tracking-tighter text-rose-500 hover:text-rose-600 transition-colors underline underline-offset-2"
-                                                >
-                                                    Fail Page
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* PRO PLUS PLAN */}
-                                <Card className="border border-slate-200 dark:border-slate-800 bg-black text-white rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
-                                    <CardContent className="p-8 flex-1 flex flex-col">
-                                        <div className="mb-8">
-                                            <Badge className="bg-amber-500 text-black border-none font-bold px-3 py-1 mb-4 text-xs font-black">ELITE</Badge>
-                                            <h3 className="text-3xl font-black uppercase tracking-tight">Pro Plus</h3>
-                                            <div className="flex items-baseline mt-2">
-                                                <span className="text-4xl font-black text-amber-500">₹999</span>
-                                                <span className="text-slate-500 font-bold ml-1">/mo</span>
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-4 mb-8 flex-1 text-sm font-medium text-slate-300">
-                                            <li className="flex items-center gap-3"><Check className="size-5 text-amber-500" /> Everything in Pro</li>
-                                            <li className="flex items-center gap-3"><Sparkles className="size-5 text-amber-500 fill-current" /> Unlimited AI Quizzes</li>
-                                            <li className="flex items-center gap-3"><Zap className="size-5 text-amber-500 fill-current" /> Unlimited Course Gen</li>
-                                            <li className="flex items-center gap-3"><CreditCard className="size-5 text-amber-500" /> Early Access Features</li>
-                                        </ul>
-                                        <Button
-                                            onClick={() => handleUpgrade('pro_plus')}
-                                            className="h-14 w-full bg-amber-500 hover:bg-amber-600 text-black font-black text-lg rounded-2xl shadow-xl shadow-amber-500/20 transition-all active:scale-95 border-none"
-                                        >
-                                            <Zap className="mr-2 size-5 fill-current" />
-                                            Get Pro Plus
-                                        </Button>
-
-                                        <button
-                                            onClick={() => handleSimulatePayment('pro_plus')}
-                                            disabled={isRedirecting}
-                                            className="w-full text-[10px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors flex items-center justify-center gap-1.5 py-4"
-                                        >
-                                            <Shield className="size-3" />
-                                            Test Sub (Plus)
-                                        </button>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        </div>
-                    )}
                 </div>
             </div>
+
+            {!isPremium && !dismissedUpgrade && (
+                <div className="absolute inset-0 z-40 flex flex-col items-center justify-start md:justify-center pt-8 md:pt-0 bg-slate-950/40 backdrop-blur-md overflow-y-auto md:overflow-hidden">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-full md:pb-0"
+                    >
+                        <PricingTable
+                            isInline
+                            onSuccess={async () => {
+                                const sub = await getSubscription(user?.id || '');
+                                const premium = sub?.status === 'active' || sub?.plan_type === 'pro' || sub?.plan_type === 'pro_plus' || sub?.plan_type === 'premium';
+                                setIsPremium(premium);
+                            }}
+                        />
+                    </motion.div>
+                </div>
+            )}
 
             <DeleteConfirmDialog
                 open={!!questionToDelete}

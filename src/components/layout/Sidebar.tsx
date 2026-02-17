@@ -64,7 +64,7 @@ const lecturerNavItems = [
   { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
   { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
-  { icon: Brain, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
+  { icon: Brain, label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 

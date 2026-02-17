@@ -41,7 +41,7 @@ const lecturerNavItems = [
   { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
   { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
-  { icon: Brain, label: "AI Quiz Generator", path: "/lecturer/quizzes?mode=create-ai" },
+  { icon: Brain, label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
   { icon: MessageSquare, label: "Messages", path: "/messages" },
 ];
 
@@ -63,12 +63,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40 lg:hidden"
+        className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-[60] lg:hidden"
         onClick={onClose}
       />
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-72 bg-surface border-r border-border z-50 lg:hidden animate-slide-in-right">
+      <aside className="fixed left-0 top-0 bottom-0 w-72 bg-surface border-r border-border z-[70] lg:hidden animate-slide-in-right">
         <div className="flex flex-col h-full p-4">
           {/* Header */}
           <div className="flex items-center justify-between px-3 mb-8">

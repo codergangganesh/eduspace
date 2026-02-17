@@ -162,6 +162,7 @@ const App = () => (
                         <Route path="/lecturer/quizzes" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerClassesQuizzes /></ProtectedRoute>} />
                         <Route path="/lecturer/quizzes/:classId/create" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateQuiz /></ProtectedRoute>} />
                         <Route path="/lecturer/quizzes/:classId/create-ai" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateAIQuiz /></ProtectedRoute>} />
+                        <Route path="/lecturer/create-ai-quiz" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateAIQuiz /></ProtectedRoute>} />
                         <Route path="/lecturer/quizzes/:classId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><ClassQuizzesView /></ProtectedRoute>} />
                         <Route path="/lecturer/quizzes/:classId/:quizId/edit" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><EditQuiz /></ProtectedRoute>} />
                         <Route path="/lecturer/quizzes/:classId/:quizId/results" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><QuizResultsView /></ProtectedRoute>} />

@@ -90,14 +90,18 @@ export function UserDropdown() {
             Settings
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => setIsSubscriptionOpen(true)}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <CreditCard className="size-4" />
-          Billing & Plans
-        </DropdownMenuItem>
+        {role !== "student" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setIsSubscriptionOpen(true)}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <CreditCard className="size-4" />
+              Billing & Plans
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => setIsContactOpen(true)}
