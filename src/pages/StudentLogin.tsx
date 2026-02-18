@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,10 @@ export default function StudentLogin() {
 
     return (
         <AuthLayout title="Sign In" subtitle="Please enter your details below">
+            <SEO
+                title="Student Login"
+                description="Log in to your EduSpace student account to access your courses, assignments, and track your learning progress."
+            />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}
                 <form className="space-y-5" onSubmit={handleSubmit}>

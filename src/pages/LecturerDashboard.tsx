@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLecturerData } from "@/hooks/useLecturerData";
 import { useNavigate } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export default function LecturerDashboard() {
 
   return (
     <DashboardLayout>
+      <SEO title="Lecturer Dashboard" />
       <div className="flex flex-col gap-8 pb-8">
 
         {/* Modern Hero Section */}

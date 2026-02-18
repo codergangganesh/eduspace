@@ -7,6 +7,7 @@ import { useAssignments } from "@/hooks/useAssignments";
 import { DashboardAssignmentList } from "@/components/dashboard/DashboardAssignmentList";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useNavigate } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
@@ -122,6 +123,7 @@ export default function Dashboard() {
     <DashboardLayout
       actions={
         <div className="flex items-center gap-2">
+          <SEO title="Student Dashboard" />
 
           <Button
             variant="default"

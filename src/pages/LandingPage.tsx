@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import {
     GraduationCap,
     CheckCircle2,
@@ -155,6 +156,10 @@ export default function LandingPage() {
 
     return (
         <div className="min-h-screen bg-transparent dark:bg-background font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
+            <SEO
+                title="Home | Modern Learning Management System"
+                description="EduSpace is a powerful learning management system for students and lecturers. Track progress, manage assignments, and enhance your learning journey."
+            />
             <AnoAI />
             <canvas
                 className="pointer-events-none absolute inset-0 mx-auto z-[1]"

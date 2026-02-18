@@ -1,14 +1,19 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Optimized robots.txt for EduSpace
 
 User-agent: *
 Allow: /
+Allow: /student/login
+Allow: /lecturer/login
+Allow: /student/register
+Allow: /lecturer/register
+
+# Disallow indexing of private dashboard areas
+Disallow: /dashboard
+Disallow: /lecturer-dashboard
+Disallow: /settings
+Disallow: /messages
+Disallow: /profile/
+Disallow: /auth/callback
+
+# Sitemaps
+Sitemap: https://eduspace-five.vercel.app/sitemap.xml

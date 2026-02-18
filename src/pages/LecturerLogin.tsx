@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,10 @@ export default function LecturerLogin() {
 
     return (
         <AuthLayout title="Sign In" subtitle="Please enter your details below">
+            <SEO
+                title="Lecturer Login"
+                description="Log in to your EduSpace lecturer account to manage classes, assignments, and track student performance."
+            />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}
                 <form className="space-y-5" onSubmit={handleSubmit}>

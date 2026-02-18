@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Mail, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +99,10 @@ export default function StudentRegister() {
 
     return (
         <AuthLayout title="Student Registration" subtitle="Join Eduspace and start your learning journey">
+            <SEO
+                title="Student Registration"
+                description="Join EduSpace and start your learning journey. Create a student account to access courses, submit assignments, and track your performance."
+            />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}
                 <form className="space-y-5" onSubmit={handleSubmit}>
