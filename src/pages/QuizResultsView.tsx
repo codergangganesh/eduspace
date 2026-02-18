@@ -284,78 +284,107 @@ export default function QuizResultsView() {
 
                     {/* Content Area */}
                     {podiumStudents.length > 0 && (
-                        <div className="flex flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 mb-12 px-2 mt-4 sm:mt-8">
-                            {/* 2nd Place */}
-                            {podiumStudents[1] && (
-                                <Card className="order-2 sm:order-1 size-44 sm:size-auto sm:w-64 aspect-square sm:aspect-auto rounded-full sm:rounded-2xl border-2 border-slate-400 dark:border-slate-500 shadow-xl relative bg-white dark:bg-slate-900 overflow-visible transform hover:-translate-y-1 transition-transform duration-300 flex items-center justify-center">
-                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-slate-500 text-white font-bold px-2 py-0.5 rounded-full text-[10px] shadow-md uppercase tracking-wider z-10 w-max sm:hidden">
-                                        2nd
-                                    </div>
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-500 text-white font-bold px-3 py-1 rounded-full text-xs shadow-md uppercase tracking-wider z-10 w-max hidden sm:block">
-                                        2nd Place
-                                    </div>
-                                    <CardContent className="p-0 flex flex-col items-center text-center justify-center w-full">
-                                        <Avatar className="size-14 sm:size-20 border-2 sm:border-4 border-slate-100 dark:border-slate-800 shadow-lg mb-1 sm:mb-3">
-                                            <AvatarImage src={podiumStudents[1].profiles?.avatar_url || undefined} className="object-cover" />
-                                            <AvatarFallback className="bg-slate-100 text-slate-600 font-bold text-xs">{podiumStudents[1].profiles?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate w-[100px] sm:w-full text-xs sm:text-base mb-0.5 sm:mb-1 px-2" title={podiumStudents[1].profiles?.full_name}>
-                                            {podiumStudents[1].profiles?.full_name || 'Unknown'}
-                                        </h3>
+                        <div className="flex flex-col items-center mt-[300px] sm:mt-[380px] mb-16 sm:mb-24">
 
-                                        <div className="text-lg sm:text-2xl font-black text-slate-700 dark:text-slate-300 leading-none">{podiumStudents[1].total_obtained}</div>
-                                        <div className="text-[8px] sm:text-xs font-bold text-slate-400 uppercase sm:hidden">{podiumStudents[1].completionTime}</div>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {/* 1st Place */}
-                            {podiumStudents[0] && (
-                                <Card className="order-1 sm:order-2 size-52 sm:size-auto sm:w-72 aspect-square sm:aspect-auto rounded-full sm:rounded-2xl border-4 border-yellow-500 shadow-2xl relative bg-white dark:bg-slate-900 overflow-visible z-20 transition-all sm:scale-105 mb-4 sm:mb-0 flex items-center justify-center">
-                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-white font-black px-3 py-1 rounded-full text-[10px] shadow-lg uppercase tracking-wider flex items-center gap-1 z-10 w-max sm:hidden">
-                                        <Trophy className="size-3 fill-white" /> 1st
+                            {/* Circular Podium - Exactly like image */}
+                            <div className="flex items-end justify-center w-full gap-4 sm:gap-12 px-4 relative font-sans">
+                                {/* 2nd Place */}
+                                {podiumStudents[1] && (
+                                    <div className="flex flex-col items-center group animate-in slide-in-from-left-8 duration-700 z-0">
+                                        <div className="relative mb-3 sm:mb-5">
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                                <Badge className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-none px-2 py-0.5 text-[8px] sm:text-[10px] font-black rounded-full shadow-lg flex items-center gap-1">
+                                                    <Trophy className="size-2.5 text-slate-400" /> 2ND
+                                                </Badge>
+                                            </div>
+                                            <div className="size-24 sm:size-36 rounded-full border-4 border-slate-300 dark:border-slate-700 p-0.5 shadow-[0_10px_40px_-15px_rgba(148,163,184,0.5)] bg-slate-900 overflow-hidden transition-all duration-500">
+                                                <Avatar className="size-full">
+                                                    <AvatarImage src={podiumStudents[1].profiles?.avatar_url || ''} className="object-cover" />
+                                                    <AvatarFallback className="bg-slate-800 text-slate-400 font-black text-xl">
+                                                        {podiumStudents[1].profiles?.full_name?.charAt(0) || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <h4 className="text-[10px] sm:text-base font-black text-slate-900 dark:text-white truncate max-w-[80px] sm:max-w-[120px] mb-0.5">
+                                                {podiumStudents[1].profiles?.full_name?.split(' ')[0]}
+                                            </h4>
+                                            <div className="text-xl sm:text-3xl font-black text-slate-600 dark:text-slate-400 leading-none">
+                                                {podiumStudents[1].total_obtained}
+                                            </div>
+                                            <p className="text-[7px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                {podiumStudents[1].completionTime}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-500 text-white font-black px-4 py-1.5 rounded-full text-sm shadow-lg uppercase tracking-wider flex items-center gap-2 z-10 w-max hidden sm:flex">
-                                        <Trophy className="size-4 fill-white" /> 1st Place
-                                    </div>
-                                    <CardContent className="p-0 flex flex-col items-center text-center justify-center w-full bg-gradient-to-b from-yellow-50/50 to-transparent dark:from-yellow-500/5 dark:to-transparent">
-                                        <Avatar className="size-16 sm:size-24 border-2 sm:border-4 border-yellow-100 dark:border-yellow-500/20 shadow-xl ring-2 sm:ring-4 ring-yellow-500/10 mb-1 sm:mb-4">
-                                            <AvatarImage src={podiumStudents[0].profiles?.avatar_url || undefined} className="object-cover" />
-                                            <AvatarFallback className="bg-yellow-100 text-yellow-700 font-bold text-sm">{podiumStudents[0].profiles?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate w-[120px] sm:w-full mb-0.5 sm:mb-1 px-2" title={podiumStudents[0].profiles?.full_name}>
-                                            {podiumStudents[0].profiles?.full_name || 'Unknown'}
-                                        </h3>
+                                )}
 
-                                        <div className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-1">{podiumStudents[0].total_obtained}</div>
-                                        <div className="text-[10px] sm:text-xs font-black text-yellow-600 dark:text-yellow-400 uppercase sm:hidden">{podiumStudents[0].completionTime}</div>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {/* 3rd Place */}
-                            {podiumStudents[2] && (
-                                <Card className="order-3 size-40 sm:size-auto sm:w-64 aspect-square sm:aspect-auto rounded-full sm:rounded-2xl border-2 border-amber-700 shadow-xl relative bg-white dark:bg-slate-900 overflow-visible transform hover:-translate-y-1 transition-transform duration-300 flex items-center justify-center">
-                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-bold px-2 py-0.5 rounded-full text-[10px] shadow-md uppercase tracking-wider z-10 w-max sm:hidden">
-                                        3rd
+                                {/* 1st Place */}
+                                {podiumStudents[0] && (
+                                    <div className="flex flex-col items-center group z-10 animate-in fade-in zoom-in duration-1000">
+                                        <div className="relative mb-4 sm:mb-6 scale-110 sm:scale-125">
+                                            <div className="absolute -inset-2 bg-yellow-500/20 rounded-full blur-2xl animate-pulse" />
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                                <Badge className="bg-yellow-500 text-white border-none px-3 py-1 text-[8px] sm:text-[10px] font-black rounded-full shadow-xl shadow-yellow-500/40 flex items-center gap-1">
+                                                    <Trophy className="size-3 fill-white" /> 1ST
+                                                </Badge>
+                                            </div>
+                                            <div className="size-28 sm:size-44 rounded-full border-[6px] border-yellow-500 p-1 shadow-[0_20px_50px_-20px_rgba(234,179,8,0.6)] bg-slate-900 overflow-hidden ring-8 ring-yellow-500/10 transition-all duration-500">
+                                                <Avatar className="size-full">
+                                                    <AvatarImage src={podiumStudents[0].profiles?.avatar_url || ''} className="object-cover" />
+                                                    <AvatarFallback className="bg-slate-800 text-yellow-500 font-black text-3xl">
+                                                        {podiumStudents[0].profiles?.full_name?.charAt(0) || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            </div>
+                                        </div>
+                                        <div className="text-center pt-2 sm:pt-4">
+                                            <h4 className="text-xs sm:text-xl font-black text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-[160px] mb-1">
+                                                {podiumStudents[0].profiles?.full_name?.split(' ')[0]}
+                                            </h4>
+                                            <div className="text-3xl sm:text-5xl font-black text-yellow-500 tracking-tighter leading-none mb-1">
+                                                {podiumStudents[0].total_obtained}
+                                            </div>
+                                            <p className="text-[9px] sm:text-xs font-black text-yellow-600 uppercase tracking-[0.2em] mb-4">
+                                                {podiumStudents[0].completionTime}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-bold px-3 py-1 rounded-full text-xs shadow-md uppercase tracking-wider z-10 w-max hidden sm:block">
-                                        3rd Place
-                                    </div>
-                                    <CardContent className="p-0 flex flex-col items-center text-center justify-center w-full">
-                                        <Avatar className="size-12 sm:size-20 border-2 sm:border-4 border-slate-100 dark:border-slate-800 shadow-lg mb-1 sm:mb-3">
-                                            <AvatarImage src={podiumStudents[2].profiles?.avatar_url || undefined} className="object-cover" />
-                                            <AvatarFallback className="bg-amber-50 text-amber-800 font-bold text-xs">{podiumStudents[2].profiles?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate w-[80px] sm:w-full text-xs sm:text-base mb-0.5 sm:mb-1 px-2" title={podiumStudents[2].profiles?.full_name}>
-                                            {podiumStudents[2].profiles?.full_name || 'Unknown'}
-                                        </h3>
+                                )}
 
-                                        <div className="text-base sm:text-2xl font-black text-slate-700 dark:text-slate-300 leading-none">{podiumStudents[2].total_obtained}</div>
-                                        <div className="text-[8px] sm:text-xs font-bold text-slate-400 uppercase sm:hidden">{podiumStudents[2].completionTime}</div>
-                                    </CardContent>
-                                </Card>
-                            )}
+                                {/* 3rd Place */}
+                                {podiumStudents[2] && (
+                                    <div className="flex flex-col items-center group animate-in slide-in-from-right-8 duration-700">
+                                        <div className="relative mb-3 sm:mb-5">
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                                <Badge className="bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border-none px-2 py-0.5 text-[8px] sm:text-[10px] font-black rounded-full shadow-lg flex items-center gap-1">
+                                                    <Trophy className="size-2.5 text-orange-600" /> 3RD
+                                                </Badge>
+                                            </div>
+                                            <div className="size-16 sm:size-32 rounded-full border-4 border-orange-700/50 p-0.5 shadow-[0_10px_40px_-15px_rgba(194,65,12,0.4)] bg-slate-900 overflow-hidden transition-all duration-500">
+                                                <Avatar className="size-full">
+                                                    <AvatarImage src={podiumStudents[2].profiles?.avatar_url || ''} className="object-cover" />
+                                                    <AvatarFallback className="bg-slate-800 text-orange-600 font-black text-lg">
+                                                        {podiumStudents[2].profiles?.full_name?.charAt(0) || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <h4 className="text-[10px] sm:text-base font-black text-slate-900 dark:text-white truncate max-w-[80px] sm:max-w-[120px] mb-0.5">
+                                                {podiumStudents[2].profiles?.full_name?.split(' ')[0]}
+                                            </h4>
+                                            <div className="text-lg sm:text-2xl font-black text-orange-700/80 leading-none">
+                                                {podiumStudents[2].total_obtained}
+                                            </div>
+                                            <p className="text-[7px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                {podiumStudents[2].completionTime}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

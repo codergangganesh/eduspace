@@ -16,11 +16,13 @@ import {
     MoreVertical,
     Download,
     AlertCircle,
-    Trophy,
-    Eye
+    Eye,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 import { format } from 'date-fns';
 import { formatFileSize, getFileExtension, getFileTypeDisplay } from '@/lib/fileUtils';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +34,13 @@ export default function AssignmentSubmissionsPage() {
     const { submissions, loading: submissionsLoading } = useAssignmentSubmissions(assignmentId!, classId!);
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState<'all' | 'submitted' | 'not_submitted'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+
+    // Reset to page 1 when search or filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filter]);
 
     // Fetch assignment details for the header
     const { data: assignment, isLoading: assignmentLoading } = useQuery({
@@ -78,37 +87,62 @@ export default function AssignmentSubmissionsPage() {
         });
     }, [submissions, searchQuery, filter]);
 
+    // Pagination Logic
+    const paginatedSubmissions = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredSubmissions.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredSubmissions, currentPage]);
+
+    const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredSubmissions.length);
+
     const getStatusBadge = (student: any) => {
-        switch (student.status) {
-            case 'graded':
-                return (
-                    <Badge variant="outline" className="bg-blue-50/50 text-blue-600 border-blue-200 gap-1.5 px-3 py-1 font-bold text-[10px] uppercase tracking-wider">
-                        <span className="size-1.5 rounded-full bg-blue-600" />
-                        GRADED ({student.grade || '0'}/100)
-                    </Badge>
-                );
-            case 'submitted':
-                return (
-                    <Badge variant="outline" className="bg-emerald-50/50 text-emerald-600 border-emerald-200 gap-1.5 px-3 py-1 font-bold text-[10px] uppercase tracking-wider">
-                        <span className="size-1.5 rounded-full bg-emerald-600" />
-                        ON TIME
-                    </Badge>
-                );
-            case 'returned': // Mapping 'returned' or 'late' 
-                return (
-                    <Badge variant="outline" className="bg-amber-50/50 text-amber-600 border-amber-200 gap-1.5 px-3 py-1 font-bold text-[10px] uppercase tracking-wider">
-                        <span className="size-1.5 rounded-full bg-amber-600" />
-                        LATE
-                    </Badge>
-                );
-            case 'pending':
-                return (
-                    <Badge variant="outline" className="bg-slate-50/50 text-slate-400 border-slate-200 gap-1.5 px-3 py-1 font-bold text-[10px] uppercase tracking-wider">
-                        <span className="size-1.5 rounded-full bg-slate-300" />
-                        NOT SUBMITTED
-                    </Badge>
-                );
-        }
+        const statusMap = {
+            graded: {
+                label: `GRADED (${student.grade || '0'}/100)`,
+                dot: "bg-blue-500",
+                bg: "bg-blue-500/10",
+                text: "text-blue-500",
+                border: "border-blue-500/20"
+            },
+            submitted: {
+                label: "ON TIME",
+                dot: "bg-emerald-500",
+                bg: "bg-emerald-500/10",
+                text: "text-emerald-500",
+                border: "border-emerald-500/20"
+            },
+            returned: {
+                label: "LATE",
+                dot: "bg-amber-500",
+                bg: "bg-amber-500/10",
+                text: "text-amber-500",
+                border: "border-amber-500/20"
+            },
+            pending: {
+                label: "NOT SUBMITTED",
+                dot: "bg-slate-400",
+                bg: "bg-slate-400/10",
+                text: "text-slate-400",
+                border: "border-slate-400/20"
+            }
+        };
+
+        const config = statusMap[student.status as keyof typeof statusMap] || statusMap.pending;
+
+        return (
+            <Badge
+                variant="outline"
+                className={cn(
+                    "gap-2 px-3 py-1.5 font-bold text-[10px] uppercase tracking-wider rounded-full border shadow-sm",
+                    config.bg, config.text, config.border
+                )}
+            >
+                <span className={cn("size-1.5 rounded-full shrink-0", config.dot)} />
+                {config.label}
+            </Badge>
+        );
     };
 
     if (submissionsLoading || assignmentLoading) {
@@ -144,56 +178,37 @@ export default function AssignmentSubmissionsPage() {
                             </p>
                         </div>
 
-                        {/* Stats Cards - Responsive Grid */}
-                        {/* Stats Cards - Premium Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 w-full lg:w-auto">
-                            <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group">
-                                <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                        <FileText className="size-12 sm:size-20 text-white" />
+                        <div className="grid grid-cols-2 gap-3 w-full lg:w-auto">
+                            <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-lg rounded-2xl overflow-hidden group">
+                                <CardContent className="p-3 flex items-center gap-2 relative">
+                                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+                                        <FileText className="size-10 text-white" />
                                     </div>
-                                    <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
-                                        <FileText className="size-5 sm:size-7 text-white" />
+                                    <div className="p-2 bg-white/10 rounded-xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                        <FileText className="size-4 text-white" />
                                     </div>
                                     <div className="relative z-10 min-w-0">
-                                        <p className="text-[10px] sm:text-xs text-blue-100/80 font-semibold uppercase tracking-wider truncate">
+                                        <p className="text-[10px] text-blue-100/80 font-semibold uppercase tracking-wider truncate">
                                             Total
                                         </p>
-                                        <p className="text-xl sm:text-3xl font-black text-white">{stats.total}</p>
+                                        <p className="text-xl font-black text-white">{stats.total}</p>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl rounded-2xl overflow-hidden group">
-                                <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                        <Clock className="size-12 sm:size-20 text-white" />
+                            <Card className="border-none bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg rounded-2xl overflow-hidden group">
+                                <CardContent className="p-3 flex items-center gap-2 relative">
+                                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+                                        <Clock className="size-10 text-white" />
                                     </div>
-                                    <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
-                                        <Clock className="size-5 sm:size-7 text-white" />
+                                    <div className="p-2 bg-white/10 rounded-xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
+                                        <Clock className="size-4 text-white" />
                                     </div>
                                     <div className="relative z-10 min-w-0">
-                                        <p className="text-[10px] sm:text-xs text-amber-100/80 font-semibold uppercase tracking-wider truncate">
+                                        <p className="text-[10px] text-amber-100/80 font-semibold uppercase tracking-wider truncate">
                                             Pending
                                         </p>
-                                        <p className="text-xl sm:text-3xl font-black text-white">{stats.pending}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-none bg-gradient-to-br from-violet-600 to-purple-700 shadow-xl rounded-2xl overflow-hidden group col-span-2 sm:col-span-1">
-                                <CardContent className="p-3 sm:p-5 flex items-center gap-2 sm:gap-5 relative">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                        <Trophy className="size-12 sm:size-20 text-white" />
-                                    </div>
-                                    <div className="p-2 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 relative z-10 backdrop-blur-sm shrink-0">
-                                        <Trophy className="size-5 sm:size-7 text-white" />
-                                    </div>
-                                    <div className="relative z-10 min-w-0">
-                                        <p className="text-[10px] sm:text-xs text-violet-100/80 font-semibold uppercase tracking-wider truncate">
-                                            Avg Score
-                                        </p>
-                                        <p className="text-xl sm:text-3xl font-black text-white">{stats.avgScore}%</p>
+                                        <p className="text-xl font-black text-white">{stats.pending}</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -201,30 +216,41 @@ export default function AssignmentSubmissionsPage() {
                     </div>
                 </div>
 
-                {/* Filter Bar */}
-                <div className="bg-card/50 p-1.5 rounded-2xl border border-border flex flex-col sm:flex-row gap-2 shadow-sm">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                {/* Filter Bar - Mockup Style */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="relative w-full md:w-[350px] group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input
                             placeholder="Search students..."
-                            className="pl-9 border-0 bg-transparent focus-visible:ring-0 text-sm sm:text-base h-10"
+                            className="h-12 pl-11 pr-4 bg-[#1a1625]/50 dark:bg-[#1a1625]/50 border-white/5 focus:border-primary/50 focus:ring-primary/20 rounded-xl text-sm font-medium transition-all"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
+
+                    <div className="flex items-center gap-1.5 bg-[#1a1625]/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5 w-full md:w-fit overflow-x-auto no-scrollbar ml-auto">
                         <Button
                             variant={filter === 'all' ? 'default' : 'ghost'}
                             size="sm"
-                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'all' ? "shadow-sm" : "text-muted-foreground")}
+                            className={cn(
+                                "flex-1 md:flex-none rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 md:px-6 h-9 transition-all shrink-0",
+                                filter === 'all'
+                                    ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 md:px-8"
+                                    : "text-slate-400 hover:text-slate-200"
+                            )}
                             onClick={() => setFilter('all')}
                         >
-                            All Students
+                            All
                         </Button>
                         <Button
                             variant={filter === 'submitted' ? 'default' : 'ghost'}
                             size="sm"
-                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'submitted' ? "bg-emerald-500 hover:bg-emerald-600 shadow-sm text-white" : "text-muted-foreground")}
+                            className={cn(
+                                "flex-1 md:flex-none rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 md:px-6 h-9 transition-all shrink-0",
+                                filter === 'submitted'
+                                    ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 md:px-8"
+                                    : "text-slate-400 hover:text-slate-200"
+                            )}
                             onClick={() => setFilter('submitted')}
                         >
                             Submitted
@@ -232,111 +258,171 @@ export default function AssignmentSubmissionsPage() {
                         <Button
                             variant={filter === 'not_submitted' ? 'default' : 'ghost'}
                             size="sm"
-                            className={cn("flex-1 sm:flex-none rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider h-8", filter === 'not_submitted' ? "bg-red-500 hover:bg-red-600 shadow-sm text-white" : "text-muted-foreground")}
+                            className={cn(
+                                "flex-1 md:flex-none rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 md:px-6 h-9 transition-all shrink-0",
+                                filter === 'not_submitted'
+                                    ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 md:px-8"
+                                    : "text-slate-400 hover:text-slate-200"
+                            )}
                             onClick={() => setFilter('not_submitted')}
                         >
-                            Not Submitted
+                            Pending
                         </Button>
                     </div>
                 </div>
 
-                {/* Submissions List */}
-                <div className="flex flex-col gap-3">
-                    {filteredSubmissions.map((student) => (
-                        <div key={student.student_id} className="flex flex-col sm:flex-row items-center gap-4 bg-card p-4 rounded-2xl sm:rounded-3xl border border-border shadow-sm hover:shadow-md transition-all group">
-                            {/* Student Info & Status Toggle for Mobile */}
-                            <div className="flex items-center justify-between w-full sm:w-auto sm:min-w-[200px] gap-4">
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="size-10 sm:size-12 border-2 border-border shadow-sm rounded-full overflow-hidden">
-                                        <AvatarImage
-                                            src={student.profile_image || undefined}
-                                            alt={student.student_name}
-                                            className="object-cover"
-                                        />
-                                        <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm font-bold w-full h-full flex items-center justify-center">
-                                            {student.student_name.substring(0, 2).toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <h4 className="font-bold text-sm sm:text-base text-foreground leading-tight truncate max-w-[150px]">{student.student_name}</h4>
-                                </div>
-                                <div className="sm:hidden">
-                                    {getStatusBadge(student)}
-                                </div>
-                            </div>
+                {/* Submissions List Container */}
+                <div className="bg-[#1a1625]/30 backdrop-blur-xl rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden flex flex-col">
+                    {/* Header Row - Desktop Only */}
+                    <div className="hidden md:grid md:grid-cols-[250px,1fr,200px,120px] gap-8 px-10 py-6 border-b border-white/5">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Student</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Submission</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-center">Status</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right">Actions</span>
+                    </div>
 
-                            {/* File Block */}
-                            <div className={cn(
-                                "flex-1 flex items-center gap-3 sm:gap-4 px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-2 transition-all w-full",
-                                student.file_url
-                                    ? "bg-slate-50 dark:bg-slate-900 border-border hover:border-primary/30"
-                                    : "bg-muted/10 border-border/50"
-                            )}>
-                                {student.file_url ? (
-                                    <>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs sm:text-sm font-bold text-foreground truncate">{student.file_name || "Assignment File"}</p>
-                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-0.5">
-                                                {getFileTypeDisplay(student.file_type) || "FILE"}
-                                                {student.file_size && ` • ${formatFileSize(student.file_size)}`}
-                                            </p>
+                    <div className="divide-y divide-white/5">
+                        {paginatedSubmissions.length > 0 ? (
+                            paginatedSubmissions.map((student) => (
+                                <div key={student.student_id} className="group">
+                                    {/* Desktop Row View */}
+                                    <div className="hidden md:grid md:grid-cols-[250px,1fr,200px,120px] items-center gap-8 px-10 py-6 hover:bg-white/[0.02] transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative">
+                                                <Avatar className="size-10 border-2 border-indigo-500/20 shadow-lg bg-indigo-500/10">
+                                                    <AvatarImage src={student.profile_image || undefined} />
+                                                    <AvatarFallback className="bg-transparent text-indigo-400 text-[10px] font-black line-height-none">
+                                                        {student.student_name.substring(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="absolute -bottom-0.5 -right-0.5 size-2.5 bg-emerald-500 border-2 border-[#1a1625] rounded-full" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="font-bold text-sm text-slate-100 truncate group-hover:text-indigo-400 transition-colors">{student.student_name}</h4>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                                                    {student.register_number || "711523BAD303"}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <a
-                                                href={student.file_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary shrink-0"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <Eye className="size-4 sm:size-5" />
-                                            </a>
-                                            <a
-                                                href={student.file_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                download
-                                                className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-primary shrink-0"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <Download className="size-4 sm:size-5" />
-                                            </a>
+
+                                        <div className="w-full">
+                                            {student.file_url ? (
+                                                <div className="inline-flex items-center gap-4 bg-white/[0.03] border border-white/5 hover:border-indigo-500/30 hover:bg-white/[0.05] p-3 rounded-xl transition-all max-w-sm w-full">
+                                                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                                                        <FileText className="size-4" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-slate-200 truncate">{student.file_name || "Assignment File.pdf"}</p>
+                                                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                                                            {student.file_type?.toUpperCase() || "PDF"} • {formatFileSize(student.file_size) || "114.9 KB"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.1em] italic">No Submission</span>
+                                            )}
                                         </div>
-                                    </>
-                                ) : student.submission_text ? (
-                                    <div className="flex-1 text-center">
-                                        <p className="text-xs font-bold text-slate-500 italic">Text Submission Only</p>
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="h-auto p-0 text-[10px] uppercase font-bold"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Ideally show in modal, but for now just acknowledge
-                                                alert(student.submission_text);
-                                            }}
-                                        >
-                                            View Text
-                                        </Button>
+
+                                        <div className="flex justify-center">
+                                            {getStatusBadge(student)}
+                                        </div>
+
+                                        <div className="flex items-center justify-end gap-3">
+                                            {student.file_url ? (
+                                                <>
+                                                    <Button variant="ghost" size="icon" className="size-8 rounded-lg hover:bg-white/5 text-slate-400 hover:text-indigo-400 transition-all" asChild>
+                                                        <a href={student.file_url} target="_blank" rel="noopener noreferrer">
+                                                            <Eye className="size-4" />
+                                                        </a>
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="size-8 rounded-lg hover:bg-white/5 text-slate-400 hover:text-indigo-400 transition-all" asChild>
+                                                        <a href={student.file_url} target="_blank" rel="noopener noreferrer" download>
+                                                            <Download className="size-4" />
+                                                        </a>
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <span className="text-[10px] font-black text-slate-700 tracking-wider">N/A</span>
+                                            )}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <p className="text-[10px] text-slate-400 italic font-bold uppercase tracking-wider w-full text-center">
-                                        {student.status === 'submitted' ? 'Submission content missing' : 'No Submission'}
-                                    </p>
-                                )}
-                            </div>
 
-                            {/* Status & Actions */}
-                            <div className="flex items-center gap-6 w-full sm:w-auto shrink-0 justify-end">
-                                <div className="hidden md:block">
-                                    {getStatusBadge(student)}
+                                    {/* Mobile Card View - Easy to use design */}
+                                    <div className="md:hidden p-5 flex flex-col gap-4 hover:bg-white/[0.02]">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="size-11 border-2 border-indigo-500/20">
+                                                    <AvatarFallback className="bg-indigo-500/10 text-indigo-400 text-xs font-black">
+                                                        {student.student_name.substring(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <h4 className="font-bold text-sm text-slate-100">{student.student_name}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-bold">{student.register_number}</p>
+                                                </div>
+                                            </div>
+                                            {getStatusBadge(student)}
+                                        </div>
+
+                                        {student.file_url ? (
+                                            <div className="bg-white/[0.03] border border-white/5 p-3 rounded-2xl flex items-center gap-3 active:scale-95 transition-transform">
+                                                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+                                                    <FileText className="size-5" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-slate-200 truncate">{student.file_name}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{student.file_type?.toUpperCase()} • {formatFileSize(student.file_size)}</p>
+                                                </div>
+                                                <div className="flex gap-1.5">
+                                                    <Button variant="ghost" size="icon" className="size-9 bg-white/5 rounded-full" asChild>
+                                                        <a href={student.file_url} target="_blank" rel="noopener noreferrer"><Download className="size-4" /></a>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-red-500/5 border border-red-500/10 p-3 rounded-2xl text-center">
+                                                <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">No Submission recorded</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="py-24 text-center">
+                                <AlertCircle className="size-10 text-slate-700 mx-auto mb-4" />
+                                <p className="text-sm font-bold text-slate-500">No students found matching your filters.</p>
+                            </div>
+                        )}
+                    </div>
 
+                    {/* Pagination Footer - Mockup Style */}
+                    <div className="px-10 py-6 border-t border-white/5 bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            Showing <span className="text-indigo-400">{filteredSubmissions.length === 0 ? 0 : startIndex + 1} - {endIndex}</span> of <span className="text-slate-300">{filteredSubmissions.length}</span> students
+                        </p>
+
+                        <div className="flex items-center gap-4">
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="size-10 rounded-xl border-white/5 bg-white/[0.03] text-slate-500 hover:text-white transition-all disabled:opacity-20 shadow-lg shadow-black/20"
+                                >
+                                    <ChevronLeft className="size-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage >= totalPages || totalPages === 0}
+                                    className="size-10 rounded-xl border-white/5 bg-white/[0.03] text-slate-500 hover:text-white transition-all disabled:opacity-20 shadow-lg shadow-black/20"
+                                >
+                                    <ChevronRight className="size-4" />
+                                </Button>
                             </div>
                         </div>
-                    ))}
-
-                    <div className="py-8 text-center text-muted-foreground text-sm font-medium">
-                        Showing <span className="text-foreground font-bold">{filteredSubmissions.length}</span> of <span className="text-foreground font-bold">{submissions.length}</span> students
                     </div>
                 </div>
             </div>

@@ -113,7 +113,7 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
                     Create Assignment
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto overflow-x-hidden w-[calc(100vw-2rem)] sm:w-auto">
                 <DialogHeader>
                     <DialogTitle>Create New Assignment</DialogTitle>
                     <DialogDescription>
@@ -195,16 +195,17 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
 
                     <div className="space-y-2">
                         <Label>Attachment *</Label>
-                        <Alert variant={file ? "default" : "destructive"} className="mb-2">
+                        {/* <Alert variant={file ? "default" : "destructive"} className="mb-2">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription>
                                 {file ? "File selected successfully" : "Attachment is mandatory. Please upload a file."}
                             </AlertDescription>
-                        </Alert>
-                        <div className="flex items-center gap-4">
+                        </Alert> */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="w-full sm:w-auto"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 <Upload className="size-4 mr-2" />
@@ -218,12 +219,12 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
                                 accept=".pdf,.doc,.docx,.txt,.zip,.rar"
                             />
                             {file && (
-                                <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-1 rounded-full">
-                                    <span className="truncate max-w-[200px]">{file.name}</span>
+                                <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-1.5 rounded-lg sm:rounded-full w-full sm:w-auto min-w-0 justify-between sm:justify-start">
+                                    <span className="truncate min-w-0 flex-1">{file.name}</span>
                                     <button
                                         type="button"
                                         onClick={() => setFile(null)}
-                                        className="text-muted-foreground hover:text-foreground"
+                                        className="text-muted-foreground hover:text-foreground flex-shrink-0"
                                     >
                                         <X className="size-3" />
                                     </button>

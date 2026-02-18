@@ -217,22 +217,22 @@ export function AssignmentCard({
 
     return (
         <Card className={cn(
-            "group relative overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all duration-500 w-full flex flex-col h-full rounded-[2rem] bg-white dark:bg-[#1a1625] text-slate-900 dark:text-white",
+            "group relative overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all duration-500 w-full flex flex-col h-full rounded-2xl bg-white dark:bg-[#1a1625] text-slate-900 dark:text-white",
             className
         )}>
-            {/* Header Section - Premium Gradient */}
-            <div className="relative h-28 bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 p-5 flex flex-col justify-between overflow-hidden">
+            {/* Header Section - Compact Gradient */}
+            <div className="relative h-16 bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 p-3 flex flex-col justify-between overflow-hidden">
                 {/* Decorative background circle */}
-                <div className="absolute -top-10 -right-10 size-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                <div className="absolute -top-6 -right-6 size-20 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
                 <div className="flex justify-between items-start relative z-10">
-                    <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md font-bold tracking-wider uppercase text-[9px] px-2.5 py-1.5 rounded-lg truncate max-w-[120px] shrink-0">
+                    <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md font-bold tracking-wider uppercase text-[8px] px-2 py-1 rounded-md truncate max-w-[90px] shrink-0">
                         {assignment.course_code || assignment.class_name || 'COURSE'}
                     </Badge>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                         {role === 'student' && (
-                            <Badge className={cn("border-none font-bold shadow-lg backdrop-blur-md px-3 py-1 rounded-lg text-[10px]", statusInfo.color)}>
+                            <Badge className={cn("border-none font-bold shadow-lg backdrop-blur-md px-2 py-0.5 rounded-md text-[8px]", statusInfo.color)}>
                                 {statusInfo.label}
                             </Badge>
                         )}
@@ -243,10 +243,10 @@ export function AssignmentCard({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-white hover:bg-white/20 hover:text-white rounded-full -mt-0.5 -mr-0.5"
+                                        className="h-6 w-6 text-white hover:bg-white/20 hover:text-white rounded-full -mt-0.5 -mr-0.5"
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <MoreVertical className="size-4" />
+                                        <MoreVertical className="size-3.5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="rounded-2xl p-2 shadow-2xl border-border">
@@ -275,122 +275,93 @@ export function AssignmentCard({
                 </div>
             </div>
 
-            {/* Content Body */}
-            <CardContent className="p-5 flex flex-col h-full gap-5 relative">
+            {/* Content Body - Compact */}
+            <CardContent className="p-3 flex flex-col h-full gap-3 relative">
                 {/* Title */}
                 <div>
-                    <h3 className="font-black text-lg md:text-xl leading-snug line-clamp-2 mb-3 text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors" title={assignment.title}>
+                    <h3 className="font-black text-sm leading-snug line-clamp-2 mb-2 text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors" title={assignment.title}>
                         {assignment.title}
                     </h3>
 
                     {/* Instructor / Subject Info */}
                     {(assignment.lecturer_name || assignment.subject_name) && (
-                        <div className="flex items-center gap-2.5">
-                            <div className="relative">
-                                <Avatar className="h-7 w-7 border-2 border-background shadow-md">
-                                    <AvatarImage src={assignment.instructor_avatar || ''} />
-                                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-[10px]">
-                                        {assignment.lecturer_name?.charAt(0) || 'L'}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="absolute -bottom-0.5 -right-0.5 size-2.5 bg-emerald-500 border-2 border-background rounded-full" />
-                            </div>
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 line-clamp-1">
-                                {assignment.lecturer_name}
-                                {assignment.subject_name && <span className="mx-1.5 opacity-30">|</span>}
-                                {assignment.subject_name}
+                        <div className="flex items-center gap-1.5">
+                            <Avatar className="h-5 w-5 border border-background shadow-sm shrink-0">
+                                <AvatarImage src={assignment.instructor_avatar || ''} />
+                                <AvatarFallback className="bg-primary/10 text-primary font-bold text-[8px]">
+                                    {assignment.lecturer_name?.charAt(0) || 'L'}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 line-clamp-1">
+                                {assignment.lecturer_name || assignment.subject_name}
                             </span>
                         </div>
                     )}
                 </div>
 
-                {/* Metrics Grid */}
-                <div className="grid grid-cols-1 gap-2.5">
-                    {/* Due Date - Premium Glossy Design */}
-                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5 shadow-inner group/date hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
-                        <div className="flex items-center gap-2.5">
-                            <div className="p-2 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                                <Calendar className="size-3.5" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Due Date</span>
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                    {assignment.due_date ? format(new Date(assignment.due_date), "MMM d, h:mm a") : "No Due Date"}
-                                </span>
-                            </div>
+                {/* Metrics - Compact stacked */}
+                <div className="flex flex-col gap-1.5">
+                    {/* Due Date */}
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5">
+                        <div className="p-1 rounded-lg bg-orange-500/10 text-orange-500 shrink-0">
+                            <Calendar className="size-3" />
                         </div>
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate">
+                            {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : "No Due Date"}
+                        </span>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex gap-1.5">
                         {/* Points */}
-                        <div className="flex-1 flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5 shadow-inner">
-                            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                <Trophy className="size-3.5" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Points</span>
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{assignment.points || 100}</span>
-                            </div>
+                        <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5">
+                            <Trophy className="size-3 text-amber-500 shrink-0" />
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{assignment.points || 100}</span>
                         </div>
 
-                        {/* Submission Info for Lecturers */}
+                        {/* Submissions for Lecturers */}
                         {role === 'lecturer' && (
-                            <div className="flex-1 flex items-center gap-2.5 p-3 rounded-2xl bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/10 shadow-inner">
-                                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                                    <Users className="size-3.5" />
-                                </div>
-                                <div className="flex flex-col text-right ml-auto">
-                                    <span className="text-[10px] font-black text-indigo-400 dark:text-indigo-500 uppercase tracking-widest leading-none mb-1">Submits</span>
-                                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                                        {assignment.submission_count || 0}/{assignment.total_students || 0}
-                                    </span>
-                                </div>
+                            <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/10">
+                                <Users className="size-3 text-indigo-500 shrink-0" />
+                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                                    {assignment.submission_count || 0}/{assignment.total_students || 0}
+                                </span>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Action Area */}
-                <div className="mt-auto pt-2">
+                {/* Action Button - Compact */}
+                <div className="mt-auto">
                     {role === 'student' ? (
-                        <div className="flex flex-col gap-2">
-                            <Button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSubmit?.(assignment);
-                                }}
-                                className={cn(
-                                    "w-full rounded-2xl font-black text-sm h-12 shadow-xl border-none transition-all hover:scale-[1.02] active:scale-95",
-                                    isOverdue && !isSubmitted
-                                        ? "bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-red-500/20"
-                                        : isSubmitted
-                                            ? "bg-white dark:bg-white/5 text-slate-700 dark:text-white border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10"
-                                            : "bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-indigo-500/20"
-                                )}
-                            >
-                                {isSubmitted ? (
-                                    <>
-                                        <Eye className="size-4 mr-2" />
-                                        View Assignment
-                                    </>
-                                ) : (
-                                    <>
-                                        <UploadCloud className="size-4 mr-2" />
-                                        {isOverdue ? 'Submit Late' : 'Submit Now'}
-                                    </>
-                                )}
-                            </Button>
-                        </div>
+                        <Button
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSubmit?.(assignment);
+                            }}
+                            className={cn(
+                                "w-full rounded-xl font-bold text-xs h-8 shadow border-none transition-all hover:scale-[1.02] active:scale-95",
+                                isOverdue && !isSubmitted
+                                    ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
+                                    : isSubmitted
+                                        ? "bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white"
+                                        : "bg-gradient-to-r from-indigo-600 to-violet-700 text-white"
+                            )}
+                        >
+                            {isSubmitted ? <Eye className="size-3 mr-1" /> : <UploadCloud className="size-3 mr-1" />}
+                            {isSubmitted ? 'View' : (isOverdue ? 'Late Submit' : 'Submit')}
+                        </Button>
                     ) : (
                         <Button
+                            size="sm"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onView?.(assignment.id);
                             }}
-                            className="w-full rounded-2xl font-bold bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 hover:border-primary/30 shadow-md h-12 transition-all flex items-center justify-center gap-2"
+                            className="w-full rounded-xl font-bold text-xs h-8 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 shadow transition-all flex items-center justify-center gap-1"
                         >
-                            <Eye className="size-4" />
-                            {role === 'lecturer' ? 'Review Submissions' : 'All Details'}
+                            <Eye className="size-3" />
+                            Review
                         </Button>
                     )}
                 </div>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -53,7 +54,7 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const location = useLocation();
-  const { role, signOut } = useAuth();
+  const { role, signOut, profile } = useAuth();
 
   const navItems = role === "lecturer" ? lecturerNavItems : studentNavItems;
 
@@ -110,7 +111,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                     isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   )}
                 >
@@ -121,18 +122,36 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             })}
           </nav>
 
-          {/* Sign Out */}
-          {/* Sign Out */}
-          <button
-            onClick={() => {
-              signOut();
-              onClose();
-            }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full"
-          >
-            <LogOut className="size-5" />
-            <span>Sign Out</span>
-          </button>
+          {/* Footer Section */}
+          <div className="mt-auto pt-6 border-t border-border flex flex-col gap-2">
+            <button
+              onClick={() => {
+                signOut();
+                onClose();
+              }}
+              className="flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-black bg-red-600 text-white hover:bg-red-700 transition-all w-full active:scale-[0.98] shadow-lg shadow-red-600/20"
+            >
+              <LogOut className="size-5" />
+              <span>Sign Out</span>
+            </button>
+
+            <div className="flex items-center gap-3 px-3 py-3 mt-2 bg-secondary/30 rounded-2xl border border-border/50">
+              <Avatar className="size-10 border border-border/50 shadow-sm">
+                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                  {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-black text-foreground truncate">
+                  {profile?.full_name || 'User'}
+                </span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
+                  {role}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </>

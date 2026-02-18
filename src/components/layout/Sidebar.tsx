@@ -86,7 +86,6 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   const { signOut, role } = useAuth();
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
   const [showControls, setShowControls] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Fetch students ONLY if user is a lecturer
   const { students } = useLecturerStudents();
@@ -100,17 +99,11 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   };
 
   const handleToggle = () => {
-    let msg = "";
     if (mode === 'expanded') {
       setMode('collapsed');
-      msg = "Slim View";
     } else {
       setMode('expanded');
-      msg = "Wide View";
     }
-
-    setStatusMessage(msg);
-    setTimeout(() => setStatusMessage(null), 2000);
   };
 
   const dashboardPath = isLecturer ? "/lecturer-dashboard" : "/dashboard";
@@ -125,15 +118,40 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
       <div className="flex flex-col h-full p-4 justify-between overflow-y-auto custom-scrollbar">
         <div className="flex flex-col gap-8">
           {/* Logo/Brand */}
-          <div className="flex items-center px-3">
-            <Link to={dashboardPath} className="flex items-center gap-3">
-              <div className="size-8 rounded-lg overflow-hidden shrink-0 border border-border">
-                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
-              </div>
-              {!isCollapsed && (
-                <span className="text-xl font-bold tracking-tight">Eduspace</span>
+          <div className={cn(
+            "relative flex transition-all duration-300 px-3 group/header",
+            isCollapsed ? "justify-center" : "items-center justify-between"
+          )}>
+            <div className="relative group/logo">
+              <Link to={dashboardPath} className="flex items-center gap-3">
+                <div className="size-8 rounded-lg overflow-hidden shrink-0 border border-border shadow-sm transition-all duration-300 group-hover/logo:scale-95 group-hover/logo:opacity-40">
+                  <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                </div>
+                {!isCollapsed && (
+                  <span className="text-xl font-bold tracking-tight">Eduspace</span>
+                )}
+              </Link>
+
+              {isCollapsed && (
+                <button
+                  onClick={handleToggle}
+                  className="absolute inset-0 flex items-center justify-center bg-primary opacity-0 group-hover/logo:opacity-100 pointer-events-none group-hover/logo:pointer-events-auto transition-all duration-200 rounded-lg z-10"
+                  title="Expand Sidebar"
+                >
+                  <ChevronRight className="size-5 text-primary-foreground" />
+                </button>
               )}
-            </Link>
+            </div>
+
+            {!isCollapsed && (
+              <button
+                onClick={handleToggle}
+                className="p-1.5 rounded-lg border border-border bg-background/50 opacity-0 group-hover/header:opacity-100 hover:bg-secondary text-primary transition-all shadow-sm"
+                title="Collapse Sidebar"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+            )}
           </div>
 
           {/* Navigation */}
@@ -263,7 +281,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full group"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-all w-full group shadow-md shadow-red-600/20 active:scale-[0.98]"
                 >
                   <LogOut className="size-5 shrink-0 group-hover:scale-110 transition-transform duration-200" />
                   {!isCollapsed && <span>Sign Out</span>}
@@ -277,44 +295,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
             </Tooltip>
           </TooltipProvider>
 
-          <div className="mt-2 border-t border-border pt-4 relative">
-            {statusMessage && (
-              <div className="absolute -top-6 left-0 w-full flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <span className="bg-primary/90 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg backdrop-blur-sm">
-                  {statusMessage}
-                </span>
-              </div>
-            )}
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleToggle}
-                    className={cn(
-                      "flex items-center px-3 py-2.5 rounded-xl transition-all w-full group hover:bg-secondary/50",
-                      isCollapsed ? "justify-center" : "justify-end bg-secondary/30"
-                    )}
-                  >
-                    <div className={cn(
-                      "p-1.5 rounded-lg bg-background border border-border group-hover:border-primary/30 transition-colors shadow-sm",
-                      isCollapsed && "border-primary/20"
-                    )}>
-                      {isCollapsed ? (
-                        <ChevronRight className="size-4 text-primary" />
-                      ) : (
-                        <ChevronLeft className="size-4 text-primary" />
-                      )}
-                    </div>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium text-xs">
-                  {mode === 'expanded'
-                    ? "Currently: Wide View (Click for Slim View)"
-                    : "Currently: Slim View (Click for Wide View)"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+
         </div>
       </div>
     </aside>
