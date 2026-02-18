@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://eduspace-five.vercel.app/</loc>
+    <loc>https://eduspaceacademy.online/</loc>
     <lastmod>2024-02-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://eduspace-five.vercel.app/student/login</loc>
+    <loc>https://eduspaceacademy.online/student/login</loc>
     <lastmod>2024-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://eduspace-five.vercel.app/lecturer/login</loc>
+    <loc>https://eduspaceacademy.online/lecturer/login</loc>
     <lastmod>2024-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://eduspace-five.vercel.app/student/register</loc>
+    <loc>https://eduspaceacademy.online/student/register</loc>
     <lastmod>2024-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://eduspace-five.vercel.app/lecturer/register</loc>
+    <loc>https://eduspaceacademy.online/lecturer/register</loc>
     <lastmod>2024-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

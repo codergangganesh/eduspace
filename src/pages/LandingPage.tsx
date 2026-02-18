@@ -159,6 +159,66 @@ export default function LandingPage() {
             <SEO
                 title="Home | Modern Learning Management System"
                 description="EduSpace is a powerful learning management system for students and lecturers. Track progress, manage assignments, and enhance your learning journey."
+                keywords={["LMS", "Learning Management System", "Education", "Student", "Lecturer", "Assignments", "Grades", "GPA Tracker", "Online Learning", "Eduspace"]}
+                structuredData={[
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "SoftwareApplication",
+                        "name": "Eduspace Academy",
+                        "applicationCategory": "EducationalApplication",
+                        "operatingSystem": "Web",
+                        "offers": {
+                            "@type": "Offer",
+                            "price": "0",
+                            "priceCurrency": "USD"
+                        },
+                        "description": "Eduspace is a state-of-the-art learning management system designed to empower students and lecturers with AI-driven tools, seamless collaboration, and efficient course management.",
+                        "featureList": [
+                            "Course Management",
+                            "Assignment Tracking",
+                            "Advanced Analytics",
+                            "Class Collaboration",
+                            "Smart Notifications",
+                            "Secure & Private"
+                        ],
+                        "screenshot": "https://eduspaceacademy.online/og-image.png",
+                        "author": {
+                            "@type": "Organization",
+                            "name": "Eduspace Team",
+                            "url": "https://eduspaceacademy.online"
+                        }
+                    },
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "WebSite",
+                        "name": "Eduspace Academy",
+                        "url": "https://eduspaceacademy.online",
+                        "potentialAction": {
+                            "@type": "SearchAction",
+                            "target": "https://eduspaceacademy.online/search?q={search_term_string}",
+                            "query-input": "required name=search_term_string"
+                        }
+                    },
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "Organization",
+                        "name": "Eduspace Academy",
+                        "url": "https://eduspaceacademy.online",
+                        "logo": "https://eduspaceacademy.online/favicon.png",
+                        "contactPoint": {
+                            "@type": "ContactPoint",
+                            "telephone": "+91-7670895485",
+                            "contactType": "customer service",
+                            "areaServed": "IN",
+                            "availableLanguage": "en"
+                        },
+                        "sameAs": [
+                            "https://x.com/Ganeshbabu_13",
+                            "https://www.linkedin.com/in/mannam-ganeshbabu-5a19ab291/",
+                            "https://github.com/codergangganesh"
+                        ]
+                    }
+                ]}
             />
             <AnoAI />
             <canvas

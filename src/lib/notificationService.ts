@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Helper to trigger class email via Edge Function
  */
-const BASE_URL = "https://eduspace-five.vercel.app";
+const BASE_URL = "https://eduspaceacademy.online";
 
 async function sendClassEmail(params: {
     classId: string;

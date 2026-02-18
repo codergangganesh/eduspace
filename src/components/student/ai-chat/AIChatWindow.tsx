@@ -134,10 +134,10 @@ export default function AIChatWindow() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data } = await supabase
-                    .from('profiles')
+                    .from('public_profiles')
                     .select('full_name, avatar_url, role')
                     .eq('user_id', user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (data) setUserProfile(data);
             }

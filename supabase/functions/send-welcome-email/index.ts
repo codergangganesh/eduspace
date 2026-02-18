@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
 
-    const appUrl = "https://eduspace-five.vercel.app";
+    const appUrl = "https://eduspaceacademy.online";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
@@ -63,9 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("SMTP Transporter configured");
 
     const mailOptions = {
-      from: `"EduSpace Support" <${smtpUser}>`,
+      from: `"Eduspace Academy Support" <${smtpUser}>`,
       to: email,
-      subject: "Welcome to EduSpace!",
+      subject: "Welcome to Eduspace Academy!",
       html: `
         <!DOCTYPE html>
         <html>
@@ -85,13 +85,13 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Welcome to EduSpace!</h1>
+              <h1>Welcome to Eduspace Academy!</h1>
             </div>
             <div class="content">
               <h2>Hello ${fullName},</h2>
               <p>We are thrilled to have you join our academic community as a <strong>${role}</strong>!</p>
               
-              <p>EduSpace is designed to streamline your educational journey. Here are some of the key features you can explore:</p>
+              <p>Eduspace Academy is designed to streamline your educational journey. Here are some of the key features you can explore:</p>
               
               <ul class="feature-list">
                 <li><strong>Class Management:</strong> Organize and access all your courses in one place.</li>
@@ -106,10 +106,10 @@ const handler = async (req: Request): Promise<Response> => {
                 <a href="${appUrl}${role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'}" class="button" style="color: white;">Get Started</a>
               </center>
               <p>If you have any questions, our support team is always here to help.</p>
-              <p>Best regards,<br>The EduSpace Team</p>
+              <p>Best regards,<br>The Eduspace Academy Team</p>
             </div>
             <div class="footer">
-              &copy; ${new Date().getFullYear()} EduSpace. All rights reserved.<br>
+              &copy; ${new Date().getFullYear()} Eduspace Academy. All rights reserved.<br>
               <a href="#" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> | <a href="#" style="color: #64748b; text-decoration: underline;">Terms of Service</a>
             </div>
           </div>

@@ -16,4 +16,4 @@ Disallow: /profile/
 Disallow: /auth/callback
 
 # Sitemaps
-Sitemap: https://eduspace-five.vercel.app/sitemap.xml
+Sitemap: https://eduspaceacademy.online/sitemap.xml

@@ -88,7 +88,7 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
             });
 
             const link = document.createElement('a');
-            link.download = `eduspace-streak-${details.level}-days.png`;
+            link.download = `eduspace-academy-streak-${details.level}-days.png`;
             link.href = dataUrl;
             link.click();
 
@@ -114,12 +114,12 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
         }
 
         const shareUrl = `${window.location.origin}/badge/${profile.user_id}?badge=${type}`;
-        const shareMessage = `I just reached a ${details.level} Days Academic Streak on EduSpace! Check out my live achievement: ${shareUrl}`;
+        const shareMessage = `I just reached a ${details.level} Days Academic Streak on Eduspace Academy! Check out my live achievement: ${shareUrl}`;
 
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: `Academic Achievement | Eduspace`,
+                    title: `Academic Achievement | Eduspace Academy`,
                     text: shareMessage,
                     url: shareUrl,
                 });
@@ -382,14 +382,14 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
                                                         </div>
                                                         <div className="flex flex-col items-center">
                                                             <span className="text-sm sm:text-xl lg:text-2xl font-black tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 uppercase">
-                                                                Eduspace
+                                                                Eduspace Academy
                                                             </span>
                                                             <div className="h-px w-6 sm:w-12 bg-white/20 mt-1 sm:mt-2" />
                                                             <span className="text-[6px] sm:text-[9px] font-black tracking-[0.4em] text-white/30 uppercase mt-1 sm:mt-2">
                                                                 Official Badge
                                                             </span>
                                                             <span className="text-[5px] sm:text-[6px] font-black tracking-[0.2em] text-white/10 uppercase mt-2 sm:mt-4">
-                                                                eduspace-five.vercel.app
+                                                                eduspaceacademy.online
                                                             </span>
                                                         </div>
                                                     </div>
@@ -411,7 +411,7 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
                                             ACADEMIC CONSISTENCY • {details.level}+ DAYS STREAK
                                         </p>
                                         <p className="text-[6px] font-medium tracking-[0.2em] text-white/30">
-                                            eduspace-five.vercel.app
+                                            eduspaceacademy.online
                                         </p>
                                     </div>
                                 </div>
@@ -471,11 +471,11 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
 
                                         <div className="flex items-center gap-3">
                                             <div className="flex flex-col items-end">
-                                                <span className="font-black text-lg sm:text-xl tracking-tight text-white/90 leading-none">EduSpace</span>
+                                                <span className="font-black text-lg sm:text-xl tracking-tight text-white/90 leading-none">Eduspace Academy</span>
                                                 <span className="text-[8px] font-black tracking-widest text-[#d4af37] uppercase mt-1">Academic Pride</span>
                                             </div>
                                             <div className="size-10 sm:size-12 rounded-2xl bg-white/5 border border-white/10 p-2 flex items-center justify-center shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] backdrop-blur-md">
-                                                <img src="/favicon.png" alt="EduSpace Logo" className="size-full object-contain" />
+                                                <img src="/favicon.png" alt="Eduspace Academy Logo" className="size-full object-contain" />
                                             </div>
                                         </div>
                                     </div>

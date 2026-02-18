@@ -361,7 +361,7 @@ serve(async (req: Request) => {
         const supabaseKey = DenoEnv?.get('SUPABASE_SERVICE_ROLE_KEY') || '';
         const vapidPublicKey = DenoEnv?.get('VITE_VAPID_PUBLIC_KEY');
         const vapidPrivateKey = DenoEnv?.get('VAPID_PRIVATE_KEY');
-        const subject = 'mailto:admin@eduspace.com';
+        const subject = 'mailto:admin@eduspaceacademy.online';
 
         if (!vapidPublicKey || !vapidPrivateKey) {
             throw new Error("VAPID keys are missing in environment variables.");

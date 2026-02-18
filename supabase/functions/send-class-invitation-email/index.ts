@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
-    const appUrl = "https://eduspace-five.vercel.app";
+    const appUrl = "https://eduspaceacademy.online";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
@@ -81,9 +81,9 @@ const handler = async (req: Request): Promise<Response> => {
     const classDetailsText = classDetails.length > 0 ? ` (${classDetails.join(' • ')})` : '';
 
     const mailOptions = {
-      from: `"EduSpace - ${lecturerName}" <${smtpUser}>`,
+      from: `"Eduspace Academy - ${lecturerName}" <${smtpUser}>`,
       to: studentEmail,
-      subject: `You've Been Invited to Join ${courseCode} on EduSpace`,
+      subject: `You've Been Invited to Join ${courseCode} on Eduspace Academy`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             <div class="content">
               <h2>Hello ${studentName},</h2>
-              <p>Great news! <strong>${lecturerName}</strong> has invited you to join their class on <strong>EduSpace</strong>.</p>
+              <p>Great news! <strong>${lecturerName}</strong> has invited you to join their class on <strong>Eduspace Academy</strong>.</p>
               
               <div class="class-card">
                 <h2>${courseCode}</h2>
@@ -139,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
 
               <p>To accept this invitation and access your class materials, you'll need to:</p>
               <ol style="line-height: 1.8;">
-                <li>Create your <span class="highlight">EduSpace account</span> (if you haven't already)</li>
+                <li>Create your <span class="highlight">Eduspace Academy account</span> (if you haven't already)</li>
                 <li>Log in with this email address: <strong>${studentEmail}</strong></li>
                 <li>Accept the pending class invitation from your dashboard</li>
               </ol>
@@ -164,10 +164,10 @@ const handler = async (req: Request): Promise<Response> => {
               
               <p>If you have any questions, please contact ${lecturerName} directly.</p>
               
-              <p>Best regards,<br>The EduSpace Team</p>
+              <p>Best regards,<br>The Eduspace Academy Team</p>
             </div>
             <div class="footer">
-              &copy; ${new Date().getFullYear()} EduSpace. All rights reserved.<br>
+              &copy; ${new Date().getFullYear()} Eduspace Academy. All rights reserved.<br>
               <a href="#" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> | <a href="#" style="color: #64748b; text-decoration: underline;">Terms of Service</a>
             </div>
           </div>

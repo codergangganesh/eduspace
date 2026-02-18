@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Eduspace Learning Management System',
-        short_name: 'Eduspace',
+        name: 'Eduspace Academy Learning Management System',
+        short_name: 'Eduspace Academy',
         description: 'A modern learning management system for students and lecturers',
         theme_color: '#ffffff',
         background_color: '#ffffff',

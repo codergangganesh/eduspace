@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+import SEO from "@/components/SEO";
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -15,6 +17,7 @@ export default function ForgotPassword() {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // ... (rest of the function)
     e.preventDefault();
 
     if (!email) {
@@ -88,6 +91,11 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden">
+      <SEO
+        title="Forgot Password"
+        description="Reset your Eduspace password. Enter your email to receive password reset instructions."
+        keywords={["Forgot Password", "Reset Password", "EduSpace Account Recovery"]}
+      />
       <AuthHeader />
 
       <main className="flex-1 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">

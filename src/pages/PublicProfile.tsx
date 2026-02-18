@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { BadgeType, BADGE_DETAILS } from "@/services/streakService";
 import { StreakBadgeDetailModal } from "@/components/streak/StreakBadgeDetailModal";
+import SEO from "@/components/SEO";
 
 const IconMap: Record<string, any> = {
     Trophy, Medal, Award, Zap, Crown, Sparkles, Shield, Sword, Gem, Infinity: InfinityIcon
@@ -136,6 +137,20 @@ export default function PublicProfile() {
 
     return (
         <div className="h-screen w-full overflow-hidden bg-slate-50 dark:bg-[#050b14] text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 transition-colors duration-300 flex flex-col items-center">
+            <SEO
+                title={profile ? `${profile.full_name} | Academic Profile` : "Public Profile"}
+                description={profile?.bio || "View this student's academic profile and achievements on Eduspace Academy."}
+                ogImage={profile?.avatar_url || "/og-image.png"}
+                keywords={["Student Profile", "Academic Portfolio", "Eduspace Profile", "Student Achievements"]}
+                structuredData={profile ? {
+                    "@context": "https://schema.org",
+                    "@type": "Person",
+                    "name": profile.full_name,
+                    "description": profile.bio,
+                    "image": profile.avatar_url,
+                    "url": window.location.href
+                } : undefined}
+            />
 
             {/* Background spotlight for badge view */}
             {isBadgeView && (

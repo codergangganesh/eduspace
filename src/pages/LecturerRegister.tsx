@@ -80,6 +80,22 @@ export default function LecturerRegister() {
             <SEO
                 title="Lecturer Registration"
                 description="Join EduSpace and start teaching. Create a lecturer account to manage classes, assignments, and track student success."
+                keywords={["Lecturer Registration", "Teacher Sign Up", "EduSpace for Lecturers", "LMS for Teachers", "Online Teaching Platform"]}
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [{
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://eduspaceacademy.online"
+                    }, {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Lecturer Registration",
+                        "item": "https://eduspaceacademy.online/lecturer/register"
+                    }]
+                }}
             />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}

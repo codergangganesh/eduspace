@@ -76,14 +76,14 @@ export function TermsDialog({ open, onOpenChange, onAgree, showAgreeButton = fal
                             <strong>Last Updated:</strong> January 2, 2026
                         </p>
                         <p className="text-muted-foreground">
-                            Welcome to EduSpace. By accessing or using our platform, you agree to be bound by these Terms and Conditions. Please read them carefully before using our services.
+                            Welcome to Eduspace Academy. By accessing or using our platform, you agree to be bound by these Terms and Conditions. Please read them carefully before using our services.
                         </p>
                     </div>
 
                     <div>
                         <h3 className="text-lg font-semibold mb-2 text-foreground">1. Acceptance of Terms</h3>
                         <p>
-                            By creating an account or using EduSpace, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions, as well as our Privacy Policy. If you do not agree, please do not use our platform.
+                            By creating an account or using Eduspace Academy, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions, as well as our Privacy Policy. If you do not agree, please do not use our platform.
                         </p>
                     </div>
 
@@ -124,7 +124,7 @@ export function TermsDialog({ open, onOpenChange, onAgree, showAgreeButton = fal
                     <div>
                         <h3 className="text-lg font-semibold mb-2 text-foreground">4. Intellectual Property</h3>
                         <div className="space-y-2">
-                            <p><strong>Platform Content:</strong> All content, features, and functionality of EduSpace are owned by us and protected by copyright, trademark, and other intellectual property laws.</p>
+                            <p><strong>Platform Content:</strong> All content, features, and functionality of Eduspace Academy are owned by us and protected by copyright, trademark, and other intellectual property laws.</p>
                             <p><strong>User Content:</strong> You retain ownership of content you upload but grant us a license to use, store, and display it as necessary to provide our services.</p>
                             <p><strong>Course Materials:</strong> Course content belongs to the respective lecturers and institutions. Unauthorized distribution is prohibited.</p>
                         </div>
@@ -168,7 +168,7 @@ export function TermsDialog({ open, onOpenChange, onAgree, showAgreeButton = fal
                     <div>
                         <h3 className="text-lg font-semibold mb-2 text-foreground">9. Indemnification</h3>
                         <p>
-                            You agree to indemnify and hold harmless EduSpace from any claims, damages, or expenses arising from your use of the platform or violation of these terms.
+                            You agree to indemnify and hold harmless Eduspace Academy from any claims, damages, or expenses arising from your use of the platform or violation of these terms.
                         </p>
                     </div>
 
@@ -182,7 +182,7 @@ export function TermsDialog({ open, onOpenChange, onAgree, showAgreeButton = fal
                     <div>
                         <h3 className="text-lg font-semibold mb-2 text-foreground">11. Governing Law</h3>
                         <p>
-                            These Terms are governed by the laws of the jurisdiction where EduSpace operates. Any disputes shall be resolved in the courts of that jurisdiction.
+                            These Terms are governed by the laws of the jurisdiction where Eduspace Academy operates. Any disputes shall be resolved in the courts of that jurisdiction.
                         </p>
                     </div>
 

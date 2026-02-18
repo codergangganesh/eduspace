@@ -267,7 +267,7 @@ export function AIChatInput({ onSendMessage, isLoading }: AIChatInputProps) {
             </div>
             <div className="flex items-center justify-end mt-2 px-4 text-right">
                 <p className="text-[10px] font-semibold text-muted-foreground/60 tracking-tight uppercase">
-                    EduSpace AI
+                    Eduspace Academy AI
                 </p>
             </div>
         </form>

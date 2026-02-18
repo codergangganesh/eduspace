@@ -48,6 +48,22 @@ export default function LecturerLogin() {
             <SEO
                 title="Lecturer Login"
                 description="Log in to your EduSpace lecturer account to manage classes, assignments, and track student performance."
+                keywords={["Lecturer Login", "EduSpace Lecturer", "Teacher Login", "LMS Admin", "Class Management"]}
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [{
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://eduspaceacademy.online"
+                    }, {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Lecturer Login",
+                        "item": "https://eduspaceacademy.online/lecturer/login"
+                    }]
+                }}
             />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}

@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
-    const appUrl = "https://eduspace-five.vercel.app";
+    const appUrl = "https://eduspaceacademy.online";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
@@ -63,9 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("SMTP Transporter configured");
 
     const mailOptions = {
-      from: `"EduSpace Support" <${smtpUser}>`,
+      from: `"Eduspace Academy Support" <${smtpUser}>`,
       to: inviteeEmail,
-      subject: `You're Invited to Join EduSpace by ${lecturerName}`,
+      subject: `You're Invited to Join Eduspace Academy by ${lecturerName}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -87,11 +87,11 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>You're Invited to EduSpace!</h1>
+              <h1>You're Invited to Eduspace Academy!</h1>
             </div>
             <div class="content">
               <h2>Hello!</h2>
-              <p><strong>${lecturerName}</strong> has invited you to join <strong>EduSpace</strong>, a comprehensive academic platform designed to streamline your educational journey.</p>
+              <p><strong>${lecturerName}</strong> has invited you to join <strong>Eduspace Academy</strong>, a comprehensive academic platform designed to streamline your educational journey.</p>
               
               <div class="sender-info">
                 <strong>Invited by:</strong> ${lecturerName}<br>
@@ -105,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               ` : ''}
 
-              <p>EduSpace provides powerful tools to help you succeed:</p>
+              <p>Eduspace Academy provides powerful tools to help you succeed:</p>
               
               <ul class="feature-list">
                 <li><strong>Class Management:</strong> Organize and access all your courses in one place.</li>
@@ -115,18 +115,18 @@ const handler = async (req: Request): Promise<Response> => {
                 <li><strong>Notifications:</strong> Stay updated with important announcements and alerts.</li>
               </ul>
 
-              <p>Ready to get started? Click the button below to create your account and join the EduSpace community!</p>
+              <p>Ready to get started? Click the button below to create your account and join the Eduspace Academy community!</p>
               
               <center>
-                <a href="https://eduspace-five.vercel.app" class="button" style="color: white;">Get Started</a>
+                <a href="https://eduspaceacademy.online" class="button" style="color: white;">Get Started</a>
               </center>
 
               <p style="margin-top: 30px; font-size: 14px; color: #64748b;">If you have any questions, feel free to reach out to ${lecturerName} at ${lecturerEmail} or contact our support team.</p>
               
-              <p>Best regards,<br>The EduSpace Team</p>
+              <p>Best regards,<br>The Eduspace Academy Team</p>
             </div>
             <div class="footer">
-              &copy; ${new Date().getFullYear()} EduSpace. All rights reserved.<br>
+              &copy; ${new Date().getFullYear()} Eduspace Academy. All rights reserved.<br>
               <a href="#" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> | <a href="#" style="color: #64748b; text-decoration: underline;">Terms of Service</a>
             </div>
           </div>

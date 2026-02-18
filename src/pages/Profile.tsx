@@ -285,7 +285,7 @@ export default function Profile() {
       toast.error("Profile ID not found. Please refresh and try again.");
       return;
     }
-    const profileUrl = `https://eduspace-five.vercel.app/p/${profile.user_id}`;
+    const profileUrl = `https://eduspaceacademy.online/p/${profile.user_id}`;
 
     if (navigator.share) {
       try {
@@ -1117,7 +1117,7 @@ export default function Profile() {
                     <span className="font-bold tracking-wide text-xs uppercase">Download Official PDF</span>
                   </Button>
                 </div>
-                
+
                 {/* Visit Public Profile Link */}
                 <div className="mt-4 text-center">
                   <button

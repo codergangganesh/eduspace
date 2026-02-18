@@ -102,6 +102,22 @@ export default function StudentRegister() {
             <SEO
                 title="Student Registration"
                 description="Join EduSpace and start your learning journey. Create a student account to access courses, submit assignments, and track your performance."
+                keywords={["Student Registration", "Create Account", "EduSpace Sign Up", "Student Portal", "Join EduSpace"]}
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [{
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://eduspaceacademy.online"
+                    }, {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Student Registration",
+                        "item": "https://eduspaceacademy.online/student/register"
+                    }]
+                }}
             />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}

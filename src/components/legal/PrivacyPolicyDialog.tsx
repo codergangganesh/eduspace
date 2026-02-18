@@ -170,7 +170,7 @@ export function PrivacyPolicyDialog({ open, onOpenChange, onAgree, showAgreeButt
                             For privacy-related questions or concerns, contact us at:
                         </p>
                         <ul className="list-none pl-0 space-y-1 text-muted-foreground">
-                            <li><strong>Name:</strong> EduSpace</li>
+                            <li><strong>Name:</strong> Eduspace Academy</li>
                             <li><strong>Email:</strong> eduspacelearning8@gmail.com</li>
                             <li><strong>Phone:</strong> +91 7670895485</li>
                             <li><strong>Address:</strong> 1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District, Andhra Pradesh - 523225, India</li>

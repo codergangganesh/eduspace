@@ -70,6 +70,22 @@ export default function StudentLogin() {
             <SEO
                 title="Student Login"
                 description="Log in to your EduSpace student account to access your courses, assignments, and track your learning progress."
+                keywords={["Student Login", "EduSpace Login", "LMS Login", "Student Portal", "Online Learning"]}
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [{
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://eduspaceacademy.online"
+                    }, {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Student Login",
+                        "item": "https://eduspaceacademy.online/student/login"
+                    }]
+                }}
             />
             <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
                 {/* Form */}
