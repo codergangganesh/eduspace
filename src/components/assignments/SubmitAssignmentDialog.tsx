@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatFileSize, getFileTypeDisplay } from "@/lib/fileUtils";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -57,14 +58,17 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
     const hasSubmission = !!existingSubmission;
     const isGraded = existingSubmission?.status === 'graded';
 
-    // Reset form when dialog opens/closes
+    const prevOpenRef = useRef(false);
+
+    // Reset form only when dialog transition from closed to open
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !prevOpenRef.current) {
             setStudentName(profile?.full_name || "");
             setRegNumber(profile?.student_id || "");
             setFile(null);
             setNotes("");
         }
+        prevOpenRef.current = isOpen;
     }, [isOpen, profile]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,7 +330,9 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <span className="text-sm font-bold text-slate-800 dark:text-white truncate block">{existingSubmission.attachment_name || "Your Submission"}</span>
-                                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">Download PDF</span>
+                                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
+                                                                Download {getFileTypeDisplay(existingSubmission.file_type)} {existingSubmission.file_size ? `(${formatFileSize(existingSubmission.file_size)})` : ''}
+                                                            </span>
                                                         </div>
                                                         <Download className="size-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
                                                     </a>
@@ -380,7 +386,11 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
     // Render Form Mode
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent
+                className="sm:max-w-[500px]"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{hasSubmission ? "Edit Submission" : "Submit Assignment"}</DialogTitle>
                     <DialogDescription>
@@ -388,72 +398,80 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4">
-                    {/* Read-only info */}
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="text-muted-foreground block">Subject</span>
-                            <span className="font-medium">{assignment.subject_name || assignment.course_title}</span>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4 py-4">
+                        {/* Read-only info */}
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span className="text-muted-foreground block">Subject</span>
+                                <span className="font-medium">{assignment.subject_name || assignment.course_title}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground block">Lecturer</span>
+                                <span className="font-medium">{assignment.lecturer_name}</span>
+                            </div>
                         </div>
-                        <div>
-                            <span className="text-muted-foreground block">Lecturer</span>
-                            <span className="font-medium">{assignment.lecturer_name}</span>
-                        </div>
-                    </div>
 
-                    <div className="space-y-2">
-                        <Label>Assignment File (PDF)</Label>
-                        <div
-                            className="border-2 border-dashed border-border rounded-lg p-6 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer flex flex-col items-center justify-center text-center"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept="application/pdf"
-                                onChange={handleFileChange}
-                            />
-                            {file ? (
-                                <div className="flex items-center gap-2 text-primary">
-                                    <FileText className="size-6" />
-                                    <span className="font-medium">{file.name}</span>
-                                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
-                                        <X className="size-4" />
-                                    </Button>
-                                </div>
-                            ) : (
-                                <>
-                                    <Upload className="size-8 text-muted-foreground mb-2" />
-                                    <p className="text-sm font-medium">Click to upload PDF</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Max 10MB</p>
-                                </>
+                        <div className="space-y-2">
+                            <Label>Assignment File</Label>
+                            <div
+                                className="border-2 border-dashed border-border rounded-lg p-6 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer flex flex-col items-center justify-center text-center"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept=".pdf,.doc,.docx,.txt,.zip,.rar"
+                                    onChange={handleFileChange}
+                                />
+                                {file ? (
+                                    <div className="flex items-center gap-2 text-primary">
+                                        <FileText className="size-6" />
+                                        <span className="font-medium truncate max-w-[200px]">{file.name}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                                        >
+                                            <X className="size-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload className="size-8 text-muted-foreground mb-2" />
+                                        <p className="text-sm font-medium">Click to upload file</p>
+                                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, TXT, ZIP, RAR (Max 50MB)</p>
+                                    </>
+                                )}
+                            </div>
+                            {hasSubmission && !file && (
+                                <p className="text-xs text-muted-foreground text-center mt-2">
+                                    Current file: {existingSubmission.attachment_name || "None"}
+                                </p>
                             )}
                         </div>
-                        {hasSubmission && !file && (
-                            <p className="text-xs text-muted-foreground text-center mt-2">
-                                Current file: {existingSubmission.attachment_name || "None"}
-                            </p>
-                        )}
+
+                        <div className="space-y-2">
+                            <Label>Additional Notes (Optional)</Label>
+                            <Textarea
+                                placeholder="Any comments for the lecturer..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                            />
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>Additional Notes (Optional)</Label>
-                        <Textarea
-                            placeholder="Any comments for the lecturer..."
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={submitting || (!file && !hasSubmission)}>
-                        {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-                        {hasSubmission ? "Update Submission" : "Submit Assignment"}
-                    </Button>
-                </DialogFooter>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+                        <Button type="submit" disabled={submitting || (!file && !hasSubmission)}>
+                            {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
+                            {hasSubmission ? "Update Submission" : "Submit Assignment"}
+                        </Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );

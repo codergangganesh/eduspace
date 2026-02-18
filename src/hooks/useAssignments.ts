@@ -142,7 +142,7 @@ export function useAssignments(selectedClassId?: string) {
                         .from('assignments')
                         .select('*')
                         .in('class_id', targetClassIds)
-                        .or('status.eq.published,status.eq.active,status.eq.completed,status.eq.closed')
+                        .in('status', ['published', 'active', 'completed', 'closed'])
                         .order('due_date', { ascending: true });
 
                     if (classError) {
@@ -269,7 +269,7 @@ export function useAssignments(selectedClassId?: string) {
             if (isInitialLoad) {
                 setAssignments([]);
             }
-            setError(null);
+            setError(err as Error);
         } finally {
             setLoading(false);
             setIsInitialLoad(false);
@@ -279,13 +279,7 @@ export function useAssignments(selectedClassId?: string) {
     // Fetch assignments when selected class changes (for student)
     useEffect(() => {
         if (role === 'student') {
-            if (selectedClassId) {
-                setAssignments([]); // Clear stale data
-                setLoading(true); // Trigger loading
-                fetchAssignments();
-            } else {
-                fetchAssignments();
-            }
+            fetchAssignments();
         } else if (role === 'lecturer') {
             // Lecturer login handles initial load
             fetchAssignments();

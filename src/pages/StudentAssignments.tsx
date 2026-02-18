@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumCardSkeleton } from "@/components/skeletons/PremiumCardSkeleton";
 
-type FilterType = "all" | "pending" | "submitted" | "overdue";
+type FilterType = "all" | "pending" | "submitted" | "overdue" | "graded";
 
 export default function StudentAssignments() {
     const navigate = useNavigate();
@@ -41,7 +41,7 @@ export default function StudentAssignments() {
     } = useAssignments(selectedClassId);
 
     const [filter, setFilter] = useState<FilterType>("all");
-    const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+    const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
     const [isSubmitOpen, setIsSubmitOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -68,6 +68,7 @@ export default function StudentAssignments() {
 
     const filteredAssignments = assignments.filter((assignment) => {
         if (filter === "all") return true;
+        if (filter === "submitted" && (assignment.studentStatus === "submitted" || assignment.studentStatus === "graded")) return true;
         return assignment.studentStatus === filter;
     }).filter(assignment =>
         assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,7 +76,7 @@ export default function StudentAssignments() {
     );
 
     const handleSubmitClick = (assignment: any) => {
-        setSelectedAssignmentId(assignment.id);
+        setSelectedAssignment(assignment);
         setIsSubmitOpen(true);
     };
 
@@ -92,7 +93,8 @@ export default function StudentAssignments() {
         }
     };
 
-    const activeAssignment = assignments.find(a => a.id === selectedAssignmentId);
+    // Use the stored assignment for the dialog, but sync it with latest data if available
+    const activeAssignment = assignments.find(a => a.id === selectedAssignment?.id) || selectedAssignment;
 
     return (
         <DashboardLayout>
@@ -190,8 +192,8 @@ export default function StudentAssignments() {
                         <div className="mt-2 space-y-6">
                             {(assignments.length > 0 || loading) && (
                                 <div className="flex flex-col xl:flex-row gap-4 items-center justify-between p-1">
-                                    <div className="grid grid-cols-4 sm:hidden items-center gap-1 sm:gap-2 w-full sm:w-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl shrink-0">
-                                        {(['all', 'pending', 'submitted', 'overdue'] as FilterType[]).map((f) => (
+                                    <div className="grid grid-cols-5 sm:hidden items-center gap-1 sm:gap-2 w-full sm:w-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl shrink-0">
+                                        {(['all', 'pending', 'submitted', 'graded', 'overdue'] as FilterType[]).map((f) => (
                                             <Button
                                                 key={f}
                                                 variant={filter === f ? "default" : "ghost"}
@@ -225,7 +227,7 @@ export default function StudentAssignments() {
                                                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
                                                     <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">Filter Status</div>
                                                     <DropdownMenuRadioGroup value={filter} onValueChange={(val) => setFilter(val as FilterType)}>
-                                                        {(['all', 'pending', 'submitted', 'overdue'] as FilterType[]).map((f) => (
+                                                        {(['all', 'pending', 'submitted', 'graded', 'overdue'] as FilterType[]).map((f) => (
                                                             <DropdownMenuRadioItem
                                                                 key={f}
                                                                 value={f}

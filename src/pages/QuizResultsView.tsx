@@ -118,9 +118,9 @@ export default function QuizResultsView() {
                 if (s.time_taken !== null && s.time_taken !== undefined) {
                     durationSeconds = s.time_taken;
                 } else {
-                    // Fallback for legacy data
-                    const startTime = new Date(s.started_at || s.created_at).getTime();
-                    const endTime = new Date(s.submitted_at || s.created_at).getTime();
+                    // Fallback for legacy data - Use submitted_at as second fallback if started_at or created_at (if existed) is missing
+                    const startTime = new Date(s.started_at || s.submitted_at).getTime();
+                    const endTime = new Date(s.submitted_at).getTime();
                     durationSeconds = Math.floor((endTime - startTime) / 1000);
                     if (durationSeconds < 0) durationSeconds = 0;
                 }
@@ -129,12 +129,8 @@ export default function QuizResultsView() {
                 const seconds = durationSeconds % 60;
 
                 let timingLabel = 'On-Time';
-                if (quizData?.due_date) {
-                    const dueDate = new Date(quizData.due_date).getTime();
-                    const submitDate = new Date(s.submitted_at).getTime();
-                    if (dueDate - submitDate > 3600000) timingLabel = 'Early';
-                    else if (submitDate > dueDate) timingLabel = 'Late';
-                }
+                // Quiz schema doesn't have due_date currently, so we default to On-Time
+                // This block can be restored if due_date is added to the quizzes table
 
                 return {
                     ...s,
