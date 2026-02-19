@@ -214,6 +214,17 @@ export const renderCanvas = function () {
     ctx.running = true;
     // @ts-ignore
     ctx.frame = 1;
+
+    // Optimize for mobile
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+        E.trails = 8;
+        E.size = 15;
+    } else {
+        E.trails = 20;
+        E.size = 30;
+    }
+
     f = new n({
         phase: Math.random() * 2 * Math.PI,
         amplitude: 85,

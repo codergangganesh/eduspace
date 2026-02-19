@@ -1,13 +1,5 @@
-import { ReactNode, useState, useEffect } from "react";
-import { Sidebar } from "./Sidebar";
-import { DashboardHeader } from "./DashboardHeader";
-import { MobileSidebar } from "./MobileSidebar";
-import PageTransition from "./PageTransition";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
-import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { ReactNode, useEffect } from "react";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -16,83 +8,28 @@ interface DashboardLayoutProps {
   hideHeaderOnMobile?: boolean;
 }
 
+/**
+ * DashboardLayout Logic:
+ * This component now sits INSIDE the RootLayout (via Outlet).
+ * Its purpose is to:
+ * 1. Hoist 'actions' (buttons) to the global Header.
+ * 2. Configure layout options (fullHeight, etc.).
+ * 3. Render the page content.
+ */
 export function DashboardLayout({ children, actions, fullHeight = false, hideHeaderOnMobile = false }: DashboardLayoutProps) {
-  const { user, profile, role, updateProfile } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [sidebarMode, setSidebarMode] = useState<'expanded' | 'collapsed' | 'hover'>('expanded');
-  const [isHovered, setIsHovered] = useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const { setActions, setOptions } = useLayout();
 
-  const isLecturer = role === "lecturer";
-
-  // Sync with profile when it loads
   useEffect(() => {
-    if (profile?.sidebar_mode) {
-      setSidebarMode(profile.sidebar_mode as 'expanded' | 'collapsed' | 'hover');
-    }
-  }, [profile?.sidebar_mode]);
+    // Mount: Set actions and options
+    setActions(actions);
+    setOptions({ fullHeight, hideHeaderOnMobile });
 
-  const handleModeChange = async (newMode: 'expanded' | 'collapsed' | 'hover') => {
-    setSidebarMode(newMode);
-    await updateProfile({ sidebar_mode: newMode });
-  };
+    // Unmount: Cleanup (Optional, but good practice if we want generic header when no layout)
+    // However, since we navigate to another page that likely sets its own actions immediately, 
+    // strict cleanup might cause flickering (empty header for a split second).
+    // We'll leave it for the next page to overwrite.
+  }, [actions, fullHeight, hideHeaderOnMobile, setActions, setOptions]);
 
-  // Combine global actions with page-specific ones
-  const combinedActions = actions;
-
-  const isCollapsed = sidebarMode === 'collapsed' || (sidebarMode === 'hover' && !isHovered);
-
-  return (
-    <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
-      <Sidebar
-        mode={sidebarMode}
-        setMode={handleModeChange}
-        isCollapsed={isCollapsed}
-        onHoverChange={setIsHovered}
-      />
-      <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
-
-      <div className={cn(
-        "flex-1 flex flex-col min-h-0 w-full transition-all duration-300",
-        isCollapsed ? "lg:pl-20" : "lg:pl-72"
-      )}>
-        {!hideHeaderOnMobile && (
-          <DashboardHeader
-            onMenuClick={() => setIsMobileMenuOpen(true)}
-            actions={combinedActions}
-            onInviteClick={isLecturer ? () => setInviteDialogOpen(true) : undefined}
-          />
-        )}
-        {hideHeaderOnMobile && (
-          <div className="hidden lg:block">
-            <DashboardHeader
-              onMenuClick={() => setIsMobileMenuOpen(true)}
-              actions={combinedActions}
-              onInviteClick={isLecturer ? () => setInviteDialogOpen(true) : undefined}
-            />
-          </div>
-        )}
-        <main
-          className={cn(
-            "flex-1 min-h-0 overflow-hidden relative",
-            !fullHeight && "p-4 lg:p-6 overflow-y-auto"
-          )}
-        >
-          <PageTransition className="h-full w-full">
-            {children}
-          </PageTransition>
-        </main>
-      </div>
-
-      {/* Persistent Global Dialogs */}
-      {isLecturer && (
-        <InviteUserDialog
-          open={inviteDialogOpen}
-          onOpenChange={setInviteDialogOpen}
-          lecturerName={profile?.full_name || "Lecturer"}
-          lecturerEmail={user?.email || ""}
-        />
-      )}
-    </div>
-  );
+  return <>{children}</>;
 }
+
