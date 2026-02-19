@@ -35,7 +35,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
 
         setIsLoading(true);
         try {
-            const { error } = await supabase.functions.invoke("contact-support", {
+            const { data, error } = await supabase.functions.invoke("contact-support", {
                 body: {
                     name: profile?.full_name || "Unknown User",
                     email: profile?.email || "No email",
@@ -45,6 +45,10 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             });
 
             if (error) throw error;
+
+            if (data && !data.success) {
+                throw new Error(data.error || "Failed to send support request");
+            }
 
             toast.success("Support request sent successfully!");
             setSubject("");

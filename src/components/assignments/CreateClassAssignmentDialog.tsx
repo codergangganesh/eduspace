@@ -144,7 +144,7 @@ export function CreateClassAssignmentDialog({
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto overflow-x-hidden w-[calc(100vw-2rem)] sm:w-auto">
+            <DialogContent className="w-[95%] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Create New Assignment</DialogTitle>
                     <DialogDescription>
@@ -152,7 +152,7 @@ export function CreateClassAssignmentDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 py-2 sm:py-4">
                     <div className="space-y-2">
                         <Label htmlFor="title">Assignment Title *</Label>
                         <Input
@@ -266,7 +266,7 @@ export function CreateClassAssignmentDialog({
                                 </AlertDescription>
                             </Alert>
                         )}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                             <Button
                                 type="button"
                                 variant="outline"
@@ -284,14 +284,14 @@ export function CreateClassAssignmentDialog({
                                 accept=".pdf,.doc,.docx,.txt,.zip,.rar"
                             />
                             {file && (
-                                <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-1.5 rounded-lg sm:rounded-full w-full sm:w-auto min-w-0 justify-between sm:justify-start">
-                                    <span className="truncate min-w-0 flex-1">{file.name}</span>
+                                <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-2 rounded-md max-w-full">
+                                    <span className="break-all">{file.name}</span>
                                     <button
                                         type="button"
                                         onClick={() => setFile(null)}
-                                        className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                                        className="text-muted-foreground hover:text-foreground shrink-0 ml-1 p-0.5"
                                     >
-                                        <X className="size-3" />
+                                        <X className="size-4" />
                                     </button>
                                 </div>
                             )}

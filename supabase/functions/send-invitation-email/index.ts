@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import nodemailer from "npm:nodemailer@6.9.8";
+import nodemailer from "npm:nodemailer@6.9.13";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,20 +22,47 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("Starting send-invitation-email execution");
+
     // Verify request has authorization (anon key or user token)
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       console.error("Missing authorization header");
       return new Response(
-        JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header (DEBUG MODE: Returned 200 instead of 401)" }),
+        JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200, // Return 200 to ensure client sees the error body
+          status: 200,
         }
       );
     }
 
-    const { inviteeEmail, lecturerName, lecturerEmail, personalMessage } = await req.json() as InvitationEmailRequest;
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Error parsing request body:", e);
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid JSON body" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
+    const { inviteeEmail, lecturerName, lecturerEmail, personalMessage } = body as InvitationEmailRequest;
+
+    if (!inviteeEmail || !lecturerName || !lecturerEmail) {
+      console.error("Missing required fields in request body");
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing required fields: inviteeEmail, lecturerName, or lecturerEmail" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
 
     console.log(`Preparing to send invitation email to: ${inviteeEmail} from ${lecturerName}`);
 
@@ -43,7 +70,6 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPass = Deno.env.get("SMTP_PASS");
-    const appUrl = "https://eduspaceacademy.online";
 
     if (!smtpHost || !smtpUser || !smtpPass) {
       console.error("Missing SMTP configuration environment variables");
@@ -58,6 +84,9 @@ const handler = async (req: Request): Promise<Response> => {
         user: smtpUser,
         pass: smtpPass,
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
 
     console.log("SMTP Transporter configured");
@@ -149,10 +178,10 @@ const handler = async (req: Request): Promise<Response> => {
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     console.error("Error sending invitation email:", errorMessage);
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage, debug: { receivedBody: { inviteeEmail, lecturerName, lecturerEmail, personalMessage } } }),
+      JSON.stringify({ success: false, error: errorMessage }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200, // Return 200 to ensure client sees the error body
+        status: 200, // Return 200 to ensure client displays error properly
       }
     );
   }

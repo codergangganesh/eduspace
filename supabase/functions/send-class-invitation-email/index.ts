@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import nodemailer from "npm:nodemailer@6.9.8";
+import nodemailer from "npm:nodemailer@6.9.13";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ success: false, error: "Unauthorized: Missing authorization header" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 401,
+          status: 200,
         }
       );
     }
@@ -193,7 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ success: false, error: errorMessage }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200, // Return 200 to ensure client displays error properly
       }
     );
   }

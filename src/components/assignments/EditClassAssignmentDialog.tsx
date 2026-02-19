@@ -122,7 +122,7 @@ export function EditClassAssignmentDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95%] sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Edit Assignment</DialogTitle>
                     <DialogDescription>
@@ -130,7 +130,7 @@ export function EditClassAssignmentDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 py-2 sm:py-4">
                     <div className="space-y-2">
                         <Label htmlFor="title">Assignment Title *</Label>
                         <Input
@@ -221,7 +221,7 @@ export function EditClassAssignmentDialog({
                                 Current: {assignment.attachment_name}
                             </div>
                         )}
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                             <Button
                                 type="button"
                                 variant="outline"
@@ -238,14 +238,14 @@ export function EditClassAssignmentDialog({
                                 accept=".pdf,.doc,.docx,.txt,.zip,.rar"
                             />
                             {file && (
-                                <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-1 rounded-full">
-                                    <span className="truncate max-w-[200px]">{file.name}</span>
+                                <div className="flex items-center gap-2 text-sm bg-secondary px-3 py-2 rounded-md max-w-full">
+                                    <span className="break-all">{file.name}</span>
                                     <button
                                         type="button"
                                         onClick={() => setFile(null)}
-                                        className="text-muted-foreground hover:text-foreground"
+                                        className="text-muted-foreground hover:text-foreground shrink-0 ml-1 p-0.5"
                                     >
-                                        <X className="size-3" />
+                                        <X className="size-4" />
                                     </button>
                                 </div>
                             )}

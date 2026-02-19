@@ -53,14 +53,18 @@ export function InviteUserDialog({
         try {
             console.log("📧 Sending invitation email...");
 
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log("Session token:", session?.access_token ? "Present" : "Missing");
+            // refresh session to ensure we have a valid token
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-            if (!session?.access_token) {
-                console.warn("⚠️ No active session found. Request might fail.");
+            if (sessionError || !session) {
+                console.error("Session Error:", sessionError);
+                toast.error("Authentication error: Please sign in again.");
+                return;
             }
 
-            const { data, error } = await supabase.functions.invoke("send-platform-invitation", {
+            console.log("Session present, token length:", session.access_token.length);
+
+            const { data, error } = await supabase.functions.invoke("send-invitation-email", {
                 body: {
                     inviteeEmail: email,
                     lecturerName,
@@ -72,7 +76,9 @@ export function InviteUserDialog({
             console.log("🔍 Function Response:", data);
 
             if (error || (data && !data.success)) {
-                console.error("❌ Failed to send invitation:", error || data?.error);
+                console.error("❌ Failed to send invitation:", error);
+                if (data) console.error("Function data:", data);
+
                 // Check if it's our debug "Unauthorized" message
                 if (data?.error?.includes("Unauthorized")) {
                     toast.error("Authentication Error: Please sign out and sign in again.");
