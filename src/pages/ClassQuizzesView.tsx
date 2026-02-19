@@ -5,7 +5,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2, ArrowLeft, Brain } from 'lucide-react';
+import { Plus, BarChart, FileText, LayoutGrid, List, Clock, MoreVertical, Edit2, Globe, Lock, Trash2, ArrowLeft, Brain, Search } from 'lucide-react';
+import { Input } from "@/components/ui/input";
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/contexts/AuthContext';
 import { LecturerQuizCard } from '@/components/lecturer/LecturerQuizCard';
@@ -26,7 +27,12 @@ export default function ClassQuizzesView() {
     const { profile } = useAuth();
     const { quizzes, loading, updateQuizStatus, deleteQuiz } = useQuizzes(classId);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [searchQuery, setSearchQuery] = useState('');
     const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
+
+    const filteredQuizzes = quizzes.filter(quiz =>
+        quiz.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handleCreateQuiz = () => {
         navigate(`/lecturer/quizzes/${classId}/create`);
@@ -71,36 +77,51 @@ export default function ClassQuizzesView() {
                             <p className="text-muted-foreground mt-1 text-xs md:text-sm">Manage and track quizzes for this class</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
-                            <Button
-                                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setViewMode('grid')}
-                                className={cn("h-9 px-3 rounded-lg transition-all", viewMode === 'grid' && "shadow-sm")}
-                            >
-                                <LayoutGrid className="size-4 mr-2" />
-                                <span className="text-xs font-semibold tracking-wide">Grid</span>
-                            </Button>
-                            <Button
-                                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setViewMode('list')}
-                                className={cn("h-9 px-3 rounded-lg transition-all", viewMode === 'list' && "shadow-sm")}
-                            >
-                                <List className="size-4 mr-2" />
-                                <span className="text-xs font-semibold tracking-wide">List</span>
-                            </Button>
+
+                    <div className="flex flex-col sm:flex-row gap-4 md:items-center w-full md:w-auto">
+                        <div className="flex w-full sm:w-auto items-center gap-2">
+                            <div className="relative flex-1 sm:w-64">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search quizzes..."
+                                    className="pl-9 bg-white dark:bg-slate-900 rounded-xl border-slate-200 dark:border-slate-800"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50 shrink-0">
+                                <Button
+                                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setViewMode('grid')}
+                                    className={cn("h-9 px-2 sm:px-3 rounded-lg transition-all", viewMode === 'grid' && "shadow-sm")}
+                                >
+                                    <LayoutGrid className="size-4 sm:mr-2" />
+                                    <span className="hidden sm:inline text-xs font-semibold tracking-wide">Grid</span>
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setViewMode('list')}
+                                    className={cn("h-9 px-2 sm:px-3 rounded-lg transition-all", viewMode === 'list' && "shadow-sm")}
+                                >
+                                    <List className="size-4 sm:mr-2" />
+                                    <span className="hidden sm:inline text-xs font-semibold tracking-wide">List</span>
+                                </Button>
+                            </div>
                         </div>
 
-                        <Button onClick={() => navigate(`/lecturer/quizzes/${classId}/create-ai`)} className="hidden sm:flex gap-2 h-11 px-6 shadow-md transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-                            <Brain className="size-5" />
-                            AI Quiz
-                        </Button>
-                        <Button onClick={handleCreateQuiz} className="hidden sm:flex gap-2 h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-                            <Plus className="size-5" />
-                            Create Manually
-                        </Button>
+                        <div className="hidden sm:flex gap-2">
+                            <Button onClick={() => navigate(`/lecturer/quizzes/${classId}/create-ai`)} className="gap-2 h-11 px-4 shadow-md transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl">
+                                <Brain className="size-5" />
+                                AI Quiz
+                            </Button>
+                            <Button onClick={handleCreateQuiz} className="gap-2 h-11 px-4 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 rounded-xl">
+                                <Plus className="size-5" />
+                                Create
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -130,7 +151,7 @@ export default function ClassQuizzesView() {
                             ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-5"
                             : "flex flex-col gap-4"
                     )}>
-                        {quizzes.map((quiz) => (
+                        {filteredQuizzes.map((quiz) => (
                             viewMode === 'grid' ? (
                                 <LecturerQuizCard
                                     key={quiz.id}

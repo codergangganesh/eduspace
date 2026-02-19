@@ -167,7 +167,7 @@ export function AssignmentCard({
                                         ? "bg-red-500 hover:bg-red-600 text-white"
                                         : isSubmitted
                                             ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                            : "bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
+                                            : "bg-blue-600 hover:bg-blue-700 text-white"
                                 )}
                             >
                                 {isSubmitted ? <Eye className="size-4 mr-2" /> : <UploadCloud className="size-4 mr-2" />}
@@ -221,9 +221,9 @@ export function AssignmentCard({
             className
         )}>
             {/* Header Section - Compact Gradient */}
-            <div className="relative h-16 bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 p-3 flex flex-col justify-between overflow-hidden">
+            <div className="relative h-16 bg-gradient-to-br from-blue-600 to-blue-800 p-3 flex flex-col justify-between overflow-hidden">
                 {/* Decorative background circle */}
-                <div className="absolute -top-6 -right-6 size-20 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                <div className="absolute -top-6 -right-6 size-20 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
                 <div className="flex justify-between items-start relative z-10">
                     <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md font-bold tracking-wider uppercase text-[8px] px-2 py-1 rounded-md truncate max-w-[90px] shrink-0">
@@ -345,7 +345,7 @@ export function AssignmentCard({
                                     ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
                                     : isSubmitted
                                         ? "bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white"
-                                        : "bg-gradient-to-r from-indigo-600 to-violet-700 text-white"
+                                        : "bg-gradient-to-r from-blue-600 to-blue-800 text-white"
                             )}
                         >
                             {isSubmitted ? <Eye className="size-3 mr-1" /> : <UploadCloud className="size-3 mr-1" />}

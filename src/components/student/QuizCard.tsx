@@ -143,9 +143,9 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
             className
         )}>
             {/* Header Section - Compact Gradient */}
-            <div className="relative h-16 bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 p-3 flex flex-col justify-between overflow-hidden">
+            <div className="relative h-16 bg-gradient-to-br from-blue-600 to-blue-800 p-3 flex flex-col justify-between overflow-hidden">
                 {/* Decorative background circle */}
-                <div className="absolute -top-6 -right-6 size-20 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                <div className="absolute -top-6 -right-6 size-20 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
                 <div className="flex justify-between items-start relative z-10">
                     <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md font-bold tracking-wider uppercase text-[8px] px-2 py-1 rounded-md truncate max-w-[90px] shrink-0">
@@ -232,7 +232,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                     ) : (
                         <Button
                             onClick={() => onAttempt(quiz.id)}
-                            className="w-full rounded-xl font-bold text-xs h-8 bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow transition-all hover:scale-[1.02] active:scale-95 border-none"
+                            className="w-full rounded-xl font-bold text-xs h-8 bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow transition-all hover:scale-[1.02] active:scale-95 border-none"
                         >
                             {canReattempt ? 'Retake Quiz' : 'Start Quiz'}
                         </Button>
