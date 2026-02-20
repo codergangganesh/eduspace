@@ -55,6 +55,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { CallModal } from "@/components/chat/CallModal";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/useMessages";
 import { useInstructors } from "@/hooks/useInstructors";
@@ -354,6 +355,7 @@ const TypingIndicator = () => (
 );
 
 export default function Messages() {
+  const navigate = useNavigate();
   const { user, role, profile } = useAuth();
   const {
     conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId,
@@ -380,7 +382,7 @@ export default function Messages() {
   const [wallpaper, setWallpaper] = useState<string>("");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
-  const { startCall, activeCall } = useCall();
+  const { initiateCall, startMeeting, activeCall } = useCall();
   const activeCallRef = useRef<any>(null);
 
   // Meeting State
@@ -452,21 +454,21 @@ export default function Messages() {
     setIsCreateMeetingOpen(true);
   };
 
-  const startMeeting = (code: string, type: 'audio' | 'video') => {
+  const startMeetingHandler = (code: string, type: 'audio' | 'video') => {
     // Record academic action (Participating in class interaction)
     if (role === 'student') {
       recordAcademicAction();
     }
-    startCall({ type, conversationId: code, isMeeting: true, startTime: Date.now() });
+    startMeeting(code, "Meeting", type);
     setIsCreateMeetingOpen(false);
     setIsJoinMeetingOpen(false);
     setJoinMeetingCode("");
   };
 
-  const handleDirectCall = async (type: 'audio' | 'video') => {
+  const handleDirectCall = async (type: 'audio' | 'video', category: 'private' | 'meeting' = 'private') => {
     if (!selectedConversation || !user) return;
 
-    // Record academic action (Participating in class interaction)
+    // Record academic action
     if (role === 'student') {
       recordAcademicAction();
     }
@@ -476,21 +478,26 @@ export default function Messages() {
       : selectedConversation.participant_1;
 
     try {
-      // Send "Started" message
-      await sendMessage(otherUserId, "Call Started", {
-        type: 'call',
-        name: type === 'video' ? 'Video Call' : 'Voice Call',
-        status: 'started'
-      });
+      if (category === 'private') {
+        await initiateCall(
+          otherUserId,
+          selectedConversation.other_user_name || 'User',
+          selectedConversation.other_user_avatar || '',
+          type
+        );
+      } else {
+        // Meeting Call (Jitsi)
+        startMeeting(selectedConversation.id, selectedConversation.other_user_name || 'Meeting', type);
 
-      startCall({
-        type,
-        conversationId: selectedConversation.id,
-        userName: selectedConversation.other_user_name,
-        startTime: Date.now()
-      });
+        // Send message about meeting
+        await sendMessage(otherUserId, "Meeting Started", {
+          type: 'call',
+          name: type === 'video' ? 'Video Meeting' : 'Voice Meeting',
+          status: 'started'
+        });
+      }
     } catch (err) {
-      console.error("Failed to start call message:", err);
+      console.error("Failed to start call:", err);
       toast.error("Failed to start call");
     }
   };
@@ -941,6 +948,15 @@ export default function Messages() {
                 variant="ghost"
                 size="icon"
                 className="size-9 text-slate-600 dark:text-slate-400 hover:text-emerald-600"
+                onClick={() => navigate('/call-history')}
+                title="Call History"
+              >
+                <Clock className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 text-slate-600 dark:text-slate-400 hover:text-emerald-600"
                 onClick={() => setIsNewChatOpen(true)}
                 title="Start New Chat"
               >
@@ -1194,22 +1210,49 @@ export default function Messages() {
                     </div>
                   </div>
                   <div className="flex items-center shrink-0 ml-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
-                      onClick={() => handleDirectCall('audio')}
-                    >
-                      <Phone className="size-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
-                      onClick={() => handleDirectCall('video')}
-                    >
-                      <Video className="size-5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
+                        >
+                          <Phone className="size-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDirectCall('audio', 'private')}>
+                          <ShieldAlert className="size-4 mr-2 text-emerald-500" />
+                          <span>🔒 Private Audio Call</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDirectCall('audio', 'meeting')}>
+                          <User className="size-4 mr-2 text-blue-500" />
+                          <span>👥 Meeting Audio Call</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
+                        >
+                          <Video className="size-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDirectCall('video', 'private')}>
+                          <ShieldAlert className="size-4 mr-2 text-emerald-500" />
+                          <span>🔒 Private Video Call</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDirectCall('video', 'meeting')}>
+                          <User className="size-4 mr-2 text-blue-500" />
+                          <span>👥 Meeting Video Call</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1613,157 +1656,135 @@ export default function Messages() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-      {/* Create Meeting Dialog */}
-      <Dialog open={isCreateMeetingOpen} onOpenChange={setIsCreateMeetingOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Meeting</DialogTitle>
-            <DialogDescription>
-              Share this code with others to let them join.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-6 py-4">
-            <div className="flex items-center gap-2 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-              <code className="text-2xl font-mono font-bold tracking-wider text-emerald-600 dark:text-emerald-400">
+        {/* Create Meeting Dialog */}
+        <Dialog open={isCreateMeetingOpen} onOpenChange={setIsCreateMeetingOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Meeting Created</DialogTitle>
+              <DialogDescription>
+                Share this code with others to join the {meetingType} meeting.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-3xl font-mono font-bold tracking-widest bg-slate-100 dark:bg-slate-800 px-6 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
                 {createdMeetingCode}
-              </code>
+              </div>
               <Button
-                variant="ghost"
-                size="icon"
+                variant="outline"
+                size="sm"
+                className="gap-2"
                 onClick={() => {
                   navigator.clipboard.writeText(createdMeetingCode);
-                  toast.success("Meeting code copied!");
+                  toast.success("Code copied to clipboard");
                 }}
               >
                 <Copy className="size-4" />
+                Copy Code
               </Button>
             </div>
-            <div className="flex gap-4">
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setIsCreateMeetingOpen(false)}>Close</Button>
               <Button
-                variant={meetingType === 'audio' ? 'default' : 'outline'}
-                onClick={() => setMeetingType('audio')}
-                className="w-32"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                onClick={() => startMeetingHandler(createdMeetingCode, meetingType)}
               >
-                <Phone className="size-4 mr-2" />
-                Audio
-              </Button>
-              <Button
-                variant={meetingType === 'video' ? 'default' : 'outline'}
-                onClick={() => setMeetingType('video')}
-                className="w-32"
-              >
-                <Video className="size-4 mr-2" />
-                Video
+                Start Now
               </Button>
             </div>
-            <Button
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => startMeeting(createdMeetingCode, meetingType)}
-            >
-              Start Meeting
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
 
-      {/* Join Meeting Dialog */}
-      <Dialog open={isJoinMeetingOpen} onOpenChange={setIsJoinMeetingOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Join Meeting</DialogTitle>
-            <DialogDescription>
-              Enter the 6-character code to join an existing meeting.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              placeholder="e.g. ABC-123"
-              className="text-center text-lg tracking-widest uppercase"
-              value={joinMeetingCode}
-              onChange={(e) => setJoinMeetingCode(e.target.value.toUpperCase())}
-              maxLength={7}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline"
-                onClick={() => startMeeting(joinMeetingCode, 'audio')}
-                disabled={joinMeetingCode.length < 7}
-              >
-                <Phone className="size-4 mr-2" />
-                Join Audio
-              </Button>
-              <Button
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={() => startMeeting(joinMeetingCode, 'video')}
-                disabled={joinMeetingCode.length < 7}
-              >
-                <Video className="size-4 mr-2" />
-                Join Video
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {selectedConversationId && (
-        <ChatPollDialog
-          isOpen={isPollDialogOpen}
-          onClose={() => setIsPollDialogOpen(false)}
-          conversationId={selectedConversationId}
-          onSuccess={(pollId, question) => {
-            const receiverId = conversations.find(c => c.id === selectedConversationId)?.participant_1 === user?.id
-              ? conversations.find(c => c.id === selectedConversationId)?.participant_2
-              : conversations.find(c => c.id === selectedConversationId)?.participant_1;
-
-            if (receiverId) {
-              sendMessage(receiverId, "📊 " + question, {
-                name: question,
-                url: pollId,
-                type: 'poll'
-              });
-            }
-          }}
-        />
-      )}
-      {/* Chat Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="size-5 text-emerald-600" />
-              Chat Settings
-            </DialogTitle>
-            <DialogDescription>
-              Manage privacy and automation for this conversation.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-6 space-y-6">
-            <div className="flex items-center justify-between space-x-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="auto-delete" className="text-base font-semibold">Auto-Delete Messages</Label>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  When enabled, messages older than 15 days will be automatically removed from this conversation for you.
-                </p>
-              </div>
-              <Switch
-                id="auto-delete"
-                checked={(user?.id && selectedConversation?.auto_delete_settings?.[user.id]) || false}
-                onCheckedChange={async (checked) => {
-                  try {
-                    await toggleAutoDelete(selectedConversationId!, checked);
-                    toast.success(checked ? "Auto-delete enabled" : "Auto-delete disabled", {
-                      description: checked ? "Messages will be auto-deleted after 15 days." : "Messages will remain permanently."
-                    });
-                  } catch (err) {
-                    toast.error("Failed to update setting");
-                  }
-                }}
+        {/* Join Meeting Dialog */}
+        <Dialog open={isJoinMeetingOpen} onOpenChange={setIsJoinMeetingOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Join Meeting</DialogTitle>
+              <DialogDescription>
+                Enter the 6-character code to join a meeting.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="ABC-DEF"
+                className="text-center text-2xl font-mono tracking-widest h-14"
+                value={joinMeetingCode}
+                onChange={(e) => setJoinMeetingCode(e.target.value.toUpperCase())}
+                maxLength={7}
               />
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setIsJoinMeetingOpen(false)}>Cancel</Button>
+              <Button
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                disabled={joinMeetingCode.length < 6}
+                onClick={() => startMeetingHandler(joinMeetingCode, 'video')}
+              >
+                Join
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {selectedConversationId && (
+          <ChatPollDialog
+            isOpen={isPollDialogOpen}
+            onClose={() => setIsPollDialogOpen(false)}
+            conversationId={selectedConversationId}
+            onSuccess={(pollId, question) => {
+              const receiverId = conversations.find(c => c.id === selectedConversationId)?.participant_1 === user?.id
+                ? conversations.find(c => c.id === selectedConversationId)?.participant_2
+                : conversations.find(c => c.id === selectedConversationId)?.participant_1;
+
+              if (receiverId) {
+                sendMessage(receiverId, "📊 " + question, {
+                  name: question,
+                  url: pollId,
+                  type: 'poll'
+                });
+              }
+            }}
+          />
+        )}
+
+        {/* Chat Settings Dialog */}
+        <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <DialogContent className="sm:max-w-[425px] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="size-5 text-emerald-600" />
+                Chat Settings
+              </DialogTitle>
+              <DialogDescription>
+                Manage privacy and automation for this conversation.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-6 space-y-6">
+              <div className="flex items-center justify-between space-x-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="auto-delete" className="text-base font-semibold">Auto-Delete Messages</Label>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    When enabled, messages older than 15 days will be automatically removed from this conversation for you.
+                  </p>
+                </div>
+                <Switch
+                  id="auto-delete"
+                  checked={(user?.id && selectedConversation?.auto_delete_settings?.[user.id]) || false}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      await toggleAutoDelete(selectedConversationId!, checked);
+                      toast.success(checked ? "Auto-delete enabled" : "Auto-delete disabled", {
+                        description: checked ? "Messages will be auto-deleted after 15 days." : "Messages will remain permanently."
+                      });
+                    } catch (err) {
+                      toast.error("Failed to update setting");
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </DashboardLayout>
   );
 }

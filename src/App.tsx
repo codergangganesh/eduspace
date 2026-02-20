@@ -70,6 +70,7 @@ const AIChat = lazy(() => import("./pages/AIChat"));
 const SharedAIChat = lazy(() => import("./pages/SharedAIChat"));
 const KnowledgeMap = lazy(() => import("@/pages/KnowledgeMap"));
 const StreakPage = lazy(() => import("./pages/StreakPage"));
+const CallHistory = lazy(() => import("./pages/CallHistory"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -179,6 +180,7 @@ const App = () => (
                             <Route path="/assignments/:id/submit" element={<ProtectedRoute><AssignmentSubmit /></ProtectedRoute>} />
                             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                            <Route path="/call-history" element={<ProtectedRoute><CallHistory /></ProtectedRoute>} />
                             <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
                             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

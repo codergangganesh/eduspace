@@ -148,6 +148,60 @@ export type Database = {
           },
         ]
       }
+      call_sessions: {
+        Row: {
+          id: string
+          caller_id: string
+          receiver_id: string
+          institution_id: string
+          status: string
+          call_type: string
+          started_at: string | null
+          ended_at: string | null
+          duration: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          caller_id: string
+          receiver_id: string
+          institution_id: string
+          status?: string
+          call_type?: string
+          started_at?: string | null
+          ended_at?: string | null
+          duration?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          caller_id?: string
+          receiver_id?: string
+          institution_id?: string
+          status?: string
+          call_type?: string
+          started_at?: string | null
+          ended_at?: string | null
+          duration?: number | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_sessions_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "call_sessions_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          }
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string | null

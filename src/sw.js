@@ -45,7 +45,8 @@ async function handlePushEvent(data) {
     const hasFocusedClient = clients.some((c) => c.focused);
 
     // CRITICAL UX RULE: Do NOT send push if user is actively using the app
-    if (hasFocusedClient || appState.isFocused) {
+    // EXCEPTION: Always show call notifications to ensure the user doesn't miss them
+    if (data.type !== 'call' && (hasFocusedClient || appState.isFocused)) {
       const isMessageType = data.type === 'message';
       const isOnMessagesPage = appState.currentPath?.startsWith('/messages');
 
@@ -69,8 +70,9 @@ async function handlePushEvent(data) {
   // Requirement: App name + Branded icon + Title + Message preview
   const options = {
     body: data.body || 'New update available',
-    icon: data.icon || '/logo-branded.png', // Branded Icon
-    badge: data.badge || '/pwa-badge.png',  // Monochrome badge for Android
+    icon: data.icon || '/pwa-192x192.png', // Corrected Branded Icon
+    badge: data.badge || '/pwa-192x192.png',  // Corrected Monochrome badge
+    image: data.image || data.icon || null, // Native-style large image preview
     tag: data.tag || getDefaultTag(data),
     renotify: true,
     timestamp: data.timestamp || Date.now(),
@@ -82,6 +84,7 @@ async function handlePushEvent(data) {
       notificationId: data.data?.notificationId, // To mark as read on click
       ...data.data,
     },
+    requireInteraction: data.type === 'call' || data.requireInteraction,
   };
 
   // Vibration pattern (Requirement 4: Vibration pattern)
@@ -119,13 +122,15 @@ function getDefaultTag(data) {
 function getDefaultVibration(type) {
   switch (type) {
     case 'message':
-      return [100, 50, 100]; // Quick double-tap
+      return [100, 50, 100];
     case 'assignment':
     case 'submission':
-      return [200, 100, 200]; // Firm double-tap
+      return [200, 100, 200];
     case 'announcement':
     case 'schedule':
-      return [200, 100, 200, 100, 200]; // Triple-tap for important
+      return [200, 100, 200, 100, 200];
+    case 'call':
+      return [1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000]; // Aggressive repeating vibration
     default:
       return [100, 50, 100];
   }
@@ -159,6 +164,11 @@ function getDefaultActions(type) {
       return [
         { action: 'view', title: '📊 View Grade' },
       ];
+    case 'call':
+      return [
+        { action: 'accept', title: '✅ Answer' },
+        { action: 'decline', title: '❌ Reject' },
+      ];
     default:
       return [
         { action: 'open', title: 'Open EduSpace' },
@@ -173,10 +183,21 @@ self.addEventListener('notificationclick', (event) => {
   const notificationData = event.notification.data || {};
   let urlToOpen = notificationData.url || '/';
 
+  console.log('[SW] Notification clicked:', event.action, 'URL:', urlToOpen);
+
   // Handle specific action button clicks
-  if (event.action === 'dismiss') {
+  if (event.action === 'dismiss' || event.action === 'decline') {
     return; // Just close the notification
   }
+
+  // Handle call acceptance
+  if (event.action === 'accept') {
+    const clickUrl = urlToOpen + (urlToOpen.includes('?') ? '&' : '?') + 'action=accept';
+    console.log('[SW] Accept action, opening:', clickUrl);
+    event.waitUntil(openOrFocusWindow(clickUrl));
+    return;
+  }
+
   // 'view', 'open', or default tap — navigate to the url
   if (event.action === 'view' || event.action === 'open' || !event.action) {
     event.waitUntil(openOrFocusWindow(urlToOpen));
@@ -190,6 +211,7 @@ self.addEventListener('notificationclose', (event) => {
 
 // ─── Helper: Open or focus existing window ──────────────────────────────────
 async function openOrFocusWindow(urlToOpen) {
+  console.log('[SW] Attempting to open/focus:', urlToOpen);
   const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 
   // Try to find an existing window with our origin to focus & navigate
@@ -199,19 +221,22 @@ async function openOrFocusWindow(urlToOpen) {
       const targetUrl = new URL(urlToOpen, self.location.origin);
 
       if (clientUrl.origin === targetUrl.origin && 'focus' in client) {
+        console.log('[SW] Found existing client, focusing...');
         const focused = await client.focus();
         if (focused && focused.navigate) {
+          console.log('[SW] Navigating existing client to:', urlToOpen);
           return focused.navigate(urlToOpen);
         }
         return focused;
       }
-    } catch {
-      // URL parsing failed, skip this client
+    } catch (e) {
+      console.error('[SW] URL parsing/focus failed for client:', e);
     }
   }
 
   // No existing window — open a new one
   if (self.clients.openWindow) {
+    console.log('[SW] No existing client found, opening new window...');
     return self.clients.openWindow(urlToOpen);
   }
 }

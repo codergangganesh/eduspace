@@ -263,4 +263,9 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Video Mirroring */
+  .mirror {
+    transform: scaleX(-1);
+  }
 }
