@@ -1489,6 +1489,7 @@ export type Database = {
           title: string
           total_marks: number
           version: number
+          due_date: string | null
         }
         Insert: {
           class_id: string
@@ -1501,6 +1502,7 @@ export type Database = {
           title: string
           total_marks?: number
           version?: number
+          due_date?: string | null
         }
         Update: {
           class_id?: string
@@ -1513,6 +1515,7 @@ export type Database = {
           title?: string
           total_marks?: number
           version?: number
+          due_date?: string | null
         }
         Relationships: [
           {

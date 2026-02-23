@@ -128,9 +128,10 @@ export default function QuizResultsView() {
                 const minutes = Math.floor(durationSeconds / 60);
                 const seconds = durationSeconds % 60;
 
-                let timingLabel = 'On-Time';
-                // Quiz schema doesn't have due_date currently, so we default to On-Time
-                // This block can be restored if due_date is added to the quizzes table
+                const dueDate = quizData?.due_date ? new Date(quizData.due_date) : null;
+                const submittedDate = new Date(s.submitted_at);
+                const isLate = dueDate ? submittedDate > dueDate : false;
+                const timingLabel = isLate ? 'Late' : 'On-Time';
 
                 return {
                     ...s,
