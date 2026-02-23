@@ -173,9 +173,9 @@ export default function Profile() {
       return;
     }
 
-    // Validate file size (max 2MB for base64)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image size should be less than 2MB');
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size should be less than 10MB');
       return;
     }
 
