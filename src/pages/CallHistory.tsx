@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+    Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff,
     Video, VideoOff, Clock, Calendar, Search, Filter,
     MoreVertical, Trash2, ArrowLeft
 } from 'lucide-react';
