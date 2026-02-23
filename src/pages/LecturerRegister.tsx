@@ -5,7 +5,6 @@ import { Mail, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { Capacitor } from "@capacitor/core";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
 
@@ -15,7 +14,6 @@ import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 export default function LecturerRegister() {
     const navigate = useNavigate();
     const { signUp, isAuthenticated, role } = useAuth();
-    const isNative = Capacitor.isNativePlatform();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
@@ -99,8 +97,8 @@ export default function LecturerRegister() {
                     }]
                 }}
             />
-            <div className={`${isNative ? 'bg-background/80 backdrop-blur-md rounded-xl border border-border p-8 shadow-sm' : 'bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm'}`}>
-                <div className={`mb-8 ${isNative ? 'hidden' : 'lg:hidden'}`}>
+            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
+                <div className="mb-8 lg:hidden">
                     <h2 className="text-3xl font-black text-foreground tracking-tight">Lecturer</h2>
                     <p className="text-blue-600 font-bold text-lg -mt-1">Registration</p>
                 </div>
@@ -108,7 +106,7 @@ export default function LecturerRegister() {
                 <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
                     {/* Full Name Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Full Name
                         </label>
                         <div className="relative">
@@ -128,7 +126,7 @@ export default function LecturerRegister() {
 
                     {/* Email Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Email Address
                         </label>
                         <div className="relative">
@@ -148,7 +146,7 @@ export default function LecturerRegister() {
 
                     {/* Password Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Password
                         </label>
                         <div className="relative">
@@ -173,9 +171,9 @@ export default function LecturerRegister() {
                         </div>
                     </div>
 
-                    {/* Confirm Password Field - Desktop only label, kept for confirmed password on mobile if needed but image only shows one password field. User said keep all required fields. */}
+                    {/* Confirm Password Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Confirm Password
                         </label>
                         <div className="relative">
@@ -248,15 +246,15 @@ export default function LecturerRegister() {
                     </Button>
                 </form>
 
-                {/* Footer - Only on mobile web */}
-                <div className={`mt-8 text-center ${isNative ? 'hidden' : 'lg:hidden'}`}>
+                {/* Footer - Only on mobile */}
+                <div className="mt-8 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
                         Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                     </p>
                 </div>
 
-                {/* Desktop/Native Divider & Sign In */}
-                <div className={`${isNative ? 'block' : 'hidden lg:block'} mt-6`}>
+                {/* Desktop Divider & Sign In */}
+                <div className="hidden lg:block mt-6">
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border"></div>

@@ -5,14 +5,12 @@ import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { Capacitor } from "@capacitor/core";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
 
 export default function StudentLogin() {
     const navigate = useNavigate();
     const { signIn, signInWithGoogle, signInWithGitHub, isAuthenticated, role } = useAuth();
-    const isNative = Capacitor.isNativePlatform();
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -89,9 +87,9 @@ export default function StudentLogin() {
                     }]
                 }}
             />
-            <div className={`${isNative ? 'bg-background/80 backdrop-blur-md rounded-xl border border-border p-6 shadow-sm' : 'bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-6 lg:shadow-sm'}`}>
-                {/* OAuth Buttons - Top on mobile web, Bottom on desktop/native */}
-                <div className={`flex flex-col ${isNative ? 'hidden' : 'lg:hidden'} mb-8`}>
+            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-6 lg:shadow-sm">
+                {/* OAuth Buttons - Top on mobile, Bottom on desktop */}
+                <div className="flex flex-col lg:hidden mb-8">
                     <div className="flex justify-center gap-4 lg:grid lg:grid-cols-2 lg:gap-3">
                         <button
                             onClick={handleGoogleSignIn}
@@ -153,7 +151,7 @@ export default function StudentLogin() {
                 <form className="space-y-4" onSubmit={handleSubmit}>
                     {/* Institutional Email Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Institutional Email
                         </label>
                         <div className="relative">
@@ -173,7 +171,7 @@ export default function StudentLogin() {
 
                     {/* Password Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Password
                         </label>
                         <div className="relative">
@@ -221,15 +219,15 @@ export default function StudentLogin() {
                     </Button>
                 </form>
 
-                {/* Footer - Only on mobile web */}
-                <div className={`mt-8 text-center ${isNative ? 'hidden' : 'lg:hidden'}`}>
+                {/* Footer - Only on mobile */}
+                <div className="mt-8 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
                         Don't have an account? <Link to="/student/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
                     </p>
                 </div>
 
-                {/* Desktop/Native Divider & OAuth */}
-                <div className={`${isNative ? 'block' : 'hidden lg:block'} mt-6`}>
+                {/* Desktop Divider & OAuth */}
+                <div className="hidden lg:block mt-6">
                     <div className="relative my-4 lg:my-5">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border"></div>

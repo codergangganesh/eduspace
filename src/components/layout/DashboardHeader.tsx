@@ -5,7 +5,8 @@ import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
-import { StudentNotesDrawer } from "@/components/student/StudentNotesDrawer";
+import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
+import { Capacitor } from "@capacitor/core";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;

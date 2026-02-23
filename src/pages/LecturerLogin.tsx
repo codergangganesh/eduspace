@@ -5,14 +5,12 @@ import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { Capacitor } from "@capacitor/core";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
 
 export default function LecturerLogin() {
     const navigate = useNavigate();
     const { signIn, isAuthenticated, role } = useAuth();
-    const isNative = Capacitor.isNativePlatform();
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -46,11 +44,11 @@ export default function LecturerLogin() {
     };
 
     return (
-        <AuthLayout title="Sign In" subtitle="Please enter your details below">
+        <AuthLayout title="Lecturer Sign In" subtitle="Access your portal to manage your courses and students">
             <SEO
                 title="Lecturer Login"
-                description="Log in to your EduSpace lecturer account to manage classes, assignments, and track student performance."
-                keywords={["Lecturer Login", "EduSpace Lecturer", "Teacher Login", "LMS Admin", "Class Management"]}
+                description="Access the EduSpace Lecturer Portal. Manage your courses, grade assignments, and communicate with students."
+                keywords={["Lecturer Login", "Teacher Portal", "EduSpace for Educators", "LMS Login", "Grading System"]}
                 structuredData={{
                     "@context": "https://schema.org",
                     "@type": "BreadcrumbList",
@@ -67,8 +65,8 @@ export default function LecturerLogin() {
                     }]
                 }}
             />
-            <div className={`${isNative ? 'bg-background/80 backdrop-blur-md rounded-xl border border-border p-8 shadow-sm' : 'bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm'}`}>
-                <div className={`mb-8 ${isNative ? 'hidden' : 'lg:hidden'}`}>
+            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
+                <div className="mb-8 lg:hidden">
                     <h2 className="text-3xl font-black text-foreground tracking-tight">Lecturer</h2>
                     <p className="text-blue-600 font-bold text-lg -mt-1">Login</p>
                 </div>
@@ -76,7 +74,7 @@ export default function LecturerLogin() {
                 <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
                     {/* Institutional Email Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Institutional Email
                         </label>
                         <div className="relative">
@@ -90,13 +88,14 @@ export default function LecturerLogin() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
+                                required
                             />
                         </div>
                     </div>
 
                     {/* Password Field */}
                     <div className="space-y-1.5">
-                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Password
                         </label>
                         <div className="relative">
@@ -110,6 +109,7 @@ export default function LecturerLogin() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
+                                required
                             />
                             <button
                                 type="button"
@@ -122,7 +122,7 @@ export default function LecturerLogin() {
                     </div>
 
                     {/* Forgot Password Link */}
-                    <div className="flex justify-end">
+                    <div className="flex justify-end pt-1">
                         <Link
                             to="/forgot-password"
                             className="text-sm font-medium text-blue-600 hover:underline"
@@ -144,15 +144,15 @@ export default function LecturerLogin() {
                     </Button>
                 </form>
 
-                {/* Footer - Only on mobile web */}
-                <div className={`mt-8 text-center ${isNative ? 'hidden' : 'lg:hidden'}`}>
+                {/* Footer - Only on mobile */}
+                <div className="mt-8 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
                         Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
                     </p>
                 </div>
 
-                {/* Desktop/Native Divider & Sign In */}
-                <div className={`${isNative ? 'block' : 'hidden lg:block'} mt-6`}>
+                {/* Desktop Divider & Sign In */}
+                <div className="hidden lg:block mt-6">
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border"></div>
