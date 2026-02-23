@@ -63,9 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("SMTP Transporter configured");
 
     const mailOptions = {
-      from: `"Eduspace Academy Support" <${smtpUser}>`,
+      from: `"EduSpace Support" <${smtpUser}>`,
       to: email,
-      subject: "Welcome to Eduspace Academy!",
+      subject: "Welcome to EduSpace!",
       html: `
         <!DOCTYPE html>
         <html>
@@ -85,13 +85,13 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Welcome to Eduspace Academy!</h1>
+              <h1>Welcome to EduSpace!</h1>
             </div>
             <div class="content">
               <h2>Hello ${fullName},</h2>
               <p>We are thrilled to have you join our academic community as a <strong>${role}</strong>!</p>
               
-              <p>Eduspace Academy is designed to streamline your educational journey. Here are some of the key features you can explore:</p>
+              <p>EduSpace is designed to streamline your educational journey. Here are some of the key features you can explore:</p>
               
               <ul class="feature-list">
                 <li><strong>Class Management:</strong> Organize and access all your courses in one place.</li>
@@ -106,10 +106,10 @@ const handler = async (req: Request): Promise<Response> => {
                 <a href="${appUrl}${role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'}" class="button" style="color: white;">Get Started</a>
               </center>
               <p>If you have any questions, our support team is always here to help.</p>
-              <p>Best regards,<br>The Eduspace Academy Team</p>
+              <p>Best regards,<br>The EduSpace Team</p>
             </div>
             <div class="footer">
-              &copy; ${new Date().getFullYear()} Eduspace Academy. All rights reserved.<br>
+              &copy; ${new Date().getFullYear()} EduSpace. All rights reserved.<br>
               <a href="#" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> | <a href="#" style="color: #64748b; text-decoration: underline;">Terms of Service</a>
             </div>
           </div>

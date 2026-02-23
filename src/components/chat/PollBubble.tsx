@@ -39,7 +39,7 @@ interface VoterInfo {
 }
 
 export function PollBubble({ pollId }: { pollId: string }) {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [poll, setPoll] = useState<PollData | null>(null);
     const [loading, setLoading] = useState(true);
     const [voting, setVoting] = useState(false);
@@ -142,7 +142,9 @@ export function PollBubble({ pollId }: { pollId: string }) {
         if (!user || !poll || voting || isEditing) return;
 
         // Record academic action (Participating in class interaction)
-        recordAcademicAction();
+        if (role === 'student') {
+            recordAcademicAction();
+        }
 
         // Restriction: Poll creator cannot vote
         if (user.id === poll.createdBy) {

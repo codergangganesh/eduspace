@@ -22,7 +22,7 @@ export function PrivateCallManager() {
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
-    const [isSpeakerOn, setIsSpeakerOn] = useState(true); // Default to speaker on for web calls
+    const [isSpeakerOn, setIsSpeakerOn] = useState(true); // Default to speaker on for mobile/web calls
     const [isRemoteVideoOff, setIsRemoteVideoOff] = useState(false);
     const [timer, setTimer] = useState(0);
 
@@ -347,7 +347,6 @@ export function PrivateCallManager() {
             }
         }
     };
-
     // Ensure streams are attached when UI elements mount/unmount
     useEffect(() => {
         if (remoteVideoRef.current && remoteStream) {

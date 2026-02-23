@@ -41,7 +41,7 @@ interface SubmitAssignmentDialogProps {
 }
 
 export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, onDelete }: SubmitAssignmentDialogProps) {
-    const { profile } = useAuth();
+    const { profile, role } = useAuth();
     const [submitting, setSubmitting] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -143,7 +143,12 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
 
             if (result.success) {
                 console.log('[SubmitAssignmentDialog] Submission successful!');
-                await recordAcademicAction();
+
+                // Record academic action
+                if (role === 'student') {
+                    await recordAcademicAction();
+                }
+
                 toast.success(hasSubmission ? "Submission updated successfully!" : "Assignment submitted successfully!");
 
                 // Reset form state

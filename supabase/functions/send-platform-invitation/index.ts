@@ -64,9 +64,9 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const mailOptions = {
-      from: `"Eduspace Academy Support" <${smtpUser}>`,
+            from: `"EduSpace Support" <${smtpUser}>`,
       to: inviteeEmail,
-      subject: `Join ${lecturerName} on Eduspace Academy`,
+            subject: `Join ${lecturerName} on EduSpace`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -84,15 +84,15 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Welcome to Eduspace Academy</h1>
+              <h1>Welcome to EduSpace</h1>
             </div>
             <div class="content">
               <h2>Hello!</h2>
-              <p><strong>${lecturerName}</strong> (${lecturerEmail}) has invited you to join them on <strong>Eduspace Academy</strong>.</p>
+              <p><strong>${lecturerName}</strong> (${lecturerEmail}) has invited you to join them on <strong>EduSpace</strong>.</p>
               
               ${personalMessage ? `<p><em>"${personalMessage}"</em></p>` : ''}
 
-              <p>Eduspace Academy is your all-in-one platform for managing classes, assignments, and connecting with your educational community.</p>
+              <p>EduSpace is your all-in-one platform for managing classes, assignments, and connecting with your educational community.</p>
 
               <center>
                 <a href="${platformUrl}" class="button">Get Started</a>
@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin-top: 30px; font-size: 14px; color: #64748b;">Or copy and paste this link into your browser:<br>${platformUrl}</p>
             </div>
             <div class="footer">
-              &copy; ${new Date().getFullYear()} Eduspace Academy. All rights reserved.
+              &copy; ${new Date().getFullYear()} EduSpace. All rights reserved.
             </div>
           </div>
         </body>

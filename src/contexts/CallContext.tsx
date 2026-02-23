@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { App } from '@capacitor/app';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -39,92 +40,123 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const [isMinimized, setIsMinimized] = useState(false);
     const channelRef = useRef<any>(null);
 
-    // Handle Incoming Call from URL (Deep Linking / Push Notifications)
-    useEffect(() => {
-        const handleDeepLinkCall = async () => {
-            // CRITICAL: Wait for user AND profile to be loaded before handling deep link
-            // This is essential for mobile where auth state might take a second to hydrate
-            if (!user || !profile) {
-                console.log("[CallContext] Waiting for auth/profile to hydrate...");
+    // Unified Session Handler
+    const handleSession = async (sessionId: string | null, action: string | null) => {
+        if (!sessionId || (activeCall && activeCall.id === sessionId)) return;
+
+        console.log("[CallContext] Checking session:", sessionId, "Action:", action);
+
+        try {
+            // Fetch session details from DB
+            const { data: session, error } = await supabase
+                .from('call_sessions')
+                .select(`
+                    *,
+                    caller:profiles!call_sessions_caller_id_fkey(full_name, avatar_url)
+                `)
+                .eq('id', sessionId)
+                .single();
+
+            if (error || !session) {
+                console.error("[CallContext] Failed to fetch session for deep link:", error);
                 return;
             }
 
-            const params = new URLSearchParams(window.location.search);
-            const sessionId = params.get('session');
-            const action = params.get('action');
+            console.log("[CallContext] Session fetched successfully. Status:", session.status);
 
-            if (sessionId && !activeCall) {
-                console.log("[CallContext] Deep link session detected:", sessionId);
+            // Check for stale session (ignore calls older than 5 minutes)
+            const sessionTime = new Date(session.created_at).getTime();
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
 
-                try {
-                    // Fetch session details from DB
-                    const { data: session, error } = await supabase
-                        .from('call_sessions')
-                        .select(`
-                            *,
-                            caller:profiles!call_sessions_caller_id_fkey(full_name, avatar_url)
-                        `)
-                        .eq('id', sessionId)
-                        .single();
+            if (now - sessionTime > fiveMinutes && session.status !== 'active') {
+                console.warn("[CallContext] Ignoring stale deep link session.");
+                return;
+            }
 
-                    if (error || !session) {
-                        console.error("[CallContext] Failed to fetch session for deep link:", error);
-                        return;
-                    }
+            // Only handle if the call is still valid
+            const isValidStatus = ['initiated', 'ringing', 'accepted', 'active'].includes(session.status);
 
-                    console.log("[CallContext] Session fetched successfully. Status:", session.status);
+            if (isValidStatus) {
+                const callState: CallState = {
+                    id: session.id,
+                    type: session.call_type as CallType,
+                    category: 'private',
+                    peerId: session.caller_id,
+                    peerName: session.caller?.full_name || 'Someone',
+                    peerAvatar: session.caller?.avatar_url,
+                    isInitiator: false,
+                    status: session.status === 'active' || session.status === 'accepted' ? 'active' : 'incoming',
+                    startTime: session.status === 'active' ? sessionTime : undefined
+                };
 
-                    // Check for stale session (ignore calls older than 5 minutes)
-                    const sessionTime = new Date(session.created_at).getTime();
-                    const now = Date.now();
-                    const fiveMinutes = 5 * 60 * 1000;
+                console.log("[CallContext] Setting recovery call state:", callState.status);
+                setActiveCall(callState);
 
-                    if (now - sessionTime > fiveMinutes && session.status !== 'active') {
-                        console.warn("[CallContext] Ignoring stale deep link session.");
-                        return;
-                    }
-
-                    // Only handle if the call is still valid (initiated or ringing)
-                    // or if it was recently accepted (to avoid losing UI on refresh)
-                    const isValidStatus = ['initiated', 'ringing', 'accepted', 'active'].includes(session.status);
-
-                    if (isValidStatus) {
-                        const callState: CallState = {
-                            id: session.id,
-                            type: session.call_type as CallType,
-                            category: 'private',
-                            peerId: session.caller_id,
-                            peerName: session.caller?.full_name || 'Someone',
-                            peerAvatar: session.caller?.avatar_url,
-                            isInitiator: false,
-                            status: session.status === 'active' || session.status === 'accepted' ? 'active' : 'incoming',
-                            startTime: session.status === 'active' ? sessionTime : undefined
-                        };
-
-                        console.log("[CallContext] Setting recovery call state:", callState.status);
-                        setActiveCall(callState);
-
-                        // If the user clicked "Accept" from the push notification
-                        if (action === 'accept' && session.status !== 'accepted' && session.status !== 'active') {
-                            console.log("[CallContext] Auto-accepting from deep link...");
-                            // Longer delay to ensure channel is ready and UI is mounted
-                            setTimeout(() => {
-                                acceptCallFromSession(callState);
-                                // Clean up URL to prevent auto-accept on refresh
-                                window.history.replaceState({}, '', '/messages');
-                            }, 1500); // Slightly longer delay for mobile stability
-                        } else if (action === 'accept') {
-                            // Already accepted, just clear URL
-                            window.history.replaceState({}, '', '/messages');
+                // If the user clicked "Accept"
+                if (action === 'accept' && session.status !== 'accepted' && session.status !== 'active') {
+                    console.log("[CallContext] Auto-accepting from deep link...");
+                    setTimeout(() => {
+                        acceptCallFromSession(callState);
+                        // Clean up URL
+                        if (window.history.pushState) {
+                            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                            window.history.pushState({ path: newUrl }, '', newUrl);
                         }
-                    }
-                } catch (err) {
-                    console.error("[CallContext] Critical error in deep link handler:", err);
+                    }, 1500);
                 }
             }
+        } catch (err) {
+            console.error("[CallContext] Critical error in deep link handler:", err);
+        }
+    };
+
+    // Handle Incoming Call from URL (Deep Linking / Push Notifications)
+    useEffect(() => {
+        const checkInitialUrl = async () => {
+            // CRITICAL: Wait for user AND profile
+            if (!user || !profile) return;
+            const params = new URLSearchParams(window.location.search);
+            handleSession(params.get('session'), params.get('action'));
         };
 
-        handleDeepLinkCall();
+        checkInitialUrl();
+
+        // Listen for App Resume (Foreground) - Re-check current URL if changed or stale? 
+        // Actually simpler to just rely on appUrlOpen for new intents.
+        // But if user just minimized and restored, standard resume might trigger check.
+        const stateListener = App.addListener('appStateChange', ({ isActive }) => {
+            if (isActive && user && profile) {
+                // Optional: Re-check window location or just wait for url event
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('session')) {
+                    handleSession(params.get('session'), params.get('action'));
+                }
+            }
+        });
+
+        // Listen for Deep Links (Custom Scheme / Universal Links)
+        const urlListener = App.addListener('appUrlOpen', (data) => {
+            console.log("[CallContext] App opened with URL:", data.url);
+            try {
+                // Support both http/https and custom schemes
+                // URL might be "eduspace://call?session=..." or "https://.../?session=..."
+                const urlObj = new URL(data.url);
+                const params = urlObj.searchParams;
+                const sessionId = params.get('session');
+                const action = params.get('action');
+                if (sessionId && user && profile) {
+                    handleSession(sessionId, action);
+                }
+            } catch (e) {
+                console.error("Error parsing deep link:", e);
+            }
+        });
+
+        return () => {
+            stateListener.then(l => l.remove());
+            urlListener.then(l => l.remove());
+        };
     }, [user, profile]); // Depend on profile too
 
     // Helper for acceptance from deep link

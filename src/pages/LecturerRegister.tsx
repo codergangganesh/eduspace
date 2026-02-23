@@ -97,91 +97,101 @@ export default function LecturerRegister() {
                     }]
                 }}
             />
-            <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
+            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
+                <div className="mb-8 lg:hidden">
+                    <h2 className="text-3xl font-black text-foreground tracking-tight">Lecturer</h2>
+                    <p className="text-blue-600 font-bold text-lg -mt-1">Registration</p>
+                </div>
                 {/* Form */}
-                <form className="space-y-5" onSubmit={handleSubmit}>
+                <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
                     {/* Full Name Field */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Full Name
                         </label>
                         <div className="relative">
-                            <Input
-                                type="text"
-                                placeholder="Enter your full name"
-                                value={formData.fullName}
-                                onChange={handleChange("fullName")}
-                                className="pr-10"
-                                disabled={isLoading}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
                                 <User className="size-5" />
                             </div>
+                            <Input
+                                type="text"
+                                placeholder="Full Name"
+                                value={formData.fullName}
+                                onChange={handleChange("fullName")}
+                                className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                disabled={isLoading}
+                            />
                         </div>
                     </div>
 
                     {/* Email Field */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Email Address
                         </label>
                         <div className="relative">
-                            <Input
-                                type="email"
-                                placeholder="you@example.com"
-                                value={formData.email}
-                                onChange={handleChange("email")}
-                                className="pr-10"
-                                disabled={isLoading}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
                                 <Mail className="size-5" />
                             </div>
+                            <Input
+                                type="email"
+                                placeholder="Email Address"
+                                value={formData.email}
+                                onChange={handleChange("email")}
+                                className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                disabled={isLoading}
+                            />
                         </div>
                     </div>
 
                     {/* Password Field */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Password
                         </label>
                         <div className="relative">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                            </div>
                             <Input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="Create a strong password"
+                                placeholder="Password"
                                 value={formData.password}
                                 onChange={handleChange("password")}
-                                className="pr-12"
+                                className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
                             >
                                 {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                             </button>
                         </div>
                     </div>
 
-                    {/* Confirm Password Field */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                    {/* Confirm Password Field - Desktop only label, kept for confirmed password on mobile if needed but image only shows one password field. User said keep all required fields. */}
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground lg:block hidden">
                             Confirm Password
                         </label>
                         <div className="relative">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                            </div>
                             <Input
                                 type={showConfirmPassword ? "text" : "password"}
-                                placeholder="Confirm your password"
+                                placeholder="Confirm Password"
                                 value={formData.confirmPassword}
                                 onChange={handleChange("confirmPassword")}
-                                className="pr-12"
+                                className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
                             >
                                 {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                             </button>
@@ -189,7 +199,7 @@ export default function LecturerRegister() {
                     </div>
 
                     {/* Terms Agreement */}
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 mt-2">
                         <TermsDialog
                             open={showTerms}
                             onOpenChange={setShowTerms}
@@ -214,35 +224,20 @@ export default function LecturerRegister() {
                                         setAgreedToTerms(false);
                                     }
                                 }}
-                                className="mt-1 size-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                                className="size-5 rounded-lg border-border/50 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                                 disabled={isLoading}
                             />
-                            <label htmlFor="terms" className="text-sm text-muted-foreground select-none">
-                                I agree to the{" "}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowTerms(true)}
-                                    className="text-primary hover:underline font-medium focus:outline-none"
-                                >
-                                    Terms of Service
-                                </button>
-                                {" "}and{" "}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPrivacy(true)}
-                                    className="text-primary hover:underline font-medium focus:outline-none"
-                                >
-                                    Privacy Policy
-                                </button>
+                            <label htmlFor="terms" className="text-[13px] text-muted-foreground/80 select-none">
+                                I agree to the <span className="text-blue-600 font-semibold cursor-pointer" onClick={() => setShowTerms(true)}>Terms</span> & <span className="text-blue-600 font-semibold cursor-pointer" onClick={() => setShowPrivacy(true)}>Privacy Policy</span>
                             </label>
                         </div>
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-4" disabled={isLoading}>
                         {isLoading ? (
                             <>
-                                <Loader2 className="size-4 mr-2 animate-spin" />
+                                <Loader2 className="size-5 mr-2 animate-spin" />
                                 Creating Account...
                             </>
                         ) : (
@@ -251,20 +246,28 @@ export default function LecturerRegister() {
                     </Button>
                 </form>
 
-                {/* Divider */}
-                <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-border"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">OR</span>
-                    </div>
+                {/* Footer - Only on mobile */}
+                <div className="mt-8 text-center lg:hidden">
+                    <p className="text-muted-foreground text-sm">
+                        Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
+                    </p>
                 </div>
 
-                {/* Sign In Link */}
-                <Button variant="outline" asChild className="w-full">
-                    <Link to="/lecturer/login">Sign In</Link>
-                </Button>
+                {/* Desktop Divider & Sign In */}
+                <div className="hidden lg:block mt-6">
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-border"></div>
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">OR</span>
+                        </div>
+                    </div>
+
+                    <Button variant="outline" asChild className="w-full h-11">
+                        <Link to="/lecturer/login">Sign In</Link>
+                    </Button>
+                </div>
             </div>
         </AuthLayout>
     );

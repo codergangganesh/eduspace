@@ -26,7 +26,7 @@ export function DashboardHeader({ onMenuClick, actions, onInviteClick }: Dashboa
   const showNotifications = profile?.notifications_enabled !== false;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-surface px-4 shadow-sm lg:px-6">
+    <header className="sticky top-0 z-30 flex min-h-16 items-center border-b bg-surface px-4 shadow-sm lg:px-6 pt-[var(--safe-top)]">
       <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={onMenuClick}>
         <Menu className="size-5" />
       </Button>

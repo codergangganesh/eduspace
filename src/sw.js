@@ -46,7 +46,7 @@ async function handlePushEvent(data) {
 
     // CRITICAL UX RULE: Do NOT send push if user is actively using the app
     // EXCEPTION: Always show call notifications to ensure the user doesn't miss them
-    if (data.type !== 'call' && (hasFocusedClient || appState.isFocused)) {
+    if (data.type !== 'call' && data.type !== 'incoming_call' && (hasFocusedClient || appState.isFocused)) {
       const isMessageType = data.type === 'message';
       const isOnMessagesPage = appState.currentPath?.startsWith('/messages');
 
@@ -130,6 +130,7 @@ function getDefaultVibration(type) {
     case 'schedule':
       return [200, 100, 200, 100, 200];
     case 'call':
+    case 'incoming_call':
       return [1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000]; // Aggressive repeating vibration
     default:
       return [100, 50, 100];
@@ -165,6 +166,7 @@ function getDefaultActions(type) {
         { action: 'view', title: '📊 View Grade' },
       ];
     case 'call':
+    case 'incoming_call':
       return [
         { action: 'accept', title: '✅ Answer' },
         { action: 'decline', title: '❌ Reject' },

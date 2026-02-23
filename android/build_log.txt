@@ -1,0 +1,313 @@
+Initialized native services in: C:\Users\HP\.gradle\native
+Initialized jansi services in: C:\Users\HP\.gradle\native
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Starting process 'Gradle build daemon'. Working directory: C:\Users\HP\.gradle\daemon\8.14 Command: C:\Program Files\java\jdk-24.0.1\bin\java.exe --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED --enable-native-access=ALL-UNNAMED -Xmx1536m -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -cp C:\Users\HP\.gradle\wrapper\dists\gradle-8.14-all\c2qonpi39x1mddn7hk5gh9iqj\gradle-8.14\lib\gradle-daemon-main-8.14.jar -javaagent:C:\Users\HP\.gradle\wrapper\dists\gradle-8.14-all\c2qonpi39x1mddn7hk5gh9iqj\gradle-8.14\lib\agents\gradle-instrumentation-agent-8.14.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.14
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 11.072 secs.
+The client will now receive all logging from the daemon (pid: 16784). The daemon log file: C:\Users\HP\.gradle\daemon\8.14\daemon-16784.out.log
+Daemon will be stopped at the end of the build 
+Using 4 worker leases.
+Received JVM installation metadata from 'C:\Program Files\java\jdk-24.0.1': {JAVA_HOME=C:\Program Files\java\jdk-24.0.1, JAVA_VERSION=24.0.1, JAVA_VENDOR=Oracle Corporation, RUNTIME_NAME=Java(TM) SE Runtime Environment, RUNTIME_VERSION=24.0.1+9-30, VM_NAME=Java HotSpot(TM) 64-Bit Server VM, VM_VERSION=24.0.1+9-30, VM_VENDOR=Oracle Corporation, OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Now considering [E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android] as hierarchies to watch
+File system watching is active
+Starting Build
+Caching disabled for Groovy DSL script compilation (cp_settings) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling settings file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\settings.gradle' using SubsetScriptTransformer.
+Resource missing. [HTTP GET: https://dl.google.com/dl/android/maven2/org/gradle/toolchains/foojay-resolver-convention/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin/0.8.0/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin-0.8.0.pom]
+Resource missing. [HTTP GET: https://repo.maven.apache.org/maven2/org/gradle/toolchains/foojay-resolver-convention/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin/0.8.0/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin-0.8.0.pom]
+Downloading https://plugins.gradle.org/m2/org/gradle/toolchains/foojay-resolver-convention/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin/0.8.0/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin-0.8.0.pom to C:\Users\HP\.gradle\.tmp\gradle_download10086069805809686627bin
+Resource missing. [HTTP HEAD: https://plugins.gradle.org/m2/org/gradle/toolchains/foojay-resolver-convention/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin/0.8.0/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin-0.8.0.jar]
+Resolved plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '0.8.0']
+Resource missing. [HTTP GET: https://dl.google.com/dl/android/maven2/org/gradle/toolchains/foojay-resolver/0.8.0/foojay-resolver-0.8.0.pom]
+Resource missing. [HTTP GET: https://repo.maven.apache.org/maven2/org/gradle/toolchains/foojay-resolver/0.8.0/foojay-resolver-0.8.0.pom]
+Downloading https://plugins.gradle.org/m2/org/gradle/toolchains/foojay-resolver/0.8.0/foojay-resolver-0.8.0.pom to C:\Users\HP\.gradle\.tmp\gradle_download8599482585280530172bin
+Downloading https://plugins.gradle.org/m2/org/gradle/toolchains/foojay-resolver/0.8.0/foojay-resolver-0.8.0.module to C:\Users\HP\.gradle\.tmp\gradle_download1966905356388838177bin
+Downloading https://plugins.gradle.org/m2/org/gradle/toolchains/foojay-resolver/0.8.0/foojay-resolver-0.8.0.jar to C:\Users\HP\.gradle\.tmp\gradle_download2305092240356691757bin
+Caching disabled for InstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\modules-2\files-2.1\org.gradle.toolchains\foojay-resolver\0.8.0\51af701a9c5fb46bb66a0e5ab9d6ef22720d7ec6\foojay-resolver-0.8.0.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\8.14\transforms\3702a732d58aed7ff5cf1cca17b6042c\transformed\.gradle-instrumented-classpath.marker because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\8.14\transforms\ac37b94b66ef37ca4111bd7ebe9e0d89\transformed\analysis\instrumentation-hierarchy.bin because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\8.14\transforms\3702a732d58aed7ff5cf1cca17b6042c\transformed\analysis\instrumentation-hierarchy.bin because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\8.14\transforms\3702a732d58aed7ff5cf1cca17b6042c\transformed\analysis\instrumentation-dependencies.bin because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\8.14\transforms\ac37b94b66ef37ca4111bd7ebe9e0d89\transformed\analysis\instrumentation-dependencies.bin because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\modules-2\files-2.1\org.gradle.toolchains\foojay-resolver\0.8.0\51af701a9c5fb46bb66a0e5ab9d6ef22720d7ec6\foojay-resolver-0.8.0.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for MergeInstrumentationAnalysisTransform: C:\Users\HP\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.10.1\b3add478d4382b78ea20b1671390a858002feb6c\gson-2.10.1.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for ExternalDependencyInstrumentingArtifactTransform: C:\Users\HP\.gradle\caches\8.14\transforms\fab29cf99cd9f46c906b9893726be2fb\transformed\merge\instrumentation-dependencies.bin because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for ExternalDependencyInstrumentingArtifactTransform: C:\Users\HP\.gradle\caches\modules-2\files-2.1\org.gradle.toolchains\foojay-resolver\0.8.0\51af701a9c5fb46bb66a0e5ab9d6ef22720d7ec6\foojay-resolver-0.8.0.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for Groovy DSL script compilation (settings) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling settings file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\settings.gradle' using BuildScriptTransformer.
+Settings evaluated using settings file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\settings.gradle'.
+Projects loaded. Root project using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\build.gradle'.
+Included projects: [root project 'android', project ':app', project ':capacitor-android', project ':capacitor-app', project ':capacitor-cordova-android-plugins', project ':capacitor-filesystem', project ':capacitor-push-notifications', project ':capacitor-status-bar']
+
+> Configure project :
+Evaluating root project 'android' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\build.gradle' using BuildScriptTransformer.
+Caching disabled for Groovy DSL script compilation (cp_dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\variables.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\variables.gradle' using BuildScriptTransformer.
+
+> Configure project :app
+Evaluating project ':app' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\app\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\app\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\app\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+Caching disabled for Groovy DSL script compilation (cp_dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\app\capacitor.build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\app\capacitor.build.gradle' using BuildScriptTransformer.
+Caching disabled for Groovy DSL script compilation (cp_dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\capacitor-cordova-android-plugins\cordova.variables.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\capacitor-cordova-android-plugins\cordova.variables.gradle' using BuildScriptTransformer.
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-android
+Evaluating project ':capacitor-android' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\android\capacitor\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\android\capacitor\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\android\capacitor\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+
+> Configure project :capacitor-app
+Evaluating project ':capacitor-app' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\app\android\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\app\android\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\app\android\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+
+> Configure project :capacitor-cordova-android-plugins
+Evaluating project ':capacitor-cordova-android-plugins' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\capacitor-cordova-android-plugins\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\capacitor-cordova-android-plugins\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\android\capacitor-cordova-android-plugins\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-filesystem
+Evaluating project ':capacitor-filesystem' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\filesystem\android\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\filesystem\android\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\filesystem\android\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+Build f6571d39-f111-4906-b3fa-4df8c7113894 is started
+Using Kotlin Gradle Plugin gradle813 variant
+
+> Configure project :capacitor-push-notifications
+Evaluating project ':capacitor-push-notifications' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\push-notifications\android\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\push-notifications\android\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\push-notifications\android\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+
+> Configure project :capacitor-status-bar
+Evaluating project ':capacitor-status-bar' using build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\status-bar\android\build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\status-bar\android\build.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (proj) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling build file 'E:\AI PROJECT LISTS\STUDENT WORKSPACE\eduspace\eduspace\node_modules\@capacitor\status-bar\android\build.gradle' using BuildScriptTransformer.
+Using default execution profile
+All projects evaluated.
+Task name matched 'tasks'
+Selected primary task 'tasks' from project :
+Tasks to be executed: [task ':tasks']
+Tasks that were excluded: []
+Resolve mutations for :tasks (Thread[#98,included builds,5,main]) started.
+:tasks (Thread[#98,included builds,5,main]) started.
+
+> Task :tasks
+Caching disabled for task ':tasks' because:
+  Build cache is disabled
+Task ':tasks' is not up-to-date because:
+  Task is untracked because: Uses the whole project state as an input
+Starting process 'command 'C:\Users\HP\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2\bin\java.exe''. Working directory: C:\Users\HP\.gradle\.tmp\tmp-jvm4720908351356904149probe Command: C:\Users\HP\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2\bin\java.exe -Xmx32m -Xms32m -cp . JavaProbe
+Successfully started process 'command 'C:\Users\HP\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2\bin\java.exe''
+Received JVM installation metadata from 'C:\Users\HP\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2': {JAVA_HOME=C:\Users\HP\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2, JAVA_VERSION=21.0.10, JAVA_VENDOR=Eclipse Adoptium, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.10+7-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.10+7-LTS, VM_VENDOR=Eclipse Adoptium, OS_ARCH=amd64}
+
+------------------------------------------------------------
+Tasks runnable from root project 'android'
+------------------------------------------------------------
+
+Android tasks
+-------------
+androidDependencies - Displays the Android dependencies of the project.
+signingReport - Displays the signing info for the base and test modules
+sourceSets - Prints out all the source sets defined in this project.
+
+Build tasks
+-----------
+assemble - Assemble main outputs for all the variants.
+assembleAndroidTest - Assembles all the Test applications.
+assembleUnitTest - Assembles all the unit test applications.
+build - Assembles and tests this project.
+buildDependents - Assembles and tests this project and all projects that depend on it.
+buildKotlinToolingMetadata - Build metadata json file containing information about the used Kotlin tooling
+buildNeeded - Assembles and tests this project and all projects it depends on.
+bundle - Assemble bundles for all the variants.
+clean - Deletes the build directory.
+compileDebugAndroidTestSources
+compileDebugSources
+compileDebugUnitTestSources
+compileReleaseSources
+compileReleaseUnitTestSources
+debugSourcesJar - Assembles a jar archive containing the sources of target 'debug'.
+extractDebugAnnotations - Extracts Android annotations for the debug variant into the archive file
+extractReleaseAnnotations - Extracts Android annotations for the release variant into the archive file
+releaseSourcesJar - Assembles a jar archive containing the sources of target 'release'.
+
+Build Setup tasks
+-----------------
+init - Initializes a new Gradle build.
+updateDaemonJvm - Generates or updates the Gradle Daemon JVM criteria.
+wrapper - Generates Gradle wrapper files.
+
+Help tasks
+----------
+artifactTransforms - Displays the Artifact Transforms that can be executed in root project 'android'.
+buildEnvironment - Displays all buildscript dependencies declared in root project 'android'.
+dependencies - Displays all dependencies declared in root project 'android'.
+dependencyInsight - Displays the insight into a specific dependency in root project 'android'.
+help - Displays a help message.
+javaToolchains - Displays the detected java toolchains.
+outgoingVariants - Displays the outgoing variants of root project 'android'.
+projects - Displays the sub-projects of root project 'android'.
+properties - Displays the properties of root project 'android'.
+resolvableConfigurations - Displays the configurations that can be resolved in root project 'android'.
+tasks - Displays the tasks runnable from root project 'android' (some of the displayed tasks may belong to subprojects).
+
+Install tasks
+-------------
+installDebug - Installs the Debug build.
+installDebugAndroidTest - Installs the android (on device) tests for the Debug build.
+uninstallAll - Uninstall all applications.
+uninstallDebug - Uninstalls the Debug build.
+uninstallDebugAndroidTest - Uninstalls the android (on device) tests for the Debug build.
+uninstallRelease - Uninstalls the Release build.
+
+Signing tasks
+-------------
+generatePgpKeys - Generates a new PGP keypair.
+
+Usage: 
+gradlew generatePgpKeys --name "Jane Doe <janedoe@example.com>" --password YOUR_PASSWORD
+uploadPublicPgpKey - Uploads the public PGP key to a keyserver
+
+Validation tasks
+----------------
+checkSigningConfiguration - Checks that a signing configuration is set up correctly.
+
+Verification tasks
+------------------
+check - Runs all checks.
+checkJetifier - Checks whether Jetifier is needed for the current project
+checkKotlinGradlePluginConfigurationErrors - Checks that Kotlin Gradle Plugin hasn't reported project configuration errors, failing otherwise. This task always runs before compileKotlin* or similar tasks.
+connectedAndroidTest - Installs and runs instrumentation tests for all flavors on connected devices.
+connectedCheck - Runs all device checks on currently connected devices.
+connectedDebugAndroidTest - Installs and runs the tests for debug on connected devices.
+deviceAndroidTest - Installs and runs instrumentation tests using all Device Providers.
+deviceCheck - Runs all device checks using Device Providers and Test Servers.
+lint - Runs lint on the default variant.
+lintDebug - Print text output from the corresponding lint report task
+lintFix - Runs lint on the default variant and applies any safe suggestions to the source code.
+lintRelease - Print text output from the corresponding lint report task
+lintVitalRelease - Print text output from the corresponding lint report task
+test - Run unit tests for all variants.
+testDebugUnitTest - Run unit tests for the debug build.
+testReleaseUnitTest - Run unit tests for the release build.
+updateLintBaseline - Updates the lint baseline using the default variant.
+
+To see all tasks and more detail, run gradlew tasks --all
+
+To see more detail about a task, run gradlew help --task <task>
+Build f6571d39-f111-4906-b3fa-4df8c7113894 is closed
+
+[Incubating] Problems report is available at: file:///E:/AI%20PROJECT%20LISTS/STUDENT%20WORKSPACE/eduspace/eduspace/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 9s
+1 actionable task: 1 executed
+Watched directory hierarchies: []

@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Mail, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import { Mail, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AuthHeader } from "@/components/layout/AuthHeader";
-import { BackgroundDecoration } from "@/components/auth/BackgroundDecoration";
+import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -96,115 +95,86 @@ export default function ForgotPassword() {
         description="Reset your Eduspace password. Enter your email to receive password reset instructions."
         keywords={["Forgot Password", "Reset Password", "EduSpace Account Recovery"]}
       />
-      <AuthHeader />
 
-      <main className="flex-1 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-[480px] mx-auto flex flex-col gap-6">
-          {/* Back Link */}
-          <Link
-            to="/login"
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium w-fit animate-fade-in"
-          >
-            <ArrowLeft className="size-4" />
-            Back to Sign In
-          </Link>
-
-          {!isSubmitted ? (
-            <>
-              {/* Page Heading */}
-              <div className="flex flex-col gap-2 text-center sm:text-left animate-fade-in">
-                <h1 className="text-foreground text-3xl sm:text-4xl font-black leading-tight tracking-[-0.033em]">
-                  Forgot Password?
-                </h1>
-                <p className="text-muted-foreground text-base font-normal leading-normal">
-                  No worries! Enter your email and we'll send you reset instructions.
-                </p>
-              </div>
-
-              {/* Form Card */}
-              <div className="bg-surface rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:shadow-none border border-border p-6 sm:p-8 flex flex-col gap-6 animate-fade-in">
-                <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-                  {/* Email Field */}
-                  <label className="flex flex-col gap-2">
-                    <span className="text-foreground text-sm font-medium leading-normal">
-                      Institutional Email
-                    </span>
-                    <div className="relative flex items-center">
-                      <Input
-                        type="email"
-                        placeholder="Enter your email address"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pr-10"
-                        disabled={isLoading}
-                        required
-                      />
-                      <div className="absolute right-3 text-muted-foreground pointer-events-none flex items-center">
-                        <Mail className="size-5" />
-                      </div>
-                    </div>
-                  </label>
-
-                  {/* Submit Button */}
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="size-4 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      "Send Reset Link"
-                    )}
-                  </Button>
-                </form>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Success State */}
-              <div className="bg-surface rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:shadow-none border border-border p-6 sm:p-8 flex flex-col items-center gap-6 text-center animate-fade-in">
-                <div className="size-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <CheckCircle className="size-8 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <h2 className="text-foreground text-2xl font-bold">Request Received</h2>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    If an account exists for{" "}
-                    <span className="font-medium text-foreground">{email}</span>, you will receive password reset instructions shortly.
-                  </p>
-                  <p className="text-muted-foreground text-xs mt-2">
-                    Please check your inbox and spam folder. If you don't receive an email, contact your administrator.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 w-full">
-                  <Button asChild className="w-full">
-                    <Link to="/login">Back to Sign In</Link>
-                  </Button>
-                  <button
-                    onClick={handleResend}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Didn't receive the email?{" "}
-                    <span className="text-primary hover:underline">Try again</span>
-                  </button>
+      <AuthLayout
+        title="Forgot Password"
+        subtitle="No worries! Enter your email and we'll send you reset instructions."
+        contentMaxWidth="max-w-md"
+      >
+        {!isSubmitted ? (
+          <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
+            <form className="space-y-4 lg:space-y-6" onSubmit={handleSubmit}>
+              {/* Email Field */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground lg:block hidden">
+                  Institutional Email
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                    <Mail className="size-5" />
+                  </div>
+                  <Input
+                    type="email"
+                    placeholder="Institutional Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                    disabled={isLoading}
+                    required
+                  />
                 </div>
               </div>
-            </>
-          )}
 
-          {/* Footer Info */}
-          <div className="text-center animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <p className="text-xs text-muted-foreground/70">
-              Remember your password?{" "}
-              <Link to="/login" className="text-primary hover:underline">
-                Sign in here
-              </Link>
-            </p>
+              {/* Submit Button */}
+              <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-4" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="size-5 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-8 text-center text-sm">
+              <p className="text-muted-foreground">
+                Remember your password?{" "}
+                <Link to="/login" className="text-blue-600 font-bold hover:underline">
+                  Sign In
+                </Link>
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
-
-      <BackgroundDecoration />
+        ) : (
+          <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm flex flex-col items-center gap-6 text-center animate-fade-in">
+            <div className="size-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <CheckCircle className="size-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h2 className="text-foreground text-2xl font-bold">Request Received</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                If an account exists for{" "}
+                <span className="font-medium text-foreground">{email}</span>, you will receive password reset instructions shortly.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 w-full mt-4">
+              <Button asChild className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700">
+                <Link to="/login">Back to Sign In</Link>
+              </Button>
+              <button
+                onClick={handleResend}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isLoading}
+              >
+                Didn't receive the email?{" "}
+                <span className="text-blue-600 hover:underline">Try again</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </AuthLayout>
     </div>
   );
 }

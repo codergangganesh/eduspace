@@ -1071,6 +1071,7 @@ export type Database = {
           email_notifications: boolean | null
           enrollment_date: string | null
           expected_graduation: string | null
+          fcm_token: string | null // Added manually
           full_name: string | null
           gpa: number | null
           grade_updates: boolean | null
@@ -1120,6 +1121,7 @@ export type Database = {
           email_notifications?: boolean | null
           enrollment_date?: string | null
           expected_graduation?: string | null
+          fcm_token?: string | null
           full_name?: string | null
           gpa?: number | null
           grade_updates?: boolean | null
@@ -1169,6 +1171,7 @@ export type Database = {
           email_notifications?: boolean | null
           enrollment_date?: string | null
           expected_graduation?: string | null
+          fcm_token?: string | null
           full_name?: string | null
           gpa?: number | null
           grade_updates?: boolean | null

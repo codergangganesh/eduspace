@@ -1,4 +1,4 @@
-@tailwind base;
+ @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -37,7 +37,29 @@
 
     --surface: 0 0% 100%;
     --surface-foreground: 228 29% 9%;
+
+    /* Safe Area Insets */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
   }
+
+  @media (max-width: 1024px) {
+    :root {
+      /* Default for mobile browsers - no forced buffer */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Only apply the aggressive 60px buffer for the Android/iOS Native App */
+    .is-native {
+      --safe-top: max(60px, env(safe-area-inset-top));
+      --safe-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+  }
+
+
 
   .dark {
     --background: 222 33% 10%;
@@ -267,5 +289,22 @@
   /* Video Mirroring */
   .mirror {
     transform: scaleX(-1);
+  }
+
+  /* Safe Area Utilities */
+  .p-safe-top {
+    padding-top: var(--safe-top);
+  }
+  .p-safe-bottom {
+    padding-bottom: var(--safe-bottom);
+  }
+  .m-safe-top {
+    margin-top: var(--safe-top);
+  }
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
   }
 }

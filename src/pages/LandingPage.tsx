@@ -147,9 +147,9 @@ export default function LandingPage() {
                 <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
                 {/* Navigation */}
-                <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl fixed top-0 w-full z-[100] transition-all duration-300">
+                <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl fixed top-0 w-full z-[100] transition-all duration-300 pt-[var(--safe-top)]">
                     <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
-                        <div className="flex items-center justify-between h-20">
+                        <div className="flex items-center justify-between min-h-20">
                             {/* Logo */}
                             <div className="flex items-center gap-2">
                                 <Link to="/" className="flex items-center gap-2 group">

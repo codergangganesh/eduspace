@@ -55,14 +55,14 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const mailOptions = {
-      from: `"Eduspace Academy Feedback" <${smtpUser}>`,
+            from: `"EduSpace Feedback" <${smtpUser}>`,
       to: targetEmail,
       replyTo: userEmail,
       subject: `New Feedback Received: ${rating} Stars from ${userName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
           <div style="background: #1e3a8a; padding: 20px; text-align: center; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">Eduspace Academy Feedback</h1>
+            <h1 style="margin: 0; font-size: 24px;">EduSpace Feedback</h1>
           </div>
           <div style="padding: 30px; line-height: 1.6; color: #334155;">
             <h2 style="color: #1e3a8a; margin-top: 0;">Feedback Details</h2>
@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
           </div>
           <div style="background: #f1f5f9; padding: 15px; text-align: center; font-size: 12px; color: #64748b;">
-            This email was sent automatically from the Eduspace Academy Feedback System.
+            This email was sent automatically from the EduSpace Feedback System.
           </div>
         </div>
       `,

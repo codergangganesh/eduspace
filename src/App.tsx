@@ -18,6 +18,7 @@ import { Loader2 } from "lucide-react";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
+import { FCMManager } from "@/components/chat/FCMManager";
 import { GlobalCallManager } from "@/components/chat/GlobalCallManager";
 import { FeedbackPrompt } from "@/components/feedback/FeedbackPrompt";
 import { useFeedback } from "@/hooks/useFeedback";
@@ -118,19 +119,19 @@ const App = () => (
             <StreakProvider>
               <LayoutProvider>
                 <FeedbackManager />
-                <CallProvider>
-                  <GlobalCallManager />
+                <BrowserRouter>
                   <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <OfflineBanner />
-                    <BrowserRouter>
+                    <CallProvider>
+                      <GlobalCallManager />
+                      <Toaster />
+                      <Sonner />
+                      <OfflineBanner />
                       <PWAInstallPrompt />
                       <PushNotificationManager />
+                      <FCMManager />
                       <CookieConsent />
                       <Suspense fallback={<LoadingFallback />}>
                         <Routes>
-
                           <Route path="/p/:id" element={<PublicProfile />} />
                           <Route path="/badge/:id" element={<PublicProfile />} />
                           <Route path="/profile/:id" element={<PublicProfile />} />
@@ -188,20 +189,19 @@ const App = () => (
                           </Route>
 
                           <Route path="/ai-chat/share/:token" element={<SharedAIChat />} />
-
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
-                    </BrowserRouter>
+                    </CallProvider>
                   </TooltipProvider>
-                </CallProvider>
+                </BrowserRouter>
               </LayoutProvider>
             </StreakProvider>
           </FeedbackProvider>
         </ThemeProvider>
       </LanguageProvider>
     </AuthProvider>
-  </QueryClientProvider >
+  </QueryClientProvider>
 );
 
 export default App;

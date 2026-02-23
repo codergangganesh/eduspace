@@ -69,7 +69,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       />
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-72 bg-surface border-r border-border z-[70] lg:hidden animate-slide-in-right">
+      <aside className="fixed left-0 top-0 bottom-0 w-72 bg-surface border-r border-border z-[70] lg:hidden animate-slide-in-right pt-[var(--safe-top)] pb-[var(--safe-bottom)]">
         <div className="flex flex-col h-full p-4">
           {/* Header */}
           <div className="flex items-center justify-between px-3 mb-8">
@@ -111,7 +111,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                     isActive
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   )}
                 >

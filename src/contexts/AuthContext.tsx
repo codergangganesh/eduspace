@@ -29,6 +29,7 @@ export interface Profile {
   zip_code: string | null;
   country: string | null;
   verified: boolean | null;
+  fcm_token: string | null; // Added
   email_notifications: boolean | null;
   push_notifications: boolean | null;
   sms_notifications: boolean | null;

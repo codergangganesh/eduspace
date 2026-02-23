@@ -1,0 +1,64 @@
+import { initializeApp } from "firebase/app";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { supabase } from "@/integrations/supabase/client";
+
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+
+export const requestFirebaseToken = async (userId: string) => {
+    if (!messaging) return null;
+
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.warn("Notification permission NOT granted");
+            return null;
+        }
+
+        const token = await getToken(messaging, {
+            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+        });
+
+        if (token) {
+            console.log("FCM Token (PWA):", token);
+
+            // Update profile with FCM token
+            const { error } = await supabase
+                .from('profiles')
+                .update({ fcm_token: token })
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error("Error updating profile with FCM token:", error);
+            }
+
+            return token;
+        } else {
+            console.warn("No registration token available. Request permission to generate one.");
+            return null;
+        }
+    } catch (err) {
+        console.error("An error occurred while retrieving token:", err);
+        return null;
+    }
+};
+
+export const onForegroundMessage = (callback: (payload: any) => void) => {
+    if (!messaging) return () => { };
+    return onMessage(messaging, (payload) => {
+        console.log("Foreground message received:", payload);
+        callback(payload);
+    });
+};
+
+export { messaging };

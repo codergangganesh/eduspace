@@ -319,7 +319,9 @@ export default function AIChatWindow() {
 
         try {
             // Record academic action
-            recordAcademicAction();
+            if (userProfile?.role === 'student') {
+                recordAcademicAction();
+            }
             setIsLoading(true);
 
             // Construct content for user message
@@ -489,7 +491,7 @@ export default function AIChatWindow() {
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
                 {/* Chat Header */}
-                <div className="h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30">
+                <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30 pt-[var(--safe-top)]">
                     <div className="flex items-center gap-2 md:gap-3">
                         <Button
                             variant="ghost"

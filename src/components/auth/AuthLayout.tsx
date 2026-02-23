@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
-import { Link } from "react-router-dom";
-import { GraduationCap } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { GraduationCap, ChevronLeft } from "lucide-react";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { HelpCenterDialog } from "@/components/support/HelpCenterDialog";
@@ -11,18 +11,49 @@ interface AuthLayoutProps {
     children: ReactNode;
     title: string;
     subtitle: string;
+    contentMaxWidth?: string;
 }
 
-export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
+export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w-md" }: AuthLayoutProps) {
+    const navigate = useNavigate();
     const [showPrivacy, setShowPrivacy] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showContact, setShowContact] = useState(false);
 
     return (
-        <BackgroundGradientAnimation>
-            <div className="min-h-screen w-full flex items-center justify-center p-4 lg:p-8 z-10 relative overflow-y-auto">
-                <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 my-4 lg:my-8">
+        <div className="min-h-screen lg:h-screen w-full relative flex items-start justify-center overflow-y-auto lg:overflow-hidden bg-background selection:bg-blue-100 selection:text-blue-900">
+            {/* Desktop Background Animation */}
+            <div className="hidden lg:block absolute inset-0 z-0">
+                <BackgroundGradientAnimation />
+            </div>
+
+            <div className="w-full flex items-start justify-center lg:p-6 z-10 relative bg-background lg:bg-transparent transition-colors duration-300">
+                {/* Mobile Header - Only visible on mobile */}
+                <div className="lg:hidden fixed top-0 left-0 right-0 z-50">
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-lg border-b border-border/50 -z-10" />
+                    <div className="flex flex-col pt-safe">
+                        <div className="min-h-[64px] flex items-center px-4">
+                            <div className="flex items-center gap-2 w-full">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="p-2 -ml-2 text-foreground hover:bg-accent rounded-full transition-colors active:scale-90"
+                                >
+                                    <ChevronLeft className="size-6" />
+                                </button>
+
+                                <div className="flex items-center gap-2.5 ml-1">
+                                    <div className="size-8 rounded-lg overflow-hidden border border-border/50 shadow-sm bg-white p-0.5">
+                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-contain" />
+                                    </div>
+                                    <span className="text-xl font-bold text-foreground tracking-tight">Eduspace</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-background lg:bg-white/20 dark:lg:bg-black/20 lg:backdrop-blur-xl lg:rounded-3xl overflow-hidden lg:shadow-2xl lg:border lg:border-white/20 dark:lg:border-white/10 lg:my-auto shrink-0 lg:shadow-blue-500/10 min-h-screen lg:min-h-0 pt-4 lg:pt-0">
 
                     {/* Modals */}
                     <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
@@ -31,7 +62,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                     <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
                     {/* Branding Panel */}
-                    <div className="w-full lg:w-5/12 p-6 lg:p-12 flex flex-col justify-between bg-black/5 dark:bg-black/40 text-white relative lg:min-h-[700px] shrink-0">
+                    <div className="hidden lg:flex w-full lg:w-5/12 p-6 lg:p-10 flex-col justify-between bg-black/5 dark:bg-black/40 text-white relative lg:min-h-[550px] shrink-0">
                         {/* Decorative background overlay */}
                         <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 mix-blend-overlay pointer-events-none" />
 
@@ -60,21 +91,23 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                     </div>
 
                     {/* Content Panel */}
-                    <div className="flex-1 p-6 lg:p-12 bg-background/80 backdrop-blur-md flex flex-col justify-center relative">
-                        <div className="flex justify-end gap-4 text-sm font-medium mb-6 lg:mb-8">
+                    <div className="flex-1 p-5 lg:p-10 bg-background lg:bg-background/80 lg:backdrop-blur-md flex flex-col justify-center relative py-12 lg:py-10 pb-safe">
+                        <div className="hidden lg:flex justify-end gap-4 text-sm font-medium mb-4 lg:mb-6">
                             <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors">Help</button>
                             <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors">Support</button>
                         </div>
 
-                        <div className="w-full max-w-md mx-auto">
-                            <div className="mb-6 lg:mb-8 text-center lg:text-left">
-                                <h2 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight mb-2">{title}</h2>
+                        <div className={`w-full ${contentMaxWidth} mx-auto`}>
+                            <div className="mb-6 lg:mb-8 text-center lg:text-left hidden lg:block">
+                                <h2 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight mb-1">{title}</h2>
                                 <p className="text-sm lg:text-base text-muted-foreground">{subtitle}</p>
                             </div>
 
-                            {children}
+                            <div className="mt-2 lg:mt-0">
+                                {children}
+                            </div>
 
-                            <div className="mt-6 lg:mt-8 text-center text-xs text-muted-foreground">
+                            <div className="mt-8 lg:mt-10 py-6 border-t border-border/50 lg:border-none text-center text-xs text-muted-foreground">
                                 By continuing, you agree to our{" "}
                                 <button onClick={() => setShowTerms(true)} className="underline hover:text-primary">Terms of Service</button>
                                 {" "}and{" "}
@@ -84,6 +117,6 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                     </div>
                 </div>
             </div>
-        </BackgroundGradientAnimation>
+        </div>
     );
 }

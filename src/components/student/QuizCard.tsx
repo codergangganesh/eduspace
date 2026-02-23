@@ -239,6 +239,8 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                     )}
                 </div>
             </CardContent>
+        
         </Card>
+        
     );
 }

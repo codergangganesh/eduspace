@@ -60,7 +60,8 @@ export function RootLayout() {
                 <main
                     className={cn(
                         "flex-1 min-h-0 overflow-hidden relative",
-                        !options.fullHeight && "p-4 lg:p-6 overflow-y-auto"
+                        !options.fullHeight && "p-4 lg:p-6 overflow-y-auto",
+                        options.hideHeaderOnMobile && "pt-[var(--safe-top)]"
                     )}
                 >
                     <PageTransition className="h-full w-full">
@@ -69,14 +70,16 @@ export function RootLayout() {
                 </main>
             </div>
 
-            {isLecturer && (
-                <InviteUserDialog
-                    open={inviteDialogOpen}
-                    onOpenChange={setInviteDialogOpen}
-                    lecturerName={profile?.full_name || "Lecturer"}
-                    lecturerEmail={user?.email || ""}
-                />
-            )}
-        </div>
+            {
+                isLecturer && (
+                    <InviteUserDialog
+                        open={inviteDialogOpen}
+                        onOpenChange={setInviteDialogOpen}
+                        lecturerName={profile?.full_name || "Lecturer"}
+                        lecturerEmail={user?.email || ""}
+                    />
+                )
+            }
+        </div >
     );
 }

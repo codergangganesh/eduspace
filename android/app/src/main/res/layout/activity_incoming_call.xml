@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F172A"
+    tools:context=".IncomingCallActivity">
+
+    <!-- Background Decoration -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_launcher_background"
+        android:alpha="0.1"
+        android:contentDescription="Background" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <ImageView
+            android:id="@+id/callerAvatar"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="24dp"
+            android:src="@mipmap/ic_launcher_round"
+            android:background="@drawable/circle_shape"
+            android:scaleType="centerCrop"
+            android:contentDescription="Caller Avatar" />
+
+        <TextView
+            android:id="@+id/callerName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="John Doe"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/callType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Incoming Video Call..."
+            android:textColor="#94A3B8"
+            android:textSize="16sp"
+            android:layout_marginBottom="64dp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="80dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <!-- Reject Button -->
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="48dp">
+
+            <ImageButton
+                android:id="@+id/btnReject"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/circle_bg_red"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#FFFFFF"
+                android:contentDescription="Reject Call" />
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Decline"
+                android:textColor="#EF4444"
+                android:textSize="12sp"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_marginBottom="-24dp" />
+        </FrameLayout>
+
+        <!-- Accept Button -->
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="48dp">
+
+            <ImageButton
+                android:id="@+id/btnAccept"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/circle_bg_green"
+                android:src="@android:drawable/ic_menu_call"
+                android:tint="#FFFFFF"
+                android:contentDescription="Accept Call" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Accept"
+                android:textColor="#10B981"
+                android:textSize="12sp"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_marginBottom="-24dp" />
+        </FrameLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>

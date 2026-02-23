@@ -30,16 +30,16 @@ export default function Dashboard() {
   const { schedules, loading: scheduleLoading } = useSchedule();
   const { streak, loading: streakLoading } = useStreak();
   const navigate = useNavigate();
-  const { profile, user } = useAuth();
+  const { profile, user, role } = useAuth();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { recordAcademicAction } = useStreak();
 
   // Record daily visit streak
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && role === 'student') {
       recordAcademicAction();
     }
-  }, [user?.id, recordAcademicAction]);
+  }, [user?.id, role, recordAcademicAction]);
 
   // Student onboarding and real-time invitations
   const {

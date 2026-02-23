@@ -19,7 +19,7 @@ interface StreakContextType {
 const StreakContext = createContext<StreakContextType | undefined>(undefined);
 
 export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [streak, setStreak] = useState<UserStreak | null>(null);
     const [badges, setBadges] = useState<UserBadge[]>([]);
     const [activityLog, setActivityLog] = useState<string[]>([]);
@@ -29,8 +29,10 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [showStreakUpdate, setShowStreakUpdate] = useState(false);
     const [currentStreakCount, setCurrentStreakCount] = useState(0);
 
+    const isStudent = role === 'student';
+
     const refreshStreakData = useCallback(async () => {
-        if (!user) {
+        if (!user || !isStudent) {
             setStreak(null);
             setBadges([]);
             setActivityLog([]);
@@ -50,24 +52,24 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, isStudent]);
 
     const fetchActivityRange = useCallback(async (start: string, end: string) => {
-        if (!user) return;
+        if (!user || !isStudent) return;
         try {
             const logs = await StreakService.getActivityLog(user.id, start, end);
             setActivityLog(logs);
         } catch (error) {
             console.error('Error fetching activity range:', error);
         }
-    }, [user]);
+    }, [user, isStudent]);
 
     useEffect(() => {
         refreshStreakData();
     }, [refreshStreakData]);
 
     const recordAcademicAction = useCallback(async () => {
-        if (!user) return;
+        if (!user || !isStudent) return;
 
         try {
             const result = await StreakService.recordAction(user.id);
@@ -91,7 +93,7 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } catch (error) {
             console.error('Error recording academic action:', error);
         }
-    }, [user, refreshStreakData]);
+    }, [user, isStudent, refreshStreakData]);
 
 
 
@@ -106,14 +108,14 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             fetchActivityRange,
         }}>
             {children}
-            {showCelebration && unlockedBadge && (
+            {isStudent && showCelebration && unlockedBadge && (
                 <StreakCelebrationModal
                     badgeType={unlockedBadge}
                     streakCount={streak?.current_streak || 0}
                     onClose={() => setShowCelebration(false)}
                 />
             )}
-            {showStreakUpdate && (
+            {isStudent && showStreakUpdate && (
                 <StreakUpdateModal
                     streakCount={currentStreakCount}
                     onClose={() => setShowStreakUpdate(false)}
