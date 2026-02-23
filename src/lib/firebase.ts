@@ -11,9 +11,22 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId;
+
+// Initialize Firebase only if config is valid
+let app = null;
+let messaging = null;
+
+if (isConfigValid) {
+    try {
+        app = initializeApp(firebaseConfig);
+        messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+    } catch (error) {
+        console.error("Failed to initialize Firebase:", error);
+    }
+} else {
+    console.warn("Firebase configuration is missing or incomplete. Some features like push notifications might not work.");
+}
 
 export const requestFirebaseToken = async (userId: string) => {
     if (!messaging) return null;

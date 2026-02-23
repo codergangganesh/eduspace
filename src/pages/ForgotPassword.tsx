@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+import { Capacitor } from "@capacitor/core";
 import SEO from "@/components/SEO";
 
 export default function ForgotPassword() {
@@ -14,6 +15,7 @@ export default function ForgotPassword() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const isNative = Capacitor.isNativePlatform();
 
   const handleSubmit = async (e: React.FormEvent) => {
     // ... (rest of the function)
@@ -102,11 +104,11 @@ export default function ForgotPassword() {
         contentMaxWidth="max-w-md"
       >
         {!isSubmitted ? (
-          <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
+          <div className={`${isNative ? 'bg-background/80 backdrop-blur-md rounded-xl border border-border p-8 shadow-sm' : 'bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm'}`}>
             <form className="space-y-4 lg:space-y-6" onSubmit={handleSubmit}>
               {/* Email Field */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground lg:block hidden">
+                <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
                   Institutional Email
                 </label>
                 <div className="relative">
@@ -148,7 +150,7 @@ export default function ForgotPassword() {
             </div>
           </div>
         ) : (
-          <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm flex flex-col items-center gap-6 text-center animate-fade-in">
+          <div className={`${isNative ? 'bg-background/80 backdrop-blur-md rounded-xl border border-border p-8 shadow-sm' : 'bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm'} flex flex-col items-center gap-6 text-center animate-fade-in`}>
             <div className="size-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
               <CheckCircle className="size-8 text-green-600 dark:text-green-400" />
             </div>

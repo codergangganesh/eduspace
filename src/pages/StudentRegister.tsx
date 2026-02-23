@@ -5,6 +5,7 @@ import { Mail, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { Capacitor } from "@capacitor/core";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
 
@@ -14,6 +15,7 @@ import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 export default function StudentRegister() {
     const navigate = useNavigate();
     const { signUp, signInWithGoogle, signInWithGitHub, isAuthenticated, role } = useAuth();
+    const isNative = Capacitor.isNativePlatform();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
@@ -119,9 +121,9 @@ export default function StudentRegister() {
                     }]
                 }}
             />
-            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-7 lg:shadow-sm overflow-hidden animate-in fade-in zoom-in duration-300">
-                {/* OAuth Buttons - Top on mobile, Bottom on desktop */}
-                <div className="flex flex-col lg:hidden mb-8">
+            <div className={`${isNative ? 'bg-background/80 backdrop-blur-md rounded-xl border border-border p-7 shadow-sm' : 'bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-7 lg:shadow-sm'} overflow-hidden animate-in fade-in zoom-in duration-300`}>
+                {/* OAuth Buttons - Top on mobile web, Bottom on desktop/native */}
+                <div className={`flex flex-col ${isNative ? 'hidden' : 'lg:hidden'} mb-8`}>
                     <div className="flex justify-center gap-4 lg:grid lg:grid-cols-2 lg:gap-3">
                         <button
                             onClick={handleGoogleSignIn}
@@ -183,7 +185,7 @@ export default function StudentRegister() {
                 <form className="space-y-4 lg:space-y-4" onSubmit={handleSubmit}>
                     {/* Full Name Field */}
                     <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
+                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
                             Full Name
                         </label>
                         <div className="relative">
@@ -203,7 +205,7 @@ export default function StudentRegister() {
 
                     {/* Email Field */}
                     <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
+                        <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
                             Email Address
                         </label>
                         <div className="relative">
@@ -224,7 +226,7 @@ export default function StudentRegister() {
                     {/* Password Fields in a row on desktop, stacked on mobile */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-foreground lg:block hidden">
+                            <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
                                 Password
                             </label>
                             <div className="relative">
@@ -250,7 +252,7 @@ export default function StudentRegister() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-foreground lg:block hidden">
+                            <label className={`text-sm font-medium text-foreground ${isNative ? 'block' : 'lg:block hidden'}`}>
                                 Confirm Password
                             </label>
                             <div className="relative">
@@ -324,15 +326,15 @@ export default function StudentRegister() {
                     </Button>
                 </form>
 
-                {/* Footer - Only on mobile */}
-                <div className="mt-8 text-center lg:hidden">
+                {/* Footer - Only on mobile web */}
+                <div className={`mt-8 text-center ${isNative ? 'hidden' : 'lg:hidden'}`}>
                     <p className="text-muted-foreground text-sm">
                         Already have an account? <Link to="/student/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                     </p>
                 </div>
 
-                {/* Desktop Divider & OAuth */}
-                <div className="hidden lg:block mt-6">
+                {/* Desktop/Native Divider & OAuth */}
+                <div className={`${isNative ? 'block' : 'hidden lg:block'} mt-6`}>
                     <div className="relative my-5">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border"></div>
