@@ -28,6 +28,11 @@ export interface Profile {
   state: string | null;
   zip_code: string | null;
   country: string | null;
+  cover_url: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  twitter_url: string | null;
+  portfolio_url: string | null;
   verified: boolean | null;
   fcm_token: string | null; // Added
   email_notifications: boolean | null;
@@ -371,6 +376,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phone: data.phone,
       city: data.city,
       country: data.country,
+      cover_url: data.cover_url,
+      linkedin_url: data.linkedin_url,
+      github_url: data.github_url,
+      twitter_url: data.twitter_url,
+      portfolio_url: data.portfolio_url,
       last_updated: new Date().toISOString()
     };
 

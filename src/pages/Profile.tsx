@@ -47,10 +47,15 @@ import {
   Palette,
   Loader2,
   Upload,
+  Trash2,
+  QrCode,
   Share2,
+  Linkedin,
+  Github,
+  Twitter,
   Copy,
+  Link as LinkIcon,
   ExternalLink,
-  MapPin,
   Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -63,6 +68,7 @@ import { ProfileNotificationSettings } from "@/components/ProfileNotificationSet
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
   { id: "academic", label: "Academic Details", icon: GraduationCap },
+  { id: "social", label: "Social Links", icon: Share2 },
   { id: "security", label: "Security", icon: Shield },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "preferences", label: "Preferences", icon: Settings },
@@ -75,8 +81,11 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [showPublicProfile, setShowPublicProfile] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -109,6 +118,11 @@ export default function Profile() {
     theme: "system",
     batch: "",
     hod_name: "",
+    // Social
+    linkedin_url: "",
+    github_url: "",
+    twitter_url: "",
+    portfolio_url: "",
   });
 
   // Password change state
@@ -152,6 +166,10 @@ export default function Profile() {
         theme: profile.theme || "system",
         batch: profile.batch || "",
         hod_name: profile.hod_name || "",
+        linkedin_url: profile.linkedin_url || "",
+        github_url: profile.github_url || "",
+        twitter_url: profile.twitter_url || "",
+        portfolio_url: profile.portfolio_url || "",
       });
     }
   }, [profile]);
@@ -212,6 +230,73 @@ export default function Profile() {
     }
   };
 
+  const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Banner size should be less than 10MB');
+      return;
+    }
+
+    setIsUploadingBanner(true);
+
+    try {
+      // Upload to Cloudinary
+      const uploaded = await uploadToCloudinary(file);
+      const result = await updateProfile({ cover_url: uploaded.url } as Partial<ProfileType>);
+
+      if (result.success) {
+        toast.success('Cover photo updated successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to update cover photo');
+      }
+
+      setIsUploadingBanner(false);
+
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = '';
+      }
+
+    } catch (error: unknown) {
+      console.error('Error uploading banner:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload banner';
+      toast.error(errorMessage);
+      setIsUploadingBanner(false);
+
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = '';
+      }
+    }
+  };
+
+  const calculateProfileCompleteness = () => {
+    if (!profile) return 0;
+
+    const fieldsToTrack = [
+      'full_name', 'email', 'phone', 'date_of_birth', 'bio',
+      'street', 'city', 'state', 'zip_code', 'country',
+      'avatar_url', 'cover_url', 'student_id', 'program',
+      'linkedin_url', 'github_url', 'twitter_url', 'portfolio_url'
+    ];
+
+    const completedFields = fieldsToTrack.filter(field => {
+      const value = (profile as any)[field];
+      return value && value !== "" && value !== null;
+    });
+
+    return Math.round((completedFields.length / fieldsToTrack.length) * 100);
+  };
+
+  const completeness = calculateProfileCompleteness();
+
   if (authLoading) {
     return (
       <DashboardLayout>
@@ -269,6 +354,10 @@ export default function Profile() {
       theme: formData.theme,
       batch: formData.batch,
       hod_name: formData.hod_name,
+      linkedin_url: formData.linkedin_url,
+      github_url: formData.github_url,
+      twitter_url: formData.twitter_url,
+      portfolio_url: formData.portfolio_url,
     } as Partial<ProfileType>);
 
     if (result.success) {
@@ -405,13 +494,50 @@ export default function Profile() {
         {/* Main Content */}
         <div className="flex-1 space-y-6">
           {/* Profile Header Card */}
-          <div className="bg-surface border border-border rounded-xl p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              {/* Top Row on Mobile: Avatar + Mobile Button */}
-              <div className="flex flex-row items-center justify-between w-full sm:w-auto">
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
+            {/* Banner Section */}
+            <div className="relative h-32 sm:h-48 w-full group">
+              {profile?.cover_url ? (
+                <img
+                  src={profile.cover_url}
+                  alt="Profile Banner"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-primary/20 via-primary/10 to-surface" />
+              )}
+
+              {/* Banner Upload Button */}
+              <div className="absolute top-4 right-4">
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerUpload}
+                  className="hidden"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={isUploadingBanner}
+                  className="bg-black/20 hover:bg-black/40 text-white border-white/20 backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                >
+                  {isUploadingBanner ? (
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                  ) : (
+                    <Camera className="size-4 mr-2" />
+                  )}
+                  {profile?.cover_url ? "Change Cover" : "Add Cover"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 sm:pt-0 relative z-10">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 text-center sm:text-left">
                 {/* Avatar with Edit */}
-                <div className="relative">
-                  <Avatar className="size-24 sm:size-28">
+                <div className="relative shrink-0 -mt-12 sm:-mt-16">
+                  <Avatar className="size-24 sm:size-32 border-4 border-surface shadow-xl">
                     <AvatarImage src={profile?.avatar_url || ""} />
                     <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
                       {initials}
@@ -427,7 +553,7 @@ export default function Profile() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingImage}
-                    className="absolute bottom-0 right-0 size-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute bottom-2 right-2 size-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-2 border-surface"
                     title="Upload profile image"
                   >
                     {isUploadingImage ? (
@@ -438,58 +564,66 @@ export default function Profile() {
                   </button>
                 </div>
 
-                {/* Mobile Public Profile Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="sm:hidden"
-                  onClick={() => setShowPublicProfile(true)}
-                >
-                  <Eye className="size-4 mr-2" />
-                  Public Profile
-                </Button>
-              </div>
+                {/* User Info & Actions */}
+                <div className="flex-1 w-full pt-2 flex flex-col items-center sm:items-start min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 w-full">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center sm:justify-start gap-2 truncate">
+                        {formData.full_name || "User"}
+                        {profile?.verified && (
+                          <CheckCircle className="size-5 text-primary fill-primary/10 shrink-0" />
+                        )}
+                      </h1>
+                      <p className="text-muted-foreground truncate">
+                        {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
+                      </p>
+                    </div>
 
-              {/* User Info */}
-              <div className="flex-1 w-full sm:w-auto">
-                <h1 className="text-2xl font-bold text-foreground">{formData.full_name || "User"}</h1>
-                <p className="text-muted-foreground">
-                  {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                    {role === "lecturer" ? "Lecturer" : "Student"}
-                  </Badge>
-                  {profile?.verified && (
-                    <Badge variant="outline" className="bg-green-500/5 text-green-600 border-green-500/20">
-                      Verified
-                    </Badge>
-                  )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
-                    onClick={() => {
-                      const url = `${window.location.origin}/p/${user?.id}`;
-                      navigator.clipboard.writeText(url);
-                      toast.success("Public profile link copied!");
-                    }}
-                    title="Share Profile"
-                  >
-                    <Share2 className="size-4" />
-                  </Button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowPublicProfile(true)}
+                        className="bg-surface/50 backdrop-blur-sm whitespace-nowrap shrink-0 border-border/50"
+                      >
+                        <Eye className="size-4 mr-2" />
+                        Public Profile
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setShowQRCode(true)}
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+                        title="Digital Business Card"
+                      >
+                        <QrCode className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+                        onClick={() => handleShare()}
+                      >
+                        <Share2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Profile Completeness Tracker */}
+                  <div className="mt-4 sm:mt-2 space-y-1.5 w-full sm:max-w-md">
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
+                      <span className="text-muted-foreground font-medium uppercase tracking-widest">Completeness</span>
+                      <span className="text-primary font-black">{completeness}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden shadow-inner border border-border/30">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-1000 ease-out rounded-full shadow-[0_0_8px_rgba(var(--primary),0.3)]"
+                        style={{ width: `${completeness}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Desktop Action Button */}
-              <Button
-                variant="outline"
-                className="hidden sm:flex"
-                onClick={() => setShowPublicProfile(true)}
-              >
-                <Eye className="size-4 mr-2" />
-                View Public Profile
-              </Button>
             </div>
           </div>
 
@@ -653,7 +787,124 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
+
             </>
+          )}
+
+          {/* Social Links Section */}
+          {activeTab === "social" && (
+            <div className="bg-surface border border-border rounded-xl p-4 sm:p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Share2 className="size-5 text-primary" />
+                  Social & Professional Links
+                </h2>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {isEditing ? "Cancel" : "Edit Info"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* LinkedIn */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Linkedin className="size-4 text-[#0077b5]" />
+                    LinkedIn Profile
+                  </label>
+                  <Input
+                    placeholder="https://linkedin.com/in/username"
+                    value={formData.linkedin_url}
+                    onChange={(e) => handleInputChange("linkedin_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* GitHub */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Github className="size-4 text-[#333]" />
+                    GitHub Profile
+                  </label>
+                  <Input
+                    placeholder="https://github.com/username"
+                    value={formData.github_url}
+                    onChange={(e) => handleInputChange("github_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* Twitter / X */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Twitter className="size-4 text-[#1DA1F2]" />
+                    Twitter / X
+                  </label>
+                  <Input
+                    placeholder="https://twitter.com/username"
+                    value={formData.twitter_url}
+                    onChange={(e) => handleInputChange("twitter_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* Portfolio */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Globe className="size-4 text-primary" />
+                    Personal Portfolio
+                  </label>
+                  <Input
+                    placeholder="https://yourportfolio.com"
+                    value={formData.portfolio_url}
+                    onChange={(e) => handleInputChange("portfolio_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              {/* Glassmorphism Social Preview (Only if not editing) */}
+              {!isEditing && (
+                <div className="mt-8 pt-6 border-t border-border/50">
+                  <p className="text-sm text-muted-foreground mb-4">Quick Connect</p>
+                  <div className="flex flex-wrap gap-3">
+                    {formData.linkedin_url && (
+                      <a href={formData.linkedin_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all text-sm font-medium text-primary backdrop-blur-sm">
+                        <Linkedin className="size-4" /> LinkedIn
+                      </a>
+                    )}
+                    {formData.github_url && (
+                      <a href={formData.github_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-500/5 hover:bg-slate-500/10 border border-slate-500/10 transition-all text-sm font-medium text-foreground backdrop-blur-sm">
+                        <Github className="size-4" /> GitHub
+                      </a>
+                    )}
+                    {formData.twitter_url && (
+                      <a href={formData.twitter_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-400/5 hover:bg-blue-400/10 border border-blue-400/10 transition-all text-sm font-medium text-[#1DA1F2] backdrop-blur-sm">
+                        <Twitter className="size-4" /> Twitter
+                      </a>
+                    )}
+                    {formData.portfolio_url && (
+                      <a href={formData.portfolio_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all text-sm font-medium text-primary backdrop-blur-sm">
+                        <Globe className="size-4" /> Portfolio
+                      </a>
+                    )}
+                    {!formData.linkedin_url && !formData.github_url && !formData.twitter_url && !formData.portfolio_url && (
+                      <p className="text-xs text-muted-foreground italic">No social links added yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Academic Details Section */}
@@ -956,7 +1207,7 @@ export default function Profile() {
           )}
 
           {/* Action Buttons */}
-          {(activeTab === "personal" || activeTab === "academic" || activeTab === "notifications" || activeTab === "preferences") && (
+          {(activeTab === "personal" || activeTab === "academic" || activeTab === "social" || activeTab === "notifications" || activeTab === "preferences") && (
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setIsEditing(false)}>
                 Cancel
@@ -1076,18 +1327,81 @@ export default function Profile() {
                 <div className="w-full text-left mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="h-1 w-6 bg-blue-600 rounded-full"></div>
-                    <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 dark:text-slate-500 uppercase">Connectivity</h3>
+                    <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 dark:text-slate-400 uppercase">Connectivity</h3>
                   </div>
 
-                  <div className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none">
+                  <div
+                    className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none mb-3"
+                    onClick={() => {
+                      const url = `${window.location.origin}/p/${user?.id}`;
+                      navigator.clipboard.writeText(url);
+                      toast.success("Profile link copied!");
+                    }}
+                  >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <Globe className="size-4 text-slate-400 shrink-0" />
                       <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate tracking-tight">
-                        eduspace.network/{formData.full_name?.toLowerCase().replace(/\s+/g, '')}
+                        eduspaceacademy.online/p/{formData.full_name?.toLowerCase().replace(/\s+/g, '')}
                       </span>
                     </div>
                     <Copy className="size-3.5 text-slate-500" />
                   </div>
+
+                  {formData.portfolio_url && (
+                    <a
+                      href={formData.portfolio_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none mb-3"
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <LinkIcon className="size-4 text-blue-500 shrink-0" />
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate tracking-tight">
+                          {formData.portfolio_url.replace(/^https?:\/\/(www\.)?/, '')}
+                        </span>
+                      </div>
+                      <ExternalLink className="size-3.5 text-slate-500" />
+                    </a>
+                  )}
+
+                  {/* Social Presence Links */}
+                  {(formData.linkedin_url || formData.github_url || formData.twitter_url) && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.linkedin_url && (
+                        <a
+                          href={formData.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <Linkedin className="size-3.5 text-[#0077b5] group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">LinkedIn</span>
+                        </a>
+                      )}
+                      {formData.github_url && (
+                        <a
+                          href={formData.github_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <Github className="size-3.5 text-slate-900 dark:text-white group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">GitHub</span>
+                        </a>
+                      )}
+                      {formData.twitter_url && (
+                        <a
+                          href={formData.twitter_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <Twitter className="size-3.5 text-[#1DA1F2] group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">X</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer E-Record Card */}
@@ -1136,6 +1450,63 @@ export default function Profile() {
             </div>
           </div>
 
+        </DialogContent>
+      </Dialog>
+
+      {/* Digital Business Card (QR Code) Modal */}
+      <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
+        <DialogContent className="max-w-sm rounded-3xl overflow-hidden p-0 border-none bg-transparent">
+          <div className="bg-white dark:bg-[#050b14] p-8 text-center relative overflow-hidden">
+            {/* Decorative backgrounds */}
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-primary" />
+            <div className="absolute -top-24 -right-24 size-48 bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 size-48 bg-blue-500/10 rounded-full blur-3xl" />
+
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="mb-6">
+                <div className="size-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                  <QrCode className="size-10 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Digital Business Card</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Scan to connect with {formData.full_name?.split(' ')[0]}</p>
+              </div>
+
+              {/* QR Code Frame */}
+              <div className="p-4 bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-slate-100 mb-8 aspect-square flex items-center justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://eduspaceacademy.online/p/${user?.id}`)}`}
+                  alt="QR Code"
+                  className="size-48 object-contain"
+                />
+              </div>
+
+              <div className="w-full space-y-3">
+                <Button
+                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 py-6"
+                  onClick={() => {
+                    const profileUrl = `https://eduspaceacademy.online/p/${user?.id}`;
+                    navigator.clipboard.writeText(profileUrl);
+                    toast.success("Profile link copied!");
+                  }}
+                >
+                  <Copy className="size-4 mr-2" />
+                  Copy Profile Link
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 py-6"
+                  onClick={() => setShowQRCode(false)}
+                >
+                  Close
+                </Button>
+              </div>
+
+              <div className="mt-8 flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                <Shield className="size-3" />
+                Eduspace Verified Student
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

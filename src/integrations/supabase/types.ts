@@ -1062,6 +1062,7 @@ export type Database = {
           course_announcements: boolean | null
           cookie_consent_at: string | null
           cookie_consent_choice: string | null
+          cover_url: string | null
           created_at: string
           credits_completed: number | null
           credits_required: number | null
@@ -1073,6 +1074,7 @@ export type Database = {
           expected_graduation: string | null
           fcm_token: string | null // Added manually
           full_name: string | null
+          github_url: string | null
           gpa: number | null
           grade_updates: boolean | null
           hod_name: string | null
@@ -1080,9 +1082,11 @@ export type Database = {
           language: string | null
           last_feedback_prompt_at: string | null
           last_selected_class_id: string | null
+          linkedin_url: string | null
           message_notifications: boolean | null
           notifications_enabled: boolean | null
           phone: string | null
+          portfolio_url: string | null
           program: string | null
           push_notifications: boolean | null
           sidebar_mode: string | null
@@ -1092,6 +1096,7 @@ export type Database = {
           student_id: string | null
           theme: string | null
           timezone: string | null
+          twitter_url: string | null
           two_factor_enabled: boolean | null
           updated_at: string
           user_id: string
@@ -1216,18 +1221,23 @@ export type Database = {
           bio: string | null
           city: string | null
           country: string | null
+          cover_url: string | null
           credits_completed: number | null
           credits_required: number | null
           department: string | null
           email: string | null
           expected_graduation: string | null
           full_name: string | null
+          github_url: string | null
           gpa: string | null
           id: string
           last_updated: string | null
+          linkedin_url: string | null
           phone: string | null
+          portfolio_url: string | null
           program: string | null
           role: string | null
+          twitter_url: string | null
           user_id: string
           verified: boolean | null
           year: string | null

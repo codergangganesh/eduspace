@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Trophy, Mail, Calendar, CheckCircle, Copy, ChevronLeft, Loader2, User, Globe, Shield, Printer, Sparkles, Star, Medal, Award, Zap, Crown, Sword, Gem, GraduationCap, Infinity as InfinityIcon } from "lucide-react";
+import { X, Trophy, Mail, Calendar, CheckCircle, Copy, ChevronLeft, Loader2, User, Globe, Shield, Printer, Sparkles, Star, Medal, Award, Zap, Crown, Sword, Gem, GraduationCap, Infinity as InfinityIcon, Link as LinkIcon, ExternalLink, Linkedin, Github, Twitter } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { BadgeType, BADGE_DETAILS } from "@/services/streakService";
@@ -260,15 +260,71 @@ export default function PublicProfile() {
                                 <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-500 dark:text-slate-500 uppercase">Connectivity</h3>
                             </div>
 
-                            <div className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none" onClick={copyLink}>
+                            <div className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none mb-3" onClick={copyLink}>
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <Globe className="size-5 text-slate-400 shrink-0" />
                                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate tracking-tight">
-                                        eduspace.network/{profile.full_name?.toLowerCase().replace(/\s+/g, '')}
+                                        eduspaceacademy.online/p/{profile.full_name?.toLowerCase().replace(/\s+/g, '')}
                                     </span>
                                 </div>
                                 <Copy className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-500 transition-colors" />
                             </div>
+
+                            {profile.portfolio_url && (
+                                <a
+                                    href={profile.portfolio_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/20 transition-all cursor-pointer shadow-sm dark:shadow-none mb-3"
+                                >
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <LinkIcon className="size-5 text-blue-500 shrink-0" />
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate tracking-tight">
+                                            {profile.portfolio_url.replace(/^https?:\/\/(www\.)?/, '')}
+                                        </span>
+                                    </div>
+                                    <ExternalLink className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-500 transition-colors" />
+                                </a>
+                            )}
+
+                            {/* Social Presence Links */}
+                            {(profile.linkedin_url || profile.github_url || profile.twitter_url) && (
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                    {profile.linkedin_url && (
+                                        <a
+                                            href={profile.linkedin_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                                        >
+                                            <Linkedin className="size-4 text-[#0077b5] group-hover/social:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">LinkedIn</span>
+                                        </a>
+                                    )}
+                                    {profile.github_url && (
+                                        <a
+                                            href={profile.github_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                                        >
+                                            <Github className="size-4 text-slate-900 dark:text-white group-hover/social:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">GitHub</span>
+                                        </a>
+                                    )}
+                                    {profile.twitter_url && (
+                                        <a
+                                            href={profile.twitter_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                                        >
+                                            <Twitter className="size-4 text-[#1DA1F2] group-hover/social:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">X</span>
+                                        </a>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer E-Record Card */}
