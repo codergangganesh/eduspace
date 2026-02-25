@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: true,
     strictPort: true,
     hmr: {
-      clientPort: 8080,
+      overlay: true,
     },
   },
   plugins: [

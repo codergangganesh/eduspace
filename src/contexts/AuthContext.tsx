@@ -92,8 +92,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchWithRetry = async <T,>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
     try {
+      return await fn();
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(fn, retries - 1, delay * 1.5);
+      }
+      throw err;
+    }
+  };
+
+  const fetchProfile = async (userId: string) => {
+    return fetchWithRetry(async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -105,14 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       return data as any as Profile | null;
-    } catch (err) {
-      console.error("Exception fetching profile:", err);
+    }).catch(err => {
+      console.error("Persistent error fetching profile:", err);
       return null;
-    }
+    });
   };
 
   const fetchRole = async (userId: string) => {
-    try {
+    return fetchWithRetry(async () => {
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -124,17 +136,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       return data?.role as AppRole | null;
-    } catch (err) {
-      console.error("Exception fetching role:", err);
+    }).catch(err => {
+      console.error("Persistent error fetching role:", err);
       return null;
-    }
+    });
   };
 
   const refreshProfile = async (userId?: string) => {
     const targetUserId = userId || user?.id;
     if (targetUserId) {
-      const profileData = await fetchProfile(targetUserId);
-      const userRole = await fetchRole(targetUserId);
+      const [profileData, userRole] = await Promise.all([
+        fetchProfile(targetUserId),
+        fetchRole(targetUserId)
+      ]);
 
       // Always update state when we have valid data
       if (userRole !== null) {
@@ -269,6 +283,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }).then(({ data, error }) => {
           if (error) console.error("❌ Failed to send welcome email:", error);
           else console.log("✅ Welcome email request sent:", data);
+        }).catch(err => {
+          console.error("❌ Network error triggering welcome email:", err);
         });
       } catch (err) {
         console.error("Error triggering email function:", err);

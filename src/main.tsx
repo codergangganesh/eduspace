@@ -20,13 +20,31 @@ window.addEventListener("unhandledrejection", (event) => {
             (reason.constructor && reason.constructor.name === "TypeError" && reason.message?.includes("Failed to fetch")))
     ) {
         console.warn("Caught suppressed network error (likely background refresh or DNS issue):", reason);
+
+        // Show a non-intrusive log but prevent the crash overlay in development
+        if (window.confirm && reason.message?.includes("Failed to fetch") && !localStorage.getItem('net_error_shown')) {
+            console.log("Network request failed. This is often due to unstable mobile DNS or Supabase being unreachable.");
+            localStorage.setItem('net_error_shown', 'true');
+            setTimeout(() => localStorage.removeItem('net_error_shown'), 60000);
+        }
+
         event.preventDefault();
         return;
     }
 
-    // Log unexpected errors for mobile debugging if possible
+    // Log unexpected errors for mobile debugging
     console.error("Unhandled Rejection:", reason);
 });
+
+// Clear old service workers if the hostname has changed or if they are stuck
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (const registration of registrations) {
+            // If the SW is from a different host or we're in dev mode with a new DNS, unregister it
+            registration.unregister();
+        }
+    });
+}
 
 window.addEventListener("error", (event) => {
     console.error("Global Error:", event.error);

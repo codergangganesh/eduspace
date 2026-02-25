@@ -32,6 +32,12 @@ export const requestFirebaseToken = async (userId: string) => {
     if (!messaging) return null;
 
     try {
+        // Safety check for mobile browsers or non-secure contexts
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            console.warn("Notifications are not supported in this browser environment.");
+            return null;
+        }
+
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             console.warn("Notification permission NOT granted");
