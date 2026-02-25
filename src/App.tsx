@@ -75,11 +75,30 @@ const StreakPage = lazy(() => import("./pages/StreakPage"));
 const CallHistory = lazy(() => import("./pages/CallHistory"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const LoadingFallback = () => (
-  <div className="flex h-screen w-full items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+const LoadingFallback = () => {
+  useEffect(() => {
+    // If the loading state persists for more than 8 seconds, it might be a chunk load error
+    const timer = setTimeout(() => {
+      console.warn("Loading persists... possible chunk error. Trying to recover.");
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0B0F1A] gap-4">
+      <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+      <p className="text-slate-500 text-sm font-medium animate-pulse">Loading Academy Assets...</p>
+    </div>
+  );
+};
+
+// Global polyfill for chunk errors
+window.addEventListener('error', (e) => {
+  if (e.message.includes('Loading chunk') || e.message.includes('CSS chunk')) {
+    console.warn("Chunk error detected, reloading...");
+    window.location.reload();
+  }
+}, true);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -188,6 +207,7 @@ const App = () => (
                             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                             <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
                             <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
+
                           </Route>
 
                           <Route path="/ai-chat/share/:token" element={<SharedAIChat />} />

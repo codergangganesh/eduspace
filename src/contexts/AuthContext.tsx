@@ -93,32 +93,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching profile:", error);
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return null;
+      }
+      return data as any as Profile | null;
+    } catch (err) {
+      console.error("Exception fetching profile:", err);
       return null;
     }
-    return data as any as Profile | null;
-
   };
 
   const fetchRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching role:", error);
+      if (error) {
+        console.error("Error fetching role:", error);
+        return null;
+      }
+      return data?.role as AppRole | null;
+    } catch (err) {
+      console.error("Exception fetching role:", err);
       return null;
     }
-    return data?.role as AppRole | null;
   };
 
   const refreshProfile = async (userId?: string) => {
@@ -140,6 +149,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // 1. Define initialization logic
     const initializeAuth = async () => {
+      // Safety timeout: don't let the app stay in loading state forever if Supabase is unreachable
+      const timeoutId = setTimeout(() => {
+        if (mounted && isLoading) {
+          console.warn("Auth initialization timed out after 10s, forcing loading to false.");
+          setIsLoading(false);
+        }
+      }, 10000);
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -160,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Auth initialization failed:", error);
       } finally {
+        clearTimeout(timeoutId);
         if (mounted) setIsLoading(false);
       }
     };
@@ -198,150 +216,181 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      return { success: false, error: error.message };
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Sign in exception:", error);
+      return { success: false, error: error.message || "Network error. Please check your connection and try again." };
     }
-
-    return { success: true };
   };
 
   const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole) => {
-    const redirectUrl = `${window.location.origin}/`;
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          role: selectedRole,
-        },
-      },
-    });
-
-    if (error) {
-      if (error.message.includes("already registered")) {
-        return { success: false, error: "This email is already registered. Please sign in instead." };
-      }
-      return { success: false, error: error.message };
-    }
-
-    // Trigger Welcome Email (Fire and forget, don't block registration)
     try {
-      console.log("📧 Triggering welcome email...");
+      const redirectUrl = `${window.location.origin}/`;
 
-      supabase.functions.invoke("send-welcome-email", {
-        body: {
-          email,
-          fullName,
-          role: selectedRole,
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+            role: selectedRole,
+          },
         },
-      }).then(({ data, error }) => {
-        if (error) console.error("❌ Failed to send welcome email:", error);
-        else console.log("✅ Welcome email request sent:", data);
       });
-    } catch (err) {
-      console.error("Error triggering email function:", err);
-    }
 
-    return { success: true };
+      if (error) {
+        if (error.message.includes("already registered")) {
+          return { success: false, error: "This email is already registered. Please sign in instead." };
+        }
+        return { success: false, error: error.message };
+      }
+
+      // Trigger Welcome Email (Fire and forget, don't block registration)
+      try {
+        console.log("📧 Triggering welcome email...");
+
+        supabase.functions.invoke("send-welcome-email", {
+          body: {
+            email,
+            fullName,
+            role: selectedRole,
+          },
+        }).then(({ data, error }) => {
+          if (error) console.error("❌ Failed to send welcome email:", error);
+          else console.log("✅ Welcome email request sent:", data);
+        });
+      } catch (err) {
+        console.error("Error triggering email function:", err);
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Sign up exception:", error);
+      return { success: false, error: error.message || "Network error. Please check your connection." };
+    }
   };
 
   const signInWithGoogle = async (selectedRole: AppRole) => {
-    // Store the selected role in localStorage for use after OAuth callback
-    localStorage.setItem("pendingRole", selectedRole);
-    console.log("🔐 Storing role in localStorage for OAuth:", selectedRole);
+    try {
+      // Store the selected role in localStorage for use after OAuth callback
+      localStorage.setItem("pendingRole", selectedRole);
+      console.log("🔐 Storing role in localStorage for OAuth:", selectedRole);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      localStorage.removeItem("pendingRole");
-      console.error("❌ OAuth initiation failed:", error.message);
-      return { success: false, error: error.message };
+      if (error) {
+        localStorage.removeItem("pendingRole");
+        console.error("❌ OAuth initiation failed:", error.message);
+        return { success: false, error: error.message };
+      }
+
+      console.log("✅ OAuth initiated successfully, redirecting to Google...");
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Network error. Please check your connection." };
     }
-
-    console.log("✅ OAuth initiated successfully, redirecting to Google...");
-    return { success: true };
   };
 
   const signInWithNotion = async (selectedRole: AppRole) => {
-    // Store the selected role in localStorage for use after OAuth callback
-    localStorage.setItem("pendingRole", selectedRole);
-    console.log("🔐 Storing role in localStorage for Notion OAuth:", selectedRole);
+    try {
+      // Store the selected role in localStorage for use after OAuth callback
+      localStorage.setItem("pendingRole", selectedRole);
+      console.log("🔐 Storing role in localStorage for Notion OAuth:", selectedRole);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "notion",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "notion",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      localStorage.removeItem("pendingRole");
-      console.error("❌ Notion OAuth initiation failed:", error.message);
-      return { success: false, error: error.message };
+      if (error) {
+        localStorage.removeItem("pendingRole");
+        console.error("❌ Notion OAuth initiation failed:", error.message);
+        return { success: false, error: error.message };
+      }
+
+      console.log("✅ Notion OAuth initiated successfully, redirecting to Notion...");
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Network error." };
     }
-
-    console.log("✅ Notion OAuth initiated successfully, redirecting to Notion...");
-    return { success: true };
   };
 
   const signInWithGitHub = async (selectedRole: AppRole) => {
-    // Store the selected role in localStorage for use after OAuth callback
-    localStorage.setItem("pendingRole", selectedRole);
-    console.log("🔐 Storing role in localStorage for GitHub OAuth:", selectedRole);
+    try {
+      // Store the selected role in localStorage for use after OAuth callback
+      localStorage.setItem("pendingRole", selectedRole);
+      console.log("🔐 Storing role in localStorage for GitHub OAuth:", selectedRole);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?role=${selectedRole}`,
-        scopes: "user:email",
-      },
-    });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?role=${selectedRole}`,
+          scopes: "user:email",
+        },
+      });
 
-    if (error) {
-      localStorage.removeItem("pendingRole");
-      console.error("❌ GitHub OAuth initiation failed:", error.message);
-      return { success: false, error: error.message };
+      if (error) {
+        localStorage.removeItem("pendingRole");
+        console.error("❌ GitHub OAuth initiation failed:", error.message);
+        return { success: false, error: error.message };
+      }
+
+      console.log("✅ GitHub OAuth initiated successfully, redirecting to GitHub...");
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Network error." };
     }
-
-    console.log("✅ GitHub OAuth initiated successfully, redirecting to GitHub...");
-    return { success: true };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    setRole(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    } finally {
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setRole(null);
+    }
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      });
 
-    if (error) {
-      return { success: false, error: error.message };
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Network error." };
     }
-
-    return { success: true };
   };
 
   const updateProfile = async (data: Partial<Profile>) => {
@@ -349,55 +398,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: "Not authenticated" };
     }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update(data)
-      .eq("user_id", user.id);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update(data)
+        .eq("user_id", user.id);
 
-    if (error) {
-      return { success: false, error: error.message };
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // Also sync to public_profiles table for sharing
+      // Only pick fields that are safe/meant for public viewing
+      const publicData = {
+        user_id: user.id,
+        full_name: data.full_name,
+        avatar_url: data.avatar_url,
+        bio: data.bio,
+        program: data.program,
+        year: data.year,
+        department: data.department,
+        gpa: data.gpa,
+        credits_completed: data.credits_completed,
+        credits_required: data.credits_required,
+        expected_graduation: data.expected_graduation,
+        email: data.email,
+        phone: data.phone,
+        city: data.city,
+        country: data.country,
+        cover_url: data.cover_url,
+        linkedin_url: data.linkedin_url,
+        github_url: data.github_url,
+        twitter_url: data.twitter_url,
+        portfolio_url: data.portfolio_url,
+        last_updated: new Date().toISOString()
+      };
+
+      // Filter out undefined values to avoid overwriting with null if no change
+      const filteredPublicData = Object.fromEntries(
+        Object.entries(publicData).filter(([_, v]) => v !== undefined)
+      );
+
+      if (Object.keys(filteredPublicData).length > 1) { // More than just user_id
+        await supabase
+          .from("public_profiles")
+          .upsert(filteredPublicData as any, { onConflict: 'user_id' });
+
+      }
+
+      await refreshProfile();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Network error. Failed to update profile." };
     }
-
-    // Also sync to public_profiles table for sharing
-    // Only pick fields that are safe/meant for public viewing
-    const publicData = {
-      user_id: user.id,
-      full_name: data.full_name,
-      avatar_url: data.avatar_url,
-      bio: data.bio,
-      program: data.program,
-      year: data.year,
-      department: data.department,
-      gpa: data.gpa,
-      credits_completed: data.credits_completed,
-      credits_required: data.credits_required,
-      expected_graduation: data.expected_graduation,
-      email: data.email,
-      phone: data.phone,
-      city: data.city,
-      country: data.country,
-      cover_url: data.cover_url,
-      linkedin_url: data.linkedin_url,
-      github_url: data.github_url,
-      twitter_url: data.twitter_url,
-      portfolio_url: data.portfolio_url,
-      last_updated: new Date().toISOString()
-    };
-
-    // Filter out undefined values to avoid overwriting with null if no change
-    const filteredPublicData = Object.fromEntries(
-      Object.entries(publicData).filter(([_, v]) => v !== undefined)
-    );
-
-    if (Object.keys(filteredPublicData).length > 1) { // More than just user_id
-      await supabase
-        .from("public_profiles")
-        .upsert(filteredPublicData as any, { onConflict: 'user_id' });
-
-    }
-
-    await refreshProfile();
-    return { success: true };
   };
 
   return (

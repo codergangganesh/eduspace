@@ -24,6 +24,7 @@ import {
   Orbit,
   Brain,
   Flame,
+  Building2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -47,6 +48,7 @@ import {
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
@@ -58,6 +60,7 @@ const studentNavItems = [
 
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
+
   { icon: Users, label: "All Students", path: "/all-students" },
   { icon: Table, label: "Time Table", path: "/lecturer/timetable" }, // New Item
   { icon: Calendar, label: "Schedule", path: "/schedule" },

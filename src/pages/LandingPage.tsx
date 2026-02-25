@@ -62,7 +62,7 @@ export default function LandingPage() {
     );
 
     return (
-        <div className="min-h-screen bg-transparent dark:bg-background font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
+        <div className="min-h-screen bg-slate-950 dark:bg-background font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
             <SEO
                 title="Home | Modern Learning Management System"
                 description="EduSpace is a powerful learning management system for students and lecturers. Track progress, manage assignments, and enhance your learning journey."
