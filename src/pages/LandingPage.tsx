@@ -34,31 +34,19 @@ export default function LandingPage() {
     const [showTerms, setShowTerms] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showContact, setShowContact] = useState(false);
-    const [loadHeavyVisuals, setLoadHeavyVisuals] = useState(false);
 
-    // Defer heavy visuals to avoid blocking LCP
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setLoadHeavyVisuals(true);
-        }, 2000); // Wait 2s before loading heavy background effects
-        return () => clearTimeout(timer);
-    }, []);
 
-    // Initialize canvas only after visuals are allowed to load
     useEffect(() => {
-        if (!loadHeavyVisuals) return;
 
         const canvas = document.getElementById("canvas");
         if (canvas && !canvas.hasAttribute('data-initialized')) {
             renderCanvas();
             canvas.setAttribute('data-initialized', 'true');
         }
-    }, [loadHeavyVisuals]);
+    }, []);
 
     const LoadingFallback = () => (
-        <div className="py-20 flex justify-center items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
+        <div className="py-20 flex justify-center items-center h-[200px]" />
     );
 
     return (
@@ -128,15 +116,13 @@ export default function LandingPage() {
                 ]}
             />
 
-            {loadHeavyVisuals && (
-                <Suspense fallback={null}>
-                    <AnoAI />
-                    <canvas
-                        className="pointer-events-none absolute inset-0 mx-auto z-[1]"
-                        id="canvas"
-                    />
-                </Suspense>
-            )}
+            <Suspense fallback={null}>
+                <AnoAI />
+                <canvas
+                    className="pointer-events-none absolute inset-0 mx-auto z-[1]"
+                    id="canvas"
+                />
+            </Suspense>
 
             <div className="relative z-10 backdrop-blur-[2px]">
                 {/* Modals */}

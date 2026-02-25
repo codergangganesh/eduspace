@@ -212,7 +212,7 @@ export const AgoraPostModal: React.FC<AgoraPostModalProps> = ({ isOpen, onClose,
                             disabled={isSubmitting}
                             className="flex-[2] bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black h-12 shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
                         >
-                            {isSubmitting ? "Syncing to Galaxy..." : post ? "Update Resource" : "Launch to Agora"}
+                            {isSubmitting ? "Processing..." : post ? "Update Resource" : "Launch to Agora"}
                         </Button>
                     </div>
                 </form>

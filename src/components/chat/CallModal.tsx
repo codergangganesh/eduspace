@@ -141,7 +141,6 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
                     {isLoading && (
                         <div className="absolute inset-0 z-[100001] flex flex-col items-center justify-center bg-slate-950 text-white gap-2 md:gap-4">
                             <Loader2 className="size-6 md:size-12 animate-spin text-emerald-500" />
-                            <p className="text-[10px] md:text-sm text-slate-400 animate-pulse">Syncing...</p>
                         </div>
                     )}
 

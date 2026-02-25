@@ -23,9 +23,8 @@ const Index = () => {
         <Helmet>
           <meta name="robots" content="noindex" />
         </Helmet>
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-slate-400 font-medium animate-pulse">Syncing with EduSpace...</p>
+        <div className="size-20 rounded-3xl overflow-hidden border border-white/5 animate-pulse bg-slate-900/50 flex items-center justify-center">
+          <img src="/favicon.png" alt="Logo" className="size-12 object-contain opacity-40 grayscale" />
         </div>
       </div>
     );

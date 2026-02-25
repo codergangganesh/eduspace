@@ -84,9 +84,10 @@ const LoadingFallback = () => {
   }, []);
 
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0B0F1A] gap-4">
-      <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-      <p className="text-slate-500 text-sm font-medium animate-pulse">Loading Academy Assets...</p>
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0B0F1A]">
+      <div className="size-16 rounded-2xl overflow-hidden border border-white/10 animate-pulse bg-slate-800/50 flex items-center justify-center">
+        <img src="/favicon.png" alt="Logo" className="size-10 object-contain opacity-50 grayscale" />
+      </div>
     </div>
   );
 };

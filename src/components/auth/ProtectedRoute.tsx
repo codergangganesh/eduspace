@@ -36,10 +36,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   // Show loading while auth is loading OR while role is being fetched
   if (isLoading || isRoleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="size-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background pointer-events-none">
+        <div className="size-16 rounded-2xl border border-white/5 animate-pulse bg-slate-900/50 flex items-center justify-center">
+          <img src="/favicon.png" alt="Logo" className="size-10 object-contain opacity-30 grayscale" />
         </div>
       </div>
     );
