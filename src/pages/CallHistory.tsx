@@ -220,10 +220,10 @@ export default function CallHistory() {
 
     return (
         <DashboardLayout fullHeight={true}>
-            <div className="flex bg-[#0b141a] text-slate-200 h-full overflow-hidden">
+            <div className="flex bg-slate-50 dark:bg-[#0b141a] text-slate-900 dark:text-slate-200 h-full overflow-hidden">
                 {/* Sidebar Pane */}
                 <div className={cn(
-                    "w-full md:w-[400px] flex flex-col min-h-0 border-r border-slate-800/50 bg-[#111b21]",
+                    "w-full md:w-[400px] flex flex-col min-h-0 border-r border-slate-200 dark:border-slate-800/50 bg-white dark:bg-[#111b21]",
                     selectedContactId && "hidden md:flex"
                 )}>
                     <div className="p-4 space-y-4">
@@ -240,25 +240,25 @@ export default function CallHistory() {
                                     <Input
                                         autoFocus
                                         placeholder="Search..."
-                                        className="bg-[#202c33] border-none rounded-lg h-10 text-slate-200 focus-visible:ring-0 placeholder:text-slate-500"
+                                        className="bg-slate-100 dark:bg-[#202c33] border-none rounded-lg h-10 text-slate-900 dark:text-slate-200 focus-visible:ring-0 placeholder:text-slate-500"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
                                 </div>
                             ) : (
                                 <>
-                                    <h2 className="text-2xl font-semibold text-white md:text-xl md:font-bold">Calls</h2>
+                                    <h2 className="text-2xl font-semibold text-slate-900 dark:text-white md:text-xl md:font-bold">Calls</h2>
                                     <div className="flex items-center gap-1 md:gap-0">
                                         <Button
                                             variant="ghost" size="icon"
-                                            className="rounded-full text-slate-200 hover:bg-slate-800 flex md:hidden"
+                                            className="rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex md:hidden"
                                             onClick={() => setIsMobileSearchOpen(true)}
                                         >
                                             <Search className="size-5" />
                                         </Button>
                                         <Button
                                             variant="ghost" size="icon"
-                                            className="rounded-full text-slate-400 hover:bg-slate-800 hidden md:flex"
+                                            className="rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hidden md:flex"
                                             onClick={() => setIsNewCallOpen(true)}
                                         >
                                             <Plus className="size-6" />
@@ -267,35 +267,35 @@ export default function CallHistory() {
                                             <DropdownMenuTrigger asChild>
                                                 <Button
                                                     variant="ghost" size="icon"
-                                                    className="rounded-full text-slate-200 hover:bg-slate-800 flex md:hidden"
+                                                    className="rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex md:hidden"
                                                 >
                                                     <MoreVertical className="size-5" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-[#233138] border-none text-slate-200 min-w-[200px] shadow-2xl">
+                                            <DropdownMenuContent align="end" className="bg-white dark:bg-[#233138] border-slate-200 dark:border-none text-slate-800 dark:text-slate-200 min-w-[200px] shadow-2xl">
                                                 <DropdownMenuItem
-                                                    className="focus:bg-[#111b21] focus:text-white flex items-center gap-3 py-3"
+                                                    className="focus:bg-slate-100 dark:focus:bg-[#111b21] focus:text-slate-900 dark:focus:text-white flex items-center gap-3 py-3 cursor-pointer"
                                                     onClick={() => setIsNewCallOpen(true)}
                                                 >
                                                     <Plus className="size-4" />
                                                     <span>New Call</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    className="focus:bg-[#111b21] focus:text-white flex items-center gap-3 py-3"
+                                                    className="focus:bg-slate-100 dark:focus:bg-[#111b21] focus:text-slate-900 dark:focus:text-white flex items-center gap-3 py-3 cursor-pointer"
                                                     onClick={() => navigate('/messages')}
                                                 >
                                                     <MessageSquare className="size-4" />
                                                     <span>Messages</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    className="focus:bg-[#111b21] focus:text-white flex items-center gap-3 py-3"
+                                                    className="focus:bg-slate-100 dark:focus:bg-[#111b21] focus:text-slate-900 dark:focus:text-white flex items-center gap-3 py-3 cursor-pointer"
                                                     onClick={() => setFilter(filter === 'all' ? 'missed' : 'all')}
                                                 >
                                                     <Filter className="size-4" />
                                                     <span>{filter === 'all' ? 'Show Missed Calls' : 'Show All Calls'}</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    className="focus:bg-[#111b21] focus:text-white flex items-center gap-3 py-3"
+                                                    className="focus:bg-slate-100 dark:focus:bg-[#111b21] focus:text-slate-900 dark:focus:text-white flex items-center gap-3 py-3 cursor-pointer"
                                                     onClick={() => navigate('/settings')}
                                                 >
                                                     <Settings className="size-4" />
@@ -312,7 +312,7 @@ export default function CallHistory() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
                             <Input
                                 placeholder="Search name or number"
-                                className="pl-10 h-10 bg-[#202c33] border-none rounded-lg text-sm text-slate-200 focus-visible:ring-0 placeholder:text-slate-500"
+                                className="pl-10 h-10 bg-slate-100 dark:bg-[#202c33] border-none rounded-lg text-sm text-slate-900 dark:text-slate-200 focus-visible:ring-0 placeholder:text-slate-500"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -323,8 +323,8 @@ export default function CallHistory() {
                             <Button
                                 variant="ghost"
                                 className={cn(
-                                    "rounded-full px-4 h-8 text-xs font-semibold",
-                                    filter === 'all' ? "bg-slate-700 text-white" : "text-slate-400"
+                                    "rounded-full px-4 h-8 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-800",
+                                    filter === 'all' ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
                                 )}
                                 onClick={() => setFilter('all')}
                             >
@@ -333,8 +333,8 @@ export default function CallHistory() {
                             <Button
                                 variant="ghost"
                                 className={cn(
-                                    "rounded-full px-4 h-8 text-xs font-semibold",
-                                    filter === 'missed' ? "bg-slate-700 text-white" : "text-slate-400"
+                                    "rounded-full px-4 h-8 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-800",
+                                    filter === 'missed' ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
                                 )}
                                 onClick={() => setFilter('missed')}
                             >
@@ -370,19 +370,19 @@ export default function CallHistory() {
                                                 <div
                                                     onClick={() => setExpandedLogId(isExpanded ? null : logKey)}
                                                     className={cn(
-                                                        "flex items-center gap-4 p-4 cursor-pointer hover:bg-[#1f2c33] transition-colors border-b border-white/5 active:bg-[#202c33]",
-                                                        isExpanded && "bg-[#1f2c33] border-b-0"
+                                                        "flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-[#1f2c33] transition-colors border-b border-slate-200 dark:border-white/5 active:bg-slate-200 dark:active:bg-[#202c33]",
+                                                        isExpanded && "bg-slate-50 dark:bg-[#1f2c33] border-b-0"
                                                     )}
                                                 >
                                                     <Avatar className="h-14 w-14 border-none shrink-0 pointer-events-none">
                                                         <AvatarImage src={contact.avatar_url} />
-                                                        <AvatarFallback className="bg-slate-700 text-slate-300 font-bold uppercase text-lg">
+                                                        <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold uppercase text-lg">
                                                             {contact.full_name?.[0]}
                                                         </AvatarFallback>
                                                     </Avatar>
 
                                                     <div className="flex-1 min-w-0 pointer-events-none">
-                                                        <p className="font-medium text-[17px] truncate mb-0.5 text-white">
+                                                        <p className="font-medium text-[17px] truncate mb-0.5 text-slate-900 dark:text-white">
                                                             {contact.full_name}{item.count > 1 ? `(${item.count})` : ''}
                                                         </p>
                                                         <div className="flex items-center gap-1.5">
@@ -391,59 +391,59 @@ export default function CallHistory() {
                                                             ) : (
                                                                 <ArrowDownLeft className={cn("size-3.5", isMissed ? "text-red-500" : "text-emerald-500")} />
                                                             )}
-                                                            <p className="text-[14px] text-slate-400 truncate font-light">
+                                                            <p className="text-[14px] text-slate-500 dark:text-slate-400 truncate font-light">
                                                                 {dateStr}
                                                             </p>
                                                         </div>
                                                     </div>
 
                                                     <div
-                                                        className="shrink-0 ml-2 p-2 rounded-full active:bg-white/10"
+                                                        className="shrink-0 ml-2 p-2 rounded-full active:bg-slate-200 dark:active:bg-white/10"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             initiateCall(contact.user_id, contact.full_name, contact.avatar_url || '', call.call_type || 'audio');
                                                         }}
                                                     >
                                                         {call.call_type === 'video' ? (
-                                                            <Video className="size-6 text-slate-200" />
+                                                            <Video className="size-6 text-slate-700 dark:text-slate-200" />
                                                         ) : (
-                                                            <Phone className="size-5 text-slate-200" />
+                                                            <Phone className="size-5 text-slate-700 dark:text-slate-200" />
                                                         )}
                                                     </div>
                                                 </div>
 
                                                 {isExpanded && (
-                                                    <div className="bg-[#1f2c33] flex items-center justify-around py-3 border-t border-white/5 animate-in slide-in-from-top-1 duration-200 border-b border-white/5">
+                                                    <div className="bg-slate-50 dark:bg-[#1f2c33] flex items-center justify-around py-3 border-t border-slate-200 dark:border-white/5 animate-in slide-in-from-top-1 duration-200 border-b border-slate-200 dark:border-white/5">
                                                         <button
-                                                            className="flex flex-col items-center gap-1.5 px-4 py-1 active:bg-white/5 rounded-xl transition-colors"
+                                                            className="flex flex-col items-center gap-1.5 px-4 py-1 active:bg-slate-200 dark:active:bg-white/5 rounded-xl transition-colors"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setSelectedContactId(contact.user_id);
                                                             }}
                                                         >
-                                                            <Clock className="size-5 text-slate-400" />
-                                                            <span className="text-[11px] text-slate-400">Info</span>
+                                                            <Clock className="size-5 text-slate-500 dark:text-slate-400" />
+                                                            <span className="text-[11px] text-slate-500 dark:text-slate-400">Info</span>
                                                         </button>
                                                         <button
-                                                            className="flex flex-col items-center gap-1.5 px-4 py-1 active:bg-white/5 rounded-xl transition-colors"
+                                                            className="flex flex-col items-center gap-1.5 px-4 py-1 active:bg-slate-200 dark:active:bg-white/5 rounded-xl transition-colors"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 navigate('/messages', { state: { contactId: contact.user_id } });
                                                             }}
                                                         >
-                                                            <MessageSquare className="size-5 text-slate-400" />
-                                                            <span className="text-[11px] text-slate-400">Message</span>
+                                                            <MessageSquare className="size-5 text-slate-500 dark:text-slate-400" />
+                                                            <span className="text-[11px] text-slate-500 dark:text-slate-400">Message</span>
                                                         </button>
                                                         <button
-                                                            className="flex flex-col items-center gap-1.5 px-4 py-1 active:bg-white/5 rounded-xl transition-colors"
+                                                            className="flex flex-col items-center gap-1.5 px-4 py-1 active:bg-slate-200 dark:active:bg-white/5 rounded-xl transition-colors"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 initiateCall(contact.user_id, contact.full_name, contact.avatar_url || '', 'video');
                                                                 setExpandedLogId(null);
                                                             }}
                                                         >
-                                                            <Video className="size-5 text-slate-400" />
-                                                            <span className="text-[11px] text-slate-400">Video Call</span>
+                                                            <Video className="size-5 text-slate-500 dark:text-slate-400" />
+                                                            <span className="text-[11px] text-slate-500 dark:text-slate-400">Video Call</span>
                                                         </button>
                                                     </div>
                                                 )}
@@ -473,20 +473,20 @@ export default function CallHistory() {
                                                 key={contact.user_id}
                                                 onClick={() => setSelectedContactId(contact.user_id)}
                                                 className={cn(
-                                                    "flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-[#202c33] transition-colors group",
-                                                    selectedContactId === contact.user_id && "bg-[#2a3942]"
+                                                    "flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-[#202c33] transition-colors group",
+                                                    selectedContactId === contact.user_id && "bg-slate-200 dark:bg-[#2a3942]"
                                                 )}
                                             >
                                                 <Avatar className="h-12 w-12 border-none">
                                                     <AvatarImage src={contact.avatar_url} />
-                                                    <AvatarFallback className="bg-slate-700 text-slate-300 font-bold uppercase">
+                                                    <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold uppercase">
                                                         {contact.full_name?.[0]}
                                                     </AvatarFallback>
                                                 </Avatar>
 
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-baseline mb-0.5">
-                                                        <p className="font-semibold text-white truncate text-sm">
+                                                        <p className="font-semibold text-slate-900 dark:text-white truncate text-sm">
                                                             {contact.full_name}
                                                         </p>
                                                         <span className="text-[10px] text-slate-500 font-medium">
@@ -503,7 +503,7 @@ export default function CallHistory() {
                                                         )}
                                                         <p className={cn(
                                                             "text-[12px] truncate",
-                                                            isMissed ? "text-red-500" : "text-slate-400"
+                                                            isMissed ? "text-red-500" : "text-slate-500 dark:text-slate-400"
                                                         )}>
                                                             {isMissed ? 'Missed' : item.isOutgoing ? 'Outgoing' : 'Incoming'}
                                                         </p>
@@ -511,10 +511,10 @@ export default function CallHistory() {
                                                 </div>
 
                                                 <div className="hidden group-hover:flex items-center gap-1">
-                                                    <Button variant="ghost" size="icon" className="size-8 text-slate-400 hover:text-white">
+                                                    <Button variant="ghost" size="icon" className="size-8 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                                                         <Phone className="size-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="size-8 text-slate-400 hover:text-white">
+                                                    <Button variant="ghost" size="icon" className="size-8 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                                                         <Video className="size-4" />
                                                     </Button>
                                                 </div>
@@ -529,26 +529,26 @@ export default function CallHistory() {
 
                 {/* Detail Pane */}
                 <div className={cn(
-                    "flex-1 flex flex-col min-h-0 bg-[#0b141a] relative",
+                    "flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0b141a] relative",
                     !selectedContactId && "hidden md:flex items-center justify-center"
                 )}>
                     {activeDetailContact ? (
                         <>
                             {/* Header */}
-                            <div className="h-16 border-b border-slate-800/50 flex items-center justify-between px-6 bg-[#111b21] shrink-0">
+                            <div className="h-16 border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between px-6 bg-slate-50 dark:bg-[#111b21] shrink-0">
                                 <div className="flex items-center gap-3">
                                     <Button
                                         variant="ghost" size="icon"
-                                        className="md:hidden -ml-2 text-slate-400"
+                                        className="md:hidden -ml-2 text-slate-500 dark:text-slate-400"
                                         onClick={() => setSelectedContactId(null)}
                                     >
                                         <ArrowLeft className="size-5" />
                                     </Button>
-                                    <h2 className="text-xl font-bold text-white">Call info</h2>
+                                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Call info</h2>
                                 </div>
                                 <Button
                                     variant="ghost" size="icon"
-                                    className="text-slate-400 hover:bg-slate-800 rounded-full"
+                                    className="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full"
                                     onClick={() => setSelectedContactId(null)}
                                 >
                                     <X className="size-5" />
@@ -558,64 +558,64 @@ export default function CallHistory() {
                             <ScrollArea className="flex-1">
                                 <div className="w-full max-w-[1400px] mx-auto p-4 md:p-8 lg:p-10 space-y-8">
                                     {/* Contact Hero Area */}
-                                    <div className="relative group overflow-hidden bg-gradient-to-br from-[#111b21] to-[#182229] border border-slate-800/50 rounded-[2rem] p-8 shadow-2xl">
-                                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                                    <div className="relative group overflow-hidden md:bg-gradient-to-br md:from-white md:to-slate-50 dark:md:from-[#111b21] dark:md:to-[#182229] md:border border-slate-200 dark:border-slate-800/50 md:rounded-[2rem] py-4 px-2 md:p-8 md:shadow-2xl">
+                                        <div className="hidden md:block absolute top-0 right-0 p-8 opacity-5 text-slate-900 dark:text-inherit">
                                             <Phone className="size-48 rotate-12" />
                                         </div>
 
-                                        <div className="relative flex flex-col lg:flex-row items-center justify-between gap-8">
-                                            <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-                                                <div className="relative">
-                                                    <Avatar className="h-32 w-32 border-4 border-slate-800 shadow-2xl transition-transform group-hover:scale-105 duration-500">
+                                        <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8">
+                                            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
+                                                <div className="relative shrink-0">
+                                                    <Avatar className="h-28 w-28 lg:h-32 lg:w-32 border-none md:border-solid md:border-4 md:border-white dark:md:border-slate-800 shadow-xl md:shadow-2xl transition-transform group-hover:scale-105 duration-500">
                                                         <AvatarImage src={activeDetailContact.avatar_url || (activeDetailContact as any).contact?.avatar_url} />
-                                                        <AvatarFallback className="bg-slate-700 text-slate-200 text-4xl font-black uppercase">
+                                                        <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 text-4xl font-black uppercase">
                                                             {activeDetailContact.full_name?.[0]}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-2 rounded-2xl border-4 border-[#111b21]">
+                                                    <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-2 rounded-2xl border-4 border-white dark:border-[#0b141a] md:border-slate-50 dark:md:border-[#111b21]">
                                                         <div className="size-3 bg-white rounded-full animate-pulse" />
                                                     </div>
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight mb-2">
+                                                    <h3 className="text-2xl lg:text-3xl xl:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-2 md:mb-3">
                                                         {activeDetailContact.full_name}
                                                     </h3>
-                                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                                                        <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 lg:gap-3">
+                                                        <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-none px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
                                                             {activeDetailContact.role || 'Contact'}
                                                         </Badge>
-                                                        <p className="text-slate-400 font-medium text-sm flex items-center gap-2">
-                                                            <span className="size-1 bg-slate-700 rounded-full" />
-                                                            {activeDetailContact.department || 'Education Space'}
+                                                        <p className="text-slate-500 dark:text-slate-400 font-medium text-[13px] lg:text-sm flex items-center gap-2">
+                                                            <span className="size-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0" />
+                                                            <span className="truncate">{activeDetailContact.department || 'Education Space'}</span>
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-wrap items-center justify-center gap-3">
+                                            <div className="flex items-center justify-center gap-4 lg:gap-3 shrink-0 mt-2 md:mt-0 w-full md:w-auto">
                                                 <Button
                                                     variant="secondary"
-                                                    className="rounded-2xl h-14 px-8 bg-[#202c33] hover:bg-[#2a3942] text-white border-none gap-3 shadow-xl group/btn transition-all hover:-translate-y-1"
+                                                    className="rounded-full size-12 lg:size-12 p-0 bg-slate-100 dark:bg-[#202c33] hover:bg-slate-200 dark:hover:bg-[#2a3942] text-slate-900 dark:text-white border-none shadow-lg group/btn transition-transform hover:-translate-y-1 shrink-0"
                                                     onClick={() => navigate('/messages', { state: { contactId: selectedContactId } })}
+                                                    title="Message"
                                                 >
                                                     <MessageSquare className="size-5 text-emerald-500 group-hover/btn:scale-110 transition-transform" />
-                                                    <span className="font-bold">Message</span>
                                                 </Button>
                                                 <Button
                                                     variant="secondary"
-                                                    className="rounded-2xl h-14 px-8 bg-[#202c33] hover:bg-[#2a3942] text-white border-none gap-3 shadow-xl group/btn transition-all hover:-translate-y-1"
+                                                    className="rounded-full size-12 lg:size-12 p-0 bg-slate-100 dark:bg-[#202c33] hover:bg-slate-200 dark:hover:bg-[#2a3942] text-slate-900 dark:text-white border-none shadow-lg group/btn transition-transform hover:-translate-y-1 shrink-0"
                                                     onClick={() => initiateCall(selectedContactId!, activeDetailContact!.full_name, activeDetailContact!.avatar_url || '', 'video')}
+                                                    title="Video Call"
                                                 >
                                                     <Video className="size-5 text-blue-500 group-hover/btn:scale-110 transition-transform" />
-                                                    <span className="font-bold">Video</span>
                                                 </Button>
                                                 <Button
                                                     variant="secondary"
-                                                    className="rounded-2xl h-14 px-8 bg-[#202c33] hover:bg-[#2a3942] text-white border-none gap-3 shadow-xl group/btn transition-all hover:-translate-y-1"
+                                                    className="rounded-full size-12 lg:size-12 p-0 bg-slate-100 dark:bg-[#202c33] hover:bg-slate-200 dark:hover:bg-[#2a3942] text-slate-900 dark:text-white border-none shadow-lg group/btn transition-transform hover:-translate-y-1 shrink-0"
                                                     onClick={() => initiateCall(selectedContactId!, activeDetailContact!.full_name, activeDetailContact!.avatar_url || '', 'audio')}
+                                                    title="Audio Call"
                                                 >
                                                     <Phone className="size-5 text-emerald-500 group-hover/btn:scale-110 transition-transform" />
-                                                    <span className="font-bold">Audio</span>
                                                 </Button>
                                             </div>
                                         </div>
@@ -624,9 +624,9 @@ export default function CallHistory() {
                                     {/* Logs List Area */}
                                     <div className="space-y-10">
                                         <div className="flex items-center gap-4 px-2">
-                                            <div className="h-px flex-1 bg-slate-800/50" />
+                                            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800/50" />
                                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Communication Logs</span>
-                                            <div className="h-px flex-1 bg-slate-800/50" />
+                                            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800/50" />
                                         </div>
 
                                         <div className="space-y-12">
@@ -634,7 +634,7 @@ export default function CallHistory() {
                                                 <div key={group.date} className="space-y-6">
                                                     <div className="flex items-center gap-4">
                                                         <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                                        <h5 className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                                        <h5 className="text-xs font-black uppercase tracking-[0.15em] text-slate-600 dark:text-slate-400">
                                                             {group.date}
                                                         </h5>
                                                     </div>
@@ -646,21 +646,21 @@ export default function CallHistory() {
                                                             const timeStr = format(new Date(log.created_at), 'h:mm a');
 
                                                             return (
-                                                                <div key={log.id} className="relative group/log overflow-hidden bg-[#111b21] border border-slate-800/50 rounded-2xl p-4 hover:border-slate-700 transition-all">
+                                                                <div key={log.id} className="relative group/log overflow-hidden bg-white dark:bg-[#111b21] border border-slate-200 dark:border-slate-800/50 rounded-2xl p-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm">
                                                                     <div className="flex items-center justify-between gap-4">
                                                                         <div className="flex items-center gap-4">
                                                                             <div className={cn(
                                                                                 "size-12 rounded-xl flex items-center justify-center shadow-inner transition-transform group-hover/log:scale-110",
-                                                                                log.call_type === 'video' ? "bg-blue-500/10" : "bg-emerald-500/10"
+                                                                                log.call_type === 'video' ? "bg-blue-50 dark:bg-blue-500/10" : "bg-emerald-50 dark:bg-emerald-500/10"
                                                                             )}>
                                                                                 {log.call_type === 'video' ?
-                                                                                    <Video className="size-5 text-blue-400" /> :
-                                                                                    <Phone className="size-5 text-emerald-400" />
+                                                                                    <Video className="size-5 text-blue-500 dark:text-blue-400" /> :
+                                                                                    <Phone className="size-5 text-emerald-500 dark:text-emerald-400" />
                                                                                 }
                                                                             </div>
                                                                             <div className="min-w-0">
                                                                                 <div className="flex items-center gap-2 mb-1">
-                                                                                    <p className="text-sm font-bold text-white truncate">
+                                                                                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                                                                                         {isOutgoing ? 'Outgoing' : 'Incoming'} Call
                                                                                     </p>
                                                                                     {isMissed && (
@@ -676,8 +676,8 @@ export default function CallHistory() {
                                                                                     </span>
                                                                                     {log.duration > 0 && (
                                                                                         <>
-                                                                                            <span className="size-1 bg-slate-800 rounded-full" />
-                                                                                            <span className="text-emerald-500/80">{formatDuration(log.duration)}</span>
+                                                                                            <span className="size-1 bg-slate-300 dark:bg-slate-800 rounded-full" />
+                                                                                            <span className="text-emerald-600 dark:text-emerald-500/80">{formatDuration(log.duration)}</span>
                                                                                         </>
                                                                                     )}
                                                                                 </div>
@@ -701,7 +701,7 @@ export default function CallHistory() {
                         </>
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center space-y-4 opacity-40 grayscale pointer-events-none">
-                            <div className="size-20 rounded-3xl bg-slate-800 flex items-center justify-center">
+                            <div className="size-20 rounded-3xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
                                 <Search className="size-8 text-slate-500" />
                             </div>
                             <p className="text-sm font-medium text-slate-500 max-w-[200px] text-center">
@@ -714,10 +714,10 @@ export default function CallHistory() {
 
             {/* New Call Dialog */}
             <Dialog open={isNewCallOpen} onOpenChange={setIsNewCallOpen}>
-                <DialogContent className="max-w-md p-0 overflow-hidden bg-[#1f2c33] border-none shadow-2xl rounded-2xl">
-                    <DialogHeader className="p-6 pb-2 text-white">
+                <DialogContent className="max-w-md p-0 overflow-hidden bg-white dark:bg-[#1f2c33] border-none shadow-2xl rounded-2xl">
+                    <DialogHeader className="p-6 pb-2 text-slate-900 dark:text-white">
                         <DialogTitle className="text-xl font-bold">New Call</DialogTitle>
-                        <DialogDescription className="text-slate-400">
+                        <DialogDescription className="text-slate-500 dark:text-slate-400">
                             Search for people in your workspace
                         </DialogDescription>
                     </DialogHeader>
@@ -727,7 +727,7 @@ export default function CallHistory() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
                             <Input
                                 placeholder="Name or email..."
-                                className="pl-10 bg-[#111b21] border-none rounded-xl text-white h-11"
+                                className="pl-10 bg-slate-100 dark:bg-[#111b21] border-none rounded-xl text-slate-900 dark:text-white h-11"
                                 value={contactSearch}
                                 onChange={(e) => setContactSearch(e.target.value)}
                             />
@@ -738,16 +738,16 @@ export default function CallHistory() {
                                 {filteredContacts.map(contact => (
                                     <div
                                         key={contact.id}
-                                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#2a3942] cursor-pointer group transition-colors"
+                                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-[#2a3942] cursor-pointer group transition-colors"
                                     >
                                         <Avatar className="h-10 w-10 border-none">
                                             <AvatarImage src={contact.avatar_url || (contact as any).avatar_url} />
-                                            <AvatarFallback className="bg-slate-700 text-slate-300">
+                                            <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                                                 {contact.full_name?.[0]}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-white text-sm truncate">{contact.full_name}</p>
+                                            <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{contact.full_name}</p>
                                             <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-none font-bold truncate">
                                                 {contact.role}
                                             </p>
