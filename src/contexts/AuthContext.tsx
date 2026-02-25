@@ -58,8 +58,6 @@ export interface Profile {
     userName?: string;
   } | null;
   last_feedback_prompt_at: string | null;
-  cookie_consent_at: string | null;
-  cookie_consent_choice: 'allow' | 'reject' | 'dismissed' | null;
   created_at: string;
   updated_at: string;
 }

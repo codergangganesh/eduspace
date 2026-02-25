@@ -1060,8 +1060,6 @@ export type Database = {
           city: string | null
           country: string | null
           course_announcements: boolean | null
-          cookie_consent_at: string | null
-          cookie_consent_choice: string | null
           cover_url: string | null
           created_at: string
           credits_completed: number | null
@@ -1115,8 +1113,6 @@ export type Database = {
           city?: string | null
           country?: string | null
           course_announcements?: boolean | null
-          cookie_consent_at?: string | null
-          cookie_consent_choice?: string | null
           created_at?: string
           credits_completed?: number | null
           credits_required?: number | null
@@ -1165,8 +1161,6 @@ export type Database = {
           city?: string | null
           country?: string | null
           course_announcements?: boolean | null
-          cookie_consent_at?: string | null
-          cookie_consent_choice?: string | null
           created_at?: string
           credits_completed?: number | null
           credits_required?: number | null

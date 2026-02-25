@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { CookieConsent } from "@/components/legal/CookieConsent";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -149,7 +148,6 @@ const App = () => (
                       <PWAInstallPrompt />
                       <PushNotificationManager />
                       <FCMManager />
-                      <CookieConsent />
                       <Suspense fallback={<LoadingFallback />}>
                         <Routes>
                           <Route path="/p/:id" element={<PublicProfile />} />
