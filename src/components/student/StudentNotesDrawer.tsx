@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { knowledgeService } from "@/lib/knowledgeService";
-import { Capacitor } from "@capacitor/core";
 import { cn } from "@/lib/utils";
 
 interface Note {
@@ -27,7 +26,19 @@ export function StudentNotesDrawer() {
     const [isEditing, setIsEditing] = useState<string | null>(null);
     const [newNoteMode, setNewNoteMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const isNative = Capacitor.isNativePlatform();
+    const [isNative, setIsNative] = useState(false);
+
+    useEffect(() => {
+        const checkNative = async () => {
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                setIsNative(Capacitor.isNativePlatform());
+            } catch (e) {
+                setIsNative(false);
+            }
+        };
+        checkNative();
+    }, []);
 
     // Form State
     const [title, setTitle] = useState("");

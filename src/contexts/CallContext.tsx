@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { App } from '@capacitor/app';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -125,37 +124,50 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // Listen for App Resume (Foreground) - Re-check current URL if changed or stale? 
         // Actually simpler to just rely on appUrlOpen for new intents.
         // But if user just minimized and restored, standard resume might trigger check.
-        const stateListener = App.addListener('appStateChange', ({ isActive }) => {
-            if (isActive && user && profile) {
-                // Optional: Re-check window location or just wait for url event
-                const params = new URLSearchParams(window.location.search);
-                if (params.get('session')) {
-                    handleSession(params.get('session'), params.get('action'));
-                }
-            }
-        });
 
-        // Listen for Deep Links (Custom Scheme / Universal Links)
-        const urlListener = App.addListener('appUrlOpen', (data) => {
-            console.log("[CallContext] App opened with URL:", data.url);
+        let stateListener: any;
+        let urlListener: any;
+
+        const initCapacitor = async () => {
             try {
-                // Support both http/https and custom schemes
-                // URL might be "eduspace://call?session=..." or "https://.../?session=..."
-                const urlObj = new URL(data.url);
-                const params = urlObj.searchParams;
-                const sessionId = params.get('session');
-                const action = params.get('action');
-                if (sessionId && user && profile) {
-                    handleSession(sessionId, action);
-                }
-            } catch (e) {
-                console.error("Error parsing deep link:", e);
+                const { App } = await import('@capacitor/app');
+                stateListener = App.addListener('appStateChange', ({ isActive }) => {
+                    if (isActive && user && profile) {
+                        // Optional: Re-check window location or just wait for url event
+                        const params = new URLSearchParams(window.location.search);
+                        if (params.get('session')) {
+                            handleSession(params.get('session'), params.get('action'));
+                        }
+                    }
+                });
+
+                // Listen for Deep Links (Custom Scheme / Universal Links)
+                urlListener = App.addListener('appUrlOpen', (data) => {
+                    console.log("[CallContext] App opened with URL:", data.url);
+                    try {
+                        // Support both http/https and custom schemes
+                        // URL might be "eduspace://call?session=..." or "https://.../?session=..."
+                        const urlObj = new URL(data.url);
+                        const params = urlObj.searchParams;
+                        const sessionId = params.get('session');
+                        const action = params.get('action');
+                        if (sessionId && user && profile) {
+                            handleSession(sessionId, action);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing deep link:", e);
+                    }
+                });
+            } catch (err) {
+                console.warn("Capacitor App plugin not available", err);
             }
-        });
+        };
+
+        initCapacitor();
 
         return () => {
-            stateListener.then(l => l.remove());
-            urlListener.then(l => l.remove());
+            if (stateListener) stateListener.then((l: any) => l.remove());
+            if (urlListener) urlListener.then((l: any) => l.remove());
         };
     }, [user, profile]); // Depend on profile too
 

@@ -6,7 +6,6 @@ import { NotificationsPopover } from "@/components/notifications/NotificationsPo
 import { useAuth } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
 import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
-import { Capacitor } from "@capacitor/core";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;

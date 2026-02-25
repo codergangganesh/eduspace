@@ -22,6 +22,16 @@ export default defineConfig(({ mode }) => ({
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
+      injectManifest: {
+        rollupOptions: {
+          external: [
+            '@capacitor/core',
+            '@capacitor/app',
+            '@capacitor/status-bar',
+            '@capacitor/push-notifications'
+          ]
+        }
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'Eduspace Learning Management System',
@@ -70,19 +80,8 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['lucide-react', 'framer-motion'],
-        },
-      },
-    },
     chunkSizeWarningLimit: 1000,
     minify: 'esbuild',
     cssCodeSplit: true,
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
   },
 }));
