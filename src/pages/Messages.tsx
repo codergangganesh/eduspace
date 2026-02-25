@@ -55,7 +55,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { CallModal } from "@/components/chat/CallModal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/useMessages";
 import { useInstructors } from "@/hooks/useInstructors";
@@ -356,6 +356,7 @@ const TypingIndicator = () => (
 
 export default function Messages() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role, profile } = useAuth();
   const {
     conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId,
@@ -753,6 +754,16 @@ export default function Messages() {
     }
     setIsNewChatOpen(false);
   };
+
+  // Handle auto-open from navigation state
+  useEffect(() => {
+    const state = location.state as { contactId?: string };
+    if (state?.contactId && !loading) {
+      handleStartNewChat(state.contactId);
+      // Clear state after handling it once
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, loading, conversations, handleStartNewChat]);
 
   const handleClearChat = async () => {
     if (!selectedConversationId) return;

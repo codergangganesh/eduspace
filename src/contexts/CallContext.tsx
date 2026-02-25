@@ -355,11 +355,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         try {
             const endedAt = new Date().toISOString();
             const duration = activeCall.startTime ? Math.floor((Date.now() - activeCall.startTime) / 1000) : 0;
+            const finalStatus = activeCall.startTime ? 'completed' : 'cancelled';
 
             await supabase
                 .from('call_sessions')
                 .update({
-                    status: 'completed',
+                    status: finalStatus,
                     ended_at: endedAt,
                     duration: duration
                 })

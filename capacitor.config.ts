@@ -4,6 +4,12 @@ const config: CapacitorConfig = {
   appId: 'com.eduspace.app',
   appName: 'Eduspace',
   webDir: 'dist',
+  server: {
+    // Replace with your computer's local IP address (e.g., 192.168.1.10)
+    // to enable live reload on your personal mobile device.
+    // url: 'http://YOUR_LOCAL_IP:8080',
+    cleartext: true
+  },
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
