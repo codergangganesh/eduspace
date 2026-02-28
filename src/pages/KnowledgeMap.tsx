@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { knowledgeService } from "@/lib/knowledgeService";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface Node {
@@ -361,8 +362,20 @@ export default function KnowledgeMap() {
                 {/* Graph Container */}
                 <div ref={containerRef} className="flex-1 relative overflow-hidden group bg-transparent">
                     {loading ? (
-                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/50 backdrop-blur-sm">
-                            <Loader2 className="size-12 animate-spin text-primary" />
+                        <div className="absolute inset-0 flex flex-col p-6 space-y-8 z-10 bg-background/50 backdrop-blur-sm animate-in fade-in duration-500">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <Skeleton className="h-24 rounded-3xl" />
+                                <Skeleton className="h-24 rounded-3xl" />
+                                <Skeleton className="h-24 rounded-3xl" />
+                                <Skeleton className="h-24 rounded-3xl" />
+                            </div>
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="space-y-4 text-center">
+                                    <Skeleton className="size-32 rounded-full mx-auto" />
+                                    <Skeleton className="h-6 w-48 mx-auto rounded-lg" />
+                                    <Skeleton className="h-4 w-64 mx-auto rounded-lg" />
+                                </div>
+                            </div>
                         </div>
                     ) : graphData.nodes.length === 0 ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8 text-center bg-background/20 backdrop-blur-[2px]">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Plus, Trash2, Edit2, Save, X, Search, Clock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -216,9 +217,23 @@ export default function Notes() {
                     ) : (
                         <ScrollArea className="flex-1 px-4 sm:px-8 py-6">
                             {loading ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
                                     {[1, 2, 3, 4, 5, 6].map(i => (
-                                        <div key={i} className="h-48 rounded-3xl bg-slate-200/50 dark:bg-slate-800/50 animate-pulse" />
+                                        <div key={i} className="bg-white dark:bg-slate-900 border border-border/50 rounded-3xl p-6 space-y-4">
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-24 rounded-lg" />
+                                                <Skeleton className="h-7 w-3/4 rounded-lg" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-full rounded-md" />
+                                                <Skeleton className="h-4 w-full rounded-md" />
+                                                <Skeleton className="h-4 w-[60%] rounded-md" />
+                                            </div>
+                                            <div className="pt-4 border-t border-border/10 flex justify-between items-center">
+                                                <Skeleton className="h-3 w-20 rounded-md" />
+                                                <Skeleton className="size-4 rounded-full" />
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             ) : filteredNotes.length > 0 ? (

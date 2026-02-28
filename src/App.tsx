@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -76,7 +77,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => {
   useEffect(() => {
-    // If the loading state persists for more than 8 seconds, it might be a chunk load error
     const timer = setTimeout(() => {
       console.warn("Loading persists... possible chunk error. Trying to recover.");
     }, 8000);
@@ -84,8 +84,49 @@ const LoadingFallback = () => {
   }, []);
 
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0B0F1A]">
-      <div className="size-12 rounded-full border-2 border-blue-600/20 border-t-blue-600 animate-spin" />
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
+      {/* Sidebar Skeleton */}
+      <div className="hidden md:flex w-72 h-full flex-col border-r border-border/50 p-6 space-y-6 shrink-0">
+        <Skeleton className="h-10 w-32 rounded-xl mb-4" />
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="size-5 rounded-md" />
+              <Skeleton className="h-4 w-24 rounded-md" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content Skeleton */}
+      <div className="flex-1 flex flex-col p-6 md:p-10 space-y-8 min-w-0">
+        <header className="flex justify-between items-center shrink-0">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48 rounded-lg" />
+            <Skeleton className="h-4 w-64 rounded-lg invisible sm:visible" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="size-9 rounded-full" />
+            <Skeleton className="size-9 rounded-full" />
+          </div>
+        </header>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-32 rounded-3xl" />
+          ))}
+        </div>
+
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-0">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-[400px] w-full rounded-3xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-[200px] w-full rounded-3xl" />
+            <Skeleton className="h-[200px] w-full rounded-3xl" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
