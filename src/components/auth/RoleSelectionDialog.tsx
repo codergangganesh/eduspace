@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, BookOpen, Users } from "lucide-react";
+import { BookOpen, Users } from "lucide-react";
 import {
     Dialog,
     DialogContent,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Drawer } from "vaul";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RoleSelectionDialogProps {
     open: boolean;
@@ -13,6 +14,7 @@ interface RoleSelectionDialogProps {
 
 export function RoleSelectionDialog({ open, onOpenChange }: RoleSelectionDialogProps) {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     const handleRoleSelection = (role: "student" | "lecturer") => {
         onOpenChange(false);
@@ -22,6 +24,65 @@ export function RoleSelectionDialog({ open, onOpenChange }: RoleSelectionDialogP
             navigate("/lecturer/login");
         }
     };
+
+    if (isMobile) {
+        return (
+            <Drawer.Root open={open} onOpenChange={onOpenChange}>
+                <Drawer.Portal>
+                    <Drawer.Overlay className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-[2px]" />
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-slate-50 dark:bg-slate-900 rounded-t-[32px] outline-none max-h-[85vh]">
+                        <div className="flex-1 overflow-y-auto px-6 pb-12 rounded-t-[32px]">
+                            {/* Drag handle */}
+                            <div className="mx-auto w-12 h-1.5 flex-shrink-0 cursor-grab rounded-full bg-slate-200 dark:bg-slate-800 mt-4 mb-8" />
+
+                            <div className="mb-0 text-center">
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-4">Select your role</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1 mb-8">To personalize your experience</p>
+                            </div>
+
+                            <div className="grid gap-4">
+                                {/* Student Section */}
+                                <div
+                                    className="group relative p-6 bg-white dark:bg-slate-950/50 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center gap-5 active:scale-[0.98] transition-all"
+                                    onClick={() => handleRoleSelection("student")}
+                                >
+                                    <div className="size-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                                        <BookOpen className="size-8 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                                            I'm a Student
+                                        </h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-tight">
+                                            Join classes and learn
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Lecturer Section */}
+                                <div
+                                    className="group relative p-6 bg-white dark:bg-slate-950/50 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center gap-5 active:scale-[0.98] transition-all"
+                                    onClick={() => handleRoleSelection("lecturer")}
+                                >
+                                    <div className="size-16 rounded-2xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                                        <Users className="size-8 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                                            I'm a Lecturer
+                                        </h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-tight">
+                                            Manage classes and track
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,7 +134,6 @@ export function RoleSelectionDialog({ open, onOpenChange }: RoleSelectionDialogP
                         </div>
                     </div>
                 </div>
-
             </DialogContent>
         </Dialog>
     );

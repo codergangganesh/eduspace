@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: {
     // Replace with your computer's local IP address (e.g., 192.168.1.10)
     // to enable live reload on your personal mobile device.
-    // url: 'http://YOUR_LOCAL_IP:8080',
+    url: 'http://10.200.140.183:8080',
     cleartext: true
   },
   plugins: {

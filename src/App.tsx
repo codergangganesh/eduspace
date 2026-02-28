@@ -85,9 +85,7 @@ const LoadingFallback = () => {
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0B0F1A]">
-      <div className="size-16 rounded-2xl overflow-hidden border border-white/10 animate-pulse bg-slate-800/50 flex items-center justify-center">
-        <img src="/favicon.png" alt="Logo" className="size-10 object-contain opacity-50 grayscale" />
-      </div>
+      <div className="size-12 rounded-full border-2 border-blue-600/20 border-t-blue-600 animate-spin" />
     </div>
   );
 };

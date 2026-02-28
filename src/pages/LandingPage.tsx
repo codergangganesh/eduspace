@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 import { renderCanvas } from "@/components/ui/canvas";
 import { HeroSection } from "@/components/landing/HeroSection";
+import { MobileOnboarding } from "@/components/landing/MobileOnboarding";
 
 // Lazy load sections (HeroSection is eager loaded for LCP)
 const AnoAI = lazy(() => import("@/components/ui/animated-shader-background"));
@@ -34,7 +35,6 @@ export default function LandingPage() {
     const [showTerms, setShowTerms] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showContact, setShowContact] = useState(false);
-
 
     useEffect(() => {
 
@@ -124,14 +124,18 @@ export default function LandingPage() {
                 />
             </Suspense>
 
-            <div className="relative z-10 backdrop-blur-[2px]">
-                {/* Modals */}
-                <RoleSelectionDialog open={showRoleDialog} onOpenChange={setShowRoleDialog} />
-                <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
-                <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
-                <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
-                <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
+            {/* Modals outside of hidden containers so they always work */}
+            <RoleSelectionDialog open={showRoleDialog} onOpenChange={setShowRoleDialog} />
+            <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
+            <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
+            <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
+            <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
+            <div className="block md:hidden relative z-50 transition-all duration-500">
+                <MobileOnboarding onComplete={() => setShowRoleDialog(true)} />
+            </div>
+
+            <div className="hidden md:block relative z-10 backdrop-blur-[2px]">
                 {/* Navigation */}
                 <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl fixed top-0 w-full z-[100] transition-all duration-300 pt-[var(--safe-top)]">
                     <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
