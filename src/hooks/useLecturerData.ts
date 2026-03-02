@@ -4,6 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
+// ── Module-level cache ───────────────────────────────────────────────────────
+const lecturerStatsCache = new Map<string, DashboardStats>();
+const recentSubmissionsCache = new Map<string, RecentActivity[]>();
+const upcomingClassesCache = new Map<string, UpcomingClass[]>();
+const activeTasksCache = new Map<string, ActiveTaskSummary[]>();
+
 export interface DashboardStats {
     enrolledStudents: number;
     submissionsReceived: number;
@@ -54,17 +60,44 @@ export interface UpcomingClass {
 
 export function useLecturerData() {
     const { user } = useAuth();
-    const [stats, setStats] = useState<DashboardStats>({
-        enrolledStudents: 0,
-        submissionsReceived: 0,
-        pendingSubmissions: 0,
-        totalExpectedSubmissions: 0,
+    const [stats, setStats] = useState<DashboardStats>(() => {
+        if (user && lecturerStatsCache.has(user.id)) {
+            return lecturerStatsCache.get(user.id)!;
+        }
+        return {
+            enrolledStudents: 0,
+            submissionsReceived: 0,
+            pendingSubmissions: 0,
+            totalExpectedSubmissions: 0,
+        };
     });
-    const [recentSubmissions, setRecentSubmissions] = useState<RecentActivity[]>([]);
-    const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
-    const [totalTasks, setTotalTasks] = useState<ActiveTaskSummary[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [recentSubmissions, setRecentSubmissions] = useState<RecentActivity[]>(() => {
+        if (user && recentSubmissionsCache.has(user.id)) {
+            return recentSubmissionsCache.get(user.id) || [];
+        }
+        return [];
+    });
+    const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>(() => {
+        if (user && upcomingClassesCache.has(user.id)) {
+            return upcomingClassesCache.get(user.id) || [];
+        }
+        return [];
+    });
+    const [totalTasks, setTotalTasks] = useState<ActiveTaskSummary[]>(() => {
+        if (user && activeTasksCache.has(user.id)) {
+            return activeTasksCache.get(user.id) || [];
+        }
+        return [];
+    });
+
+    const [loading, setLoading] = useState(() => {
+        if (!user) return false;
+        return !lecturerStatsCache.has(user.id);
+    });
+    const [isInitialLoad, setIsInitialLoad] = useState(() => {
+        if (!user) return true;
+        return !lecturerStatsCache.has(user.id);
+    });
 
     // silentRefresh: when true, don't trigger loading state (for real-time updates)
     const fetchData = async (silentRefresh = false) => {
@@ -72,7 +105,7 @@ export function useLecturerData() {
 
         try {
             // Only show loading spinner on initial load, not on real-time updates
-            if (!silentRefresh && isInitialLoad) {
+            if (!silentRefresh && !lecturerStatsCache.has(user.id)) {
                 setLoading(true);
             }
 
@@ -96,20 +129,22 @@ export function useLecturerData() {
 
             // Pre-fetch all IDs needed for counts and activity
             let allAssignmentIds: string[] = [];
-            const { data: directAssignments } = await supabase.from("assignments").select("id, class_id").eq("lecturer_id", user.id);
-            if (directAssignments) allAssignmentIds = directAssignments.map(a => a.id);
+            const { data: directAssignments } = await (supabase.from("assignments") as any).select("id, class_id").eq("lecturer_id", user.id);
+            if (directAssignments) allAssignmentIds = (directAssignments as any[]).map(a => a.id);
             if (classIds.length > 0) {
-                const { data: classAssignments } = await supabase.from("assignments").select("id, class_id").in("class_id", classIds);
-                if (classAssignments) allAssignmentIds = [...new Set([...allAssignmentIds, ...classAssignments.map(a => a.id)])];
+                const { data: classAssignments } = await (supabase.from("assignments") as any).select("id, class_id").in("class_id", classIds);
+                if (classAssignments) allAssignmentIds = [...new Set([...allAssignmentIds, ...(classAssignments as any[]).map(a => a.id)])];
             }
 
             let lecturerQuizIds: string[] = [];
-            const { data: directQuizzes } = await supabase.from("quizzes").select("id, class_id").eq("lecturer_id", user.id);
-            if (directQuizzes) lecturerQuizIds = directQuizzes.map(q => q.id);
+            const { data: directQuizzes } = await (supabase.from("quizzes") as any).select("id, class_id").eq("lecturer_id", user.id);
+            if (directQuizzes) lecturerQuizIds = (directQuizzes as any[]).map(q => q.id);
             if (classIds.length > 0) {
-                const { data: classQuizzes } = await supabase.from("quizzes").select("id, class_id").in("class_id", classIds);
-                if (classQuizzes) lecturerQuizIds = [...new Set([...lecturerQuizIds, ...classQuizzes.map(q => q.id)])];
+                const { data: classQuizzes } = await (supabase.from("quizzes") as any).select("id, class_id").in("class_id", classIds);
+                if (classQuizzes) lecturerQuizIds = [...new Set([...lecturerQuizIds, ...(classQuizzes as any[]).map(q => q.id)])];
             }
+
+            let taskSummaries: ActiveTaskSummary[] = [];
 
             if (classIds.length > 0) {
                 // A. Enrolled Students
@@ -121,8 +156,6 @@ export function useLecturerData() {
                 acceptedEnrollments?.forEach(e => {
                     if (e.class_id) classStudentCounts.set(e.class_id, (classStudentCounts.get(e.class_id) || 0) + 1);
                 });
-
-                const taskSummaries: ActiveTaskSummary[] = [];
 
                 // B. Assignments Stats
                 if (allAssignmentIds.length > 0) {
@@ -176,12 +209,15 @@ export function useLecturerData() {
 
             pendingSubmissions = Math.max(0, totalExpectedSubmissions - submissionsReceived);
 
-            setStats({
+            const newStats = {
                 enrolledStudents,
                 submissionsReceived,
                 pendingSubmissions,
                 totalExpectedSubmissions
-            });
+            };
+            setStats(newStats);
+            lecturerStatsCache.set(user.id, newStats);
+            activeTasksCache.set(user.id, taskSummaries);
 
             // 2. Fetch Recent Activity for Feed
             if (allAssignmentIds.length > 0) {
@@ -217,6 +253,7 @@ export function useLecturerData() {
                 .map(act => ({ ...act, submittedAt: format(new Date(act.submittedAt), "MMM d, h:mm a") }));
 
             setRecentSubmissions(finalActivities);
+            recentSubmissionsCache.set(user.id, finalActivities);
 
             // 3. Fetch Upcoming Classes
             const { data: schedules } = await supabase.from("schedules").select(`*, classes:class_id(class_name, course_code)`).eq("lecturer_id", user.id).order("day_of_week", { ascending: true }).order("start_time", { ascending: true });
@@ -235,6 +272,7 @@ export function useLecturerData() {
                     classId: s.class_id
                 })).sort((a, b) => a.isToday === b.isToday ? 0 : a.isToday ? -1 : 1).slice(0, 5);
                 setUpcomingClasses(mappedClasses);
+                upcomingClassesCache.set(user.id, mappedClasses);
             }
 
         } catch (error) {

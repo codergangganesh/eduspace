@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { notifyNewMessage } from '@/lib/notificationService';
 
 interface Message {
     id: string;
@@ -62,11 +63,11 @@ export function useMessages() {
         if (!user) return;
 
         try {
-            const { data, error: fetchError } = await supabase
+            const { data, error: fetchError } = await (supabase
                 .from('conversations')
                 .select('*')
                 .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-                .order('last_message_at', { ascending: false });
+                .order('last_message_at', { ascending: false }) as any);
 
             if (fetchError) {
                 console.warn('Error fetching conversations:', fetchError);
@@ -418,17 +419,14 @@ export function useMessages() {
 
             // Trigger Notification (Push + In-App if enabled)
             if (user && profile && conversationId) {
-                // Import dynamically to avoid circular dependencies if any
-                import('@/lib/notificationService').then(({ notifyNewMessage }) => {
-                    notifyNewMessage(
-                        receiverId,
-                        profile.full_name || 'New Message',
-                        finalContent,
-                        conversationId!,
-                        user.id,
-                        profile.avatar_url || undefined
-                    ).catch(err => console.error("Failed to notify message:", err));
-                });
+                notifyNewMessage(
+                    receiverId,
+                    profile.full_name || 'New Message',
+                    finalContent,
+                    conversationId!,
+                    user.id,
+                    profile.avatar_url || undefined
+                ).catch(err => console.error("Failed to notify message:", err));
             }
 
             // Manual notification fallback if needed (Optional, but DB trigger is better)

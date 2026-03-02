@@ -2,6 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
+import { notifyGradePosted, notifyAssignmentSubmission } from '@/lib/notificationService';
+import { knowledgeService } from '@/lib/knowledgeService';
+
+// ── Module-level cache ───────────────────────────────────────────────────────
+const assignmentsCache = new Map<string, Assignment[]>();
+const enrolledClassesCache = new Map<string, { id: string, class_name: string, course_code: string }[]>();
 
 export interface Assignment {
     id: string;
@@ -55,12 +61,24 @@ interface AssignmentStats {
 
 export function useAssignments(selectedClassId?: string) {
     const { user, role } = useAuth();
-    const [assignments, setAssignments] = useState<Assignment[]>([]);
+    const cacheKey = selectedClassId ? `${role}_${selectedClassId}` : `${role}_all`;
+
+    const [assignments, setAssignments] = useState<Assignment[]>(() => {
+        if (assignmentsCache.has(cacheKey)) {
+            return assignmentsCache.get(cacheKey) || [];
+        }
+        return [];
+    });
     const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !assignmentsCache.has(cacheKey));
     const [error, setError] = useState<Error | null>(null);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>([]);
+    const [isInitialLoad, setIsInitialLoad] = useState(() => !assignmentsCache.has(cacheKey));
+    const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>(() => {
+        if (user && enrolledClassesCache.has(user.id)) {
+            return enrolledClassesCache.get(user.id) || [];
+        }
+        return [];
+    });
 
     const fetchEnrolledClasses = useCallback(async () => {
         if (!user || role !== 'student') return;
@@ -85,6 +103,7 @@ export function useAssignments(selectedClassId?: string) {
             }
 
             setEnrolledClasses(classesData || []);
+            enrolledClassesCache.set(user.id, classesData || []);
 
         } catch (error) {
             console.error('Error in fetchEnrolledClasses:', error);
@@ -104,7 +123,7 @@ export function useAssignments(selectedClassId?: string) {
 
         try {
             // Only show loading spinner on initial load, not on real-time updates
-            if (!silentRefresh && isInitialLoad) {
+            if (!silentRefresh && !assignmentsCache.has(cacheKey)) {
                 setLoading(true);
             }
 
@@ -262,6 +281,7 @@ export function useAssignments(selectedClassId?: string) {
 
             console.log('[useAssignments] Final formatted assignments:', formattedAssignments.length);
             setAssignments(formattedAssignments);
+            assignmentsCache.set(cacheKey, formattedAssignments);
             setError(null);
         } catch (err) {
             console.error('Error fetching assignments:', err);
@@ -274,17 +294,24 @@ export function useAssignments(selectedClassId?: string) {
             setLoading(false);
             setIsInitialLoad(false);
         }
-    }, [user, role, isInitialLoad, selectedClassId]);
+    }, [user, role, isInitialLoad, selectedClassId, cacheKey]);
 
     // Fetch assignments when selected class changes (for student)
     useEffect(() => {
-        if (role === 'student') {
-            fetchAssignments();
-        } else if (role === 'lecturer') {
-            // Lecturer login handles initial load
+        if (assignmentsCache.has(cacheKey)) {
+            setAssignments(assignmentsCache.get(cacheKey) || []);
+            setLoading(false);
+            setIsInitialLoad(false);
+        } else {
+            setAssignments([]);
+            setLoading(true);
+            setIsInitialLoad(true);
+        }
+
+        if (role === 'student' || role === 'lecturer') {
             fetchAssignments();
         }
-    }, [fetchAssignments, role, selectedClassId]);
+    }, [fetchAssignments, role, selectedClassId, cacheKey]);
 
     // Helper function to merge new assignments with existing ones, preserving submission states
     const mergeAssignmentsWithSubmissions = useCallback((
@@ -626,7 +653,6 @@ export function useAssignments(selectedClassId?: string) {
                         .single();
 
                     if (assignment) {
-                        const { notifyGradePosted } = await import('@/lib/notificationService');
                         await notifyGradePosted(
                             submission.student_id,
                             assignment.title,
@@ -662,7 +688,6 @@ export function useAssignments(selectedClassId?: string) {
 
             if (error) throw error;
 
-            const { knowledgeService } = await import('@/lib/knowledgeService');
             await knowledgeService.deleteKnowledgeNode(submissionId);
 
             return { success: true };
@@ -741,7 +766,6 @@ export function useAssignments(selectedClassId?: string) {
             try {
                 if (assignment && assignment.class_id) {
                     // Use notification service for consistent handling
-                    const { notifyAssignmentSubmission } = await import('@/lib/notificationService');
                     await notifyAssignmentSubmission(
                         assignment.lecturer_id,
                         studentProfile?.full_name || 'A student',
@@ -757,7 +781,6 @@ export function useAssignments(selectedClassId?: string) {
 
             // Sync with Knowledge Map
             try {
-                const { knowledgeService } = await import('@/lib/knowledgeService');
                 await knowledgeService.upsertKnowledgeNode({
                     type: 'assignment',
                     sourceId: subData.id,

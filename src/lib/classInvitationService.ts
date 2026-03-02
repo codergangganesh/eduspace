@@ -18,7 +18,7 @@ export async function sendInvitationsToClass(classId: string): Promise<Invitatio
         // Get class details
         const { data: classData, error: classError } = await supabase
             .from('classes')
-            .select('course_code, class_name, lecturer_id, lecturer_name, lecturer_department')
+            .select('course_code, class_name, lecturer_id, lecturer_name, lecturer_department, semester, academic_year')
             .eq('id', classId)
             .single();
 
@@ -240,7 +240,7 @@ export async function acceptInvitation(requestId: string, userId: string): Promi
         // Get the request details
         const { data: request, error: requestError } = await supabase
             .from('access_requests')
-            .select('*, classes(course_code, class_name)')
+            .select('*, classes(course_code, class_name, lecturer_id)')
             .eq('id', requestId)
             .single();
 
@@ -280,8 +280,6 @@ export async function acceptInvitation(requestId: string, userId: string): Promi
 
         // Notify lecturer about acceptance
         try {
-            const { notifyLecturer } = await import("./notificationService");
-
             // Get student name
             const { data: studentProfile } = await supabase
                 .from('student_profiles')

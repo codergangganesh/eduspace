@@ -3,6 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
 import { toast } from 'sonner';
+import { notifyScheduleCreated, notifyScheduleUpdated } from '@/lib/notificationService';
+
+// ── Module-level cache ───────────────────────────────────────────────────────
+const scheduleCache = new Map<string, Schedule[]>();
 
 export interface Schedule {
     id: string;
@@ -29,9 +33,16 @@ export interface Schedule {
 
 export function useSchedule(classId?: string) {
     const { user, role } = useAuth();
-    const [schedules, setSchedules] = useState<Schedule[]>([]);
+    const cacheKey = classId ? `${role}_${classId}` : `${role}_all`;
+
+    const [schedules, setSchedules] = useState<Schedule[]>(() => {
+        if (scheduleCache.has(cacheKey)) {
+            return scheduleCache.get(cacheKey) || [];
+        }
+        return [];
+    });
     const [assignments, setAssignments] = useState<any[]>([]); // Kept for compatibility if needed, but primary focus is schedules
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !scheduleCache.has(cacheKey));
     // Cache enrolled class IDs for real-time filtering updates
     const enrolledClassIdsRef = useRef<string[]>([]);
 
@@ -40,7 +51,10 @@ export function useSchedule(classId?: string) {
             setLoading(false);
             return;
         }
-        setLoading(true);
+
+        if (!scheduleCache.has(cacheKey)) {
+            setLoading(true);
+        }
 
         try {
             let query = supabase
@@ -87,6 +101,7 @@ export function useSchedule(classId?: string) {
             }));
 
             setSchedules(formattedData);
+            scheduleCache.set(cacheKey, formattedData);
         } catch (err) {
             console.error('Error fetching schedules:', err);
             // toast.error('Failed to load schedule'); // Optional: don't spam toasts on load
@@ -97,6 +112,14 @@ export function useSchedule(classId?: string) {
 
     // Set up Real-time Subscription
     useEffect(() => {
+        if (scheduleCache.has(cacheKey)) {
+            setSchedules(scheduleCache.get(cacheKey) || []);
+            setLoading(false);
+        } else {
+            setSchedules([]);
+            setLoading(true);
+        }
+
         fetchSchedules();
 
         if (!user) return;
@@ -194,8 +217,6 @@ export function useSchedule(classId?: string) {
 
             // Send Notifications
             if (scheduleData.class_id) {
-                const { notifyScheduleCreated } = await import('@/lib/notificationService');
-
                 // Get accepted students for this class
                 const { data: acceptedRequests } = await supabase
                     .from('access_requests')
@@ -239,7 +260,6 @@ export function useSchedule(classId?: string) {
 
             // Send Notifications
             if (data.class_id) {
-                const { notifyScheduleUpdated } = await import('@/lib/notificationService');
                 const { data: acceptedRequests } = await supabase
                     .from('access_requests')
                     .select('student_id')

@@ -3,6 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// ── Module-level cache ───────────────────────────────────────────────────────
+const subjectsCache = new Map<string, Subject[]>();
+
 export interface Subject {
     id: string;
     class_id: string;
@@ -21,11 +24,32 @@ export interface CreateSubjectDTO {
 
 export function useClassSubjects(classId: string | null) {
     const { user } = useAuth();
-    const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [subjects, setSubjects] = useState<Subject[]>(() => {
+        if (classId && subjectsCache.has(classId)) {
+            return subjectsCache.get(classId) || [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        return !classId || !subjectsCache.has(classId);
+    });
     const [error, setError] = useState<Error | null>(null);
 
-    const fetchSubjects = useCallback(async () => {
+    // Update state synchronously if classId changes and we have cached data
+    useEffect(() => {
+        if (!classId) {
+            setSubjects([]);
+            setLoading(false);
+        } else if (subjectsCache.has(classId)) {
+            setSubjects(subjectsCache.get(classId) || []);
+            setLoading(false);
+        } else {
+            setSubjects([]);
+            setLoading(true);
+        }
+    }, [classId]);
+
+    const fetchSubjects = useCallback(async (silentRefresh = false) => {
         if (!classId || !user) {
             setSubjects([]);
             setLoading(false);
@@ -33,7 +57,9 @@ export function useClassSubjects(classId: string | null) {
         }
 
         try {
-            setLoading(true);
+            if (!silentRefresh && !subjectsCache.has(classId)) {
+                setLoading(true);
+            }
             const { data, error: fetchError } = await supabase
                 .from('subjects')
                 .select('*')
@@ -43,11 +69,14 @@ export function useClassSubjects(classId: string | null) {
             if (fetchError) throw fetchError;
 
             setSubjects(data || []);
+            if (data) subjectsCache.set(classId, data);
             setError(null);
         } catch (err) {
             console.error('Error fetching subjects:', err);
             setError(err as Error);
-            setSubjects([]);
+            if (!subjectsCache.has(classId)) {
+                setSubjects([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -70,7 +99,7 @@ export function useClassSubjects(classId: string | null) {
                     filter: `class_id=eq.${classId}`,
                 },
                 () => {
-                    fetchSubjects();
+                    fetchSubjects(true);
                 }
             )
             .subscribe();

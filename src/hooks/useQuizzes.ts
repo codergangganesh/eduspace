@@ -3,19 +3,46 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Quiz, QuizQuestion } from '@/types/quiz';
 import { toast } from 'sonner';
+import { notifyQuizPublished } from '@/lib/notificationService';
+
+// ── Module-level cache ───────────────────────────────────────────────────────
+const quizzesCache = new Map<string, Quiz[]>();
 
 export function useQuizzes(classId?: string) {
     const { user } = useAuth();
-    const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [quizzes, setQuizzes] = useState<Quiz[]>(() => {
+        if (classId && quizzesCache.has(classId)) {
+            return quizzesCache.get(classId) || [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        return !classId || !quizzesCache.has(classId);
+    });
 
-    const fetchQuizzes = useCallback(async () => {
+    // Update state synchronously if classId changes and we have cached data
+    useEffect(() => {
+        if (!classId) {
+            setQuizzes([]);
+            setLoading(false);
+        } else if (quizzesCache.has(classId)) {
+            setQuizzes(quizzesCache.get(classId) || []);
+            setLoading(false);
+        } else {
+            setQuizzes([]);
+            setLoading(true);
+        }
+    }, [classId]);
+
+    const fetchQuizzes = useCallback(async (silentRefresh = false) => {
         if (!user || !classId) {
             setLoading(false);
             return;
         }
         try {
-            setLoading(true);
+            if (!silentRefresh && !quizzesCache.has(classId)) {
+                setLoading(true);
+            }
             const { data, error } = await supabase
                 .from('quizzes')
                 .select(`
@@ -39,10 +66,13 @@ export function useQuizzes(classId?: string) {
             }));
 
             setQuizzes(transformedQuizzes as unknown as Quiz[]);
+            quizzesCache.set(classId, transformedQuizzes as unknown as Quiz[]);
         } catch (error: any) {
             console.error('Error fetching quizzes:', JSON.stringify(error, null, 2));
             toast.error(`Error loading quizzes: ${error.message || 'Unknown error'}`);
-            setQuizzes([]);
+            if (!quizzesCache.has(classId)) {
+                setQuizzes([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -65,7 +95,7 @@ export function useQuizzes(classId?: string) {
                     filter: `class_id=eq.${classId}`
                 },
                 () => {
-                    fetchQuizzes();
+                    fetchQuizzes(true);
                 }
             )
             .subscribe();
@@ -82,7 +112,7 @@ export function useQuizzes(classId?: string) {
         try {
             const { data, error } = await supabase
                 .from('quizzes')
-                .insert([quizData])
+                .insert([quizData as any])
                 .select()
                 .single();
 
@@ -90,7 +120,6 @@ export function useQuizzes(classId?: string) {
 
             // Send notifications to enrolled students if quiz is published
             if (quizData.status === 'published' && quizData.class_id) {
-                const { notifyQuizPublished } = await import('@/lib/notificationService');
                 await notifyQuizPublished(
                     data.id,
                     quizData.class_id,
@@ -132,7 +161,6 @@ export function useQuizzes(classId?: string) {
             if (status === 'published') {
                 const quiz = quizzes.find(q => q.id === quizId);
                 if (quiz?.class_id) {
-                    const { notifyQuizPublished } = await import('@/lib/notificationService');
                     await notifyQuizPublished(
                         quizId,
                         quiz.class_id,

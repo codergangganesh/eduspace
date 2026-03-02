@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { QuizSkeleton } from '@/components/skeletons/QuizSkeleton';
 import { notifyQuizSubmission } from '@/lib/notificationService';
 import { useStreak } from '@/contexts/StreakContext';
+import { knowledgeService } from '@/lib/knowledgeService';
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
@@ -445,7 +446,6 @@ export default function TakeQuiz() {
             toast.success('Quiz submitted successfully!');
 
             // Add to Knowledge Map
-            const { knowledgeService } = await import('@/lib/knowledgeService');
             knowledgeService.upsertKnowledgeNode({
                 type: 'quiz',
                 sourceId: submissionData.id,

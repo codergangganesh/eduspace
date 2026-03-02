@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { QuestionEditor } from '@/components/quizzes/QuestionEditor';
 import { QuizQuestion } from '@/types/quiz';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
+import { notifyQuizPublished } from '@/lib/notificationService';
 import { useClasses } from '@/hooks/useClasses';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
 import {
@@ -227,7 +228,6 @@ export default function CreateAIQuiz() {
             // 3. Send notifications
             if (classId) {
                 try {
-                    const { notifyQuizPublished } = await import('@/lib/notificationService');
                     await notifyQuizPublished(quizData.id, classId, title, user?.id || '');
                 } catch (notifError) {
                     console.error('Notification failed:', notifError);

@@ -3,6 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
 
+// ── Module-level cache ───────────────────────────────────────────────────────
+const classesCache = new Map<string, Class[]>();
+
 export interface Class {
     id: string;
     lecturer_id: string;
@@ -32,18 +35,43 @@ export interface CreateClassData {
 
 export function useClasses() {
     const { user, role } = useAuth();
-    const [classes, setClasses] = useState<Class[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [classes, setClasses] = useState<Class[]>(() => {
+        if (user && classesCache.has(user.id)) {
+            return classesCache.get(user.id) || [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        if (!user) return true;
+        return !classesCache.has(user.id);
+    });
     const [error, setError] = useState<Error | null>(null);
 
-    const fetchClasses = useCallback(async () => {
+    // Update state synchronously if user changes and we have cached data
+    useEffect(() => {
+        if (!user) {
+            setClasses([]);
+            setLoading(false);
+        } else if (classesCache.has(user.id)) {
+            setClasses(classesCache.get(user.id) || []);
+            setLoading(false);
+        } else {
+            setClasses([]);
+            setLoading(true);
+        }
+    }, [user]);
+
+    // silentRefresh: when true, don't trigger loading state (for real-time updates)
+    const fetchClasses = useCallback(async (silentRefresh = false) => {
         if (!user) {
             setLoading(false);
             return;
         }
 
         try {
-            setLoading(true);
+            if (!silentRefresh && !classesCache.has(user.id)) {
+                setLoading(true);
+            }
 
             if (role === 'student') {
                 // STUDENT: Fetch enrolled classes
@@ -107,6 +135,7 @@ export function useClasses() {
                 });
 
                 setClasses(enrichedClasses);
+                classesCache.set(user.id, enrichedClasses);
 
             } else {
                 // LECTURER: Fetch own classes
@@ -135,12 +164,15 @@ export function useClasses() {
                 );
 
                 setClasses(classesWithCount);
+                classesCache.set(user.id, classesWithCount);
             }
             setError(null);
         } catch (err) {
             console.error('Error fetching classes:', err);
             setError(err as Error);
-            setClasses([]);
+            if (!classesCache.has(user.id)) {
+                setClasses([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -169,7 +201,7 @@ export function useClasses() {
                         table: 'classes',
                         filter: `lecturer_id=eq.${user?.id}`,
                     },
-                    () => fetchClasses()
+                    () => fetchClasses(true)
                 )
                 .subscribe();
         }

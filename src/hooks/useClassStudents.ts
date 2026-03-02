@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+// ── Module-level cache ───────────────────────────────────────────────────────
+const studentsCache = new Map<string, ClassStudent[]>();
+
 export interface ClassStudent {
     id: string;
     class_id: string;
@@ -24,9 +27,30 @@ export interface ClassStudent {
 
 export function useClassStudents(classId?: string) {
     const { user } = useAuth();
-    const [students, setStudents] = useState<ClassStudent[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [students, setStudents] = useState<ClassStudent[]>(() => {
+        if (classId && studentsCache.has(classId)) {
+            return studentsCache.get(classId) || [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        return !classId || !studentsCache.has(classId);
+    });
     const [error, setError] = useState<string | null>(null);
+
+    // Update state synchronously if classId changes and we have cached data
+    useEffect(() => {
+        if (!classId) {
+            setStudents([]);
+            setLoading(false);
+        } else if (studentsCache.has(classId)) {
+            setStudents(studentsCache.get(classId) || []);
+            setLoading(false);
+        } else {
+            setStudents([]);
+            setLoading(true);
+        }
+    }, [classId]);
 
     useEffect(() => {
         if (!user || !classId) {
@@ -48,7 +72,7 @@ export function useClassStudents(classId?: string) {
                     filter: `class_id=eq.${classId}`
                 },
                 () => {
-                    fetchStudents();
+                    fetchStudents(true);
                 }
             )
             .subscribe();
@@ -58,11 +82,13 @@ export function useClassStudents(classId?: string) {
         };
     }, [user, classId]);
 
-    const fetchStudents = async () => {
+    const fetchStudents = async (silentRefresh = false) => {
         if (!classId) return;
 
         try {
-            setLoading(true);
+            if (!silentRefresh && !studentsCache.has(classId)) {
+                setLoading(true);
+            }
             const { data, error: fetchError } = await supabase
                 .from('class_students')
                 .select('*')
@@ -72,6 +98,7 @@ export function useClassStudents(classId?: string) {
             if (fetchError) throw fetchError;
 
             setStudents(data || []);
+            if (data) studentsCache.set(classId, data);
             setError(null);
         } catch (err) {
             console.error('Error fetching students:', err);

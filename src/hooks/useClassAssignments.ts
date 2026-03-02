@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { notifyNewAssignment, notifyAssignmentUpdated } from '@/lib/notificationService';
+
+// ── Module-level cache ───────────────────────────────────────────────────────
+const assignmentsCache = new Map<string, ClassAssignment[]>();
 
 export interface ClassAssignment {
     id: string;
@@ -33,10 +37,30 @@ export interface CreateClassAssignmentDTO {
 
 export function useClassAssignments(classId: string | null) {
     const { user } = useAuth();
-    const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [assignments, setAssignments] = useState<ClassAssignment[]>(() => {
+        if (classId && assignmentsCache.has(classId)) {
+            return assignmentsCache.get(classId) || [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        return !classId || !assignmentsCache.has(classId);
+    });
     const [error, setError] = useState<Error | null>(null);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+    // Update state if classId changes and we have cached data
+    useEffect(() => {
+        if (!classId) {
+            setAssignments([]);
+            setLoading(false);
+        } else if (assignmentsCache.has(classId)) {
+            setAssignments(assignmentsCache.get(classId) || []);
+            setLoading(false);
+        } else {
+            setAssignments([]);
+            setLoading(true);
+        }
+    }, [classId]);
 
     // silentRefresh: when true, don't trigger loading state (for real-time updates)
     const fetchAssignments = useCallback(async (silentRefresh = false) => {
@@ -48,7 +72,7 @@ export function useClassAssignments(classId: string | null) {
 
         try {
             // Only show loading spinner on initial load, not on real-time updates
-            if (!silentRefresh && isInitialLoad) {
+            if (!silentRefresh && !assignmentsCache.has(classId)) {
                 setLoading(true);
             }
 
@@ -94,6 +118,7 @@ export function useClassAssignments(classId: string | null) {
 
                     return {
                         ...assignment,
+                        status: assignment.status as 'active' | 'closed' | 'completed',
                         subject_name: subjectName,
                         submission_count: submissionCount || 0,
                         total_students: totalStudents || 0,
@@ -103,6 +128,7 @@ export function useClassAssignments(classId: string | null) {
 
             console.log('Assignments with stats:', assignmentsWithStats);
             setAssignments(assignmentsWithStats);
+            assignmentsCache.set(classId, assignmentsWithStats);
 
             // Auto-complete logic: Check if any active assignment has full submissions
             // We do this check after setting state to avoid blocking the UI, but we trigger the update
@@ -132,14 +158,13 @@ export function useClassAssignments(classId: string | null) {
             setError(err as Error);
             // Only show error for genuine failures, not empty results
             // Set empty array on initial load failure
-            if (isInitialLoad) {
+            if (!assignmentsCache.has(classId)) {
                 setAssignments([]);
             }
         } finally {
             setLoading(false);
-            setIsInitialLoad(false);
         }
-    }, [classId, user, isInitialLoad]);
+    }, [classId, user]);
 
     useEffect(() => {
         fetchAssignments();
@@ -254,7 +279,6 @@ export function useClassAssignments(classId: string | null) {
 
                 if (acceptedStudentIds.length > 0) {
                     // Use notification service for consistent handling and preference checking
-                    const { notifyNewAssignment } = await import('@/lib/notificationService');
                     await notifyNewAssignment(
                         acceptedStudentIds,
                         data.title,
@@ -332,7 +356,6 @@ export function useClassAssignments(classId: string | null) {
                         else if (data.description) updateDetails = 'Description updated';
 
                         // Use notification service for consistent handling
-                        const { notifyAssignmentUpdated } = await import('@/lib/notificationService');
                         await notifyAssignmentUpdated(
                             acceptedStudentIds,
                             assignment.title,

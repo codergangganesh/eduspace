@@ -3,11 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+// ── Module-level cache ───────────────────────────────────────────────────────
+const studentQuizzesCache = new Map<string, any[]>();
+const enrolledClassesCache = new Map<string, { id: string, class_name: string, course_code: string }[]>();
+
 export function useStudentQuizzes(selectedClassId?: string) {
     const { user } = useAuth();
-    const [quizzes, setQuizzes] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>([]);
+    const [quizzes, setQuizzes] = useState<any[]>(() => {
+        if (selectedClassId && studentQuizzesCache.has(selectedClassId)) {
+            return studentQuizzesCache.get(selectedClassId) || [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        return !selectedClassId || !studentQuizzesCache.has(selectedClassId);
+    });
+    const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>(() => {
+        // user might not be available initially due to context rendering, but let's try
+        if (user && enrolledClassesCache.has(user.id)) {
+            return enrolledClassesCache.get(user.id) || [];
+        }
+        return [];
+    });
     const [enrolledClassIds, setEnrolledClassIds] = useState<string[]>([]); // Keep this for real-time subscriptions
 
     // Use ref to track active channels for cleanup
@@ -58,6 +75,7 @@ export function useStudentQuizzes(selectedClassId?: string) {
             }
 
             setEnrolledClasses(classesData || []);
+            enrolledClassesCache.set(user.id, classesData || []);
 
         } catch (error) {
             console.error('Error in fetchEnrolledClasses:', error);
@@ -65,7 +83,7 @@ export function useStudentQuizzes(selectedClassId?: string) {
         }
     }, [user]);
 
-    const fetchStudentQuizzes = useCallback(async (overrideClassId?: string) => {
+    const fetchStudentQuizzes = useCallback(async (overrideClassId?: string, silentRefresh = false) => {
         const targetClassId = overrideClassId || selectedClassId;
         if (!user) return;
         if (!targetClassId) {
@@ -76,7 +94,9 @@ export function useStudentQuizzes(selectedClassId?: string) {
 
         try {
             console.log(`[useStudentQuizzes] Fetching quizzes for class: ${targetClassId}`);
-            setLoading(true);
+            if (!silentRefresh && !studentQuizzesCache.has(targetClassId)) {
+                setLoading(true);
+            }
 
             // 2. Fetch published quizzes for THIS class only - BASIC INFO ONLY
             const { data: quizzesData, error } = await supabase
@@ -95,6 +115,7 @@ export function useStudentQuizzes(selectedClassId?: string) {
 
             if (!quizzesData || quizzesData.length === 0) {
                 setQuizzes([]);
+                studentQuizzesCache.set(targetClassId, []);
                 setLoading(false);
                 return;
             }
@@ -185,6 +206,7 @@ export function useStudentQuizzes(selectedClassId?: string) {
             }) || []);
 
             setQuizzes(processedQuizzes);
+            studentQuizzesCache.set(targetClassId, processedQuizzes);
 
         } catch (error: any) {
             console.error('Error fetching student quizzes:', error.message || JSON.stringify(error, null, 2));
@@ -201,8 +223,13 @@ export function useStudentQuizzes(selectedClassId?: string) {
     // Fetch quizzes when selectedClassId changes
     useEffect(() => {
         if (selectedClassId) {
-            setQuizzes([]); // Clear stale data immediately
-            setLoading(true); // Trigger loading state immediately
+            if (studentQuizzesCache.has(selectedClassId)) {
+                setQuizzes(studentQuizzesCache.get(selectedClassId) || []);
+                setLoading(false);
+            } else {
+                setQuizzes([]);
+                setLoading(true);
+            }
             fetchStudentQuizzes(); // Fetch new data
         } else {
             setQuizzes([]);
@@ -252,11 +279,11 @@ export function useStudentQuizzes(selectedClassId?: string) {
                         // Since we can't check class_id on DELETE payloads easily (unless replica identity is full),
                         // we'll optimistically refresh if we have a selected class.
                         console.log('Quiz deleted, refreshing...', payload);
-                        fetchStudentQuizzes();
+                        fetchStudentQuizzes(selectedClassId, true);
                     } else if (newRecord?.class_id && enrolledClassIds.includes(newRecord.class_id)) {
                         // Filter for INSERT/UPDATE: Only refresh if the affected quiz belongs to an enrolled class
                         console.log('Relevant quiz update detected:', payload);
-                        fetchStudentQuizzes();
+                        fetchStudentQuizzes(selectedClassId, true);
                     }
                 }
             )
@@ -270,7 +297,7 @@ export function useStudentQuizzes(selectedClassId?: string) {
                 },
                 (payload) => {
                     console.log('Submission update detected:', payload);
-                    fetchStudentQuizzes();
+                    fetchStudentQuizzes(selectedClassId, true);
                 }
             )
             .subscribe();
