@@ -92,6 +92,7 @@ import { CallBubble } from "@/components/chat/CallBubble";
 import { ChatPollDialog } from "@/components/chat/ChatPollDialog";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useStreak } from "@/contexts/StreakContext";
+import { ChatProfilePopup } from "@/components/chat/ChatProfilePopup";
 
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -555,6 +556,9 @@ export default function Messages() {
   const [isPollDialogOpen, setIsPollDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMediaDrawerOpen, setIsMediaDrawerOpen] = useState(false);
+
+  const [profilePopupOpen, setProfilePopupOpen] = useState(false);
+  const [popupUserData, setPopupUserData] = useState<{ name: string; avatar: string }>({ name: "", avatar: "" });
 
   // Mobile View State
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
@@ -1264,8 +1268,18 @@ export default function Messages() {
                         : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                     )}
                   >
-                    <div className="relative">
-                      <Avatar className="size-12">
+                    <div
+                      className="relative cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPopupUserData({
+                          name: item.other_user_name || 'Unknown User',
+                          avatar: item.other_user_avatar || ''
+                        });
+                        setProfilePopupOpen(true);
+                      }}
+                    >
+                      <Avatar className="size-12 ring-2 ring-transparent hover:ring-emerald-500/30 transition-all">
                         <AvatarImage src={item.other_user_avatar} />
                         <AvatarFallback className="bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
                           {(item.other_user_name || 'U').split(" ").map((n: string) => n[0]).join("")}
@@ -1368,7 +1382,16 @@ export default function Messages() {
                     >
                       <ArrowLeft className="size-6" />
                     </Button>
-                    <Avatar className="size-8 md:size-10 shrink-0 border border-slate-200 dark:border-slate-700/50">
+                    <Avatar
+                      className="size-8 md:size-10 shrink-0 border border-slate-200 dark:border-slate-700/50 cursor-pointer hover:ring-2 hover:ring-emerald-500/30 transition-all"
+                      onClick={() => {
+                        setPopupUserData({
+                          name: selectedConversation.other_user_name || 'Unknown User',
+                          avatar: selectedConversation.other_user_avatar || ''
+                        });
+                        setProfilePopupOpen(true);
+                      }}
+                    >
                       <AvatarImage src={selectedConversation.other_user_avatar} />
                       <AvatarFallback className="bg-emerald-500 dark:bg-[#064e43] text-white">
                         {(selectedConversation.other_user_name || 'U').split(" ").map((n) => n[0]).join("")}
@@ -1964,6 +1987,14 @@ export default function Messages() {
           onOpenChange={setIsMediaDrawerOpen}
           messages={messages}
           otherUserName={selectedConversation?.other_user_name || 'User'}
+        />
+
+        <ChatProfilePopup
+          isOpen={profilePopupOpen}
+          onOpenChange={setProfilePopupOpen}
+          userName={popupUserData.name}
+          userAvatar={popupUserData.avatar}
+          onShowMedia={() => setIsMediaDrawerOpen(true)}
         />
       </div>
     </DashboardLayout>
