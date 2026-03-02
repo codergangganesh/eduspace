@@ -25,6 +25,7 @@ import {
   Brain,
   Flame,
   Building2,
+  Megaphone,
 } from "lucide-react";
 import {
   Tooltip,
@@ -48,7 +49,7 @@ import {
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-
+  { icon: Megaphone, label: "Class Feed", path: "/class-feed" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
@@ -60,9 +61,9 @@ const studentNavItems = [
 
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
-
+  { icon: Megaphone, label: "Class Feed", path: "/class-feed" },
   { icon: Users, label: "All Students", path: "/all-students" },
-  { icon: Table, label: "Time Table", path: "/lecturer/timetable" }, // New Item
+  { icon: Table, label: "Time Table", path: "/lecturer/timetable" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },

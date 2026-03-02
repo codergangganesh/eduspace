@@ -176,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <p>Click the button below to view the details directly:</p>
                 
                 <center>
-                  <a href="${link}" class="button" style="color: white;">View ${type === 'schedule' ? 'Schedule' : type === 'quiz' ? 'Quiz' : 'Assignment'}</a>
+                  <a href="${link}" class="button" style="color: white;">View ${type === 'schedule' ? 'Schedule' : type === 'quiz' ? 'Quiz' : type === 'update' ? 'Class Feed' : 'Assignment'}</a>
                 </center>
               </div>
               <div class="footer">

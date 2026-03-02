@@ -18,6 +18,7 @@ import {
   Wand2,
   Orbit,
   Flame,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Megaphone, label: "Class Feed", path: "/class-feed" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },
   { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
   { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
@@ -36,6 +38,7 @@ const studentNavItems = [
 
 const lecturerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
+  { icon: Megaphone, label: "Class Feed", path: "/class-feed" },
   { icon: Users, label: "All Students", path: "/all-students" },
   { icon: Table, label: "Time Table", path: "/lecturer/timetable" },
   { icon: Calendar, label: "Schedule", path: "/schedule" },

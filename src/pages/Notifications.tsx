@@ -46,13 +46,17 @@ type NotificationType = 'assignment' | 'schedule' | 'message' | 'grade' | 'annou
 
 interface NotificationData {
   id: string;
-  user_id: string;
+  user_id?: string;
   title: string;
   message: string;
-  type: NotificationType;
-  related_id: string | null;
+  type: string;
+  related_id?: string | null;
+  class_id?: string | null;
+  action_type?: string | null;
   is_read: boolean;
   created_at: string;
+  link?: string;
+  metadata?: any;
 }
 
 const getNotificationIcon = (type: string) => {
@@ -398,14 +402,49 @@ export default function Notifications() {
                   <Button variant="outline" onClick={() => setSelectedNotification(null)}>
                     Close
                   </Button>
-                  {selectedNotification.related_id && (
-                    <Button onClick={() => {
-                      console.log('Navigate to:', selectedNotification.type, selectedNotification.related_id);
-                      setSelectedNotification(null);
-                    }}>
-                      View Details
-                    </Button>
-                  )}
+                  <Button onClick={() => {
+                    const n = selectedNotification;
+                    if (!n) return;
+
+                    let targetUrl = '/notifications';
+
+                    switch (n.type) {
+                      case 'announcement':
+                        // Class feed announcements
+                        targetUrl = '/class-feed';
+                        break;
+                      case 'message':
+                        targetUrl = n.related_id ? `/messages?conversation=${n.related_id}` : '/messages';
+                        break;
+                      case 'assignment':
+                        targetUrl = '/student/assignments';
+                        break;
+                      case 'grade':
+                        targetUrl = '/student/assignments';
+                        break;
+                      case 'schedule':
+                        targetUrl = '/schedule';
+                        break;
+                      case 'access_request':
+                        targetUrl = '/notifications';
+                        break;
+                      default:
+                        targetUrl = '/notifications';
+                    }
+
+                    // Handle submission notifications for lecturers  
+                    if (n.action_type === 'submitted' && n.class_id && n.related_id) {
+                      targetUrl = `/lecturer/assignments/${n.class_id}/${n.related_id}/submissions`;
+                    }
+                    if (n.action_type === 'quiz_submitted' && n.class_id && n.related_id) {
+                      targetUrl = `/lecturer/quizzes/${n.class_id}/${n.related_id}/results`;
+                    }
+
+                    setSelectedNotification(null);
+                    navigate(targetUrl);
+                  }}>
+                    View Details
+                  </Button>
                 </div>
               </div>
             )}

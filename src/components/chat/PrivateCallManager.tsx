@@ -295,6 +295,24 @@ export function PrivateCallManager() {
         };
     }, [activeCall?.status, activeCall?.category, user]);
 
+    // Ensure streams are attached when UI elements mount/unmount
+    // NOTE: This must be before any early returns to satisfy React's Rules of Hooks
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) {
+            console.log("[CallManager] Attaching remote video stream");
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch(e => console.warn("Video play blocked:", e));
+        }
+        if (remoteAudioRef.current && remoteStream) {
+            console.log("[CallManager] Attaching remote audio stream");
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.play().catch(e => console.warn("Audio play blocked:", e));
+        }
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [remoteStream, localStream, activeCall?.type, activeCall?.status, isRemoteVideoOff, isMinimized]);
+
     if (!activeCall || activeCall.category !== 'private') return null;
 
     const formatTime = (seconds: number) => {
@@ -329,16 +347,6 @@ export function PrivateCallManager() {
 
             // Broadcast camera status to peer
             if (activeCall?.peerId) {
-                // Ensure we send to the channel the peer is listening to?
-                // Peer listens to calls:{peerId} or calls:{myId}?
-                // Peer listens to calls:{peerId}. Wait.
-                // In my useEffect (line 145), I listen to calls:{myId}.
-                // So I should send to calls:{myId}? NO.
-                // The peer listens to calls:{peerId}.
-                // Wait, if I am User A, peer is User B.
-                // User B listens to calls:{UserB}.
-                // I (User A) must send to calls:{UserB}.
-                // Yes, sending to `calls:${activeCall.peerId}` is correct.
                 supabase.channel(`calls:${activeCall.peerId}`).send({
                     type: 'broadcast',
                     event: 'call:camera-toggle',
@@ -347,22 +355,6 @@ export function PrivateCallManager() {
             }
         }
     };
-    // Ensure streams are attached when UI elements mount/unmount
-    useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) {
-            console.log("[CallManager] Attaching remote video stream");
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch(e => console.warn("Video play blocked:", e));
-        }
-        if (remoteAudioRef.current && remoteStream) {
-            console.log("[CallManager] Attaching remote audio stream");
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().catch(e => console.warn("Audio play blocked:", e));
-        }
-        if (localVideoRef.current && localStream) {
-            localVideoRef.current.srcObject = localStream;
-        }
-    }, [remoteStream, localStream, activeCall?.type, activeCall?.status, isRemoteVideoOff, isMinimized]);
 
     // Final Render Wrapper
     return (

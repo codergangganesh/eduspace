@@ -55,7 +55,6 @@ export const SEO = ({
             <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
 
             {/* JSON-LD Structured Data */}
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {structuredData && (
                 <script type="application/ld+json">
                     {JSON.stringify(structuredData)}

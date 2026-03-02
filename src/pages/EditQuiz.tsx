@@ -11,6 +11,7 @@ import { QuestionEditor } from '@/components/quizzes/QuestionEditor';
 import { QuizQuestion } from '@/types/quiz';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,7 +25,7 @@ const generateUUID = () => {
         return crypto.randomUUID();
     }
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 }
@@ -142,7 +143,7 @@ export default function EditQuiz() {
                         question_text: q.question_text,
                         question_type: q.question_type,
                         marks: q.marks,
-                        options: q.options,
+                        options: q.options as unknown as Json,
                         correct_answer: q.correct_answer,
                         order_index: index
                     }));
@@ -228,7 +229,7 @@ export default function EditQuiz() {
                     question_text: q.question_text,
                     question_type: q.question_type,
                     marks: q.marks,
-                    options: q.options,
+                    options: q.options as unknown as Json,
                     correct_answer: q.correct_answer,
                     order_index: index
                 }));

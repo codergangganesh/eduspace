@@ -122,7 +122,7 @@ class Line {
 // Global state variables
 let ctx: CanvasRenderingContext2D | null = null;
 let oscillator: Oscillator | null = null;
-let pos = { x: 0, y: 0 };
+const pos = { x: 0, y: 0 };
 let lines: Line[] = [];
 let isRunning = false;
 

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 const BASE_URL = "https://eduspaceacademy.online";
 
-async function sendClassEmail(params: {
+export async function sendClassEmail(params: {
     classId: string;
     type: 'assignment' | 'quiz' | 'schedule' | 'update';
     title: string;
@@ -268,9 +268,9 @@ function getNotificationUrl(type: string, relatedId?: string, classId?: string):
         case 'quiz':
             return '/student/quizzes';
         case 'announcement':
-            // If it's a quiz announcement, link to quizzes
-            if (relatedId && !classId) return '/student/quizzes';
-            // If it's associated with a class, maybe link to class dashboard or quizzes
+            // If it's a class feed announcement, link to class feed
+            if (classId) return '/class-feed';
+            // Fallback for quiz announcements
             return '/student/quizzes';
         case 'grade':
             return '/student/assignments';
@@ -343,7 +343,7 @@ export async function notifyNewAssignment(
 /**
  * Helper to fetch lecturer name
  */
-async function getLecturerName(lecturerId: string): Promise<string> {
+export async function getLecturerName(lecturerId: string): Promise<string> {
     const { data } = await supabase.from('profiles').select('full_name').eq('user_id', lecturerId).single();
     return data?.full_name || "Your Lecturer";
 }

@@ -187,7 +187,7 @@ export class StreakService {
         }
 
         let newCurrentStreak = 1;
-        let newTotalDays = (streak?.total_days || 0) + 1;
+        const newTotalDays = (streak?.total_days || 0) + 1;
         let newLongestStreak = streak?.longest_streak || 0;
 
         if (streak && streak.last_action_date) {

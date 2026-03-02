@@ -19,7 +19,7 @@ export function useLongPress({ onLongPress, delay = 500 }: UseLongPressOptions) 
     };
 
     const clear = (event: React.TouchEvent | React.MouseEvent, shouldTriggerClick = true) => {
-        timeout.current && clearTimeout(timeout.current);
+        if (timeout.current) clearTimeout(timeout.current);
         if (shouldTriggerClick && !longPressTriggered) {
             // Normal click
         }

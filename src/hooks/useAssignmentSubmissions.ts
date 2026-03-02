@@ -52,7 +52,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
 
             // 2.5 Fetch student emails for matching
             const allSubmissionUserIds = [...new Set((submitted || []).map(s => s.student_id).filter(Boolean))] as string[];
-            let submittedEmailsMap: Record<string, string> = {}; // user_id -> email
+            const submittedEmailsMap: Record<string, string> = {}; // user_id -> email
 
             if (allSubmissionUserIds.length > 0) {
                 const { data: profileEmails, error: emailsError } = await supabase
@@ -72,7 +72,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
 
             // 2.6 Fetch profile images
             const studentIds = (students || []).map(s => s.student_id);
-            let profileMap: Record<string, string> = {};
+            const profileMap: Record<string, string> = {};
 
             if (studentIds.length > 0) {
                 const { data: profiles, error: profilesError } = await supabase

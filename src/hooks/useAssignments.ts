@@ -169,7 +169,7 @@ export function useAssignments(selectedClassId?: string) {
                     }
 
                     // Fetch lecturer names and avatars
-                    let lecturerMap = new Map<string, { name: string, avatar: string | null }>();
+                    const lecturerMap = new Map<string, { name: string, avatar: string | null }>();
                     if (lecturerIds.length > 0) {
                         const { data: lecturers } = await supabase
                             .from('profiles')

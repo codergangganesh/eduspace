@@ -229,17 +229,13 @@ export default function AllStudents() {
     };
 
     const handleImport = async (studentsData: any[]) => {
-        try {
-            const result = await importStudents(studentsData);
-            await loadAccessRequests();
-            return {
-                success: result.imported,
-                failed: result.failed,
-                errors: result.errors
-            };
-        } catch (error) {
-            throw error;
-        }
+        const result = await importStudents(studentsData);
+        await loadAccessRequests();
+        return {
+            success: result.imported,
+            failed: result.failed,
+            errors: result.errors
+        };
     };
 
     const handleAddStudent = async (studentData: any) => {
@@ -290,12 +286,8 @@ export default function AllStudents() {
     };
 
     const handleSaveStudent = async (studentId: string, data: any) => {
-        try {
-            await updateStudent(studentId, data);
-            setShowEditModal(false);
-        } catch (error) {
-            throw error;
-        }
+        await updateStudent(studentId, data);
+        setShowEditModal(false);
     };
 
     const handleDeleteClick = (student: any) => {
@@ -325,19 +317,11 @@ export default function AllStudents() {
     };
 
     const handleImageUpload = async (studentId: string, imageUrl: string) => {
-        try {
-            await updateStudentImage(studentId, imageUrl);
-        } catch (error) {
-            throw error;
-        }
+        await updateStudentImage(studentId, imageUrl);
     };
 
     const handleImageRemove = async (studentId: string) => {
-        try {
-            await updateStudentImage(studentId, null);
-        } catch (error) {
-            throw error;
-        }
+        await updateStudentImage(studentId, null);
     };
 
     const getAccessStatus = (student: any) => {
