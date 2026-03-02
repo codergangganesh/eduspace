@@ -657,11 +657,8 @@ export default function ClassFeed() {
         const success = await createPost(content, attachment);
 
         if (success) {
-            toast.success("Announcement posted! 📢", { description: "All class members will be notified." });
             setContent("");
             clearFile();
-        } else {
-            toast.error("Failed to post announcement");
         }
     };
 

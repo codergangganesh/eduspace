@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => ({
       filename: 'sw.js',
       registerType: 'autoUpdate',
       injectManifest: {
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
         rollupOptions: {
           external: [
             '@capacitor/core',
