@@ -49,14 +49,29 @@ export interface ClassOption {
 
 const db = supabase as any;
 
+// ── Module-level cache ───────────────────────────────────────────────────────
+// Persists across component mounts so navigating away and back shows data instantly.
+const postsCache = new Map<string, FeedPost[]>();
+let classesCache: ClassOption[] | null = null;
+let cachedSelectedClassId: string | null = null;
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useClassFeed() {
     const { user, role } = useAuth();
-    const [posts, setPosts] = useState<FeedPost[]>([]);
-    const [classes, setClasses] = useState<ClassOption[]>([]);
-    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [posts, setPosts] = useState<FeedPost[]>(() => {
+        // Initialize from cache if available
+        if (cachedSelectedClassId && postsCache.has(cachedSelectedClassId)) {
+            return postsCache.get(cachedSelectedClassId) || [];
+        }
+        return [];
+    });
+    const [classes, setClasses] = useState<ClassOption[]>(() => classesCache || []);
+    const [selectedClassId, setSelectedClassId] = useState<string | null>(() => cachedSelectedClassId);
+    const [loading, setLoading] = useState(() => {
+        // Only show loading if we have NO cached data at all
+        return !cachedSelectedClassId || !postsCache.has(cachedSelectedClassId);
+    });
     const [posting, setPosting] = useState(false);
 
     // ── Fetch user's classes ─────────────────────────────────────────────
@@ -69,6 +84,7 @@ export function useClassFeed() {
                 const enrolledIds = await getEnrolledClassIds(user.id);
                 if (enrolledIds.length === 0) {
                     setClasses([]);
+                    classesCache = [];
                     return;
                 }
                 const { data } = await supabase
@@ -79,8 +95,10 @@ export function useClassFeed() {
                     .order('created_at', { ascending: false });
 
                 setClasses(data || []);
+                classesCache = data || [];
                 if (data && data.length > 0 && !selectedClassId) {
                     setSelectedClassId(data[0].id);
+                    cachedSelectedClassId = data[0].id;
                 }
             } else {
                 const { data } = await supabase
@@ -91,8 +109,10 @@ export function useClassFeed() {
                     .order('created_at', { ascending: false });
 
                 setClasses(data || []);
+                classesCache = data || [];
                 if (data && data.length > 0 && !selectedClassId) {
                     setSelectedClassId(data[0].id);
+                    cachedSelectedClassId = data[0].id;
                 }
             }
         } catch (err) {
@@ -109,8 +129,16 @@ export function useClassFeed() {
             return;
         }
 
+        // Cache the selected class ID for next mount
+        cachedSelectedClassId = selectedClassId;
+
         try {
-            setLoading(true);
+            // Only show loading skeleton if there's NO cached data for this class
+            const hasCachedPosts = postsCache.has(selectedClassId);
+            if (!hasCachedPosts) {
+                setLoading(true);
+            }
+            // If we have cache, show it immediately (already set in state init or previous fetch)
 
             // 1. Fetch posts
             const { data: postsData, error: postsError } = await db
@@ -123,6 +151,7 @@ export function useClassFeed() {
             if (postsError) throw postsError;
             if (!postsData || postsData.length === 0) {
                 setPosts([]);
+                postsCache.set(selectedClassId, []);
                 setLoading(false);
                 return;
             }
@@ -217,6 +246,8 @@ export function useClassFeed() {
             });
 
             setPosts(enrichedPosts);
+            // Update cache
+            postsCache.set(selectedClassId, enrichedPosts);
 
             // 9. Mark all posts as seen by the current user
             if (postIds.length > 0) {
@@ -425,11 +456,22 @@ export function useClassFeed() {
         };
     }, [selectedClassId, fetchPosts]);
 
+    // ── Wrapped setSelectedClassId — loads cached posts instantly ─────────
+
+    const handleSetSelectedClassId = useCallback((classId: string) => {
+        cachedSelectedClassId = classId;
+        setSelectedClassId(classId);
+        // Instantly load cached posts for the new class (if available)
+        if (postsCache.has(classId)) {
+            setPosts(postsCache.get(classId) || []);
+        }
+    }, []);
+
     return {
         posts,
         classes,
         selectedClassId,
-        setSelectedClassId,
+        setSelectedClassId: handleSetSelectedClassId,
         loading,
         posting,
         createPost,

@@ -27,7 +27,30 @@ import { useEffect } from "react";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 import { RootLayout } from "@/components/layout/RootLayout";
 
-// Lazy load pages
+// ── Eager imports: Core pages users navigate between frequently ──────────────
+// These load with the main bundle so page transitions are INSTANT.
+import Dashboard from "./pages/Dashboard";
+import LecturerDashboard from "./pages/LecturerDashboard";
+import ClassFeed from "./pages/ClassFeed";
+import Messages from "./pages/Messages";
+import Schedule from "./pages/Schedule";
+import Notifications from "./pages/Notifications";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Notes from "./pages/Notes";
+import StudentAssignments from "./pages/StudentAssignments";
+import StudentQuizzes from "./pages/StudentQuizzes";
+import AIChat from "./pages/AIChat";
+import AllStudents from "./pages/AllStudents";
+import CreateClass from "./pages/CreateClass";
+import LecturerTimeTable from "./pages/LecturerTimeTable";
+import LecturerClassesAssignments from "./pages/LecturerClassesAssignments";
+import LecturerClassesQuizzes from "./pages/LecturerClassesQuizzes";
+import CallHistory from "./pages/CallHistory";
+import StreakPage from "./pages/StreakPage";
+import KnowledgeMap from "@/pages/KnowledgeMap";
+
+// ── Lazy imports: Auth pages & one-off pages (visited rarely) ────────────────
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
@@ -38,42 +61,20 @@ const LecturerRegister = lazy(() => import("./pages/LecturerRegister"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const LecturerDashboard = lazy(() => import("./pages/LecturerDashboard"));
-const LecturerStudents = lazy(() => import("./pages/LecturerStudents"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const Assignments = lazy(() => import("./pages/Assignments"));
 const AssignmentSubmit = lazy(() => import("./pages/AssignmentSubmit"));
-const LecturerClassesAssignments = lazy(() => import("./pages/LecturerClassesAssignments"));
 const ClassAssignmentsView = lazy(() => import("./pages/ClassAssignmentsView"));
 const AssignmentSubmissionsPage = lazy(() => import("./pages/AssignmentSubmissionsPage"));
-const Profile = lazy(() => import("./pages/Profile"));
-const PublicProfile = lazy(() => import("./pages/PublicProfile"));
-const Messages = lazy(() => import("./pages/Messages"));
-const Schedule = lazy(() => import("./pages/Schedule"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const Settings = lazy(() => import("./pages/Settings"));
-const AllStudents = lazy(() => import("./pages/AllStudents"));
-const CreateClass = lazy(() => import("./pages/CreateClass"));
-const LecturerTimeTable = lazy(() => import("./pages/LecturerTimeTable"));
-const LecturerClassesQuizzes = lazy(() => import("./pages/LecturerClassesQuizzes"));
-
 const ClassQuizzesView = lazy(() => import("./pages/ClassQuizzesView"));
 const QuizResultsView = lazy(() => import("./pages/QuizResultsView"));
-const Notes = lazy(() => import("./pages/Notes"));
 const CreateQuiz = lazy(() => import("./pages/CreateQuiz"));
 const CreateAIQuiz = lazy(() => import("./pages/CreateAIQuiz"));
 const EditQuiz = lazy(() => import("./pages/EditQuiz"));
-const StudentQuizzes = lazy(() => import("./pages/StudentQuizzes"));
 const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
 const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDetail"));
-const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
 const QuizAttemptDetails = lazy(() => import("./pages/QuizAttemptDetails"));
-const AIChat = lazy(() => import("./pages/AIChat"));
 const SharedAIChat = lazy(() => import("./pages/SharedAIChat"));
-const KnowledgeMap = lazy(() => import("@/pages/KnowledgeMap"));
-const StreakPage = lazy(() => import("./pages/StreakPage"));
-const CallHistory = lazy(() => import("./pages/CallHistory"));
-const ClassFeed = lazy(() => import("./pages/ClassFeed"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => {
