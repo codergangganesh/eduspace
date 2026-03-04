@@ -37,9 +37,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   if (isLoading || isRoleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background pointer-events-none">
-        <div className="size-16 rounded-2xl border border-white/5 animate-pulse bg-slate-900/50 flex items-center justify-center">
-          <img src="/favicon.png" alt="Logo" className="size-10 object-contain opacity-30 grayscale" />
-        </div>
+        <Loader2 className="size-6 animate-spin text-muted-foreground/40" />
       </div>
     );
   }

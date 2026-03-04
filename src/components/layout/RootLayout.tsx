@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { MobileSidebar } from "./MobileSidebar";
@@ -11,6 +11,7 @@ import PageTransition from "./PageTransition";
 
 export function RootLayout() {
     const { user, profile, role } = useAuth();
+    const location = useLocation();
     const {
         sidebarMode,
         setSidebarMode,
@@ -64,7 +65,7 @@ export function RootLayout() {
                         options.hideHeaderOnMobile && "pt-[var(--safe-top)]"
                     )}
                 >
-                    <PageTransition className="h-full w-full">
+                    <PageTransition key={location.pathname} className="h-full w-full">
                         <Outlet />
                     </PageTransition>
                 </main>

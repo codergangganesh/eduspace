@@ -83,8 +83,8 @@ export function StudentSection() {
                         </Link>
                     </div>
                     <div className="relative">
-                        <div className="bg-gradient-to-br from-purple-100/90 to-blue-100/90 dark:from-purple-900/30 dark:to-blue-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6">
-                            <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/10">
+                        <div className="bg-purple-500/5 dark:from-purple-900/30 dark:to-blue-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6 border border-white/5">
+                            <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
                                 <div className="flex items-center gap-3 mb-4">
                                     <Star className="size-6 text-yellow-500" />
                                     <div>
@@ -92,23 +92,23 @@ export function StudentSection() {
                                         <div className="text-xs text-slate-300 dark:text-slate-400">Current Semester</div>
                                     </div>
                                 </div>
-                                <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full">
+                                <div className="h-2 bg-slate-800 dark:bg-slate-700 rounded-full">
                                     <div className="h-full bg-gradient-to-r from-purple-600 to-blue-600 rounded-full" style={{ width: '84%' }} />
                                 </div>
                             </div>
-                            <div className="bg-white/10 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/20">
+                            <div className="bg-white/5 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-sm font-medium text-white dark:text-white">Upcoming Deadlines</span>
-                                    <Clock className="size-4 text-blue-600 dark:text-blue-400" />
+                                    <span className="text-sm font-bold text-white dark:text-white">Upcoming Deadlines</span>
+                                    <Clock className="size-4 text-blue-400 dark:text-blue-400" />
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-200 dark:text-slate-400">Physics Lab Report</span>
-                                        <span className="text-orange-600 dark:text-orange-400 font-medium">2 days</span>
+                                    <div className="flex items-center justify-between text-sm mb-2">
+                                        <span className="text-slate-200 dark:text-slate-400 font-medium">Physics Lab Report</span>
+                                        <span className="text-orange-400 dark:text-orange-400 font-medium">2 days</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-200 dark:text-slate-400">Math Assignment</span>
-                                        <span className="text-green-600 dark:text-green-400 font-medium">5 days</span>
+                                        <span className="text-slate-200 dark:text-slate-400 font-medium">Math Assignment</span>
+                                        <span className="text-green-400 dark:text-green-400 font-medium">5 days</span>
                                     </div>
                                 </div>
                             </div>

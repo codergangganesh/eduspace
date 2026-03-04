@@ -45,8 +45,158 @@
 </head>
 
 <body>
+  <!-- Pre-React loading screen with Supabase-style edge glow animation -->
+  <div id="app-loading" style="
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0B0F1A;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 28px;
+    font-family: 'Inter', 'Lexend', system-ui, sans-serif;
+  ">
+    <style>
+      @property --logo-angle {
+        syntax: '<angle>';
+        initial-value: 0deg;
+        inherits: false;
+      }
+
+      @keyframes logo-edge-sweep {
+        0% {
+          --logo-angle: 0deg;
+        }
+
+        100% {
+          --logo-angle: 360deg;
+        }
+      }
+
+      @keyframes loading-pulse {
+
+        0%,
+        100% {
+          opacity: 0.4;
+          transform: scaleX(0.6);
+        }
+
+        50% {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+      }
+
+      #app-loading-logo-ring {
+        --logo-angle: 0deg;
+        animation: logo-edge-sweep 2s linear infinite;
+        background: conic-gradient(from var(--logo-angle),
+            transparent 0deg,
+            transparent 65deg,
+            #fb923c 80deg,
+            #ffffff 95deg,
+            #fb923c 110deg,
+            transparent 125deg,
+            transparent 360deg);
+        border-radius: 34px;
+        padding: 1.5px;
+        position: relative;
+        width: 110px;
+        height: 110px;
+        box-sizing: border-box;
+        flex-shrink: 0;
+      }
+
+      #app-loading-logo-ring::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 36px;
+        background: conic-gradient(from var(--logo-angle),
+            transparent 0deg,
+            transparent 65deg,
+            rgba(251, 146, 60, 0.3) 80deg,
+            rgba(255, 255, 255, 0.4) 95deg,
+            rgba(251, 146, 60, 0.3) 110deg,
+            transparent 125deg,
+            transparent 360deg);
+        filter: blur(4px);
+        z-index: -1;
+      }
+
+      #app-loading-logo-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 30px;
+        overflow: hidden;
+        background: transparent;
+        padding: 6px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #app-loading-logo-inner img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 24px;
+        display: block;
+      }
+
+      #app-loading-text {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin: 0;
+      }
+
+      #app-loading-bar-track {
+        width: 80px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+
+      #app-loading-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #f97316, #fb923c);
+        border-radius: 99px;
+        animation: loading-pulse 1.4s ease-in-out infinite;
+        transform-origin: left;
+      }
+    </style>
+    <div id="app-loading-logo-ring">
+      <div id="app-loading-logo-inner">
+        <img src="/favicon.png" alt="Eduspace" />
+      </div>
+    </div>
+    <p id="app-loading-text">Eduspace</p>
+    <div id="app-loading-bar-track">
+      <div id="app-loading-bar"></div>
+    </div>
+  </div>
+
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    // Hide the loading screen once React has mounted
+    (function () {
+      var observer = new MutationObserver(function () {
+        var root = document.getElementById('root');
+        if (root && root.children.length > 0) {
+          var el = document.getElementById('app-loading');
+          if (el) {
+            el.style.transition = 'opacity 0.4s ease';
+            el.style.opacity = '0';
+            setTimeout(function () { el.style.display = 'none'; }, 420);
+          }
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
+    })();
+  </script>
 </body>
 
 </html>

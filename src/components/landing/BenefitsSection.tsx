@@ -32,7 +32,7 @@ export function BenefitsSection() {
                                 {/* Grid Lines */}
                                 <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
                                     {[...Array(5)].map((_, i) => (
-                                        <div key={i} className="w-full h-px bg-slate-100 dark:bg-slate-700/50" />
+                                        <div key={i} className="w-full h-px border-t border-dashed border-slate-200 dark:border-slate-700/50" />
                                     ))}
                                 </div>
 
@@ -92,21 +92,21 @@ export function BenefitsSection() {
 
                             {/* Floating Stat Cards */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                                <div className="bg-white/5 dark:bg-slate-900/50 rounded-2xl p-4 border border-white/10 dark:border-slate-700 backdrop-blur-sm">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                            <Users className="size-4 text-blue-600 dark:text-blue-400" />
+                                        <div className="p-2 bg-blue-500/10 dark:bg-blue-900/30 rounded-lg">
+                                            <Users className="size-4 text-blue-400 dark:text-blue-400" />
                                         </div>
-                                        <span className="text-sm font-medium text-slate-200 dark:text-slate-400">Users</span>
+                                        <span className="text-sm font-medium text-slate-300 dark:text-slate-400">Users</span>
                                     </div>
                                     <div className="text-2xl font-bold text-white dark:text-white">50k+</div>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                                <div className="bg-white/5 dark:bg-slate-900/50 rounded-2xl p-4 border border-white/10 dark:border-slate-700 backdrop-blur-sm">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                                            <Shield className="size-4 text-purple-600 dark:text-purple-400" />
+                                        <div className="p-2 bg-purple-500/10 dark:bg-purple-900/30 rounded-lg">
+                                            <Shield className="size-4 text-purple-400 dark:text-purple-400" />
                                         </div>
-                                        <span className="text-sm font-medium text-slate-200 dark:text-slate-400">Security</span>
+                                        <span className="text-sm font-medium text-slate-300 dark:text-slate-400">Security</span>
                                     </div>
                                     <div className="text-2xl font-bold text-white dark:text-white">100%</div>
                                 </div>

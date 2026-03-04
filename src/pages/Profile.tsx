@@ -64,6 +64,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { ProfileNotificationSettings } from "@/components/ProfileNotificationSettings";
+import SEO from "@/components/SEO";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -442,6 +443,10 @@ export default function Profile() {
 
   return (
     <DashboardLayout>
+      <SEO
+        title="Your Profile"
+        description="Manage your academic and personal information, notification preferences, and account settings."
+      />
       <div className="flex flex-col xl:flex-row gap-8 w-full animate-in fade-in duration-500 pb-24 xl:pb-0">
         {/* Left Sidebar - Profile Navigation (Desktop Only) */}
         <div className="hidden xl:block w-80 shrink-0">

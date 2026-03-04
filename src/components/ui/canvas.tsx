@@ -222,8 +222,8 @@ export const renderCanvas = function () {
         E.trails = 8;
         E.size = 15;
     } else {
-        E.trails = 20;
-        E.size = 30;
+        E.trails = 12; // Reduced from 20 for better performance
+        E.size = 20; // Reduced from 30 for better performance
     }
 
     oscillator = new Oscillator({

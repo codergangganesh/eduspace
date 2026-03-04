@@ -74,6 +74,62 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
             </motion.div>
 
             <div className="relative z-10 flex flex-col items-center">
+                {/* Supabase-style edge glow sweep CSS */}
+                <style>{`
+                    @property --logo-angle {
+                        syntax: '<angle>';
+                        initial-value: 0deg;
+                        inherits: false;
+                    }
+                    @keyframes logo-edge-sweep {
+                        0%   { --logo-angle: 0deg; }
+                        100% { --logo-angle: 360deg; }
+                    }
+                    .logo-glow-ring {
+                        --logo-angle: 0deg;
+                        animation: logo-edge-sweep 2s linear infinite;
+                        background: conic-gradient(
+                            from var(--logo-angle),
+                            transparent 0deg,
+                            transparent 55deg,
+                            #fb923c 75deg,
+                            #ffffff 95deg,
+                            #fb923c 115deg,
+                            transparent 135deg,
+                            transparent 360deg
+                        );
+                        border-radius: 34px;
+                        padding: 3px;
+                        position: relative;
+                    }
+                    .logo-glow-ring::after {
+                        content: '';
+                        position: absolute;
+                        inset: -4px;
+                        border-radius: 38px;
+                        background: conic-gradient(
+                            from var(--logo-angle),
+                            transparent 0deg,
+                            transparent 55deg,
+                            rgba(251,146,60,0.4) 75deg,
+                            rgba(255,255,255,0.6) 95deg,
+                            rgba(251,146,60,0.4) 115deg,
+                            transparent 135deg,
+                            transparent 360deg
+                        );
+                        filter: blur(8px);
+                        z-index: -1;
+                    }
+                    .logo-glow-inner {
+                        border-radius: 30px;
+                        overflow: hidden;
+                        background: white;
+                        padding: 6px;
+                        width: 100%;
+                        height: 100%;
+                    }
+                `}</style>
+
                 {/* App Logo & Name */}
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -88,9 +144,14 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={phase === "final" ? { scale: 1.1, opacity: 1 } : {}}
                         transition={{ duration: 0.6, type: "spring" }}
-                        className="size-24 rounded-[28px] overflow-hidden shadow-2xl mb-8 bg-white p-1.5"
+                        className="relative mb-8"
+                        style={{ width: 104, height: 104 }}
                     >
-                        <img src="/favicon.png" alt="Eduspace" className="size-full object-cover" />
+                        <div className="logo-glow-ring" style={{ width: 104, height: 104 }}>
+                            <div className="logo-glow-inner">
+                                <img src="/favicon.png" alt="Eduspace" className="size-full object-cover rounded-[24px]" />
+                            </div>
+                        </div>
                     </motion.div>
 
                     <motion.h1

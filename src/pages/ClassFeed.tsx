@@ -670,7 +670,10 @@ export default function ClassFeed() {
         <DashboardLayout
             actions={
                 <div className="flex items-center gap-2">
-                    <SEO title="Class Feed" />
+                    <SEO
+                        title="Class Feed"
+                        description="Stay updated with announcements, class discussions, and shared resources in your EduSpace class feed."
+                    />
                 </div>
             }
         >

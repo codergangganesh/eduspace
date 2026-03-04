@@ -16,12 +16,11 @@ import { MobileOnboarding } from "@/components/landing/MobileOnboarding";
 
 // Lazy load sections (HeroSection is eager loaded for LCP)
 const AnoAI = lazy(() => import("@/components/ui/animated-shader-background"));
-
 const FeaturesSection = lazy(() => import("@/components/landing/FeaturesSection").then(module => ({ default: module.FeaturesSection })));
+const TrustedBySection = lazy(() => import("@/components/landing/TrustedBySection").then(module => ({ default: module.TrustedBySection })));
 const StreakSection = lazy(() => import("@/components/landing/StreakSection").then(module => ({ default: module.StreakSection })));
 const StudentSection = lazy(() => import("@/components/landing/StudentSection").then(module => ({ default: module.StudentSection })));
 const LecturerSection = lazy(() => import("@/components/landing/LecturerSection").then(module => ({ default: module.LecturerSection })));
-const StatsSection = lazy(() => import("@/components/landing/StatsSection").then(module => ({ default: module.StatsSection })));
 const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(module => ({ default: module.HowItWorksSection })));
 const TestimonialsSection = lazy(() => import("@/components/landing/TestimonialsSection").then(module => ({ default: module.TestimonialsSection })));
 const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(module => ({ default: module.BenefitsSection })));
@@ -37,11 +36,14 @@ export default function LandingPage() {
     const [showContact, setShowContact] = useState(false);
 
     useEffect(() => {
-
         const canvas = document.getElementById("canvas");
         if (canvas && !canvas.hasAttribute('data-initialized')) {
-            renderCanvas();
-            canvas.setAttribute('data-initialized', 'true');
+            // Defer 2D canvas initialization to let WebGL shader compile and render first
+            const timer = setTimeout(() => {
+                renderCanvas();
+                canvas.setAttribute('data-initialized', 'true');
+            }, 150);
+            return () => clearTimeout(timer);
         }
     }, []);
 
@@ -221,7 +223,7 @@ export default function LandingPage() {
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>
-                    <StatsSection />
+                    <TrustedBySection />
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>

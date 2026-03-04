@@ -123,7 +123,10 @@ export default function Dashboard() {
     <DashboardLayout
       actions={
         <div className="flex items-center gap-2">
-          <SEO title="Student Dashboard" />
+          <SEO
+            title="Student Dashboard"
+            description="View your active assignments, tracking streaks, and upcoming classes all from your EduSpace student dashboard."
+          />
 
           <Button
             variant="default"

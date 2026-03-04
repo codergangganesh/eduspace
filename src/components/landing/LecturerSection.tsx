@@ -38,11 +38,11 @@ export function LecturerSection() {
             <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
                     <div className="order-2 lg:order-1 relative">
-                        <div className="bg-gradient-to-br from-blue-100/90 to-indigo-100/90 dark:from-blue-900/30 dark:to-indigo-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6">
-                            <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/10">
+                        <div className="bg-blue-500/5 dark:from-blue-900/30 dark:to-indigo-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6 border border-white/5">
+                            <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
                                 <div className="flex items-center justify-between mb-4">
-                                    <span className="text-sm font-medium text-white dark:text-white">Class Overview</span>
-                                    <Users className="size-4 text-blue-600 dark:text-blue-400" />
+                                    <span className="text-sm font-bold text-white dark:text-white">Class Overview</span>
+                                    <Users className="size-4 text-blue-400 dark:text-blue-400" />
                                 </div>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
@@ -59,14 +59,14 @@ export function LecturerSection() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-white/10 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/20">
+                            <div className="bg-white/5 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <BarChart3 className="size-5 text-indigo-600 dark:text-indigo-400" />
-                                    <span className="text-sm font-medium text-white dark:text-white">Performance Trends</span>
+                                    <BarChart3 className="size-5 text-indigo-400 dark:text-indigo-400" />
+                                    <span className="text-sm font-bold text-white dark:text-white">Performance Trends</span>
                                 </div>
                                 <div className="flex items-end gap-2 h-24">
                                     {[65, 72, 68, 85, 78, 89, 92].map((height, i) => (
-                                        <div key={i} className="flex-1 bg-gradient-to-t from-blue-600 to-indigo-600 rounded-t" style={{ height: `${height}%` }} />
+                                        <div key={i} className="flex-1 bg-gradient-to-t from-blue-500 to-indigo-500 rounded-t opacity-80" style={{ height: `${height}%` }} />
                                     ))}
                                 </div>
                             </div>

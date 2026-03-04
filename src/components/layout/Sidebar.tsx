@@ -178,7 +178,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                     key={item.path + item.label}
                     to={item.path}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group active:scale-[0.98] active:opacity-80",
                       isActive
                         ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -254,7 +254,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group active:scale-[0.98] active:opacity-80",
                     isActive
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
