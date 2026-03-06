@@ -528,20 +528,7 @@ export default function AllStudents() {
                 <Card className="bg-card border-border">
                     <CardContent className="p-0">
                         {loading ? (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Student</TableHead>
-                                        <TableHead>Register #</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Department</TableHead>
-                                        <TableHead>Year</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableSkeleton columns={7} rows={10} />
-                            </Table>
+                            <TableSkeleton columns={7} rows={10} />
                         ) : filteredStudents.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-96 gap-4">
                                 <FileSpreadsheet className="size-12 text-muted-foreground" />

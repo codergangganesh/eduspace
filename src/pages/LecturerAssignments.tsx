@@ -77,17 +77,7 @@ export default function LecturerAssignments() {
 
                     <Card>
                         <CardContent className="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Title</TableHead>
-                                        <TableHead>Subject</TableHead>
-                                        <TableHead>Due Date</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableSkeleton columns={4} rows={5} />
-                            </Table>
+                            <TableSkeleton columns={4} rows={5} />
                         </CardContent>
                     </Card>
                 </div>
