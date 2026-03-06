@@ -74,7 +74,6 @@ export function FCMManager() {
                 };
 
                 const l1 = await PushNotifications.addListener('registration', async (token) => {
-                    console.log('Push registration success, token: ' + token.value);
                     if (user) {
                         await supabase
                             .from('profiles')
@@ -125,8 +124,14 @@ export function FCMManager() {
         return () => {
             result.then(unsubscribe => {
                 if (typeof unsubscribe === 'function') unsubscribe();
-                import('@capacitor/push-notifications').then(({ PushNotifications }) => {
-                    PushNotifications.removeAllListeners();
+
+                // Only try to remove capacitor push listeners if native
+                import('@capacitor/core').then(({ Capacitor }) => {
+                    if (Capacitor.isNativePlatform()) {
+                        import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+                            PushNotifications.removeAllListeners().catch(() => { });
+                        }).catch(() => { });
+                    }
                 }).catch(() => { });
             });
         };

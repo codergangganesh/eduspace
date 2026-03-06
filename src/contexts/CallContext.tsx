@@ -248,7 +248,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                 toast.error("User is busy");
                 setActiveCall(null);
             })
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log(`[CallContext] Subscribed to realtime for user ${user.id}`);
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error(`[CallContext] Realtime subscription failed for user ${user.id}`);
+                }
+                if (status === 'CLOSED') {
+                    console.warn(`[CallContext] Realtime channel closed for user ${user.id}`);
+                }
+            });
 
         channelRef.current = channel;
 

@@ -44,13 +44,26 @@ export const requestFirebaseToken = async (userId: string) => {
             return null;
         }
 
+        // Register the service worker explicitly for Firebase if not already registered
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            const hasSW = registrations.some(r => r.active?.scriptURL.includes('firebase-messaging-sw.js'));
+
+            if (!hasSW) {
+                console.log("Registering Firebase Service Worker...");
+                await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                    scope: '/firebase-cloud-messaging-push-scope',
+                });
+            }
+        }
+
+        const registration = await navigator.serviceWorker.ready;
         const token = await getToken(messaging, {
-            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+            serviceWorkerRegistration: registration
         });
 
         if (token) {
-            console.log("FCM Token (PWA):", token);
-
             // Update profile with FCM token
             const { error } = await supabase
                 .from('profiles')

@@ -92,7 +92,7 @@ export default function KnowledgeMap() {
         if (!containerRef.current) return;
 
         const resizeObserver = new ResizeObserver((entries) => {
-            for (let entry of entries) {
+            for (const entry of entries) {
                 if (entry.contentRect) {
                     setDimensions({
                         width: entry.contentRect.width,

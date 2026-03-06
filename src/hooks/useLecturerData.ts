@@ -137,14 +137,14 @@ export function useLecturerData() {
             }
 
             let lecturerQuizIds: string[] = [];
-            const { data: directQuizzes } = await (supabase.from("quizzes") as any).select("id, class_id").eq("lecturer_id", user.id);
-            if (directQuizzes) lecturerQuizIds = (directQuizzes as any[]).map(q => q.id);
+            // Remove the direct lecturer_id query on quizzes since the column doesn't exist
+            // and quizzes belong to classes which belong to the lecturer.
             if (classIds.length > 0) {
                 const { data: classQuizzes } = await (supabase.from("quizzes") as any).select("id, class_id").in("class_id", classIds);
                 if (classQuizzes) lecturerQuizIds = [...new Set([...lecturerQuizIds, ...(classQuizzes as any[]).map(q => q.id)])];
             }
 
-            let taskSummaries: ActiveTaskSummary[] = [];
+            const taskSummaries: ActiveTaskSummary[] = [];
 
             if (classIds.length > 0) {
                 // A. Enrolled Students

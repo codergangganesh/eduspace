@@ -465,101 +465,7 @@ function ClassInfoSidebar({
                 </motion.div>
             )}
 
-            {/* Class Selector — collapsible dropdown, shown if multiple classes */}
-            {classes.length > 1 && (
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 0.3 }}
-                    className="bg-surface rounded-2xl border border-border overflow-hidden"
-                >
-                    <button
-                        onClick={() => {
-                            const el = document.getElementById('class-switcher-list');
-                            if (el) el.classList.toggle('hidden');
-                            const icon = document.getElementById('class-switcher-chevron');
-                            if (icon) icon.classList.toggle('rotate-180');
-                        }}
-                        className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <div className="size-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <span className="text-xs font-bold text-primary tracking-wider">
-                                    {classes.find(c => c.id === selectedClassId)?.course_code?.substring(0, 2).toUpperCase() || '#'}
-                                </span>
-                            </div>
-                            <div className="text-left">
-                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Switch Class</h4>
-                                <p className="text-[11px] text-primary font-medium mt-0.5">
-                                    {classes.find(c => c.id === selectedClassId)?.course_code || 'Select'}
-                                </p>
-                            </div>
-                        </div>
-                        <ChevronDown id="class-switcher-chevron" className="size-4 text-muted-foreground transition-transform duration-200" />
-                    </button>
-                    <div id="class-switcher-list" className="hidden border-t border-border/50 p-2 space-y-1">
-                        {classes.map(cls => (
-                            <button
-                                key={cls.id}
-                                onClick={() => setSelectedClassId(cls.id)}
-                                className={cn(
-                                    "w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all text-sm",
-                                    cls.id === selectedClassId
-                                        ? "bg-primary/10 text-primary border border-primary/20"
-                                        : "hover:bg-secondary/60 text-muted-foreground border border-transparent"
-                                )}
-                            >
-                                <div className={cn(
-                                    "size-8 rounded-lg flex items-center justify-center shrink-0",
-                                    cls.id === selectedClassId
-                                        ? "bg-primary/20"
-                                        : "bg-secondary"
-                                )}>
-                                    <span className={cn(
-                                        "text-[10px] font-bold tracking-wider",
-                                        cls.id === selectedClassId ? "text-primary" : "text-muted-foreground"
-                                    )}>
-                                        {cls.course_code.substring(0, 2).toUpperCase()}
-                                    </span>
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="font-semibold text-xs truncate">{cls.course_code}</div>
-                                    {cls.class_name && (
-                                        <div className="text-[10px] text-muted-foreground truncate">{cls.class_name}</div>
-                                    )}
-                                </div>
-                                {cls.id === selectedClassId && (
-                                    <Check className="size-3.5 ml-auto shrink-0 text-primary" />
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </motion.div>
-            )}
 
-            {/* Info tip */}
-            <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.4 }}
-                className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl border border-blue-200/50 dark:border-blue-800/30 p-4"
-            >
-                <div className="flex gap-3">
-                    <div className="size-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-                        <Info className="size-4 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                        <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-200">
-                            {isLecturer ? "Post Announcements" : "Stay Updated"}
-                        </h4>
-                        <p className="text-[11px] text-blue-700/80 dark:text-blue-300/70 mt-1 leading-relaxed">
-                            {isLecturer
-                                ? "Your posts will notify all enrolled students via in-app notifications and email."
-                                : "You'll receive notifications whenever your lecturer posts a new announcement."}
-                        </p>
-                    </div>
-                </div>
-            </motion.div>
         </div>
     );
 }
@@ -684,34 +590,81 @@ export default function ClassFeed() {
                 <div className="max-w-2xl mx-auto w-full lg:max-w-none space-y-5">
 
                     {/* Page Header */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                                <Megaphone className="size-5 text-white" />
+                    <div className="flex items-center justify-between gap-2 overflow-hidden">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                            <div className="size-8 sm:size-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
+                                <Megaphone className="size-4 sm:size-5 text-white" />
                             </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-foreground">Class Feed</h1>
-                                <p className="text-xs text-muted-foreground">Announcements & updates</p>
+                            <div className="min-w-0">
+                                <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">Class Feed</h1>
+                                <p className="hidden sm:block text-xs text-muted-foreground">Announcements & updates</p>
                             </div>
                         </div>
 
-                        {/* Class Selector — Mobile only (desktop uses sidebar) */}
-                        {hasClasses && classes.length > 1 && (
-                            <div className="lg:hidden">
+                        {/* Modern Class Selector */}
+                        {hasClasses && (
+                            <div className="flex items-center shrink-0">
                                 <Select
                                     value={selectedClassId || ''}
                                     onValueChange={(val) => setSelectedClassId(val)}
                                 >
-                                    <SelectTrigger className="w-48 h-9 text-sm">
-                                        <SelectValue placeholder="Select class" />
+                                    <SelectTrigger className="w-auto h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 group">
+                                        <div className="flex items-center gap-2 sm:gap-3 bg-surface/50 hover:bg-surface border border-border/50 hover:border-primary/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl transition-all duration-300">
+                                            <div className="size-7 sm:size-8 rounded-md sm:rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 border border-primary/10 transition-colors group-hover:from-primary group-hover:to-primary/80">
+                                                <span className="text-[10px] sm:text-xs font-bold text-primary group-hover:text-white transition-colors uppercase tracking-wider">
+                                                    {classes.find(c => c.id === selectedClassId)?.course_code?.substring(0, 2) || '#'}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-start pr-1 sm:pr-2 min-w-0 text-left">
+                                                <span className="hidden xs:block text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest leading-none mb-0.5 sm:mb-1">Current</span>
+                                                <div className="flex items-center gap-1 min-w-0">
+                                                    <span className="text-xs sm:text-sm font-semibold text-foreground truncate max-w-[70px] xs:max-w-[100px] sm:max-w-[120px]">
+                                                        {classes.find(c => c.id === selectedClassId)?.course_code}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        {classes.map(cls => (
-                                            <SelectItem key={cls.id} value={cls.id}>
-                                                <span className="font-medium">{cls.course_code}</span>
-                                                {cls.class_name && <span className="text-muted-foreground ml-1.5">— {cls.class_name}</span>}
-                                            </SelectItem>
-                                        ))}
+                                    <SelectContent align="end" className="w-64 p-2 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-surface/95">
+                                        <div className="px-2 py-2 mb-1">
+                                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Your Registered Classes</h4>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {classes.map(cls => (
+                                                <SelectItem
+                                                    key={cls.id}
+                                                    value={cls.id}
+                                                    className={cn(
+                                                        "rounded-xl transition-all duration-200 cursor-pointer focus:bg-primary/5",
+                                                        cls.id === selectedClassId ? "bg-primary/10 text-primary" : "hover:bg-secondary/80"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-3 py-1">
+                                                        <div className={cn(
+                                                            "size-8 rounded-lg flex items-center justify-center shrink-0 border transition-all",
+                                                            cls.id === selectedClassId
+                                                                ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
+                                                                : "bg-secondary/50 border-border/50 text-muted-foreground group-hover:border-primary/30"
+                                                        )}>
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                                {cls.course_code.substring(0, 2)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex flex-col overflow-hidden">
+                                                            <span className="font-bold text-xs truncate">{cls.course_code}</span>
+                                                            {cls.class_name && (
+                                                                <span className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
+                                                                    {cls.class_name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {cls.id === selectedClassId && (
+                                                            <div className="ml-auto size-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
+                                                        )}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </div>
                                     </SelectContent>
                                 </Select>
                             </div>

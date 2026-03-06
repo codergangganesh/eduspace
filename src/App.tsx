@@ -1,16 +1,9 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { LanguageProvider } from "@/contexts/LanguageContext";
-import { CallProvider } from "@/contexts/CallContext";
-import { FeedbackProvider } from "@/contexts/FeedbackContext";
-import { StreakProvider } from "@/contexts/StreakContext";
+import { QueryClient } from "@tanstack/react-query";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AppProviders } from "@/components/providers/AppProviders";
 import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
@@ -25,7 +18,6 @@ import { FeedbackPrompt } from "@/components/feedback/FeedbackPrompt";
 import { useFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
-import { LayoutProvider } from "@/contexts/LayoutContext";
 import { RootLayout } from "@/components/layout/RootLayout";
 
 // ── Eager imports: Core pages users navigate between frequently ──────────────
@@ -175,7 +167,7 @@ const FeedbackManager = () => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   return (
-    <AnimatePresence mode="popLayout">
+    <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/p/:id" element={<PublicProfile />} />
         <Route path="/badge/:id" element={<PublicProfile />} />
@@ -244,37 +236,19 @@ const AnimatedRoutes = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <LanguageProvider>
-        <ThemeProvider>
-          <FeedbackProvider>
-            <StreakProvider>
-              <LayoutProvider>
-                <FeedbackManager />
-                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                  <TooltipProvider>
-                    <CallProvider>
-                      <GlobalCallManager />
-                      <Toaster />
-                      <Sonner />
-                      <OfflineBanner />
-                      <PWAInstallPrompt />
-                      <PushNotificationManager />
-                      <FCMManager />
-                      <Suspense fallback={<LoadingFallback />}>
-                        <AnimatedRoutes />
-                      </Suspense>
-                    </CallProvider>
-                  </TooltipProvider>
-                </BrowserRouter>
-              </LayoutProvider>
-            </StreakProvider>
-          </FeedbackProvider>
-        </ThemeProvider>
-      </LanguageProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <AppProviders queryClient={queryClient}>
+    <FeedbackManager />
+    <GlobalCallManager />
+    <Toaster />
+    <Sonner />
+    <OfflineBanner />
+    <PWAInstallPrompt />
+    <PushNotificationManager />
+    <FCMManager />
+    <Suspense fallback={<LoadingFallback />}>
+      <AnimatedRoutes />
+    </Suspense>
+  </AppProviders>
 );
 
 export default App;

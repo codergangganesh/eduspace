@@ -40,7 +40,10 @@ window.addEventListener("unhandledrejection", (event) => {
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(registrations => {
         for (const registration of registrations) {
-            // If the SW is from a different host or we're in dev mode with a new DNS, unregister it
+            // Keep the Firebase SW to avoid registration loops
+            if (registration.active?.scriptURL.includes('firebase-messaging-sw.js')) {
+                continue;
+            }
             registration.unregister();
         }
     });

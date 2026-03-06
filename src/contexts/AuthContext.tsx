@@ -111,11 +111,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) {
+        // Handle common network errors silently
+        if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          console.warn("Network issue while fetching profile, will retry implicitly.");
+          return null;
+        }
         console.error("Error fetching profile:", error);
         return null;
       }
       return data as any as Profile | null;
     }).catch(err => {
+      if (err.message?.includes('INTERNET_DISCONNECTED') || err.message?.includes('NETWORK_CHANGED')) {
+        return null; // Silent failure for connectivity issues
+      }
       console.error("Persistent error fetching profile:", err);
       return null;
     });
@@ -130,11 +138,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) {
+        // Handle common network errors silently
+        if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          console.warn("Network issue while fetching role, will retry implicitly.");
+          return null;
+        }
         console.error("Error fetching role:", error);
         return null;
       }
       return data?.role as AppRole | null;
     }).catch(err => {
+      if (err.message?.includes('INTERNET_DISCONNECTED') || err.message?.includes('NETWORK_CHANGED')) {
+        return null; // Silent failure for connectivity issues
+      }
       console.error("Persistent error fetching role:", err);
       return null;
     });
