@@ -1,8 +1,5 @@
-import { QuizQuestion, QuizOption } from '@/types/quiz';
-
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const AI_MODEL = 'deepseek/deepseek-r1-0528:free';
+﻿import { QuizQuestion, QuizOption } from '@/types/quiz';
+import { supabase } from '@/integrations/supabase/client';
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -60,7 +57,7 @@ ${text.slice(0, 15000)}
 ---
 
 Rules:
-1. Questions must be based ONLY on the provided content — do not add external knowledge
+1. Questions must be based ONLY on the provided content - do not add external knowledge
 2. Each question must have exactly 4 options labeled A, B, C, D
 3. Exactly one option must be correct
 4. Distractor options must be plausible but clearly incorrect
@@ -112,58 +109,34 @@ function transformToQuizQuestions(raw: RawAIQuestion[]): QuizQuestion[] {
 }
 
 async function callAI(prompt: string): Promise<QuizQuestion[]> {
-    if (!OPENROUTER_API_KEY) {
-        throw new Error('OpenRouter API key is not configured. Please set VITE_OPENROUTER_API_KEY in your .env file.');
-    }
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
 
-    const response = await fetch(OPENROUTER_API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'HTTP-Referer': window.location.origin,
-            'X-Title': 'EduSpace Quiz Generator',
-        },
-        body: JSON.stringify({
-            model: AI_MODEL,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 8192,
-        })
+    const { data, error } = await supabase.functions.invoke('generate-ai-quiz', {
+        body: { prompt },
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     });
 
-    if (!response.ok) {
-        const errBody = await response.text();
-        console.error('OpenRouter API error:', errBody);
-        throw new Error('Failed to generate questions. Please check your API key and try again.');
+    if (error) {
+        console.error('AI quiz function error:', error);
+        let detail = '';
+        try {
+            const response = (error as any).context as Response | undefined;
+            if (response) {
+                const body = await response.json().catch(() => null);
+                detail = body?.error || '';
+            }
+        } catch {
+            // ignore parsing errors and fallback to generic message
+        }
+        throw new Error(detail || 'Failed to generate questions. Please try again.');
     }
 
-    const data = await response.json();
-
-    const textContent = data?.choices?.[0]?.message?.content;
-    if (!textContent) {
-        throw new Error('AI returned an empty response. Please try again.');
+    if (data?.error) {
+        throw new Error(data.error);
     }
 
-    // DeepSeek R1 uses <think>...</think> for chain-of-thought reasoning — strip it
-    let cleaned = textContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-
-    // Strip markdown code fences if present
-    cleaned = cleaned.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-
-    let parsed: RawAIQuestion[];
-    try {
-        parsed = JSON.parse(cleaned);
-    } catch {
-        console.error('Failed to parse AI response:', cleaned);
-        throw new Error('AI returned an invalid response format. Please try again.');
-    }
-
+    const parsed = data?.questions as RawAIQuestion[] | undefined;
     if (!Array.isArray(parsed) || parsed.length === 0) {
         throw new Error('AI did not generate any questions. Please try again with a different topic.');
     }

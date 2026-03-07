@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuizQuestion, QuizOption } from "@/types/quiz";
-import { Plus, Trash, GripVertical, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,13 +71,13 @@ export function QuestionEditor({ question, onSave, onCancel, questionNumber }: Q
 
     return (
         <Card className="border-2 border-primary/20">
-            <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex justify-between items-center">
+            <CardHeader className="pb-3 p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <span>Question {questionNumber}</span>
-                    <Badge variant="outline">Multiple Choice</Badge>
+                    <Badge variant="outline" className="w-fit">Multiple Choice</Badge>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
                 <div className="space-y-2">
                     <Label>Question Text</Label>
                     <Textarea
@@ -89,14 +89,14 @@ export function QuestionEditor({ question, onSave, onCancel, questionNumber }: Q
                 </div>
 
                 <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <Label>Marks</Label>
                         <Input
                             type="number"
                             min={1}
                             value={marks}
                             onChange={(e) => setMarks(parseInt(e.target.value) || 1)}
-                            className="w-20 text-center"
+                            className="w-full sm:w-20 text-center"
                         />
                     </div>
                 </div>
@@ -105,20 +105,20 @@ export function QuestionEditor({ question, onSave, onCancel, questionNumber }: Q
                     <Label>Options</Label>
                     <div className="space-y-3">
                         {options.map((option, index) => (
-                            <div key={option.id} className="flex items-center gap-2">
+                            <div key={option.id} className="flex items-center gap-2 min-w-0">
                                 <div className="mt-1 size-2 rounded-full bg-muted-foreground/30" />
                                 <Input
                                     value={option.text}
                                     onChange={(e) => handleOptionTextChange(option.id, e.target.value)}
                                     placeholder={`Option ${index + 1}`}
-                                    className=""
+                                    className="min-w-0"
                                 />
                                 {options.length > 2 && (
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => handleRemoveOption(option.id)}
-                                        className="text-muted-foreground hover:text-destructive"
+                                        className="text-muted-foreground hover:text-destructive shrink-0"
                                     >
                                         <Trash className="size-4" />
                                     </Button>
@@ -154,9 +154,9 @@ export function QuestionEditor({ question, onSave, onCancel, questionNumber }: Q
                     <p className="text-xs text-muted-foreground">Select the correct option from the list above.</p>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={handleSave} disabled={!text.trim()}>Save Question</Button>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">Cancel</Button>
+                    <Button onClick={handleSave} disabled={!text.trim()} className="w-full sm:w-auto">Save Question</Button>
                 </div>
             </CardContent>
         </Card>

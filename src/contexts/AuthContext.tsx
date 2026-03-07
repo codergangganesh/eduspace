@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .maybeSingle();
+        .returns<Array<{ role: AppRole }>>();
 
       if (error) {
         // Handle common network errors silently
@@ -146,7 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error fetching role:", error);
         return null;
       }
-      return data?.role as AppRole | null;
+      if (!data || data.length === 0) return null;
+      if (data.length === 1) return data[0].role;
+
+      // Defensive precedence if multiple role rows exist for a user.
+      if (data.some(r => r.role === "admin")) return "admin";
+      if (data.some(r => r.role === "lecturer")) return "lecturer";
+      return "student";
     }).catch(err => {
       if (err.message?.includes('INTERNET_DISCONNECTED') || err.message?.includes('NETWORK_CHANGED')) {
         return null; // Silent failure for connectivity issues

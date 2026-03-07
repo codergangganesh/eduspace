@@ -55,6 +55,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type InputMethod = 'topic' | 'file';
 type Step = 'select-class' | 'input' | 'generating' | 'review';
+type PersistedStep = 'select-class' | 'input' | 'review';
+
+interface AIQuizDraft {
+    step: PersistedStep;
+    inputMethod: InputMethod;
+    topic: string;
+    difficulty: Difficulty;
+    questionCount: number;
+    fileQuestionCount: number;
+    questions: QuizQuestion[];
+    title: string;
+    description: string;
+    passPercentage: number;
+}
 
 const MAX_FILE_SIZE_MB = 5;
 
@@ -94,10 +108,15 @@ export default function CreateAIQuiz() {
 
     // Editing
     const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+    const [isAddingQuestion, setIsAddingQuestion] = useState(false);
     const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
     // Publishing
     const [saving, setSaving] = useState(false);
+    const [draftId, setDraftId] = useState<string | null>(null);
+    const [isLoadingDraft, setIsLoadingDraft] = useState(false);
+    const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
     // Filter classes for selection
     const [classSearch, setClassSearch] = useState('');
@@ -106,15 +125,179 @@ export default function CreateAIQuiz() {
         cls.course_code.toLowerCase().includes(classSearch.toLowerCase())
     );
 
+    const clearDraftInSupabase = useCallback(async () => {
+        if (!classId || !user?.id) return;
+
+        const { error } = await supabase
+            .from('quiz_drafts')
+            .delete()
+            .eq('class_id', classId)
+            .eq('user_id', user.id);
+
+        if (error) {
+            console.error('Failed to delete AI quiz draft:', error);
+            return;
+        }
+
+        setDraftId(null);
+        setLastSaved(null);
+    }, [classId, user?.id]);
+
     useEffect(() => {
-        if (classId) {
-            setStep('input');
-        } else {
+        if (!classId) {
             setStep('select-class');
         }
     }, [classId]);
 
+    useEffect(() => {
+        const loadDraftFromSupabase = async () => {
+            if (!classId || !user?.id) {
+                if (classId) setStep('input');
+                return;
+            }
+
+            setIsLoadingDraft(true);
+            try {
+                const { data: draft, error } = await supabase
+                    .from('quiz_drafts')
+                    .select('*')
+                    .eq('class_id', classId)
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+
+                if (!draft) {
+                    setStep('input');
+                    return;
+                }
+
+                setDraftId(draft.id);
+                const draftData = (draft.data ?? {}) as Partial<AIQuizDraft>;
+
+                setInputMethod(draftData.inputMethod ?? 'topic');
+                setTopic(draftData.topic ?? '');
+                setDifficulty(draftData.difficulty ?? 'medium');
+                setQuestionCount(Math.min(15, Math.max(1, Number(draftData.questionCount) || 10)));
+                setFileQuestionCount(Math.min(15, Math.max(1, Number(draftData.fileQuestionCount) || 10)));
+                setQuestions(Array.isArray(draftData.questions) ? draftData.questions : []);
+                setTitle(draftData.title ?? '');
+                setDescription(draftData.description ?? '');
+                setPassPercentage(Math.max(0, Number(draftData.passPercentage) || 50));
+                setLastSaved(new Date(draft.updated_at));
+
+                if (draftData.step === 'review' && Array.isArray(draftData.questions) && draftData.questions.length > 0) {
+                    setStep('review');
+                } else {
+                    setStep('input');
+                }
+            } catch (error) {
+                console.error('Failed to load AI quiz draft from Supabase:', error);
+                setStep('input');
+            } finally {
+                setIsLoadingDraft(false);
+            }
+        };
+
+        loadDraftFromSupabase();
+    }, [classId, user?.id]);
+
+    const saveDraftNow = useCallback(async (showToast = false) => {
+        if (!classId || !user?.id) return;
+        if (step === 'select-class' || step === 'generating') return;
+
+        const draft: AIQuizDraft = {
+            step: step === 'generating' ? (questions.length > 0 ? 'review' : 'input') : step,
+            inputMethod,
+            topic,
+            difficulty,
+            questionCount,
+            fileQuestionCount,
+            questions,
+            title,
+            description,
+            passPercentage,
+        };
+
+        try {
+            setIsAutoSaving(true);
+            const { data: savedDraft, error } = await supabase
+                .from('quiz_drafts')
+                .upsert({
+                    class_id: classId,
+                    user_id: user.id,
+                    data: draft,
+                    updated_at: new Date().toISOString(),
+                    ...(draftId ? { id: draftId } : {}),
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            if (!draftId && savedDraft) {
+                setDraftId(savedDraft.id);
+            }
+
+            setLastSaved(new Date());
+            if (showToast) {
+                toast.success('Draft saved');
+            }
+        } catch (error) {
+            console.error('Failed to save AI quiz draft:', error);
+            if (showToast) {
+                toast.error('Failed to save draft');
+            }
+        } finally {
+            setIsAutoSaving(false);
+        }
+    }, [
+        classId,
+        user?.id,
+        step,
+        inputMethod,
+        topic,
+        difficulty,
+        questionCount,
+        fileQuestionCount,
+        questions,
+        title,
+        description,
+        passPercentage,
+        draftId,
+    ]);
+
+    useEffect(() => {
+        if (!classId || !user?.id || isLoadingDraft) return;
+        if (step === 'select-class' || step === 'generating') return;
+        if (!title.trim() && !description.trim() && !topic.trim() && questions.length === 0) return;
+
+        const timeoutId = setTimeout(async () => {
+            await saveDraftNow(false);
+        }, 1000);
+
+        return () => clearTimeout(timeoutId);
+    }, [
+        isLoadingDraft,
+        step,
+        saveDraftNow,
+        classId,
+        user?.id,
+        title,
+        description,
+        topic,
+        questions.length,
+    ]);
+
     const calculateTotalMarks = () => questions.reduce((sum, q) => sum + q.marks, 0);
+    const editingQuestion = editingQuestionId
+        ? questions.find((question) => question.id === editingQuestionId) ?? null
+        : null;
+    const editingQuestionNumber = editingQuestion
+        ? questions.findIndex((question) => question.id === editingQuestion.id) + 1
+        : 1;
 
     // ---------- FILE HANDLING ----------
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,13 +349,24 @@ export default function CreateAIQuiz() {
     };
 
     const handleSaveQuestion = (updatedQuestion: QuizQuestion) => {
-        setQuestions(questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q));
+        setQuestions((prevQuestions) => {
+            const existingIndex = prevQuestions.findIndex((q) => q.id === updatedQuestion.id);
+            if (existingIndex === -1) {
+                return [...prevQuestions, updatedQuestion];
+            }
+            return prevQuestions.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q));
+        });
         setEditingQuestionId(null);
+        setIsAddingQuestion(false);
         toast.success('Question updated');
     };
 
     const handleDeleteQuestion = (id: string) => {
-        setQuestions(questions.filter(q => q.id !== id));
+        setQuestions((prevQuestions) => prevQuestions.filter((q) => q.id !== id));
+        if (editingQuestionId === id) {
+            setEditingQuestionId(null);
+        }
+        setIsAddingQuestion(false);
         toast.info('Question removed');
     };
 
@@ -235,6 +429,7 @@ export default function CreateAIQuiz() {
             }
 
             toast.success('AI-generated quiz published successfully!');
+            await clearDraftInSupabase();
             navigate(`/lecturer/quizzes/${classId}`);
         } catch (error: any) {
             console.error('Error publishing quiz:', error);
@@ -244,13 +439,27 @@ export default function CreateAIQuiz() {
         }
     };
 
+    const handleStartOver = async () => {
+        setQuestions([]);
+        setEditingQuestionId(null);
+        setIsAddingQuestion(false);
+        setQuestionToDelete(null);
+        setTitle('');
+        setDescription('');
+        setPassPercentage(50);
+        setStep('input');
+        setTopic('');
+        setSelectedFile(null);
+        await clearDraftInSupabase();
+    };
+
 
 
     return (
         <DashboardLayout>
             <div className={step === 'select-class' && !classId
                 ? "w-full flex flex-col gap-10 animate-in fade-in duration-500"
-                : "w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-3 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-hidden shadow-none md:shadow-sm filter-none"
+                : "w-full min-h-[calc(100vh-4rem)] bg-background text-foreground p-3 md:p-10 animate-in fade-in duration-500 rounded-3xl overflow-x-hidden md:overflow-hidden shadow-none md:shadow-sm filter-none"
             }>
                 <div className="relative w-full">
 
@@ -278,6 +487,21 @@ export default function CreateAIQuiz() {
                                         {!classId && (
                                             <Badge variant="outline" className="w-fit px-3 py-1 bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800 font-bold uppercase tracking-tighter text-[10px]">
                                                 Class Selection Mode
+                                            </Badge>
+                                        )}
+                                        {classId && isLoadingDraft && (
+                                            <Badge variant="outline" className="w-fit px-3 py-1 font-bold uppercase tracking-tighter text-[10px]">
+                                                Loading Draft...
+                                            </Badge>
+                                        )}
+                                        {classId && isAutoSaving && !isLoadingDraft && (
+                                            <Badge variant="outline" className="w-fit px-3 py-1 font-bold uppercase tracking-tighter text-[10px]">
+                                                Saving Draft...
+                                            </Badge>
+                                        )}
+                                        {classId && !isAutoSaving && !isLoadingDraft && lastSaved && (
+                                            <Badge variant="outline" className="w-fit px-3 py-1 bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800 font-bold uppercase tracking-tighter text-[10px]">
+                                                Draft Saved
                                             </Badge>
                                         )}
                                     </div>
@@ -614,104 +838,217 @@ export default function CreateAIQuiz() {
 
                     {/* ============ STEP: REVIEW ============ */}
                     {step === 'review' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 max-w-7xl mx-auto">
-                            <div className="lg:col-span-4 space-y-6">
-                                <Card className="shadow-xl rounded-3xl border-slate-200 dark:border-slate-800 overflow-hidden">
-                                    <div className="h-2 bg-gradient-to-r from-indigo-500 to-purple-600" />
-                                    <CardHeader>
-                                        <CardTitle className="text-xl">Finalize Details</CardTitle>
-                                        <CardDescription>Give your quiz a name and description before students take it.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        <div className="space-y-2.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400">Quiz Title</Label>
-                                            <Input
-                                                value={title}
-                                                onChange={(e) => setTitle(e.target.value)}
-                                                className="h-12 font-bold rounded-xl"
-                                            />
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400">Description</Label>
-                                            <Textarea
-                                                value={description}
-                                                onChange={(e) => setDescription(e.target.value)}
-                                                className="min-h-[120px] rounded-xl font-medium"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase text-slate-400">Pass Score (%)</Label>
-                                                <Input
-                                                    type="number"
-                                                    value={passPercentage}
-                                                    onChange={(e) => setPassPercentage(parseInt(e.target.value) || 0)}
-                                                    className="h-12 font-bold rounded-xl"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase text-slate-400">Total Points</Label>
-                                                <div className="h-12 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xl">
-                                                    {calculateTotalMarks()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <Button
-                                            onClick={handlePublishQuiz}
-                                            disabled={saving || questions.length === 0}
-                                            className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-2xl shadow-xl shadow-emerald-500/20"
-                                        >
-                                            {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                                            Publish to Class
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => { setStep('input'); setQuestions([]); }}
-                                            className="w-full h-12 rounded-2xl"
-                                        >
-                                            <RefreshCw className="mr-2 size-4" />
-                                            Start Over
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                        <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 lg:gap-8 pb-40 md:pb-0 max-md:bg-slate-50 dark:max-md:bg-[#0f0714] max-md:text-slate-900 dark:max-md:text-slate-100 max-md:-mx-3 max-md:px-4 max-md:pt-4">
+                            <section className="space-y-6 order-1">
+                                <nav className="flex items-center flex-wrap gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-md:text-slate-400">
+                                    <span>Quizzes</span>
+                                    <ChevronRight className="size-3.5" />
+                                    <span>New Quiz</span>
+                                    <ChevronRight className="size-3.5" />
+                                    <span className="font-semibold text-slate-900 dark:text-slate-100 max-md:text-indigo-600 dark:max-md:text-violet-300">Review</span>
+                                </nav>
 
-                            <div className="lg:col-span-8 space-y-6">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-2xl font-black tracking-tight">Review Content</h3>
-                                    <Badge className="bg-indigo-600 text-white border-none py-1.5 px-4 font-black rounded-full text-[10px] uppercase">
-                                        {questions.length} Questions
-                                    </Badge>
-                                </div>
-                                <div className="space-y-4">
-                                    {questions.map((q, i) => (
-                                        <Card key={q.id} className="group border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-all rounded-3xl overflow-hidden shadow-sm hover:shadow-xl">
-                                            <CardContent className="p-6 flex gap-6">
-                                                <div className="size-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-xl text-indigo-600 shrink-0">
-                                                    {i + 1}
+                                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 max-md:border-slate-200 dark:max-md:border-[#2d1b42] pb-4 sm:pb-6">
+                                    <div className="grid grid-cols-3 gap-3 sm:flex sm:items-center sm:gap-8 w-full">
+                                        {[
+                                            { label: 'Configure', active: false, number: 1 },
+                                            { label: 'Generate', active: false, number: 2 },
+                                            { label: 'Review', active: true, number: 3 },
+                                        ].map((item) => (
+                                            <div key={item.label} className={`flex flex-col items-center gap-1.5 ${item.active ? '' : 'opacity-50'}`}>
+                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${item.active ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'border border-slate-400 max-md:border-slate-300 dark:max-md:border-violet-500/60'}`}>
+                                                    {item.number}
                                                 </div>
-                                                <div className="flex-1">
-                                                    <p className="font-bold text-lg mb-4">{q.question_text}</p>
-                                                    <div className="flex items-center gap-4">
-                                                        <Badge variant="outline" className="rounded-full px-3 py-1 font-bold text-[10px] uppercase bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                                                            {q.marks} Points
-                                                        </Badge>
-                                                        <span className="text-xs font-bold text-slate-400 tracking-widest uppercase">
-                                                            {q.options.length} Options
+                                                <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${item.active ? 'text-indigo-600 max-md:text-indigo-600 dark:max-md:text-violet-300' : 'max-md:text-slate-500 dark:max-md:text-slate-500'}`}>{item.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">Review Content</h3>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => { setIsAddingQuestion(true); setEditingQuestionId(null); }}
+                                        className="flex items-center gap-1 text-indigo-600 max-md:text-indigo-600 dark:max-md:text-violet-300 font-semibold"
+                                    >
+                                        <Plus className="size-4" />
+                                        Add Question
+                                    </Button>
+                                </div>
+                                <div>
+                                    <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+                                        Review and edit your generated questions before publishing.
+                                    </p>
+                                </div>
+
+                                {(editingQuestion || isAddingQuestion) && (
+                                    <QuestionEditor
+                                        question={isAddingQuestion ? undefined : editingQuestion ?? undefined}
+                                        questionNumber={isAddingQuestion ? questions.length + 1 : editingQuestionNumber}
+                                        onSave={handleSaveQuestion}
+                                        onCancel={() => { setEditingQuestionId(null); setIsAddingQuestion(false); }}
+                                    />
+                                )}
+
+                                <div className="space-y-4 sm:space-y-5">
+                                    {questions.map((q, i) => (
+                                        <Card key={q.id} className="group bg-white/80 dark:bg-indigo-950/10 border border-slate-200 dark:border-indigo-900/40 max-md:bg-white dark:max-md:bg-[#160b22] max-md:border-slate-200 dark:max-md:border-[#2d1b42] rounded-xl sm:rounded-2xl p-0 hover:border-indigo-500/50 transition-all">
+                                            <CardContent className="p-4 sm:p-6">
+                                                <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4">
+                                                    <div className="flex-1 min-w-0">
+                                                        <span className="text-[10px] sm:text-xs font-bold text-indigo-600 max-md:text-indigo-600 dark:max-md:text-violet-300 uppercase tracking-widest mb-2 block">
+                                                            Question {i + 1} Multiple Choice
                                                         </span>
+                                                        <h4 className="text-base sm:text-lg font-semibold leading-relaxed break-words">
+                                                            {q.question_text}
+                                                        </h4>
+                                                    </div>
+                                                    <div className="flex gap-1 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                                                        <Button variant="ghost" size="icon" className="size-9 rounded-lg text-slate-500 max-md:text-slate-600 dark:max-md:text-slate-300 hover:bg-slate-100 dark:hover:bg-indigo-500/20" onClick={() => { setEditingQuestionId(q.id); setIsAddingQuestion(false); }}>
+                                                            <Edit2 className="size-4.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="size-9 rounded-lg text-slate-500 max-md:text-slate-600 dark:max-md:text-slate-300 hover:text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20" onClick={() => setQuestionToDelete(q.id)}>
+                                                            <Trash2 className="size-4.5" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button variant="ghost" size="icon" className="size-10 rounded-xl hover:bg-indigo-500 hover:text-white" onClick={() => setEditingQuestionId(q.id)}>
-                                                        <Edit2 className="size-5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="size-10 rounded-xl hover:bg-rose-500 hover:text-white" onClick={() => setQuestionToDelete(q.id)}>
-                                                        <Trash2 className="size-5" />
-                                                    </Button>
+                                                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-indigo-500/20 max-md:bg-slate-100 dark:max-md:bg-[#1c0f2a] max-md:border max-md:border-slate-200 dark:max-md:border-violet-500/30 rounded-full">
+                                                        <CheckCircle className="size-3.5 text-indigo-600 max-md:text-indigo-600 dark:max-md:text-violet-300" />
+                                                        <span className="text-[11px] font-bold">{q.marks} Points</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-indigo-500/20 max-md:bg-slate-100 dark:max-md:bg-[#1c0f2a] max-md:border max-md:border-slate-200 dark:max-md:border-violet-500/30 rounded-full">
+                                                        <Book className="size-3.5 text-indigo-600 max-md:text-indigo-600 dark:max-md:text-violet-300" />
+                                                        <span className="text-[11px] font-bold">{q.options.length} Options</span>
+                                                    </div>
                                                 </div>
                                             </CardContent>
                                         </Card>
                                     ))}
+                                </div>
+                            </section>
+
+                            <aside className="order-2 xl:order-2 xl:sticky xl:top-24 self-start border border-slate-200 dark:border-indigo-900/40 max-md:border-t max-md:border-x-0 max-md:border-b-0 max-md:border-slate-200 dark:max-md:border-[#2d1b42] bg-white dark:bg-slate-950/50 max-md:bg-transparent rounded-2xl max-md:rounded-none p-4 sm:p-6 max-md:px-0 max-md:pt-8 space-y-6">
+                                <div>
+                                    <h2 className="text-lg sm:text-xl font-bold mb-1">Finalize Details</h2>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 max-md:text-slate-500 dark:max-md:text-slate-400">Configure quiz settings before publish.</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-semibold max-md:text-slate-700 dark:max-md:text-slate-300">Quiz Title</Label>
+                                        <Input
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            className="h-11 bg-slate-100 dark:bg-indigo-500/10 max-md:bg-white dark:max-md:bg-[#1c0f2a] max-md:border-slate-200 dark:max-md:border-[#2d1b42] border-none rounded-lg font-semibold"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-semibold max-md:text-slate-700 dark:max-md:text-slate-300">Description</Label>
+                                        <Textarea
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            className="min-h-[90px] bg-slate-100 dark:bg-indigo-500/10 max-md:bg-white dark:max-md:bg-[#1c0f2a] max-md:border-slate-200 dark:max-md:border-[#2d1b42] border-none rounded-lg"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-semibold max-md:text-slate-700 dark:max-md:text-slate-300">Pass %</Label>
+                                            <Input
+                                                type="number"
+                                                value={passPercentage}
+                                                onChange={(e) => setPassPercentage(parseInt(e.target.value) || 0)}
+                                                className="h-11 bg-slate-100 dark:bg-indigo-500/10 max-md:bg-white dark:max-md:bg-[#1c0f2a] max-md:border-slate-200 dark:max-md:border-[#2d1b42] border-none rounded-lg"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-semibold max-md:text-slate-700 dark:max-md:text-slate-300">Points</Label>
+                                            <Input
+                                                value={calculateTotalMarks()}
+                                                readOnly
+                                                className="h-11 bg-slate-100 dark:bg-indigo-500/10 max-md:bg-white dark:max-md:bg-[#1c0f2a] max-md:border-slate-200 dark:max-md:border-[#2d1b42] border-none rounded-lg opacity-80"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-indigo-500/10 max-md:bg-indigo-50 dark:max-md:bg-[#1c0f2a] rounded-xl border border-indigo-500/20 max-md:border-indigo-200 dark:max-md:border-[#2d1b42] text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-slate-500 dark:text-slate-400 max-md:text-slate-600 dark:max-md:text-slate-400">Total Questions</span>
+                                        <span className="font-bold">{questions.length}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className="text-slate-500 dark:text-slate-400 max-md:text-slate-600 dark:max-md:text-slate-400">Total Points</span>
+                                        <span className="font-bold">{calculateTotalMarks()}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 hidden md:block">
+                                    <Button
+                                        onClick={handlePublishQuiz}
+                                        disabled={saving || questions.length === 0}
+                                        className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20"
+                                    >
+                                        {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
+                                        Publish to Class
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => saveDraftNow(true)}
+                                        className="w-full h-11 rounded-xl"
+                                    >
+                                        Save as Draft
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleStartOver}
+                                        className="w-full h-10 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                    >
+                                        Discard
+                                    </Button>
+                                </div>
+                            </aside>
+
+                            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0f0714]/95 backdrop-blur-md border-t border-slate-200 dark:border-[#2d1b42] p-4">
+                                <div className="max-w-md mx-auto space-y-3">
+                                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                        <div className="flex flex-col">
+                                            <span>Total Questions</span>
+                                            <span className="text-slate-900 dark:text-white font-bold text-sm">{questions.length}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span>Total Points</span>
+                                            <span className="text-slate-900 dark:text-white font-bold text-sm">{calculateTotalMarks()}</span>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handlePublishQuiz}
+                                        disabled={saving || questions.length === 0}
+                                        className="w-full h-12 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/30"
+                                    >
+                                        {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
+                                        Publish to Class
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => saveDraftNow(true)}
+                                        className="w-full h-11 rounded-xl border-slate-300 dark:border-[#2d1b42] bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5"
+                                    >
+                                        Save as Draft
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleStartOver}
+                                        className="w-full h-10 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                    >
+                                        Discard
+                                    </Button>
                                 </div>
                             </div>
                         </div>
