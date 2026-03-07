@@ -10,3 +10,4 @@ WITH CHECK (
   auth.uid() = user_id
   AND role IN ('student', 'lecturer')
 );
+

@@ -36,17 +36,36 @@ window.addEventListener("unhandledrejection", (event) => {
     console.error("Unhandled Rejection:", reason);
 });
 
-// Clear old service workers if the hostname has changed or if they are stuck
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (const registration of registrations) {
-            // Keep the Firebase SW to avoid registration loops
-            if (registration.active?.scriptURL.includes('firebase-messaging-sw.js')) {
-                continue;
+// In development, remove stale PWA workers/caches so Vite module URLs don't get cached.
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+    void (async () => {
+        try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            const staleRegistrations = registrations.filter((registration) => {
+                const scriptUrl = registration.active?.scriptURL
+                    ?? registration.waiting?.scriptURL
+                    ?? registration.installing?.scriptURL
+                    ?? "";
+
+                return !scriptUrl.includes('firebase-messaging-sw.js');
+            });
+
+            await Promise.all(staleRegistrations.map((registration) => registration.unregister()));
+
+            if ('caches' in window) {
+                const cacheKeys = await caches.keys();
+                const staleCacheKeys = cacheKeys.filter((key) =>
+                    key.includes('workbox')
+                    || key.includes('vite-plugin-pwa')
+                    || key.includes('precache')
+                );
+
+                await Promise.all(staleCacheKeys.map((key) => caches.delete(key)));
             }
-            registration.unregister();
+        } catch (error) {
+            console.warn("Failed to clear development service workers:", error);
         }
-    });
+    })();
 }
 
 window.addEventListener("error", (event) => {

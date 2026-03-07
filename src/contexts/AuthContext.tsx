@@ -271,7 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -288,6 +288,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { success: false, error: "This email is already registered. Please sign in instead." };
         }
         return { success: false, error: error.message };
+      }
+
+      // If a session was automatically created (automatic login), sign out
+      // standardizing the flow to force manual login for security
+      if (signUpData?.session) {
+        console.log("🔐 Registered and session created, signing out to force manual login...");
+        await supabase.auth.signOut();
       }
 
       // Trigger Welcome Email (Fire and forget, don't block registration)

@@ -64,8 +64,8 @@ export default function StudentRegister() {
         const result = await signUp(formData.email, formData.password, formData.fullName, "student");
 
         if (result.success) {
-            toast.success("Account created successfully! Welcome to Eduspace.");
-            navigate("/dashboard");
+            toast.success("Account created successfully! Please sign in to continue.");
+            navigate("/student/login", { state: { registered: true } });
         } else {
             toast.error(result.error || "Registration failed");
         }

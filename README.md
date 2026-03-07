@@ -145,7 +145,7 @@ Follow these steps to set up the project locally.
       VITE_CLOUDINARY_UPLOAD_PRESET=your_cloudinary_upload_preset_here
       
       # Application URL
-      APP_URL=http://localhost:8080
+      APP_URL=http://localhost:8082
       
       # Email Configuration (SMTP/Resend)
       RESEND_API_KEY=your_resend_api_key_here
@@ -181,7 +181,7 @@ Follow these steps to set up the project locally.
     ```bash
     npm run dev
     ```
-    Open [http://localhost:8082](http://localhost:8082) to view it.
+    Open the local URL printed by Vite in the terminal. By default this is [http://localhost:8082](http://localhost:8082), but if that port is already in use Vite will automatically use the next available port.
 
 ---
 
@@ -196,6 +196,7 @@ The system allows lecturers to add student emails before they register.
 To enable "Continue with Google":
 1.  **Google Cloud Console:** Create credentials for a Web Application.
     *   Authorized Origin: `http://localhost:8082` (and your production URL)
+    *   If Vite falls back to a different local port during development, update `APP_URL` and your OAuth authorized origin to match that port.
     *   Redirect URI: `https://<your-project-id>.supabase.co/auth/v1/callback`
 2.  **Supabase:** Go to Authentication -> Providers -> Google.
     *   Enable it.

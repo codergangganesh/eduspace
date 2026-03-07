@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 export default function StudentLogin() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { signIn, signInWithGoogle, signInWithGitHub, isAuthenticated, role } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
@@ -17,6 +18,15 @@ export default function StudentLogin() {
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+
+    // Show registration success message if redirected from registration
+    useEffect(() => {
+        if (location.state?.registered) {
+            toast.success("Your account has been successfully created. Please log in to continue.");
+            // Clear location state to prevent toast on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     // Redirect if already authenticated
     useEffect(() => {

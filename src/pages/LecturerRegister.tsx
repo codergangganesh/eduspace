@@ -62,8 +62,8 @@ export default function LecturerRegister() {
         const result = await signUp(formData.email, formData.password, formData.fullName, "lecturer");
 
         if (result.success) {
-            toast.success("Account created successfully! Welcome to Eduspace.");
-            navigate("/lecturer-dashboard");
+            toast.success("Account created successfully! Please sign in to continue.");
+            navigate("/lecturer/login", { state: { registered: true } });
         } else {
             toast.error(result.error || "Registration failed");
         }
