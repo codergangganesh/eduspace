@@ -34,6 +34,7 @@ export function DashboardHeader({ onMenuClick, actions, onInviteClick }: Dashboa
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
         {onInviteClick && (
           <Button
+            id="tour-btn-invite"
             variant="default"
             size="sm"
             onClick={onInviteClick}

@@ -16,7 +16,7 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    /* Linting */
+    /* Linting*/
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,

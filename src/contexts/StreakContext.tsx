@@ -14,6 +14,7 @@ interface StreakContextType {
     recordAcademicAction: () => Promise<void>;
     refreshStreakData: () => Promise<void>;
     fetchActivityRange: (start: string, end: string) => Promise<void>;
+    setGuideCompleted: (completed: boolean) => void; // Add this to track guide completion
 }
 
 const StreakContext = createContext<StreakContextType | undefined>(undefined);
@@ -28,6 +29,8 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [showCelebration, setShowCelebration] = useState(false);
     const [showStreakUpdate, setShowStreakUpdate] = useState(false);
     const [currentStreakCount, setCurrentStreakCount] = useState(0);
+    const [isGuideCompleted, setIsGuideCompleted] = useState(false); // Track if guide has been shown/completed
+    const [pendingStreakData, setPendingStreakData] = useState<{ unlockedBadge?: BadgeType; newStreak?: number; isNewDay?: boolean } | null>(null); // Store pending streak data
 
     const isStudent = role === 'student';
 
@@ -82,20 +85,49 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const today = format(new Date(), 'yyyy-MM-dd');
                 setActivityLog(prev => prev.includes(today) ? prev : [...prev, today]);
 
-                if (result.unlockedBadge) {
-                    setUnlockedBadge(result.unlockedBadge);
-                    setShowCelebration(true);
-                } else if (result.isNewDay) {
-                    setCurrentStreakCount(result.newStreak);
-                    setShowStreakUpdate(true);
+                // If guide hasn't been completed yet, store the streak data as pending
+                if (!isGuideCompleted) {
+                    if (result.unlockedBadge || result.isNewDay) {
+                        setPendingStreakData({
+                            unlockedBadge: result.unlockedBadge,
+                            newStreak: result.newStreak,
+                            isNewDay: result.isNewDay
+                        });
+                    }
+                } else {
+                    // Guide already completed, show modals immediately
+                    if (result.unlockedBadge) {
+                        setUnlockedBadge(result.unlockedBadge);
+                        setShowCelebration(true);
+                    } else if (result.isNewDay) {
+                        setCurrentStreakCount(result.newStreak);
+                        setShowStreakUpdate(true);
+                    }
                 }
             }
         } catch (error) {
             console.error('Error recording academic action:', error);
         }
-    }, [user, isStudent, refreshStreakData]);
+    }, [user, isStudent, refreshStreakData, isGuideCompleted]);
 
 
+
+    const setGuideCompleted = useCallback((completed: boolean) => {
+        setIsGuideCompleted(completed);
+        
+        // If there's pending streak data and guide is now completed, show the modals
+        if (completed && pendingStreakData) {
+            if (pendingStreakData.unlockedBadge) {
+                setUnlockedBadge(pendingStreakData.unlockedBadge);
+                setShowCelebration(true);
+            } else if (pendingStreakData.isNewDay && pendingStreakData.newStreak) {
+                setCurrentStreakCount(pendingStreakData.newStreak);
+                setShowStreakUpdate(true);
+            }
+            // Clear pending data after showing
+            setPendingStreakData(null);
+        }
+    }, [pendingStreakData]);
 
     return (
         <StreakContext.Provider value={{
@@ -106,6 +138,7 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             recordAcademicAction,
             refreshStreakData,
             fetchActivityRange,
+            setGuideCompleted, // Add this to the provider value
         }}>
             {children}
             {isStudent && showCelebration && unlockedBadge && (

@@ -19,6 +19,7 @@ import { useFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { RootLayout } from "@/components/layout/RootLayout";
+import { AppGuide } from "@/components/onboarding/AppGuide";
 
 // ── Eager imports: Core pages users navigate between frequently ──────────────
 // These load with the main bundle so page transitions are INSTANT.
@@ -30,7 +31,7 @@ import Schedule from "./pages/Schedule";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
-import Notes from "./pages/Notes";
+
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentQuizzes from "./pages/StudentQuizzes";
 import AIChat from "./pages/AIChat";
@@ -164,6 +165,21 @@ const FeedbackManager = () => {
   );
 };
 
+// Guarded wrapper to ensure AppGuide only mounts on protected internal pages
+const AuthAppGuide = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  const publicPaths = ['/', '/login', '/register', '/student/login', '/student/register', '/lecturer/login', '/lecturer/register', '/auth/callback', '/forgot-password', '/update-password'];
+
+  // Do not render the guide on public landing or authentication pages
+  if (!isAuthenticated || isLoading || publicPaths.includes(location.pathname)) {
+    return null;
+  }
+
+  return <AppGuide />;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   return (
@@ -222,7 +238,7 @@ const AnimatedRoutes = () => {
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+
           <Route path="/class-feed" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><ClassFeed /></ProtectedRoute>} />
           <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
 
@@ -246,6 +262,7 @@ const App = () => (
     <PushNotificationManager />
     <FCMManager />
     <Suspense fallback={<LoadingFallback />}>
+      <AuthAppGuide />
       <AnimatedRoutes />
     </Suspense>
   </AppProviders>

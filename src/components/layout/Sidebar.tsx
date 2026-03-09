@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLayout } from "@/contexts/LayoutContext";
 import { useLecturerStudents } from "@/hooks/useLecturerStudents";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -48,28 +49,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const studentNavItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Megaphone, label: "Class Feed", path: "/class-feed" },
-  { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
-  { icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
-  { icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
-  { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
-  { icon: Flame, label: "Academic Streak", path: "/streak" },
-  { icon: MessageSquare, label: "Messages", path: "/messages" },
+  { id: "tour-nav-dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { id: "tour-nav-feed", icon: Megaphone, label: "Class Feed", path: "/class-feed" },
+  { id: "tour-nav-schedule", icon: Calendar, label: "Schedule", path: "/schedule" },
+  { id: "tour-nav-assignments", icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
+  { id: "tour-nav-quizzes", icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
+  { id: "tour-nav-matrix", icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
+  { id: "tour-nav-ai", icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
+  { id: "tour-nav-streak", icon: Flame, label: "Academic Streak", path: "/streak" },
+  { id: "tour-nav-messages", icon: MessageSquare, label: "Messages", path: "/messages" },
+
 ];
 
 const lecturerNavItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
-  { icon: Megaphone, label: "Class Feed", path: "/class-feed" },
-  { icon: Users, label: "All Students", path: "/all-students" },
-  { icon: Table, label: "Time Table", path: "/lecturer/timetable" },
-  { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
-  { icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
-  { icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
-  { icon: Brain, label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
-  { icon: MessageSquare, label: "Messages", path: "/messages" },
+  { id: "tour-nav-dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
+  { id: "tour-nav-feed", icon: Megaphone, label: "Class Feed", path: "/class-feed" },
+  { id: "tour-nav-students", icon: Users, label: "All Students", path: "/all-students" },
+  { id: "tour-nav-timetable", icon: Table, label: "Time Table", path: "/lecturer/timetable" },
+  { id: "tour-nav-schedule", icon: Calendar, label: "Schedule", path: "/schedule" },
+  { id: "tour-nav-assignments", icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
+  { id: "tour-nav-quizzes", icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
+  { id: "tour-nav-ai", icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
+  { id: "tour-nav-ai-gen", icon: Brain, label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
+  { id: "tour-nav-messages", icon: MessageSquare, label: "Messages", path: "/messages" },
+
 ];
 
 const bottomNavItems = [
@@ -88,6 +91,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, role } = useAuth();
+  const { tourActiveStepId } = useLayout();
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
   const [showControls, setShowControls] = useState(false);
 
@@ -115,7 +119,8 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col bg-surface border-r border-border h-[100dvh] fixed left-0 top-0 z-20 transition-all duration-300",
+        "hidden lg:flex flex-col bg-surface border-r border-border h-[100dvh] fixed left-0 top-0 transition-all duration-300",
+        document.body.getAttribute('data-tour-active') ? "z-[9999]" : "z-20",
         isCollapsed ? "w-20" : "w-72"
       )}
     >
@@ -173,9 +178,15 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                   }
                 }
 
+                // Override isActive if this step is being highlighted by the onboarding tour
+                if (tourActiveStepId && item.id === tourActiveStepId) {
+                  isActive = true;
+                }
+
                 const content = (
                   <Link
                     key={item.path + item.label}
+                    id={item.id}
                     to={item.path}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group active:scale-[0.98] active:opacity-80",

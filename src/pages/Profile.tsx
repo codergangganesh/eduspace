@@ -298,7 +298,9 @@ export default function Profile() {
 
   const completeness = calculateProfileCompleteness();
 
-  if (authLoading) {
+  // Show skeleton during initial auth load to prevent flickering
+  // Once loaded, don't show loading state during tab changes or refreshes
+  if (authLoading && !profile) {
     return (
       <DashboardLayout>
         <ProfileSkeleton />
@@ -306,7 +308,8 @@ export default function Profile() {
     );
   }
 
-  if (!isAuthenticated) {
+  // Only redirect if not authenticated and auth is fully loaded
+  if (!isAuthenticated && !authLoading) {
     return null;
   }
 

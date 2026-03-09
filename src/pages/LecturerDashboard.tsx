@@ -6,8 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLecturerData } from "@/hooks/useLecturerData";
 import { useNavigate } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRealtimeRejections } from "@/hooks/useRealtimeRejections";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +17,7 @@ import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 
 
 export default function LecturerDashboard() {
-  const { profile } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const { stats: dataStats, upcomingClasses, loading } = useLecturerData();
   const navigate = useNavigate();
 
@@ -53,7 +51,7 @@ export default function LecturerDashboard() {
 
           <div className="relative z-10 p-5 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
 
-            <div className="space-y-3 max-w-2xl text-center sm:text-left">
+            <div id="tour-welcome" className="space-y-3 max-w-2xl text-center sm:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-white/10 backdrop-blur-md border border-emerald-100 dark:border-white/10 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                 <span className="relative flex size-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -75,6 +73,7 @@ export default function LecturerDashboard() {
 
 
             </div>
+
           </div>
         </div>
 

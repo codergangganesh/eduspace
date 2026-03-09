@@ -9,14 +9,21 @@ const Index = () => {
   const { isAuthenticated, role, isLoading } = useAuth();
 
   useEffect(() => {
+    // If we land on root with a recovery hash (Fallback), redirect to update-password
+    if (window.location.hash && window.location.hash.includes('type=recovery')) {
+      navigate('/update-password', { replace: true });
+      return;
+    }
+
     // If user is already authenticated and has a role, redirect to their dashboard
+    // Only redirect if NOT loading to prevent flickering
     if (isAuthenticated && role && !isLoading) {
       navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
     }
   }, [isAuthenticated, role, isLoading, navigate]);
 
   // Don't show landing page while auth is loading
-  // Reduced loading flickering by checking isLoading explicitly
+  // This prevents flickering by showing a consistent loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0B0F1A]">
@@ -30,6 +37,7 @@ const Index = () => {
     );
   }
 
+  // Only render LandingPage when auth is fully loaded and user is not authenticated
   return <LandingPage />;
 };
 

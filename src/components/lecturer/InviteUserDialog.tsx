@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Mail, Send, Loader2, X } from "lucide-react";
+import { Drawer } from "vaul";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
     Dialog,
     DialogContent,
@@ -29,6 +31,7 @@ export function InviteUserDialog({
     const [email, setEmail] = useState("");
     const [personalMessage, setPersonalMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const isMobile = useIsMobile();
 
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -111,85 +114,110 @@ export function InviteUserDialog({
         }
     };
 
+    const renderForm = () => (
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            {/* Email Input */}
+            <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                    Email Address <span className="text-destructive">*</span>
+                </label>
+                <div className="relative">
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pr-10"
+                        disabled={isLoading}
+                        required
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                        <Mail className="size-5" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Personal Message (Optional) */}
+            <div className="space-y-2">
+                <label htmlFor="message" className="text-sm font-medium text-foreground">
+                    Personal Message <span className="text-muted-foreground text-xs">(Optional)</span>
+                </label>
+                <Textarea
+                    id="message"
+                    placeholder="Add a personal note to your invitation..."
+                    value={personalMessage}
+                    onChange={(e) => setPersonalMessage(e.target.value)}
+                    className="min-h-[100px] resize-none"
+                    disabled={isLoading}
+                    maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                    {personalMessage.length}/500
+                </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClose}
+                    disabled={isLoading}
+                    className="flex-1"
+                >
+                    <X className="size-4 mr-2" />
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="size-4 mr-2 animate-spin" />
+                            Sending...
+                        </>
+                    ) : (
+                        <>
+                            <Send className="size-4 mr-2" />
+                            Send Invitation
+                        </>
+                    )}
+                </Button>
+            </div>
+        </form>
+    );
+
+    if (isMobile) {
+        return (
+            <Drawer.Root open={open} onOpenChange={onOpenChange}>
+                <Drawer.Portal>
+                    <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-[2px]" />
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] flex flex-col bg-surface rounded-t-[32px] outline-none max-h-[92vh]">
+                        <div className="mx-auto w-12 h-1.5 flex-shrink-0 cursor-grab rounded-full bg-border mt-4 mb-2" />
+                        <div className="p-6 overflow-y-auto">
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-black text-foreground tracking-tight">Invite User</h2>
+                                <p className="text-muted-foreground text-sm font-medium mt-1">
+                                    Send an invitation email to join Eduspace.
+                                </p>
+                            </div>
+                            {renderForm()}
+                        </div>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
+        );
+    }
+
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] z-[10001]">
                 <DialogHeader>
                     <DialogTitle>Invite User to Eduspace</DialogTitle>
                     <DialogDescription>
                         Send an invitation email to invite someone to join the Eduspace platform.
                     </DialogDescription>
                 </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                    {/* Email Input */}
-                    <div className="space-y-2">
-                        <label htmlFor="email" className="text-sm font-medium text-foreground">
-                            Email Address <span className="text-destructive">*</span>
-                        </label>
-                        <div className="relative">
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="user@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="pr-10"
-                                disabled={isLoading}
-                                required
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <Mail className="size-5" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Personal Message (Optional) */}
-                    <div className="space-y-2">
-                        <label htmlFor="message" className="text-sm font-medium text-foreground">
-                            Personal Message <span className="text-muted-foreground text-xs">(Optional)</span>
-                        </label>
-                        <Textarea
-                            id="message"
-                            placeholder="Add a personal note to your invitation..."
-                            value={personalMessage}
-                            onChange={(e) => setPersonalMessage(e.target.value)}
-                            className="min-h-[100px] resize-none"
-                            disabled={isLoading}
-                            maxLength={500}
-                        />
-                        <p className="text-xs text-muted-foreground text-right">
-                            {personalMessage.length}/500
-                        </p>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleClose}
-                            disabled={isLoading}
-                            className="flex-1"
-                        >
-                            <X className="size-4 mr-2" />
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={isLoading} className="flex-1">
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="size-4 mr-2 animate-spin" />
-                                    Sending...
-                                </>
-                            ) : (
-                                <>
-                                    <Send className="size-4 mr-2" />
-                                    Send Invitation
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </form>
+                {renderForm()}
             </DialogContent>
         </Dialog>
     );

@@ -32,6 +32,22 @@
   <meta name="twitter:image" content="https://eduspaceacademy.online/og-image.png" />
   <meta name="google-site-verification" content="CoH6zg1MA-L_yzB3cKznqINWDumy437hAHyVODOKMJo" />
 
+  <!-- Inline critical CSS to prevent flash of unstyled content -->
+  <style>
+    html, body {
+      background-color: #0B0F1A !important;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    #root {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

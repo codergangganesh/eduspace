@@ -377,13 +377,13 @@ export function StudentNotesDrawer() {
         return (
             <Drawer.Root open={open} onOpenChange={setOpen}>
                 <Drawer.Trigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-500" title="My Notes">
+                    <Button id="tour-nav-notes" variant="ghost" size="icon" className="h-9 w-9 text-slate-500" title="My Notes">
                         <BookOpen className="h-5 w-5" />
                     </Button>
                 </Drawer.Trigger>
                 <Drawer.Portal>
-                    <Drawer.Overlay className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-[2px]" />
-                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-slate-50 dark:bg-slate-900 rounded-t-[32px] outline-none h-[92vh]">
+                    <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-[2px]" />
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] flex flex-col bg-slate-50 dark:bg-slate-900 rounded-t-[32px] outline-none h-[92vh]">
                         {/* Drag handle */}
                         <div className="mx-auto w-12 h-1.5 flex-shrink-0 cursor-grab rounded-full bg-slate-200 dark:bg-slate-800 mt-4 mb-2" />
                         <div className="flex-1 overflow-hidden">
@@ -398,13 +398,13 @@ export function StudentNotesDrawer() {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-500" title="My Notes">
+                <Button id="tour-nav-notes" variant="ghost" size="icon" className="h-9 w-9 text-slate-500" title="My Notes">
                     <BookOpen className="h-5 w-5" />
                 </Button>
             </SheetTrigger>
             <SheetContent
                 side="right"
-                className="flex flex-col p-0 border-none bg-background shadow-2xl transition-all duration-500 ease-in-out h-full w-full sm:max-w-md pt-[var(--safe-top)]"
+                className="flex flex-col p-0 border-none bg-background shadow-2xl transition-all duration-500 ease-in-out h-full w-full sm:max-w-md pt-[var(--safe-top)] z-[10001]"
             >
                 {renderContent()}
             </SheetContent>

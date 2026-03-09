@@ -51,6 +51,7 @@ export interface Profile {
   theme: string | null;
   sidebar_mode: 'expanded' | 'collapsed' | 'hover' | null;
   last_selected_class_id: string | null;
+  has_seen_guide: boolean | null;
   active_call: {
     type: 'audio' | 'video';
     conversationId: string;
@@ -58,6 +59,7 @@ export interface Profile {
     userName?: string;
   } | null;
   last_feedback_prompt_at: string | null;
+  tour_current_step: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -88,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchWithRetry = async <T,>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
     try {
@@ -119,6 +121,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error fetching profile:", error);
         return null;
       }
+      
+      // Initialize has_seen_guide to false if it's null (for new users)
+      if (data && (data as any).has_seen_guide === null) {
+        // Update in background without blocking
+        (supabase as any)
+          .from("profiles")
+          .update({ has_seen_guide: false })
+          .eq("user_id", userId)
+          .then(({ error }: { error: any }) => {
+            if (error) console.warn("Failed to initialize has_seen_guide:", error);
+            else console.log("✅ Initialized has_seen_guide to false for user:", userId);
+          });
+        // Return data with has_seen_guide set to false for immediate use
+        return { ...(data as any), has_seen_guide: false } as Profile;
+      }
+      
       return data as any as Profile | null;
     }).catch(err => {
       if (err.message?.includes('INTERNET_DISCONNECTED') || err.message?.includes('NETWORK_CHANGED')) {
@@ -178,19 +196,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Removed unnecessary useEffect that was setting loading to false
+
   useEffect(() => {
     let mounted = true;
+    let isInitialLoadComplete = false;
+
+    // Set loading true initially for first load only
+    setIsLoading(true);
 
     // 1. Define initialization logic
     const initializeAuth = async () => {
-      // Safety timeout: don't let the app stay in loading state forever if Supabase is unreachable
-      const timeoutId = setTimeout(() => {
-        if (mounted && isLoading) {
-          console.warn("Auth initialization timed out after 10s, forcing loading to false.");
-          setIsLoading(false);
-        }
-      }, 10000);
-
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -199,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(session?.user ?? null);
 
           if (session?.user) {
-            // Await critical data before unblocking UI to prevent redirects
+            // Wait for profile and role on initial load to prevent flickering
             await Promise.all([
               fetchProfile(session.user.id).then(d => mounted && setProfile(d)),
               fetchRole(session.user.id).then(d => mounted && setRole(d))
@@ -208,11 +224,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("No active session found during initialization.");
           }
         }
+        
+        isInitialLoadComplete = true;
       } catch (error) {
         console.error("Auth initialization failed:", error);
       } finally {
-        clearTimeout(timeoutId);
-        if (mounted) setIsLoading(false);
+        // Only set loading false after initial auth data is ready
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -225,21 +245,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
 
         console.log("Auth state change:", event);
+        
+        // Skip loading state update if initial load hasn't completed yet
+        if (!isInitialLoadComplete) {
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Re-fetch on auth events to ensure freshness
-          // Note: using void to not block the event loop, as UI might already be rendered
-          void fetchProfile(session.user.id).then(d => mounted && setProfile(d));
-          void fetchRole(session.user.id).then(d => mounted && setRole(d));
+          // Fetch in background without showing loading state for subsequent auth changes
+          Promise.all([
+            fetchProfile(session.user.id).then(d => mounted && setProfile(d)),
+            fetchRole(session.user.id).then(d => mounted && setRole(d))
+          ]);
         } else {
           setProfile(null);
           setRole(null);
         }
-
-        // Ensure loading is false after any auth event
-        setIsLoading(false);
       }
     );
 

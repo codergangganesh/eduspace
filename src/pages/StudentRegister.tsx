@@ -22,6 +22,7 @@ export default function StudentRegister() {
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [isGitHubLoading, setIsGitHubLoading] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [hasNavigated, setHasNavigated] = useState(false); // Prevent multiple navigations
     const [formData, setFormData] = useState({
         fullName: "",
         email: "",
@@ -29,12 +30,14 @@ export default function StudentRegister() {
         confirmPassword: "",
     });
 
-    // Redirect if already authenticated
+    // Redirect if already authenticated (only after component has mounted)
     useEffect(() => {
-        if (isAuthenticated && role) {
+        // Only redirect if we haven't just submitted the form
+        // This prevents flickering after account creation
+        if (!hasNavigated && isAuthenticated && role) {
             navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
         }
-    }, [isAuthenticated, role, navigate]);
+    }, [isAuthenticated, role, navigate, hasNavigated]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,6 +67,7 @@ export default function StudentRegister() {
         const result = await signUp(formData.email, formData.password, formData.fullName, "student");
 
         if (result.success) {
+            setHasNavigated(true); // Mark that we're about to navigate
             toast.success("Account created successfully! Please sign in to continue.");
             navigate("/student/login", { state: { registered: true } });
         } else {

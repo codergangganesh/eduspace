@@ -129,6 +129,7 @@ export default function Dashboard() {
           />
 
           <Button
+            id="tour-btn-invite"
             variant="default"
             size="sm"
             onClick={() => setInviteDialogOpen(true)}

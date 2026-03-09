@@ -15,6 +15,10 @@ interface LayoutContextType {
     setOptions: (options: LayoutOptions) => void;
     isMobileMenuOpen: boolean;
     setIsMobileMenuOpen: (open: boolean) => void;
+    isMobileSidebarCollapsed: boolean;
+    setIsMobileSidebarCollapsed: (collapsed: boolean) => void;
+    tourActiveStepId: string | null;
+    setTourActiveStepId: (id: string | null) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -34,6 +38,8 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     const [actions, setActions] = useState<ReactNode>(null);
     const [options, setOptions] = useState<LayoutOptions>({});
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(false);
+    const [tourActiveStepId, setTourActiveStepId] = useState<string | null>(null);
 
     // Sync with profile on load (if not set in localstorage, or just to keep in sync)
     useEffect(() => {
@@ -64,7 +70,11 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
             options,
             setOptions,
             isMobileMenuOpen,
-            setIsMobileMenuOpen
+            setIsMobileMenuOpen,
+            isMobileSidebarCollapsed,
+            setIsMobileSidebarCollapsed,
+            tourActiveStepId,
+            setTourActiveStepId
         }}>
             {children}
         </LayoutContext.Provider>

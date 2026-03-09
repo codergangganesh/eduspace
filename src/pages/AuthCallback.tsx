@@ -13,8 +13,15 @@ export default function AuthCallback() {
     const handleCallback = async () => {
       try {
         // Check if this is a password recovery callback
+        // Supabase puts these in the hash fragment, e.g., #access_token=...&type=recovery
         const urlParams = new URLSearchParams(window.location.search);
-        const type = urlParams.get('type');
+        let type = urlParams.get('type');
+
+        if (!type && window.location.hash) {
+          // Also check hash for type=recovery
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          type = hashParams.get('type');
+        }
 
         // Get the session from the URL
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
