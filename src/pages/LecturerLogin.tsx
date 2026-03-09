@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function LecturerLogin() {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function LecturerLogin() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState<string>();
 
     // Show registration success message if redirected from registration
     useEffect(() => {
@@ -43,7 +45,7 @@ export default function LecturerLogin() {
 
         setIsLoading(true);
 
-        const result = await signIn(email, password);
+        const result = await signIn(email, password, captchaToken);
 
         if (result.success) {
             toast.success("Welcome back!");
@@ -139,6 +141,15 @@ export default function LecturerLogin() {
                         >
                             Forgot Password?
                         </Link>
+                    </div>
+
+                    {/* CAPTCHA Protection */}
+                    <div className="flex justify-center my-2">
+                        <Turnstile
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
+                            onSuccess={(token) => setCaptchaToken(token)}
+                            onExpire={() => setCaptchaToken(undefined)}
+                        />
                     </div>
 
                     {/* Submit Button */}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
@@ -20,6 +21,7 @@ export default function LecturerRegister() {
     const [showPrivacy, setShowPrivacy] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState<string>();
     const [hasNavigated, setHasNavigated] = useState(false); // Prevent multiple navigations
     const [formData, setFormData] = useState({
         fullName: "",
@@ -62,7 +64,7 @@ export default function LecturerRegister() {
 
         setIsLoading(true);
 
-        const result = await signUp(formData.email, formData.password, formData.fullName, "lecturer");
+        const result = await signUp(formData.email, formData.password, formData.fullName, "lecturer", captchaToken);
 
         if (result.success) {
             setHasNavigated(true); // Mark that we're about to navigate
@@ -235,6 +237,15 @@ export default function LecturerRegister() {
                                 I agree to the <span className="text-blue-600 font-semibold cursor-pointer" onClick={() => setShowTerms(true)}>Terms</span> & <span className="text-blue-600 font-semibold cursor-pointer" onClick={() => setShowPrivacy(true)}>Privacy Policy</span>
                             </label>
                         </div>
+                    </div>
+
+                    {/* CAPTCHA Protection */}
+                    <div className="flex justify-center my-2">
+                        <Turnstile
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
+                            onSuccess={(token) => setCaptchaToken(token)}
+                            onExpire={() => setCaptchaToken(undefined)}
+                        />
                     </div>
 
                     {/* Submit Button */}

@@ -72,15 +72,15 @@ interface AuthContextType {
   role: AppRole | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, fullName: string, role: AppRole, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
   signInWithNotion: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
   signInWithGitHub: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ success: boolean; error?: string }>;
   refreshProfile: (userId?: string) => Promise<void>;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error fetching profile:", error);
         return null;
       }
-      
+
       // Initialize has_seen_guide to false if it's null (for new users)
       if (data && (data as any).has_seen_guide === null) {
         // Update in background without blocking
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Return data with has_seen_guide set to false for immediate use
         return { ...(data as any), has_seen_guide: false } as Profile;
       }
-      
+
       return data as any as Profile | null;
     }).catch(err => {
       if (err.message?.includes('INTERNET_DISCONNECTED') || err.message?.includes('NETWORK_CHANGED')) {
@@ -224,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("No active session found during initialization.");
           }
         }
-        
+
         isInitialLoadComplete = true;
       } catch (error) {
         console.error("Auth initialization failed:", error);
@@ -245,7 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
 
         console.log("Auth state change:", event);
-        
+
         // Skip loading state update if initial load hasn't completed yet
         if (!isInitialLoadComplete) {
           return;
@@ -273,11 +273,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { captchaToken },
       });
 
       if (error) {
@@ -291,7 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole) => {
+  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole, captchaToken?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
@@ -300,6 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: {
           emailRedirectTo: redirectUrl,
+          captchaToken,
           data: {
             full_name: fullName,
             role: selectedRole,
@@ -444,10 +446,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, captchaToken?: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/update-password`,
+        captchaToken,
       });
 
       if (error) {

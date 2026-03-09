@@ -7,12 +7,14 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +26,7 @@ export default function ForgotPassword() {
 
     setIsLoading(true);
 
-    const result = await resetPassword(email);
+    const result = await resetPassword(email, captchaToken);
 
     if (result.success) {
       setIsSubmitted(true);
@@ -88,6 +90,15 @@ export default function ForgotPassword() {
                     required
                   />
                 </div>
+              </div>
+
+              {/* CAPTCHA Protection */}
+              <div className="flex justify-center my-2">
+                <Turnstile
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(undefined)}
+                />
               </div>
 
               <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={isLoading}>
