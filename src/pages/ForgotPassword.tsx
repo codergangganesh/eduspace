@@ -93,7 +93,7 @@ export default function ForgotPassword() {
               </div>
 
               {/* CAPTCHA Protection */}
-              <div className="flex justify-center my-2">
+              <div className="flex justify-center my-1.5">
                 <Turnstile
                   siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
                   onSuccess={(token) => setCaptchaToken(token)}
@@ -101,7 +101,7 @@ export default function ForgotPassword() {
                 />
               </div>
 
-              <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={isLoading}>
+              <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="size-5 mr-2 animate-spin" />

@@ -77,11 +77,7 @@ export default function LecturerLogin() {
                     }]
                 }}
             />
-            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
-                <div className="mb-8 lg:hidden">
-                    <h2 className="text-3xl font-black text-foreground tracking-tight">Lecturer</h2>
-                    <p className="text-blue-600 font-bold text-lg -mt-1">Login</p>
-                </div>
+            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-6 lg:shadow-sm">
                 {/* Form */}
                 <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
                     {/* Institutional Email Field */}
@@ -144,7 +140,7 @@ export default function LecturerLogin() {
                     </div>
 
                     {/* CAPTCHA Protection */}
-                    <div className="flex justify-center my-2">
+                    <div className="flex justify-center my-1.5">
                         <Turnstile
                             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
                             onSuccess={(token) => setCaptchaToken(token)}
@@ -153,7 +149,7 @@ export default function LecturerLogin() {
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-4" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -172,20 +168,13 @@ export default function LecturerLogin() {
                     </p>
                 </div>
 
-                {/* Desktop Divider & Sign In */}
-                <div className="hidden lg:block mt-6">
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">OR</span>
-                        </div>
+                {/* Desktop Switcher */}
+                <div className="hidden lg:block mt-6 pt-2 border-t border-border">
+                    <div className="text-center">
+                        <p className="text-muted-foreground text-[11px]">
+                            Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
+                        </p>
                     </div>
-
-                    <Button variant="outline" asChild className="w-full h-11">
-                        <Link to="/lecturer/register">Create New Account</Link>
-                    </Button>
                 </div>
             </div>
         </AuthLayout>

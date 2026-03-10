@@ -10,18 +10,20 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface RoleSelectionDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    mode?: "login" | "register";
 }
 
-export function RoleSelectionDialog({ open, onOpenChange }: RoleSelectionDialogProps) {
+export function RoleSelectionDialog({ open, onOpenChange, mode = "login" }: RoleSelectionDialogProps) {
     const navigate = useNavigate();
     const isMobile = useIsMobile();
 
     const handleRoleSelection = (role: "student" | "lecturer") => {
         onOpenChange(false);
+        const path = mode === "register" ? "register" : "login";
         if (role === "student") {
-            navigate("/student/login");
+            navigate(`/student/${path}`);
         } else {
-            navigate("/lecturer/login");
+            navigate(`/lecturer/${path}`);
         }
     };
 

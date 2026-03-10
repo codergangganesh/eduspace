@@ -24,6 +24,7 @@ import {
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Upload, X, Plus, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import confetti from 'canvas-confetti';
 import { uploadAssignmentFile, validateAssignmentFile } from '@/lib/supabaseStorage';
 import { useClassAssignments, CreateClassAssignmentDTO } from '@/hooks/useClassAssignments';
 import { Subject } from '@/hooks/useClassSubjects';
@@ -120,6 +121,14 @@ export function CreateClassAssignmentDialog({
             const result = await createAssignment(assignmentData);
 
             if (result.success) {
+                // Trigger celebratory confetti for lecturer publishing
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: ['#4f46e5', '#7c3aed', '#ec4899', '#f59e0b', '#10b981']
+                });
+
                 setOpen(false);
                 // Reset form
                 setFormData({ title: '', description: '', subjectId: '', topic: '' });

@@ -179,7 +179,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                 }
 
                 // Override isActive if this step is being highlighted by the onboarding tour
-                if (tourActiveStepId && item.id === tourActiveStepId) {
+                if (tourActiveStepId && item.id === tourActiveStepId && document.body.getAttribute('data-tour-active') === 'true') {
                   isActive = true;
                 }
 

@@ -6,6 +6,7 @@ import {
     Linkedin,
     Github
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface FooterSectionProps {
@@ -74,20 +75,20 @@ export function FooterSection({ onOpenPrivacy, onOpenTerms, onOpenContact, onOpe
                         <h3 className="font-semibold text-white dark:text-white mb-4">Legal</h3>
                         <ul className="space-y-3">
                             <li>
-                                <button
-                                    onClick={() => onOpenPrivacy(true)}
+                                <Link
+                                    to="/privacy-policy"
                                     className="text-sm text-slate-300 dark:text-slate-400 hover:text-blue-400 transition-colors"
                                 >
                                     Privacy Policy
-                                </button>
+                                </Link>
                             </li>
                             <li>
-                                <button
-                                    onClick={() => onOpenTerms(true)}
+                                <Link
+                                    to="/terms-of-service"
                                     className="text-sm text-slate-300 dark:text-slate-400 hover:text-blue-400 transition-colors"
                                 >
                                     Terms of Service
-                                </button>
+                                </Link>
                             </li>
                             <li>
                                 <button

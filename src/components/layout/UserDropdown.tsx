@@ -11,12 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
 
 export function UserDropdown() {
   const { profile, role, signOut } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
 
@@ -90,6 +92,40 @@ export function UserDropdown() {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
+
+        {/* Mobile-only Theme Toggle */}
+        <div className="sm:hidden">
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 py-1.5 flex items-center gap-2">
+            Appearance
+          </DropdownMenuLabel>
+          <DropdownMenuItem
+            onClick={() => setTheme("light")}
+            className={cn("flex items-center gap-2 cursor-pointer", theme === "light" && "bg-primary/5 text-primary")}
+          >
+            <Sun className="size-4" />
+            Light
+            {theme === "light" && <div className="ml-auto size-1.5 rounded-full bg-primary" />}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setTheme("dark")}
+            className={cn("flex items-center gap-2 cursor-pointer", theme === "dark" && "bg-primary/5 text-primary")}
+          >
+            <Moon className="size-4" />
+            Dark
+            {theme === "dark" && <div className="ml-auto size-1.5 rounded-full bg-primary" />}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setTheme("system")}
+            className={cn("flex items-center gap-2 cursor-pointer", theme === "system" && "bg-primary/5 text-primary")}
+          >
+            <Monitor className="size-4" />
+            System
+            {theme === "system" && <div className="ml-auto size-1.5 rounded-full bg-primary" />}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+        </div>
+
         <DropdownMenuItem
           onClick={() => setIsContactOpen(true)}
           className="flex items-center gap-2 cursor-pointer"

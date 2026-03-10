@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Loader2, Clock, UserPlus, Heart, Send, Megaphone, Flame, Award, ChevronRight, Sparkles } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Clock, Flame } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -8,11 +8,9 @@ import { DashboardAssignmentList } from "@/components/dashboard/DashboardAssignm
 import { useSchedule } from "@/hooks/useSchedule";
 import { useNavigate } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { StatsCard } from "@/components/dashboard/StatsCard";
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
 import { PendingInvitationsPanel } from "@/components/student/PendingInvitationsPanel";
 import { JoinRequestModal } from "@/components/student/JoinRequestModal";
 import { useState, useEffect } from "react";
@@ -31,7 +29,6 @@ export default function Dashboard() {
   const { streak, loading: streakLoading } = useStreak();
   const navigate = useNavigate();
   const { profile, user, role } = useAuth();
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { recordAcademicAction } = useStreak();
 
   // Record daily visit streak
@@ -127,17 +124,6 @@ export default function Dashboard() {
             title="Student Dashboard"
             description="View your active assignments, tracking streaks, and upcoming classes all from your EduSpace student dashboard."
           />
-
-          <Button
-            id="tour-btn-invite"
-            variant="default"
-            size="sm"
-            onClick={() => setInviteDialogOpen(true)}
-            className="gap-2"
-          >
-            <UserPlus className="size-4" />
-            <span className="hidden sm:inline">Invite User</span>
-          </Button>
         </div>
       }
     >
@@ -284,14 +270,6 @@ export default function Dashboard() {
 
         </div>
       </div>
-
-      {/* Invite User Dialog */}
-      <InviteUserDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        lecturerName={profile?.full_name || "Student"}
-        lecturerEmail={profile?.email || ""}
-      />
 
       {/* Join Request Modal */}
       <JoinRequestModal

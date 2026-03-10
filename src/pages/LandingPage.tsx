@@ -1,7 +1,7 @@
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Headset } from "lucide-react";
+import { Headset, Menu, X, ChevronRight, LayoutGrid, Users, GraduationCap, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleSelectionDialog } from "@/components/auth/RoleSelectionDialog";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
@@ -9,6 +9,13 @@ import { TermsDialog } from "@/components/legal/TermsDialog";
 import { HelpCenterDialog } from "@/components/support/HelpCenterDialog";
 import { ContactSupportDialog } from "@/components/support/ContactSupportDialog";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import {
+    Sheet,
+    SheetContent,
+    SheetTrigger,
+} from "@/components/ui/sheet";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 import { renderCanvas } from "@/components/ui/canvas";
 import { HeroSection } from "@/components/landing/HeroSection";
@@ -154,24 +161,98 @@ export default function LandingPage() {
                                 </Link>
                             </div>
 
-                            {/* Mobile Navigation Actions */}
-                            <div className="flex md:hidden items-center gap-2 sm:gap-3">
-                                <ThemeToggle />
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setShowContact(true)}
-                                    className="text-white hover:bg-white/10 size-5 sm:size-10"
-                                >
-                                    <Headset className="size-5" />
-                                </Button>
-                                <Button
-                                    onClick={() => setShowRoleDialog(true)}
-                                    size="sm"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 text-xs sm:text-sm px-3 sm:px-2"
-                                >
-                                    Sign In / Up
-                                </Button>
+                            {/* Mobile Navigation & Actions */}
+                            <div className="flex md:hidden items-center gap-2">
+
+                                <Sheet>
+                                    <SheetTrigger asChild>
+                                        <button className="p-2 text-white dark:text-white hover:bg-white/10 rounded-lg transition-colors outline-none">
+                                            <Menu className="size-7" />
+                                        </button>
+                                    </SheetTrigger>
+                                    <SheetContent
+                                        side="right"
+                                        className="w-full sm:max-w-md bg-slate-950 dark:bg-slate-950 border-white/10 p-0 flex flex-col pt-[calc(1.5rem+var(--safe-top,0px))]"
+                                    >
+                                        {/* Drawer Branding Header */}
+                                        <div className="px-6 pb-6 border-b border-white/5 flex items-center justify-between">
+                                            <Link to="/" className="flex items-center gap-2">
+                                                <div className="size-8 rounded-lg overflow-hidden border border-white/20">
+                                                    <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                                </div>
+                                                <span className="text-xl font-bold text-white tracking-tight">
+                                                    Eduspace
+                                                </span>
+                                            </Link>
+                                        </div>
+
+                                        {/* Drawer Body - Navigation Links */}
+                                        <div className="flex-1 overflow-y-auto px-4 py-8 custom-scrollbar">
+                                            <div className="space-y-2">
+                                                <a
+                                                    href="#features"
+                                                    className="flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="size-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                                        <LayoutGrid className="size-5" />
+                                                    </div>
+                                                    Features
+                                                </a>
+                                                <a
+                                                    href="#students"
+                                                    className="flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                                                        <Users className="size-5" />
+                                                    </div>
+                                                    For Students
+                                                </a>
+                                                <a
+                                                    href="#lecturers"
+                                                    className="flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="size-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all">
+                                                        <GraduationCap className="size-5" />
+                                                    </div>
+                                                    For Lecturers
+                                                </a>
+                                                <button
+                                                    onClick={() => {
+                                                        setShowContact(true);
+                                                    }}
+                                                    className="w-full flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                                                        <LifeBuoy className="size-5" />
+                                                    </div>
+                                                    Support Center
+                                                </button>
+
+                                                <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between px-4">
+                                                    <span className="text-sm font-medium text-white/40">Appearance</span>
+                                                    <ThemeToggle />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Drawer Footer - Action Buttons */}
+                                        <div className="p-6 pb-12 bg-slate-900/50 border-t border-white/5 grid grid-cols-2 gap-3">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setShowRoleDialog(true)}
+                                                className="w-full h-11 rounded-xl bg-transparent border-white/20 text-white hover:bg-white/5 font-bold transition-all text-xs"
+                                            >
+                                                Sign in
+                                            </Button>
+                                            <Button
+                                                onClick={() => setShowRoleDialog(true)}
+                                                className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black transition-all shadow-xl shadow-blue-600/20 text-xs px-2"
+                                            >
+                                                Join Now
+                                            </Button>
+                                        </div>
+                                    </SheetContent>
+                                </Sheet>
                             </div>
 
                             {/* Navigation Links */}

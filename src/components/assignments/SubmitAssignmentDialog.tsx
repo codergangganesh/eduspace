@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import confetti from 'canvas-confetti';
 import { Card, CardContent } from "@/components/ui/card";
 import { formatFileSize, getFileTypeDisplay } from "@/lib/fileUtils";
 import {
@@ -147,6 +148,14 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                 // Record academic action
                 if (role === 'student') {
                     await recordAcademicAction();
+
+                    // Trigger celebratory confetti
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#4f46e5', '#7c3aed', '#ec4899', '#f59e0b', '#10b981']
+                    });
                 }
 
                 toast.success(hasSubmission ? "Submission updated successfully!" : "Assignment submitted successfully!");

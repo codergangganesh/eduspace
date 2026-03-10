@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useClasses } from "@/hooks/useClasses";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import confetti from 'canvas-confetti';
 
 interface CreateClassModalProps {
     open: boolean;
@@ -72,6 +73,14 @@ export function CreateClassModal({ open, onOpenChange }: CreateClassModalProps) 
             toast({
                 title: "Class Created",
                 description: `${formData.course_code} has been successfully created`,
+            });
+
+            // Trigger celebratory confetti for lecturer
+            confetti({
+                particleCount: 150,
+                spread: 100,
+                origin: { y: 0.6 },
+                colors: ['#4f46e5', '#7c3aed', '#ec4899', '#f59e0b', '#10b981']
             });
 
             // Reset form

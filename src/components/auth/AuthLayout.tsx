@@ -12,9 +12,10 @@ interface AuthLayoutProps {
     title: string;
     subtitle: string;
     contentMaxWidth?: string;
+    noScroll?: boolean;
 }
 
-export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w-md" }: AuthLayoutProps) {
+export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w-md", noScroll = false }: AuthLayoutProps) {
     const navigate = useNavigate();
     const [showPrivacy, setShowPrivacy] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
@@ -53,7 +54,7 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                     </div>
                 </div>
 
-                <div className="w-full max-w-5xl flex flex-col lg:flex-row bg-background lg:bg-white/20 dark:lg:bg-black/20 lg:backdrop-blur-xl lg:rounded-[32px] overflow-hidden lg:shadow-2xl lg:border lg:border-white/20 dark:lg:border-white/10 shrink-0 lg:shadow-blue-500/10 relative min-h-screen lg:min-h-0 lg:max-h-[90vh]">
+                <div className="w-full max-w-5xl flex flex-col lg:flex-row bg-background lg:bg-white/20 dark:lg:bg-black/20 lg:backdrop-blur-xl lg:rounded-[32px] overflow-hidden lg:shadow-2xl lg:border lg:border-white/20 dark:lg:border-white/10 shrink-0 lg:shadow-blue-500/10 relative min-h-screen lg:min-h-0 lg:max-h-[96vh]">
 
                     {/* Modals */}
                     <PrivacyPolicyDialog open={showPrivacy} onOpenChange={setShowPrivacy} />
@@ -75,7 +76,7 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                             </Link>
                         </div>
 
-                        <div className="relative z-10 hidden lg:block py-4">
+                        <div className={`relative z-10 hidden lg:block ${noScroll ? 'py-2' : 'py-4'}`}>
                             <h1 className="text-3xl lg:text-3xl font-black mb-4 leading-tight tracking-tight">
                                 Welcome to <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Eduspace</span>
@@ -91,8 +92,8 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                     </div>
 
                     {/* Content Panel */}
-                    <div className="flex-1 p-6 lg:p-8 bg-background lg:bg-background/80 lg:backdrop-blur-md flex flex-col justify-center relative py-12 lg:py-8 pb-safe">
-                        <div className="hidden lg:flex justify-end gap-5 text-sm font-bold mb-4 lg:mb-6">
+                    <div className={`flex-1 px-6 lg:px-10 py-6 lg:py-7 bg-background lg:bg-background/80 lg:backdrop-blur-md flex flex-col justify-center lg:justify-start relative pb-safe ${!noScroll ? 'lg:overflow-y-auto custom-scrollbar' : 'lg:overflow-hidden'}`}>
+                        <div className="hidden lg:flex justify-end gap-5 text-sm font-bold mb-3 lg:mb-4">
                             <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider text-[10px]">Help</button>
                             <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider text-[10px]">Support</button>
                         </div>
@@ -107,11 +108,11 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                                 {children}
                             </div>
 
-                            <div className="mt-6 lg:mt-8 py-4 border-t border-border/50 lg:border-none text-center text-[10px] text-muted-foreground font-medium">
+                            <div className={`${noScroll ? 'mt-2 lg:mt-3' : 'mt-4 lg:mt-5'} py-2 border-t border-border/50 lg:border-none text-center text-[10px] text-muted-foreground font-medium`}>
                                 By continuing, you agree to our{" "}
-                                <button onClick={() => setShowTerms(true)} className="underline hover:text-primary font-bold">Terms of Service</button>
+                                <Link to="/terms-of-service" className="underline hover:text-primary font-bold">Terms of Service</Link>
                                 {" "}and{" "}
-                                <button onClick={() => setShowPrivacy(true)} className="underline hover:text-primary font-bold">Privacy Policy</button>.
+                                <Link to="/privacy-policy" className="underline hover:text-primary font-bold">Privacy Policy</Link>.
                             </div>
                         </div>
                     </div>

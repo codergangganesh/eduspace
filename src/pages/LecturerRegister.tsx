@@ -82,7 +82,7 @@ export default function LecturerRegister() {
     };
 
     return (
-        <AuthLayout title="Lecturer Registration" subtitle="Join Eduspace and start teaching">
+        <AuthLayout title="Lecturer Registration" subtitle="Join Eduspace and start teaching" noScroll={true}>
             <SEO
                 title="Lecturer Registration"
                 description="Join EduSpace and start teaching. Create a lecturer account to manage classes, assignments, and track student success."
@@ -103,16 +103,12 @@ export default function LecturerRegister() {
                     }]
                 }}
             />
-            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
-                <div className="mb-8 lg:hidden">
-                    <h2 className="text-3xl font-black text-foreground tracking-tight">Lecturer</h2>
-                    <p className="text-blue-600 font-bold text-lg -mt-1">Registration</p>
-                </div>
+            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-4 lg:shadow-sm">
                 {/* Form */}
-                <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
+                <form className="space-y-3 lg:space-y-4" onSubmit={handleSubmit}>
                     {/* Full Name Field */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
+                    <div className="space-y-1">
+                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
                             Full Name
                         </label>
                         <div className="relative">
@@ -131,8 +127,8 @@ export default function LecturerRegister() {
                     </div>
 
                     {/* Email Field */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
+                    <div className="space-y-1">
+                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
                             Email Address
                         </label>
                         <div className="relative">
@@ -151,8 +147,8 @@ export default function LecturerRegister() {
                     </div>
 
                     {/* Password Field */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
+                    <div className="space-y-1">
+                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
                             Password
                         </label>
                         <div className="relative">
@@ -178,8 +174,8 @@ export default function LecturerRegister() {
                     </div>
 
                     {/* Confirm Password Field */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
+                    <div className="space-y-1">
+                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
                             Confirm Password
                         </label>
                         <div className="relative">
@@ -234,13 +230,13 @@ export default function LecturerRegister() {
                                 disabled={isLoading}
                             />
                             <label htmlFor="terms" className="text-[13px] text-muted-foreground/80 select-none">
-                                I agree to the <span className="text-blue-600 font-semibold cursor-pointer" onClick={() => setShowTerms(true)}>Terms</span> & <span className="text-blue-600 font-semibold cursor-pointer" onClick={() => setShowPrivacy(true)}>Privacy Policy</span>
+                                I agree to the <Link to="/terms-of-service" target="_blank" className="text-blue-600 font-semibold hover:underline">Terms</Link> & <Link to="/privacy-policy" target="_blank" className="text-blue-600 font-semibold hover:underline">Privacy Policy</Link>
                             </label>
                         </div>
                     </div>
 
                     {/* CAPTCHA Protection */}
-                    <div className="flex justify-center my-2">
+                    <div className="flex justify-center my-1.5">
                         <Turnstile
                             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
                             onSuccess={(token) => setCaptchaToken(token)}
@@ -249,7 +245,7 @@ export default function LecturerRegister() {
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-4" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -268,20 +264,13 @@ export default function LecturerRegister() {
                     </p>
                 </div>
 
-                {/* Desktop Divider & Sign In */}
-                <div className="hidden lg:block mt-6">
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">OR</span>
-                        </div>
+                {/* Desktop Switcher */}
+                <div className="hidden lg:block mt-4 pt-2 border-t border-border">
+                    <div className="text-center">
+                        <p className="text-muted-foreground text-[11px]">
+                            Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
+                        </p>
                     </div>
-
-                    <Button variant="outline" asChild className="w-full h-11">
-                        <Link to="/lecturer/login">Sign In</Link>
-                    </Button>
                 </div>
             </div>
         </AuthLayout>

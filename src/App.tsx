@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppGuide } from "@/components/onboarding/AppGuide";
+import { ProgressBar } from "@/components/common/ProgressBar";
 
 // ── Eager imports: Core pages users navigate between frequently ──────────────
 // These load with the main bundle so page transitions are INSTANT.
@@ -70,6 +71,9 @@ const StudentAssignmentDetail = lazy(() => import("./pages/StudentAssignmentDeta
 const QuizAttemptDetails = lazy(() => import("./pages/QuizAttemptDetails"));
 const SharedAIChat = lazy(() => import("./pages/SharedAIChat"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const Help = lazy(() => import("./pages/Help"));
 
 const LoadingFallback = () => {
   useEffect(() => {
@@ -170,7 +174,7 @@ const AuthAppGuide = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
-  const publicPaths = ['/', '/login', '/register', '/student/login', '/student/register', '/lecturer/login', '/lecturer/register', '/auth/callback', '/forgot-password', '/update-password'];
+  const publicPaths = ['/', '/login', '/register', '/student/login', '/student/register', '/lecturer/login', '/lecturer/register', '/auth/callback', '/forgot-password', '/update-password', '/help'];
 
   // Do not render the guide on public landing or authentication pages
   if (!isAuthenticated || isLoading || publicPaths.includes(location.pathname)) {
@@ -238,6 +242,7 @@ const AnimatedRoutes = () => {
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
 
           <Route path="/class-feed" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><ClassFeed /></ProtectedRoute>} />
           <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
@@ -245,6 +250,8 @@ const AnimatedRoutes = () => {
         </Route>
 
         <Route path="/ai-chat/share/:token" element={<SharedAIChat />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
@@ -262,6 +269,7 @@ const App = () => (
     <PushNotificationManager />
     <FCMManager />
     <Suspense fallback={<LoadingFallback />}>
+      <ProgressBar />
       <AuthAppGuide />
       <AnimatedRoutes />
     </Suspense>

@@ -5,9 +5,11 @@ import { MobileSidebar } from "./MobileSidebar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { InviteUserDialog } from "@/components/lecturer/InviteUserDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLayout } from "@/contexts/LayoutContext";
 import PageTransition from "./PageTransition";
+import { CommandPalette } from "./CommandPalette";
+
 
 export function RootLayout() {
     const { user, profile, role } = useAuth();
@@ -24,11 +26,18 @@ export function RootLayout() {
     const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
 
+    useEffect(() => {
+        const handleOpenInvite = () => setInviteDialogOpen(true);
+        window.addEventListener("open-invite-dialog", handleOpenInvite);
+        return () => window.removeEventListener("open-invite-dialog", handleOpenInvite);
+    }, []);
+
     const isLecturer = role === "lecturer";
     const isCollapsed = sidebarMode === 'collapsed' || (sidebarMode === 'hover' && !isHovered);
 
     return (
         <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
+            <CommandPalette />
             <Sidebar
                 mode={sidebarMode}
                 setMode={setSidebarMode}
@@ -45,7 +54,6 @@ export function RootLayout() {
                     <DashboardHeader
                         onMenuClick={() => setIsMobileMenuOpen(true)}
                         actions={actions}
-                        onInviteClick={isLecturer ? () => setInviteDialogOpen(true) : undefined}
                     />
                 )}
                 {options.hideHeaderOnMobile && (
@@ -53,7 +61,6 @@ export function RootLayout() {
                         <DashboardHeader
                             onMenuClick={() => setIsMobileMenuOpen(true)}
                             actions={actions}
-                            onInviteClick={isLecturer ? () => setInviteDialogOpen(true) : undefined}
                         />
                     </div>
                 )}
@@ -72,11 +79,11 @@ export function RootLayout() {
             </div>
 
             {
-                isLecturer && (
+                user && (
                     <InviteUserDialog
                         open={inviteDialogOpen}
                         onOpenChange={setInviteDialogOpen}
-                        lecturerName={profile?.full_name || "Lecturer"}
+                        lecturerName={profile?.full_name || (role === 'lecturer' ? "Lecturer" : "Student")}
                         lecturerEmail={user?.email || ""}
                     />
                 )
