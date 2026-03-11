@@ -61,7 +61,9 @@ interface AssignmentStats {
 
 export function useAssignments(selectedClassId?: string) {
     const { user, role } = useAuth();
-    const cacheKey = selectedClassId ? `${role}_${selectedClassId}` : `${role}_all`;
+    const cacheKey = user
+        ? `${user.id}_${role}_${selectedClassId ?? 'all'}`
+        : `${role}_${selectedClassId ?? 'all'}`;
 
     const [assignments, setAssignments] = useState<Assignment[]>(() => {
         if (assignmentsCache.has(cacheKey)) {
@@ -294,7 +296,7 @@ export function useAssignments(selectedClassId?: string) {
             setLoading(false);
             setIsInitialLoad(false);
         }
-    }, [user, role, isInitialLoad, selectedClassId, cacheKey]);
+    }, [user, role, isInitialLoad, selectedClassId, cacheKey, enrolledClasses]);
 
     // Fetch assignments when selected class changes (for student)
     useEffect(() => {

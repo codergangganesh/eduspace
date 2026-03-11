@@ -49,6 +49,28 @@ interface CreateNotificationParams {
     pushImage?: string;
 }
 
+type NotificationPreferenceField =
+    | "assignment_reminders"
+    | "message_notifications"
+    | "grade_updates"
+    | "course_announcements";
+
+function getPreferenceField(type: CreateNotificationParams["type"]): NotificationPreferenceField | null {
+    switch (type) {
+        case "assignment":
+            return "assignment_reminders";
+        case "message":
+            return "message_notifications";
+        case "grade":
+            return "grade_updates";
+        case "announcement":
+        case "schedule":
+            return "course_announcements";
+        default:
+            return null;
+    }
+}
+
 // ─── Rich Push Helpers ──────────────────────────────────────────────────────
 function generateTag(type: string, relatedId?: string, classId?: string): string {
     const id = relatedId || classId || 'general';
@@ -92,17 +114,25 @@ function getActions(type: string): Array<{ action: string; title: string }> {
  */
 export async function createNotification(params: CreateNotificationParams) {
     const { userId, title, message, type, relatedId, senderId, actionType } = params;
+    const preferenceField = getPreferenceField(type);
 
     try {
-        // Check if recipient has notifications enabled globally
+        // Check if recipient has notifications enabled globally and for this category
+        const selectFields = preferenceField
+            ? `notifications_enabled, ${preferenceField}`
+            : "notifications_enabled";
         const { data: profile } = await supabase
             .from("profiles")
-            .select("notifications_enabled")
+            .select(selectFields)
             .eq("user_id", userId)
             .single();
 
-        if (profile && profile.notifications_enabled === false) {
+        if (profile && (profile as any).notifications_enabled === false) {
             return { success: true, message: "Notifications disabled by user" };
+        }
+
+        if (profile && preferenceField && (profile as any)[preferenceField] === false) {
+            return { success: true, message: `${preferenceField} disabled by user` };
         }
 
         const { error } = await supabase.from("notifications").insert({
@@ -133,7 +163,7 @@ export async function createNotification(params: CreateNotificationParams) {
             .eq("title", title)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
         // Append notifId to URL for auto-mark-as-read on click
         if (insertedNotif?.id) {
@@ -181,23 +211,29 @@ export async function createBulkNotifications(
     params: Omit<CreateNotificationParams, "userId">
 ) {
     const { title, message, type, relatedId, classId, senderId, actionType } = params;
+    const preferenceField = getPreferenceField(type);
 
     try {
         if (!userIds || userIds.length === 0) {
             return { success: true, message: "No users to notify" };
         }
 
-        // Filter out users who have notifications disabled globally
+        // Filter out users who have notifications disabled globally or for this category
+        const selectFields = preferenceField
+            ? `user_id, notifications_enabled, ${preferenceField}`
+            : "user_id, notifications_enabled";
         const { data: profiles, error: profileError } = await supabase
             .from("profiles")
-            .select("user_id")
+            .select(selectFields)
             .in("user_id", userIds)
-            .eq("notifications_enabled", false);
+            .or(preferenceField
+                ? `notifications_enabled.eq.false,${preferenceField}.eq.false`
+                : `notifications_enabled.eq.false`);
 
         let activeUserIds = [...userIds];
 
         if (profiles && profiles.length > 0) {
-            const disabledUserIds = new Set(profiles.map(p => p.user_id));
+            const disabledUserIds = new Set(profiles.map(p => (p as any).user_id));
             activeUserIds = userIds.filter(id => !disabledUserIds.has(id));
         }
 

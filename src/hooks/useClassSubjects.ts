@@ -2,9 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Module-level cache ───────────────────────────────────────────────────────
-const subjectsCache = new Map<string, Subject[]>();
+const subjectsCache = createRegisteredMap<string, Subject[]>();
+
+function getClassSubjectCacheKey(userId?: string, classId?: string | null) {
+    if (!userId || !classId) return null;
+    return `${userId}_${classId}`;
+}
 
 export interface Subject {
     id: string;
@@ -24,30 +30,31 @@ export interface CreateSubjectDTO {
 
 export function useClassSubjects(classId: string | null) {
     const { user } = useAuth();
+    const cacheKey = getClassSubjectCacheKey(user?.id, classId);
     const [subjects, setSubjects] = useState<Subject[]>(() => {
-        if (classId && subjectsCache.has(classId)) {
-            return subjectsCache.get(classId) || [];
+        if (cacheKey && subjectsCache.has(cacheKey)) {
+            return subjectsCache.get(cacheKey) || [];
         }
         return [];
     });
     const [loading, setLoading] = useState(() => {
-        return !classId || !subjectsCache.has(classId);
+        return cacheKey ? !subjectsCache.has(cacheKey) : false;
     });
     const [error, setError] = useState<Error | null>(null);
 
     // Update state synchronously if classId changes and we have cached data
     useEffect(() => {
-        if (!classId) {
+        if (!cacheKey) {
             setSubjects([]);
             setLoading(false);
-        } else if (subjectsCache.has(classId)) {
-            setSubjects(subjectsCache.get(classId) || []);
+        } else if (subjectsCache.has(cacheKey)) {
+            setSubjects(subjectsCache.get(cacheKey) || []);
             setLoading(false);
         } else {
             setSubjects([]);
             setLoading(true);
         }
-    }, [classId]);
+    }, [cacheKey]);
 
     const fetchSubjects = useCallback(async (silentRefresh = false) => {
         if (!classId || !user) {
@@ -57,7 +64,13 @@ export function useClassSubjects(classId: string | null) {
         }
 
         try {
-            if (!silentRefresh && !subjectsCache.has(classId)) {
+            if (!cacheKey) {
+                setSubjects([]);
+                setLoading(false);
+                return;
+            }
+
+            if (!silentRefresh && !subjectsCache.has(cacheKey)) {
                 setLoading(true);
             }
             const { data, error: fetchError } = await supabase
@@ -69,18 +82,18 @@ export function useClassSubjects(classId: string | null) {
             if (fetchError) throw fetchError;
 
             setSubjects(data || []);
-            if (data) subjectsCache.set(classId, data);
+            if (data) subjectsCache.set(cacheKey, data);
             setError(null);
         } catch (err) {
             console.error('Error fetching subjects:', err);
             setError(err as Error);
-            if (!subjectsCache.has(classId)) {
+            if (cacheKey && !subjectsCache.has(cacheKey)) {
                 setSubjects([]);
             }
         } finally {
             setLoading(false);
         }
-    }, [classId, user]);
+    }, [cacheKey, classId, user]);
 
     useEffect(() => {
         fetchSubjects();

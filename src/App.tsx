@@ -29,21 +29,14 @@ import LecturerDashboard from "./pages/LecturerDashboard";
 import ClassFeed from "./pages/ClassFeed";
 import Messages from "./pages/Messages";
 import Schedule from "./pages/Schedule";
-import Notifications from "./pages/Notifications";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
 
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentQuizzes from "./pages/StudentQuizzes";
-import AIChat from "./pages/AIChat";
 import AllStudents from "./pages/AllStudents";
 import CreateClass from "./pages/CreateClass";
 import LecturerTimeTable from "./pages/LecturerTimeTable";
 import LecturerClassesAssignments from "./pages/LecturerClassesAssignments";
 import LecturerClassesQuizzes from "./pages/LecturerClassesQuizzes";
-import CallHistory from "./pages/CallHistory";
-import StreakPage from "./pages/StreakPage";
-import KnowledgeMap from "@/pages/KnowledgeMap";
 
 // ── Lazy imports: Auth pages & one-off pages (visited rarely) ────────────────
 const Index = lazy(() => import("./pages/Index"));
@@ -74,6 +67,13 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Help = lazy(() => import("./pages/Help"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const AIChat = lazy(() => import("./pages/AIChat"));
+const CallHistory = lazy(() => import("./pages/CallHistory"));
+const StreakPage = lazy(() => import("./pages/StreakPage"));
+const KnowledgeMap = lazy(() => import("./pages/KnowledgeMap"));
 
 const LoadingFallback = () => {
   useEffect(() => {
@@ -132,8 +132,10 @@ const LoadingFallback = () => {
 };
 
 // Global polyfill for chunk errors
-window.addEventListener('error', (e) => {
-  if (e.message.includes('Loading chunk') || e.message.includes('CSS chunk')) {
+window.addEventListener('error', (e: any) => {
+  // Defensive check for message to prevent "cannot read properties of undefined (reading 'includes')"
+  const message = (e && typeof e.message === 'string') ? e.message : "";
+  if (message && (message.includes('Loading chunk') || message.includes('CSS chunk'))) {
     console.warn("Chunk error detected, reloading...");
     window.location.reload();
   }

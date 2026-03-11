@@ -33,6 +33,8 @@ type IncomingPayload = {
 
 type RoleRow = { role: string };
 type ConversationRow = { participant_1: string; participant_2: string };
+type CallSessionRow = { caller_id: string; receiver_id: string };
+type PushSubscriptionRow = { endpoint: string; notification_enabled: boolean };
 
 function json(status: number, body: unknown) {
     return new Response(JSON.stringify(body), {
@@ -57,7 +59,32 @@ function flattenData(data: Record<string, unknown> | undefined): Record<string, 
     return out;
 }
 
+async function importPrivateKey(pem: string): Promise<CryptoKey> {
+    const pemContents = pem
+        .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+        .replace(/-----END PRIVATE KEY-----/g, "")
+        .replace(/\s+/g, "");
+
+    const binaryDerString = atob(pemContents);
+    const binaryDer = new Uint8Array(binaryDerString.length);
+    for (let i = 0; i < binaryDerString.length; i++) {
+        binaryDer[i] = binaryDerString.charCodeAt(i);
+    }
+
+    return await crypto.subtle.importKey(
+        "pkcs8",
+        binaryDer,
+        {
+            name: "RSASSA-PKCS1-v1_5",
+            hash: "SHA-256",
+        },
+        true,
+        ["sign"]
+    );
+}
+
 async function getAccessToken(sa: ServiceAccount): Promise<string> {
+    const key = await importPrivateKey(sa.private_key);
     const jwt = await create(
         { alg: "RS256", typ: "JWT" },
         {
@@ -67,7 +94,7 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
             exp: Math.floor(Date.now() / 1000) + 3600,
             iat: Math.floor(Date.now() / 1000),
         },
-        sa.private_key,
+        key,
     );
 
     const params = new URLSearchParams();
@@ -98,6 +125,7 @@ async function sendFCM(
 ) {
     const accessToken = await getAccessToken(sa);
     const isCall = payload.type === "incoming_call" || payload.type === "call";
+    const ttl = isCall ? "45s" : "30s";
 
     const message: Record<string, unknown> = {
         token,
@@ -109,7 +137,7 @@ async function sendFCM(
         },
         android: {
             priority: "high",
-            ttl: "30s",
+            ttl,
             direct_boot_ok: true,
         },
     };
@@ -125,8 +153,8 @@ async function sendFCM(
             sound: "default",
             default_sound: true,
             default_vibrate_timings: true,
-            priority: "max",
-            visibility: "public",
+            notification_priority: "PRIORITY_MAX",
+            visibility: "PUBLIC",
         };
     }
 
@@ -140,10 +168,18 @@ async function sendFCM(
     });
 
     if (!res.ok) {
-        throw new Error(`FCM send failed (${res.status}): ${await res.text()}`);
+        const errorText = await res.text();
+        console.error(`FCM send failed (${res.status}): ${errorText}`);
+        throw new Error(`FCM send failed (${res.status}): ${errorText}`);
     }
 
     return await res.json();
+}
+
+function extractFcmTokenFromEndpoint(endpoint: string): string | null {
+    if (!endpoint.startsWith("fcm:")) return null;
+    const token = endpoint.slice(4).trim();
+    return token.length > 0 ? token : null;
 }
 
 serve(async (req) => {
@@ -155,7 +191,7 @@ serve(async (req) => {
     try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
         const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || serviceRole;
 
         if (!supabaseUrl || !serviceRole) {
             return json(500, { error: "Server misconfiguration: missing Supabase env vars" });
@@ -199,6 +235,7 @@ serve(async (req) => {
         if (callerId !== targetUserId) {
             const notificationType = notification.type ?? "";
             const conversationId = String(notification.data?.conversationId ?? "");
+            const callSessionId = String(notification.data?.sessionId ?? notification.data?.roomId ?? "");
             let allowed = false;
 
             // Messaging path: sender can notify only if both users are participants of this conversation.
@@ -212,6 +249,21 @@ serve(async (req) => {
                 if (!convErr && conversation) {
                     const c = conversation as ConversationRow;
                     const pair = new Set([c.participant_1, c.participant_2]);
+                    allowed = pair.has(callerId) && pair.has(targetUserId);
+                }
+            }
+
+            // Call path: caller can notify only the matched peer in an existing call session.
+            if (!allowed && (notificationType === "incoming_call" || notificationType === "call") && callSessionId) {
+                const { data: callSession, error: callErr } = await serviceClient
+                    .from("call_sessions")
+                    .select("caller_id, receiver_id")
+                    .eq("id", callSessionId)
+                    .maybeSingle();
+
+                if (!callErr && callSession) {
+                    const session = callSession as CallSessionRow;
+                    const pair = new Set([session.caller_id, session.receiver_id]);
                     allowed = pair.has(callerId) && pair.has(targetUserId);
                 }
             }
@@ -251,6 +303,17 @@ serve(async (req) => {
             return json(200, { success: true, skipped: "notifications_disabled" });
         }
 
+        const { data: pushSubscriptions, error: pushSubscriptionsError } = await serviceClient
+            .from("push_subscriptions")
+            .select("endpoint, notification_enabled")
+            .eq("user_id", targetUserId)
+            .eq("notification_enabled", true)
+            .like("endpoint", "fcm:%");
+
+        if (pushSubscriptionsError) {
+            return json(500, { error: `Push subscription lookup failed: ${pushSubscriptionsError.message}` });
+        }
+
         const saRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT") ?? "";
         if (!saRaw) {
             return json(500, { error: "Server misconfiguration: missing FIREBASE_SERVICE_ACCOUNT" });
@@ -263,14 +326,52 @@ serve(async (req) => {
             return json(500, { error: "Invalid FIREBASE_SERVICE_ACCOUNT JSON" });
         }
 
-        if (!profile.fcm_token) {
+        const tokens = new Set<string>();
+        if (profile.fcm_token) {
+            tokens.add(profile.fcm_token);
+        }
+
+        for (const row of (pushSubscriptions ?? []) as PushSubscriptionRow[]) {
+            const tokenFromSubscription = extractFcmTokenFromEndpoint(row.endpoint);
+            if (tokenFromSubscription) {
+                tokens.add(tokenFromSubscription);
+            }
+        }
+
+        const targetTokens = Array.from(tokens);
+        if (targetTokens.length === 0) {
             return json(200, { success: true, skipped: "missing_fcm_token" });
         }
 
-        const result = await sendFCM(serviceAccount, profile.fcm_token, notification);
-        return json(200, { success: true, channel: "fcm", result });
+        const sendResults = await Promise.allSettled(
+            targetTokens.map((targetToken) => sendFCM(serviceAccount, targetToken, notification)),
+        );
+
+        const successes = sendResults
+            .map((result, index) => ({ result, token: targetTokens[index] }))
+            .filter(({ result }) => result.status === "fulfilled");
+        const failures = sendResults
+            .map((result, index) => ({ result, token: targetTokens[index] }))
+            .filter(({ result }) => result.status === "rejected")
+            .map(({ result, token }) => ({
+                token,
+                error: result.status === "rejected" ? String(result.reason) : "unknown",
+            }));
+
+        if (successes.length === 0) {
+            return json(400, { error: "All FCM sends failed", failures });
+        }
+
+        return json(200, {
+            success: true,
+            channel: "fcm",
+            sent: successes.length,
+            failed: failures.length,
+            failures,
+        });
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        console.error(`Error in send-push handler: ${msg}`);
         return json(400, { error: msg });
     }
 });

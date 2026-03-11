@@ -1,6 +1,7 @@
 package com.eduspace.app;
 
 import android.app.KeyguardManager;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
@@ -18,14 +19,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 public class IncomingCallActivity extends AppCompatActivity {
+
+    private static final String APP_SCHEME = "eduspace";
+    private static final String APP_HOST = "call";
+    private static final int CALL_NOTIFICATION_ID = 1001;
+    private static final long AUTO_DISMISS_MS = 45000L;
 
     private MediaPlayer mediaPlayer;
     private String callerAvatar;
@@ -33,6 +36,15 @@ public class IncomingCallActivity extends AppCompatActivity {
     private String callerName;
     private String callerId;
     private String callType;
+    private String actionToken;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable autoDismissRunnable = new Runnable() {
+        @Override
+        public void run() {
+            cancelIncomingCallNotification();
+            finish();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +74,7 @@ public class IncomingCallActivity extends AppCompatActivity {
         callerId = intent.getStringExtra("callerId");
         callType = intent.getStringExtra("callType");
         callerAvatar = intent.getStringExtra("callerAvatar");
+        actionToken = intent.getStringExtra("actionToken");
 
         // Set UI
         TextView tvCallerName = findViewById(R.id.callerName);
@@ -97,12 +110,7 @@ public class IncomingCallActivity extends AppCompatActivity {
         });
 
         // Auto-end after 45s if no answer
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                finish();
-            }
-        }, 45000);
+        handler.postDelayed(autoDismissRunnable, AUTO_DISMISS_MS);
     }
 
     private void loadAvatar(String url) {
@@ -157,29 +165,51 @@ public class IncomingCallActivity extends AppCompatActivity {
 
     private void acceptCall() {
         stopRingtone();
+        cancelIncomingCallNotification();
 
-        // Launch Main Activity with Deep Link
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        
-        // Deep link for Capacitor to handle - this will trigger App.addListener('appUrlOpen')
-        String deepLinkUrl = "https://eduspace-five.vercel.app/messages?session=" + sessionId + "&action=accept";
-        intent.setData(Uri.parse(deepLinkUrl));
-        intent.setAction(Intent.ACTION_VIEW);
-        
-        startActivity(intent);
-        finish();
+        if (sessionId == null || sessionId.isEmpty()) {
+            finish();
+            return;
+        }
+
+        dispatchNativeAction(IncomingCallActionReceiver.ACTION_ACCEPT_CALL);
     }
 
     private void rejectCall() {
         stopRingtone();
-        // Here we ideally call an endpoint to reject.
-        // For now, just close.
+        cancelIncomingCallNotification();
+
+        if (sessionId == null || sessionId.isEmpty()) {
+            finish();
+            return;
+        }
+
+        dispatchNativeAction(IncomingCallActionReceiver.ACTION_REJECT_CALL);
+    }
+
+    private void dispatchNativeAction(String action) {
+        Intent intent = new Intent(this, IncomingCallActionReceiver.class);
+        intent.setAction(action);
+        intent.putExtra(IncomingCallActionReceiver.EXTRA_SESSION_ID, sessionId);
+        intent.putExtra(IncomingCallActionReceiver.EXTRA_CALLER_ID, callerId);
+        intent.putExtra(IncomingCallActionReceiver.EXTRA_CALLER_NAME, callerName);
+        intent.putExtra(IncomingCallActionReceiver.EXTRA_CALL_TYPE, callType);
+        intent.putExtra(IncomingCallActionReceiver.EXTRA_CALLER_AVATAR, callerAvatar);
+        intent.putExtra(IncomingCallActionReceiver.EXTRA_ACTION_TOKEN, actionToken);
+        sendBroadcast(intent);
         finish();
+    }
+
+    private void cancelIncomingCallNotification() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.cancel(CALL_NOTIFICATION_ID);
+        }
     }
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacks(autoDismissRunnable);
         stopRingtone();
         super.onDestroy();
     }

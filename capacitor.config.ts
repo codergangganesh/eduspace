@@ -1,15 +1,17 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const devServerUrl = process.env.CAPACITOR_DEV_SERVER_URL?.trim();
+
 const config: CapacitorConfig = {
   appId: 'com.eduspace.app',
   appName: 'Eduspace',
   webDir: 'dist',
-  server: {
-    // Replace with your computer's local IP address (e.g., 192.168.1.10)
-    // to enable live reload on your personal mobile device.
-    url: 'http://10.200.140.183:8082',
-    cleartext: true
-  },
+  server: devServerUrl
+    ? {
+        url: devServerUrl,
+        cleartext: devServerUrl.startsWith('http://'),
+      }
+    : undefined,
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],

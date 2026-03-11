@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface CallModalProps {
     isOpen: boolean;
@@ -44,20 +45,35 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
                     }
                 });
 
-                if (error) throw error;
+                if (error) {
+                    console.error("Token generation error:", error);
+                    throw error;
+                }
+
+                console.log("Jitsi token generated successfully:", !!data.token);
 
                 const script = document.createElement("script");
+                script.id = "jitsi-external-api";
                 script.src = `https://${domain}/${appId}/external_api.js`;
                 script.async = true;
-                document.body.appendChild(script);
+                
+                script.onerror = (e) => {
+                    console.error("Jitsi script load error:", e);
+                    setIsLoading(false);
+                    toast.error("Failed to load call engine. Please check your connection.");
+                };
 
                 script.onload = () => {
+                    console.log("Jitsi script loaded successfully");
                     const roomName = `${appId}/${conferenceName}`;
 
                     if ((window as any).JitsiMeetExternalAPI) {
+                        const container = document.querySelector('#jaas-container');
+                        if (container) container.innerHTML = '';
+
                         api = new (window as any).JitsiMeetExternalAPI(domain, {
                             roomName: roomName,
-                            parentNode: document.querySelector('#jaas-container'),
+                            parentNode: container,
                             width: '100%',
                             height: '100%',
                             jwt: data.token,
@@ -94,24 +110,49 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
                             onClose();
                         });
 
+                        api.addEventListener('deploymentInfoError', (e: any) => {
+                            console.error("Jitsi deployment info error:", e);
+                        });
+
+                        setIsLoading(false);
+                    } else {
+                        console.error("JitsiMeetExternalAPI not found on window after script load");
                         setIsLoading(false);
                     }
                 };
+
+                document.body.appendChild(script);
             } catch (err) {
                 console.error("Failed to initialize Jitsi:", err);
                 setIsLoading(false);
+                toast.error("Failed to start the call.");
             }
         };
 
         const container = document.querySelector('#jaas-container');
         if (container) container.innerHTML = '';
-        initJitsi();
+        
+        // If script already exists, handle it
+        const existingScript = document.getElementById("jitsi-external-api");
+        if ((window as any).JitsiMeetExternalAPI) {
+             console.log("Jitsi API already available, using existing script");
+             // Short delay to ensure DOM is ready
+             setTimeout(initJitsi, 100);
+        } else if (existingScript) {
+             existingScript.remove();
+             initJitsi();
+        } else {
+             initJitsi();
+        }
 
         return () => {
-            if (api) api.dispose();
+            if (api) {
+                console.log("Disposing Jitsi API");
+                api.dispose();
+            }
             const cont = document.querySelector('#jaas-container');
             if (cont) cont.innerHTML = '';
-            const scripts = document.querySelectorAll(`script[src*="external_api.js"]`);
+            const scripts = document.querySelectorAll(`script[id="jitsi-external-api"], script[src*="external_api.js"]`);
             scripts.forEach(s => s.remove());
         };
     }, [isOpen, conversationId, userName, type, isMeeting]);

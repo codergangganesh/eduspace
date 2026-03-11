@@ -7,16 +7,22 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 const studentQuizzesCache = new Map<string, any[]>();
 const enrolledClassesCache = new Map<string, { id: string, class_name: string, course_code: string }[]>();
 
+function getStudentQuizCacheKey(userId?: string, classId?: string) {
+    if (!classId) return null;
+    return `${userId || 'anonymous'}_${classId}`;
+}
+
 export function useStudentQuizzes(selectedClassId?: string) {
     const { user } = useAuth();
+    const cacheKey = getStudentQuizCacheKey(user?.id, selectedClassId);
     const [quizzes, setQuizzes] = useState<any[]>(() => {
-        if (selectedClassId && studentQuizzesCache.has(selectedClassId)) {
-            return studentQuizzesCache.get(selectedClassId) || [];
+        if (cacheKey && studentQuizzesCache.has(cacheKey)) {
+            return studentQuizzesCache.get(cacheKey) || [];
         }
         return [];
     });
     const [loading, setLoading] = useState(() => {
-        return !selectedClassId || !studentQuizzesCache.has(selectedClassId);
+        return !cacheKey || !studentQuizzesCache.has(cacheKey);
     });
     const [enrolledClasses, setEnrolledClasses] = useState<{ id: string, class_name: string, course_code: string }[]>(() => {
         // user might not be available initially due to context rendering, but let's try
@@ -92,9 +98,11 @@ export function useStudentQuizzes(selectedClassId?: string) {
             return;
         }
 
+        const targetCacheKey = getStudentQuizCacheKey(user.id, targetClassId);
+
         try {
             console.log(`[useStudentQuizzes] Fetching quizzes for class: ${targetClassId}`);
-            if (!silentRefresh && !studentQuizzesCache.has(targetClassId)) {
+            if (!silentRefresh && (!targetCacheKey || !studentQuizzesCache.has(targetCacheKey))) {
                 setLoading(true);
             }
 
@@ -115,7 +123,9 @@ export function useStudentQuizzes(selectedClassId?: string) {
 
             if (!quizzesData || quizzesData.length === 0) {
                 setQuizzes([]);
-                studentQuizzesCache.set(targetClassId, []);
+                if (targetCacheKey) {
+                    studentQuizzesCache.set(targetCacheKey, []);
+                }
                 setLoading(false);
                 return;
             }
@@ -206,7 +216,9 @@ export function useStudentQuizzes(selectedClassId?: string) {
             }) || []);
 
             setQuizzes(processedQuizzes);
-            studentQuizzesCache.set(targetClassId, processedQuizzes);
+            if (targetCacheKey) {
+                studentQuizzesCache.set(targetCacheKey, processedQuizzes);
+            }
 
         } catch (error: any) {
             console.error('Error fetching student quizzes:', error.message || JSON.stringify(error, null, 2));
@@ -223,8 +235,8 @@ export function useStudentQuizzes(selectedClassId?: string) {
     // Fetch quizzes when selectedClassId changes
     useEffect(() => {
         if (selectedClassId) {
-            if (studentQuizzesCache.has(selectedClassId)) {
-                setQuizzes(studentQuizzesCache.get(selectedClassId) || []);
+            if (cacheKey && studentQuizzesCache.has(cacheKey)) {
+                setQuizzes(studentQuizzesCache.get(cacheKey) || []);
                 setLoading(false);
             } else {
                 setQuizzes([]);
@@ -236,7 +248,7 @@ export function useStudentQuizzes(selectedClassId?: string) {
             // Ensure loading is false if no class is selected
             setLoading(false);
         }
-    }, [selectedClassId, fetchStudentQuizzes]);
+    }, [cacheKey, fetchStudentQuizzes, selectedClassId]);
 
     const refreshQuizzes = useCallback(() => {
         fetchStudentQuizzes();

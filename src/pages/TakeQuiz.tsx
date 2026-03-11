@@ -36,7 +36,7 @@ export default function TakeQuiz() {
     const startTimeRef = useRef<number>(Date.now());
 
     // LocalStorage keys for persistence
-    const getStorageKey = (key: string) => `quiz_${quizId}_${key}`;
+    const getStorageKey = (key: string) => `quiz_${user?.id || 'anonymous'}_${quizId}_${key}`;
 
     // Load saved quiz state from localStorage on mount
     useEffect(() => {
@@ -65,14 +65,14 @@ export default function TakeQuiz() {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [quizId]);
+    }, [quizId, user?.id]);
 
     // Save currentIndex to localStorage when it changes
     useEffect(() => {
         if (quizId && !result) {
             localStorage.setItem(getStorageKey('currentIndex'), currentIndex.toString());
         }
-    }, [currentIndex, quizId, result]);
+    }, [currentIndex, quizId, result, user?.id]);
 
     // Clear localStorage when quiz is submitted
     const clearQuizStorage = () => {
@@ -298,14 +298,29 @@ export default function TakeQuiz() {
         }
     };
 
-    const clearAnswer = () => {
+    const clearAnswer = async () => {
         const currentQuestion = questions[currentIndex];
-        if (currentQuestion) {
+        const existingAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
+        if (currentQuestion && existingAnswer) {
             setAnswers(prev => {
                 const newAnswers = { ...prev };
                 delete newAnswers[currentQuestion.id];
                 return newAnswers;
             });
+
+            if (submissionId) {
+                const { error } = await supabase
+                    .from('quiz_answers')
+                    .delete()
+                    .eq('submission_id', submissionId)
+                    .eq('question_id', currentQuestion.id);
+
+                if (error) {
+                    console.error("Error clearing saved answer", error);
+                    setAnswers(prev => ({ ...prev, [currentQuestion.id]: existingAnswer }));
+                    toast.error("Failed to clear answer");
+                }
+            }
         }
     };
 

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
 import { notifyClassStudents, sendClassEmail, getLecturerName } from '@/lib/notificationService';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,28 +52,65 @@ const db = supabase as any;
 
 // ── Module-level cache ───────────────────────────────────────────────────────
 // Persists across component mounts so navigating away and back shows data instantly.
-const postsCache = new Map<string, FeedPost[]>();
-let classesCache: ClassOption[] | null = null;
-let cachedSelectedClassId: string | null = null;
+const postsCache = createRegisteredMap<string, FeedPost[]>();
+const classesCache = createRegisteredMap<string, ClassOption[]>();
+const selectedClassCache = createRegisteredMap<string, string | null>();
+
+function getClassFeedCacheKey(userId?: string, classId?: string | null) {
+    if (!userId || !classId) return null;
+    return `${userId}_${classId}`;
+}
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useClassFeed() {
     const { user, role } = useAuth();
     const [posts, setPosts] = useState<FeedPost[]>(() => {
-        // Initialize from cache if available
-        if (cachedSelectedClassId && postsCache.has(cachedSelectedClassId)) {
-            return postsCache.get(cachedSelectedClassId) || [];
+        const cachedSelectedClassId = user ? selectedClassCache.get(user.id) || null : null;
+        const cacheKey = getClassFeedCacheKey(user?.id, cachedSelectedClassId);
+        if (cacheKey && postsCache.has(cacheKey)) {
+            return postsCache.get(cacheKey) || [];
         }
         return [];
     });
-    const [classes, setClasses] = useState<ClassOption[]>(() => classesCache || []);
-    const [selectedClassId, setSelectedClassId] = useState<string | null>(() => cachedSelectedClassId);
+    const [classes, setClasses] = useState<ClassOption[]>(() => {
+        if (user && classesCache.has(user.id)) {
+            return classesCache.get(user.id) || [];
+        }
+        return [];
+    });
+    const [selectedClassId, setSelectedClassId] = useState<string | null>(() => {
+        if (user && selectedClassCache.has(user.id)) {
+            return selectedClassCache.get(user.id) || null;
+        }
+        return null;
+    });
     const [loading, setLoading] = useState(() => {
-        // Only show loading if we have NO cached data at all
-        return !cachedSelectedClassId || !postsCache.has(cachedSelectedClassId);
+        if (!user) return false;
+        const cachedSelectedClassId = selectedClassCache.get(user.id) || null;
+        const cacheKey = getClassFeedCacheKey(user.id, cachedSelectedClassId);
+        return cacheKey ? !postsCache.has(cacheKey) : true;
     });
     const [posting, setPosting] = useState(false);
+
+    useEffect(() => {
+        if (!user) {
+            setPosts([]);
+            setClasses([]);
+            setSelectedClassId(null);
+            setLoading(false);
+            return;
+        }
+
+        const cachedClasses = classesCache.get(user.id) || [];
+        const cachedSelectedClassId = selectedClassCache.get(user.id) || null;
+        const cacheKey = getClassFeedCacheKey(user.id, cachedSelectedClassId);
+
+        setClasses(cachedClasses);
+        setSelectedClassId(cachedSelectedClassId);
+        setPosts(cacheKey && postsCache.has(cacheKey) ? postsCache.get(cacheKey) || [] : []);
+        setLoading(cacheKey ? !postsCache.has(cacheKey) : true);
+    }, [user?.id]);
 
     // ── Fetch user's classes ─────────────────────────────────────────────
 
@@ -84,7 +122,10 @@ export function useClassFeed() {
                 const enrolledIds = await getEnrolledClassIds(user.id);
                 if (enrolledIds.length === 0) {
                     setClasses([]);
-                    classesCache = [];
+                    classesCache.set(user.id, []);
+                    selectedClassCache.set(user.id, null);
+                    setSelectedClassId(null);
+                    setPosts([]);
                     return;
                 }
                 const { data } = await supabase
@@ -95,10 +136,24 @@ export function useClassFeed() {
                     .order('created_at', { ascending: false });
 
                 setClasses(data || []);
-                classesCache = data || [];
+                classesCache.set(user.id, data || []);
+                if (!data || data.length === 0) {
+                    selectedClassCache.set(user.id, null);
+                    setSelectedClassId(null);
+                    setPosts([]);
+                    setLoading(false);
+                    return;
+                }
+
+                if (selectedClassId && !data.some(cls => cls.id === selectedClassId)) {
+                    setSelectedClassId(data[0].id);
+                    selectedClassCache.set(user.id, data[0].id);
+                    return;
+                }
+
                 if (data && data.length > 0 && !selectedClassId) {
                     setSelectedClassId(data[0].id);
-                    cachedSelectedClassId = data[0].id;
+                    selectedClassCache.set(user.id, data[0].id);
                 }
             } else {
                 const { data } = await supabase
@@ -109,10 +164,24 @@ export function useClassFeed() {
                     .order('created_at', { ascending: false });
 
                 setClasses(data || []);
-                classesCache = data || [];
+                classesCache.set(user.id, data || []);
+                if (!data || data.length === 0) {
+                    selectedClassCache.set(user.id, null);
+                    setSelectedClassId(null);
+                    setPosts([]);
+                    setLoading(false);
+                    return;
+                }
+
+                if (selectedClassId && !data.some(cls => cls.id === selectedClassId)) {
+                    setSelectedClassId(data[0].id);
+                    selectedClassCache.set(user.id, data[0].id);
+                    return;
+                }
+
                 if (data && data.length > 0 && !selectedClassId) {
                     setSelectedClassId(data[0].id);
-                    cachedSelectedClassId = data[0].id;
+                    selectedClassCache.set(user.id, data[0].id);
                 }
             }
         } catch (err) {
@@ -129,12 +198,19 @@ export function useClassFeed() {
             return;
         }
 
+        const cacheKey = getClassFeedCacheKey(user.id, selectedClassId);
+        if (!cacheKey) {
+            setPosts([]);
+            setLoading(false);
+            return;
+        }
+
         // Cache the selected class ID for next mount
-        cachedSelectedClassId = selectedClassId;
+        selectedClassCache.set(user.id, selectedClassId);
 
         try {
             // Only show loading skeleton if there's NO cached data for this class
-            const hasCachedPosts = postsCache.has(selectedClassId);
+            const hasCachedPosts = postsCache.has(cacheKey);
             if (!hasCachedPosts) {
                 setLoading(true);
             }
@@ -151,7 +227,7 @@ export function useClassFeed() {
             if (postsError) throw postsError;
             if (!postsData || postsData.length === 0) {
                 setPosts([]);
-                postsCache.set(selectedClassId, []);
+                postsCache.set(cacheKey, []);
                 setLoading(false);
                 return;
             }
@@ -247,7 +323,7 @@ export function useClassFeed() {
 
             setPosts(enrichedPosts);
             // Update cache
-            postsCache.set(selectedClassId, enrichedPosts);
+            postsCache.set(cacheKey, enrichedPosts);
 
             // 9. Mark all posts as seen by the current user
             if (postIds.length > 0) {
@@ -459,13 +535,15 @@ export function useClassFeed() {
     // ── Wrapped setSelectedClassId — loads cached posts instantly ─────────
 
     const handleSetSelectedClassId = useCallback((classId: string) => {
-        cachedSelectedClassId = classId;
+        if (!user) return;
+        selectedClassCache.set(user.id, classId);
         setSelectedClassId(classId);
         // Instantly load cached posts for the new class (if available)
-        if (postsCache.has(classId)) {
-            setPosts(postsCache.get(classId) || []);
+        const cacheKey = getClassFeedCacheKey(user.id, classId);
+        if (cacheKey && postsCache.has(cacheKey)) {
+            setPosts(postsCache.get(cacheKey) || []);
         }
-    }, []);
+    }, [user]);
 
     return {
         posts,

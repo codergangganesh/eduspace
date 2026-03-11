@@ -4,35 +4,42 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Quiz, QuizQuestion } from '@/types/quiz';
 import { toast } from 'sonner';
 import { notifyQuizPublished } from '@/lib/notificationService';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Module-level cache ───────────────────────────────────────────────────────
-const quizzesCache = new Map<string, Quiz[]>();
+const quizzesCache = createRegisteredMap<string, Quiz[]>();
+
+function getLecturerQuizCacheKey(userId?: string, classId?: string) {
+    if (!userId || !classId) return null;
+    return `${userId}_${classId}`;
+}
 
 export function useQuizzes(classId?: string) {
     const { user } = useAuth();
+    const cacheKey = getLecturerQuizCacheKey(user?.id, classId);
     const [quizzes, setQuizzes] = useState<Quiz[]>(() => {
-        if (classId && quizzesCache.has(classId)) {
-            return quizzesCache.get(classId) || [];
+        if (cacheKey && quizzesCache.has(cacheKey)) {
+            return quizzesCache.get(cacheKey) || [];
         }
         return [];
     });
     const [loading, setLoading] = useState(() => {
-        return !classId || !quizzesCache.has(classId);
+        return cacheKey ? !quizzesCache.has(cacheKey) : false;
     });
 
     // Update state synchronously if classId changes and we have cached data
     useEffect(() => {
-        if (!classId) {
+        if (!cacheKey) {
             setQuizzes([]);
             setLoading(false);
-        } else if (quizzesCache.has(classId)) {
-            setQuizzes(quizzesCache.get(classId) || []);
+        } else if (quizzesCache.has(cacheKey)) {
+            setQuizzes(quizzesCache.get(cacheKey) || []);
             setLoading(false);
         } else {
             setQuizzes([]);
             setLoading(true);
         }
-    }, [classId]);
+    }, [cacheKey]);
 
     const fetchQuizzes = useCallback(async (silentRefresh = false) => {
         if (!user || !classId) {
@@ -40,7 +47,13 @@ export function useQuizzes(classId?: string) {
             return;
         }
         try {
-            if (!silentRefresh && !quizzesCache.has(classId)) {
+            if (!cacheKey) {
+                setQuizzes([]);
+                setLoading(false);
+                return;
+            }
+
+            if (!silentRefresh && !quizzesCache.has(cacheKey)) {
                 setLoading(true);
             }
             const { data, error } = await supabase
@@ -66,17 +79,17 @@ export function useQuizzes(classId?: string) {
             }));
 
             setQuizzes(transformedQuizzes as unknown as Quiz[]);
-            quizzesCache.set(classId, transformedQuizzes as unknown as Quiz[]);
+            quizzesCache.set(cacheKey, transformedQuizzes as unknown as Quiz[]);
         } catch (error: any) {
             console.error('Error fetching quizzes:', JSON.stringify(error, null, 2));
             toast.error(`Error loading quizzes: ${error.message || 'Unknown error'}`);
-            if (!quizzesCache.has(classId)) {
+            if (cacheKey && !quizzesCache.has(cacheKey)) {
                 setQuizzes([]);
             }
         } finally {
             setLoading(false);
         }
-    }, [user, classId]);
+    }, [cacheKey, user, classId]);
 
     // React to changes
     useEffect(() => {

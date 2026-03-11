@@ -33,7 +33,9 @@ export interface Schedule {
 
 export function useSchedule(classId?: string) {
     const { user, role } = useAuth();
-    const cacheKey = classId ? `${role}_${classId}` : `${role}_all`;
+    const cacheKey = user
+        ? `${user.id}_${role}_${classId ?? 'all'}`
+        : `${role}_${classId ?? 'all'}`;
 
     const [schedules, setSchedules] = useState<Schedule[]>(() => {
         if (scheduleCache.has(cacheKey)) {

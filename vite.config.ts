@@ -83,5 +83,41 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1000,
     minify: 'esbuild',
     cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return;
+          }
+
+          if (
+            id.includes('pdfjs-dist') ||
+            id.includes('jspdf') ||
+            id.includes('jspdf-autotable') ||
+            id.includes('html2canvas') ||
+            id.includes('html-to-image') ||
+            id.includes('xlsx')
+          ) {
+            return 'vendor-docs';
+          }
+
+          if (id.includes('three') || id.includes('react-force-graph-3d')) {
+            return 'vendor-3d';
+          }
+
+          if (id.includes('firebase')) {
+            return 'vendor-firebase';
+          }
+
+          if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
+            return 'vendor-data';
+          }
+
+          if (id.includes('framer-motion') || id.includes('/motion/') || id.includes('\\motion\\')) {
+            return 'vendor-motion';
+          }
+        },
+      },
+    },
   },
 }));

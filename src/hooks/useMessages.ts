@@ -58,6 +58,26 @@ export function useMessages() {
     const [hasMore, setHasMore] = useState(false);
     const PAGE_SIZE = 20;
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const loadedMessageCountRef = useRef(0);
+
+    const filterMessagesForCurrentUser = useCallback((rawMessages: Message[], conversationId: string) => {
+        if (!user) return rawMessages;
+
+        let filteredMessages = rawMessages;
+        const currentConv = conversations.find(c => c.id === conversationId);
+
+        if (currentConv?.cleared_at && currentConv.cleared_at[user.id]) {
+            const clearedTime = new Date(currentConv.cleared_at[user.id]).getTime();
+            filteredMessages = filteredMessages.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
+        }
+
+        if (currentConv?.auto_delete_settings?.[user.id]) {
+            const fifteenDaysAgo = Date.now() - (15 * 24 * 60 * 60 * 1000);
+            filteredMessages = filteredMessages.filter(msg => new Date(msg.created_at).getTime() > fifteenDaysAgo);
+        }
+
+        return filteredMessages;
+    }, [conversations, user]);
 
     const fetchConversations = useCallback(async () => {
         if (!user) return;
@@ -172,12 +192,16 @@ export function useMessages() {
 
     // Fetch messages effect
     useEffect(() => {
-        if (!selectedConversationId || !user) return;
+        if (!selectedConversationId || !user) {
+            loadedMessageCountRef.current = 0;
+            setMessages([]);
+            setHasMore(false);
+            return;
+        }
 
         const fetchMessages = async (isLoadMore = false) => {
             try {
-                const currentLength = isLoadMore ? messages.length : 0;
-                const from = currentLength;
+                const from = isLoadMore ? loadedMessageCountRef.current : 0;
                 const to = from + PAGE_SIZE - 1;
 
                 const { data, error: fetchError } = await supabase
@@ -189,32 +213,26 @@ export function useMessages() {
 
                 if (fetchError) throw fetchError;
 
-                let filteredData = data || [];
-                const currentConv = conversations.find(c => c.id === selectedConversationId);
-
-                if (currentConv?.cleared_at && currentConv.cleared_at[user.id]) {
-                    const clearedTime = new Date(currentConv.cleared_at[user.id]).getTime();
-                    filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > clearedTime);
-                }
-
-                // Apply individual auto-delete filter (15 days rolling window)
-                if (currentConv?.auto_delete_settings?.[user.id]) {
-                    const fifteenDaysAgo = Date.now() - (15 * 24 * 60 * 60 * 1000);
-                    filteredData = filteredData.filter(msg => new Date(msg.created_at).getTime() > fifteenDaysAgo);
-                }
-
+                const rawMessages = data || [];
+                loadedMessageCountRef.current = from + rawMessages.length;
+                const filteredData = filterMessagesForCurrentUser(rawMessages, selectedConversationId);
                 const newMessages = [...filteredData].reverse();
                 if (isLoadMore) {
-                    setMessages(prev => [...newMessages, ...prev]);
+                    setMessages(prev => {
+                        const existingIds = new Set(prev.map(message => message.id));
+                        return [...newMessages.filter(message => !existingIds.has(message.id)), ...prev];
+                    });
                 } else {
                     setMessages(newMessages);
                 }
-                setHasMore(filteredData.length === PAGE_SIZE);
+                setHasMore(rawMessages.length === PAGE_SIZE);
             } catch (err) {
                 console.error('Error in fetchMessages:', err);
             }
         };
 
+        loadedMessageCountRef.current = 0;
+        setHasMore(false);
         fetchMessages();
 
         const channel = supabase.channel(`messages_${selectedConversationId}`, {
@@ -232,17 +250,11 @@ export function useMessages() {
                 },
                 (payload) => {
                     const newMessage = payload.new as Message;
-                    const currentConv = conversations.find(c => c.id === selectedConversationId);
+                    const filteredMessage = filterMessagesForCurrentUser([newMessage], selectedConversationId);
 
                     setMessages((prev) => {
-                        // Filter real-time messages too
-                        if (currentConv?.auto_delete_settings?.[user.id]) {
-                            const fifteenDaysAgo = Date.now() - (15 * 24 * 60 * 60 * 1000);
-                            if (new Date(newMessage.created_at).getTime() <= fifteenDaysAgo) return prev;
-                        }
-
-                        if (prev.some(m => m.id === newMessage.id)) return prev;
-                        return [...prev, newMessage];
+                        if (filteredMessage.length === 0 || prev.some(m => m.id === newMessage.id)) return prev;
+                        return [...prev, filteredMessage[0]];
                     });
                     if (newMessage.sender_id !== user.id) {
                         markMessagesAsRead(selectedConversationId);
@@ -293,7 +305,7 @@ export function useMessages() {
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [selectedConversationId, user, conversations, markMessagesAsRead]);
+    }, [filterMessagesForCurrentUser, markMessagesAsRead, selectedConversationId, user]);
 
     const sendTyping = async () => {
         if (!channelRef.current || !user) return;
@@ -579,7 +591,7 @@ export function useMessages() {
 
     const loadMoreMessages = async () => {
         if (!selectedConversationId || !hasMore) return;
-        const from = messages.length;
+        const from = loadedMessageCountRef.current;
         const to = from + PAGE_SIZE - 1;
         try {
             const { data, error: fetchError } = await supabase
@@ -589,9 +601,15 @@ export function useMessages() {
                 .order('created_at', { ascending: false })
                 .range(from, to);
             if (fetchError) throw fetchError;
-            const newMessages = [...(data || [])].reverse();
-            setMessages(prev => [...newMessages, ...prev]);
-            setHasMore(data?.length === PAGE_SIZE);
+            const rawMessages = data || [];
+            loadedMessageCountRef.current = from + rawMessages.length;
+            const filteredMessages = filterMessagesForCurrentUser(rawMessages, selectedConversationId);
+            const newMessages = [...filteredMessages].reverse();
+            setMessages(prev => {
+                const existingIds = new Set(prev.map(message => message.id));
+                return [...newMessages.filter(message => !existingIds.has(message.id)), ...prev];
+            });
+            setHasMore(rawMessages.length === PAGE_SIZE);
         } catch (err) {
             console.error("Error in loadMoreMessages:", err);
         }

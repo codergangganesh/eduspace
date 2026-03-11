@@ -3,9 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { notifyNewAssignment, notifyAssignmentUpdated } from '@/lib/notificationService';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Module-level cache ───────────────────────────────────────────────────────
-const assignmentsCache = new Map<string, ClassAssignment[]>();
+const assignmentsCache = createRegisteredMap<string, ClassAssignment[]>();
+
+function getClassAssignmentCacheKey(userId?: string, classId?: string | null) {
+    if (!userId || !classId) return null;
+    return `${userId}_${classId}`;
+}
 
 export interface ClassAssignment {
     id: string;
@@ -37,30 +43,31 @@ export interface CreateClassAssignmentDTO {
 
 export function useClassAssignments(classId: string | null) {
     const { user } = useAuth();
+    const cacheKey = getClassAssignmentCacheKey(user?.id, classId);
     const [assignments, setAssignments] = useState<ClassAssignment[]>(() => {
-        if (classId && assignmentsCache.has(classId)) {
-            return assignmentsCache.get(classId) || [];
+        if (cacheKey && assignmentsCache.has(cacheKey)) {
+            return assignmentsCache.get(cacheKey) || [];
         }
         return [];
     });
     const [loading, setLoading] = useState(() => {
-        return !classId || !assignmentsCache.has(classId);
+        return cacheKey ? !assignmentsCache.has(cacheKey) : false;
     });
     const [error, setError] = useState<Error | null>(null);
 
     // Update state if classId changes and we have cached data
     useEffect(() => {
-        if (!classId) {
+        if (!cacheKey) {
             setAssignments([]);
             setLoading(false);
-        } else if (assignmentsCache.has(classId)) {
-            setAssignments(assignmentsCache.get(classId) || []);
+        } else if (assignmentsCache.has(cacheKey)) {
+            setAssignments(assignmentsCache.get(cacheKey) || []);
             setLoading(false);
         } else {
             setAssignments([]);
             setLoading(true);
         }
-    }, [classId]);
+    }, [cacheKey]);
 
     // silentRefresh: when true, don't trigger loading state (for real-time updates)
     const fetchAssignments = useCallback(async (silentRefresh = false) => {
@@ -72,7 +79,13 @@ export function useClassAssignments(classId: string | null) {
 
         try {
             // Only show loading spinner on initial load, not on real-time updates
-            if (!silentRefresh && !assignmentsCache.has(classId)) {
+            if (!cacheKey) {
+                setAssignments([]);
+                setLoading(false);
+                return;
+            }
+
+            if (!silentRefresh && !assignmentsCache.has(cacheKey)) {
                 setLoading(true);
             }
 
@@ -128,7 +141,7 @@ export function useClassAssignments(classId: string | null) {
 
             console.log('Assignments with stats:', assignmentsWithStats);
             setAssignments(assignmentsWithStats);
-            assignmentsCache.set(classId, assignmentsWithStats);
+            assignmentsCache.set(cacheKey, assignmentsWithStats);
 
             // Auto-complete logic: Check if any active assignment has full submissions
             // We do this check after setting state to avoid blocking the UI, but we trigger the update
@@ -158,13 +171,13 @@ export function useClassAssignments(classId: string | null) {
             setError(err as Error);
             // Only show error for genuine failures, not empty results
             // Set empty array on initial load failure
-            if (!assignmentsCache.has(classId)) {
+            if (cacheKey && !assignmentsCache.has(cacheKey)) {
                 setAssignments([]);
             }
         } finally {
             setLoading(false);
         }
-    }, [classId, user]);
+    }, [cacheKey, classId, user]);
 
     useEffect(() => {
         fetchAssignments();

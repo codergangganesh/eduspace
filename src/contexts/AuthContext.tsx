@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { clearRegisteredCaches } from "@/lib/cacheRegistry";
 
 export type AppRole = "student" | "lecturer" | "admin";
 
@@ -439,6 +440,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Sign out error:", error);
     } finally {
+      clearRegisteredCaches();
       setUser(null);
       setSession(null);
       setProfile(null);

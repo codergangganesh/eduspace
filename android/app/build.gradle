@@ -1,8 +1,26 @@
 apply plugin: 'com.android.application'
 
+def envProperties = new Properties()
+def envFile = rootProject.file('../.env')
+if (envFile.exists()) {
+    envFile.withInputStream { stream ->
+        envProperties.load(stream)
+    }
+}
+
+def escapeBuildConfigString = { value ->
+    return value.replace("\\", "\\\\").replace("\"", "\\\"")
+}
+
+def supabaseUrl = (System.getenv("VITE_SUPABASE_URL") ?: envProperties.getProperty("VITE_SUPABASE_URL") ?: "").trim()
+def supabaseAnonKey = (System.getenv("VITE_SUPABASE_ANON_KEY") ?: envProperties.getProperty("VITE_SUPABASE_ANON_KEY") ?: "").trim()
+
 android {
     namespace = "com.eduspace.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.eduspace.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -10,6 +28,8 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "String", "SUPABASE_URL", "\"${escapeBuildConfigString(supabaseUrl)}\""
+        buildConfigField "String", "SUPABASE_ANON_KEY", "\"${escapeBuildConfigString(supabaseAnonKey)}\""
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61

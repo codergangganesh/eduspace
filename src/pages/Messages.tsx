@@ -562,18 +562,21 @@ export default function Messages() {
 
   // Mobile View State
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+  const conversationStorageKey = user ? `last_active_conversation_${user.id}` : null;
 
   // Auto-open mobile chat when conversation selected
   useEffect(() => {
-    if (selectedConversationId) {
+    if (selectedConversationId && conversationStorageKey) {
       setIsMobileChatOpen(true);
-      localStorage.setItem('last_active_conversation', selectedConversationId);
+      localStorage.setItem(conversationStorageKey, selectedConversationId);
     }
-  }, [selectedConversationId]);
+  }, [conversationStorageKey, selectedConversationId]);
 
   // Restore state on mount
   useEffect(() => {
-    const savedId = localStorage.getItem('last_active_conversation');
+    if (!conversationStorageKey) return;
+
+    const savedId = localStorage.getItem(conversationStorageKey);
     if (savedId) {
       setSelectedConversationId(savedId);
       // We don't auto-open mobile view on refresh to prevent getting stuck if user wanted list
@@ -582,7 +585,7 @@ export default function Messages() {
       // If we restore ID, the effect above runs and sets isMobileChatOpen(true). 
       // Ideally we might want to also save 'isMobileChatOpen' state if we want perfection.
     }
-  }, []);
+  }, [conversationStorageKey]);
 
   const { isRecording, recordingTime, audioBlob, startRecording, stopRecording, resetRecorder } = useAudioRecorder();
 

@@ -52,12 +52,11 @@ export function FCMManager() {
 
                 if (Capacitor.getPlatform() === 'android') {
                     PushNotifications.createChannel({
-                        id: 'calls',
+                        id: 'eduspace_calls_v2',
                         name: 'Incoming Calls',
-                        description: 'Notifications for incoming video and audio calls',
+                        description: 'Native-style notifications for incoming calls',
                         importance: 5, // HIGH
                         visibility: 1, // PUBLIC
-                        sound: 'notification_ringtone',
                         vibration: true,
                     }).catch(e => console.error('Error creating channel:', e));
                 }
@@ -73,13 +72,30 @@ export function FCMManager() {
                     }
                 };
 
-                const l1 = await PushNotifications.addListener('registration', async (token) => {
-                    if (user) {
-                        await supabase
+                const persistNativeToken = async (tokenValue: string) => {
+                    if (!user || !tokenValue) return;
+
+                    const nativeEndpoint = `fcm:${tokenValue}`;
+
+                    await Promise.allSettled([
+                        supabase
                             .from('profiles')
-                            .update({ fcm_token: token.value })
-                            .eq('user_id', user.id);
-                    }
+                            .update({ fcm_token: tokenValue })
+                            .eq('user_id', user.id),
+                        supabase
+                            .from('push_subscriptions')
+                            .upsert({
+                                user_id: user.id,
+                                endpoint: nativeEndpoint,
+                                p256dh: 'native',
+                                auth: 'native',
+                                notification_enabled: true,
+                            }, { onConflict: 'user_id, endpoint' }),
+                    ]);
+                };
+
+                const l1 = await PushNotifications.addListener('registration', async (token) => {
+                    await persistNativeToken(token.value);
                 });
 
                 const l2 = await PushNotifications.addListener('pushNotificationReceived', (notification) => {
