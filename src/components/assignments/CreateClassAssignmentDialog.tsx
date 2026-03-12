@@ -25,7 +25,8 @@ import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Upload, X, Plus, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
-import { uploadAssignmentFile, validateAssignmentFile } from '@/lib/supabaseStorage';
+import { validateAssignmentFile } from '@/lib/supabaseStorage';
+import { uploadToSupabaseStorage } from '@/lib/supastorage';
 import { useClassAssignments, CreateClassAssignmentDTO } from '@/hooks/useClassAssignments';
 import { Subject } from '@/hooks/useClassSubjects';
 import { useAuth } from '@/contexts/AuthContext';
@@ -97,15 +98,11 @@ export function CreateClassAssignmentDialog({
                 return;
             }
 
-            // Upload file to Supabase Storage
-            const uploadResult = await uploadAssignmentFile(
-                file,
-                user?.id || 'unknown',
-                'new-assignment' // Placeholder, will be updated after creation
-            );
+            // Upload file to Supabase Storage using raw ArrayBuffer stream
+            const uploadResult = await uploadToSupabaseStorage(file);
 
-            if (!uploadResult.success || !uploadResult.url) {
-                throw new Error(uploadResult.error || 'Upload failed');
+            if (!uploadResult.url) {
+                throw new Error('Upload failed');
             }
 
             const assignmentData: CreateClassAssignmentDTO = {

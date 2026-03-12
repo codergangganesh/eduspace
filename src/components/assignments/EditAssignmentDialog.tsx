@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, Loader2, Upload, X, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { CreateAssignmentDTO, Assignment } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -79,7 +79,7 @@ export function EditAssignmentDialog({ open, onOpenChange, assignment, onUpdate 
 
             // Upload new file if selected
             if (file) {
-                const uploadResult = await uploadToCloudinary(file);
+                const uploadResult = await uploadToSupabaseStorage(file);
                 attachmentUrl = uploadResult.url;
                 attachmentName = file.name;
             }

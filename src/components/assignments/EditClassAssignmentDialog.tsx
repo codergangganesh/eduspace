@@ -23,7 +23,7 @@ import {
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { uploadToSupabaseStorage } from '@/lib/supastorage';
 import { useClassAssignments, ClassAssignment } from '@/hooks/useClassAssignments';
 import { Subject } from '@/hooks/useClassSubjects';
 import { toast } from 'sonner';
@@ -94,7 +94,7 @@ export function EditClassAssignmentDialog({
 
             // Upload new file if selected
             if (file) {
-                const uploadResult = await uploadToCloudinary(file);
+                const uploadResult = await uploadToSupabaseStorage(file);
                 attachmentUrl = uploadResult.url;
                 attachmentName = file.name;
             }

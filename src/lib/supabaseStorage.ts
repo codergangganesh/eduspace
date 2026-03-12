@@ -30,10 +30,16 @@ export async function uploadAssignmentFile(
 
         console.log('Uploading file:', { fileName, filePath, size: file.size, type: file.type });
 
+        // Convert file to ArrayBuffer to prevent "Failed to fetch" on mobile PWAs
+        // Mobile WebViews/PWAs often fail to process 'FormData' with large 'File' objects,
+        // causing arbitrary connection resets or network failures over tunnels (ngrok).
+        const arrayBuffer = await file.arrayBuffer();
+
         // Upload to Supabase Storage
         const { data, error } = await supabase.storage
             .from('assignment-submissions')
-            .upload(filePath, file, {
+            .upload(filePath, arrayBuffer, {
+                contentType: file.type,
                 cacheControl: '3600',
                 upsert: false, // Prevent overwrites
             });

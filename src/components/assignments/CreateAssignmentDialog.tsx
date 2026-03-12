@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Upload, X, Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { CreateAssignmentDTO, Subject } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -73,12 +73,23 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
 
         setLoading(true);
         try {
-            // Upload file to Cloudinary (mandatory)
-            const uploadResult = await uploadToCloudinary(file);
+            console.log("Starting assignment creation process...");
+            console.log("File to upload:", file.name, file.size, file.type);
+
+            // File size validation (10MB limit for mobile/ngrok stability)
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error("File is too large for upload via mobile tunnel. Please keep it under 10MB.");
+                setLoading(false);
+                return;
+            }
+
+            // Upload file to Supabase (mandatory)
+            const uploadResult = await uploadToSupabaseStorage(file);
+            console.log("Supabase upload successful:", uploadResult.url);
 
             const assignmentData: CreateAssignmentDTO = {
-                title: formData.title,
-                description: formData.description,
+                title: formData.title.trim(),
+                description: formData.description.trim(),
                 course_id: formData.courseId,
                 subject_id: formData.subjectId,
                 due_date: date,
@@ -86,20 +97,23 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
                 attachment_name: file.name,
             };
 
+            console.log("Creating assignment with data:", assignmentData);
             const result = await onCreate(assignmentData);
 
             if (result.success) {
+                toast.success("Assignment created successfully!");
                 setOpen?.(false);
                 // Reset form
                 setFormData({ title: "", description: "", courseId: "", subjectId: "" });
                 setDate(undefined);
                 setFile(null);
             } else {
+                console.error("Create assignment error:", result.error);
                 toast.error(result.error || "Failed to create assignment");
             }
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to upload attachment or create assignment");
+        } catch (error: any) {
+            console.error("Process failure in CreateAssignmentDialog:", error);
+            toast.error(error.message || "Failed to upload attachment or create assignment");
         } finally {
             setLoading(false);
         }

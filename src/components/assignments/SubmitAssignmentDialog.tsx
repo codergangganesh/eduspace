@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, FileText, Loader2, CheckCircle, Download, ExternalLink, Calendar, Clock, Trophy, AlertCircle, File, MoreVertical, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { uploadAssignmentFile, validateAssignmentFile } from "@/lib/supabaseStorage";
+import { validateAssignmentFile } from "@/lib/supabaseStorage";
+import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { useStreak } from "@/contexts/StreakContext";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -80,6 +81,10 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                 toast.error(validation.error || 'Invalid file');
                 return;
             }
+            if (selectedFile.size > 10 * 1024 * 1024) {
+                toast.error("File is too large for upload via mobile tunnel. Please keep it under 10MB.");
+                return;
+            }
             setFile(selectedFile);
         }
     };
@@ -109,19 +114,23 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
 
             if (file) {
                 console.log('[SubmitAssignmentDialog] Uploading new file:', file.name);
-                const uploadResult = await uploadAssignmentFile(
-                    file,
-                    profile?.user_id || 'unknown',
-                    assignment.id
-                );
 
-                if (!uploadResult.success || !uploadResult.url) {
-                    throw new Error(uploadResult.error || 'Upload failed');
+                // File size validation (10MB limit for mobile/ngrok stability)
+                if (file.size > 10 * 1024 * 1024) {
+                    toast.error("File is too large for upload via mobile tunnel. Please keep it under 10MB.");
+                    setSubmitting(false);
+                    return;
+                }
+
+                const uploadResult = await uploadToSupabaseStorage(file);
+
+                if (!uploadResult.url) {
+                    throw new Error('Upload failed');
                 }
                 attachmentUrl = uploadResult.url;
                 attachmentName = file.name;
                 fileType = file.type;
-                fileSize = file.size;
+                fileSize = file.size; // keep as number for db constraint
                 console.log('[SubmitAssignmentDialog] File uploaded successfully:', attachmentName);
                 console.log('[SubmitAssignmentDialog] New file URL:', attachmentUrl);
             } else if (hasSubmission && !file) {
@@ -457,7 +466,7 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                                     <>
                                         <Upload className="size-8 text-muted-foreground mb-2" />
                                         <p className="text-sm font-medium">Click to upload file</p>
-                                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, TXT, ZIP, RAR (Max 50MB)</p>
+                                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, TXT, ZIP, RAR (Max 10MB)</p>
                                     </>
                                 )}
                             </div>
