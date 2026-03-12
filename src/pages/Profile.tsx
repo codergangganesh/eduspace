@@ -65,6 +65,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { ProfileNotificationSettings } from "@/components/ProfileNotificationSettings";
 import SEO from "@/components/SEO";
+import imageCompression from "browser-image-compression";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -85,6 +86,8 @@ export default function Profile() {
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [showPublicProfile, setShowPublicProfile] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -192,18 +195,32 @@ export default function Profile() {
       return;
     }
 
-    // Validate file size (max 10MB) - Important for mobile users
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image size should be less than 10MB');
+    // Validate file size (max 50MB) - Important for mobile users
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Image size should be less than 50MB');
       return;
     }
+
+    // Set preview for instant visual feedback
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
 
     const uploadToast = toast.loading('Uploading profile image...');
     setIsUploadingImage(true);
 
     try {
+      // Compress image before upload for blazing fast uploads
+      toast.loading('Compressing image...', { id: uploadToast });
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true
+      };
+      const compressedFile = await imageCompression(file, options);
+
       // Upload to Cloudinary
-      const uploaded = await uploadToCloudinary(file);
+      toast.loading('Finishing upload...', { id: uploadToast });
+      const uploaded = await uploadToCloudinary(compressedFile);
       console.log('Image uploaded to Cloudinary:', uploaded.url);
 
       const result = await updateProfile({ avatar_url: uploaded.url } as Partial<ProfileType>);
@@ -215,6 +232,7 @@ export default function Profile() {
       }
     } catch (error: any) {
       console.error('Error uploading image:', error);
+      setAvatarPreview(null); // Revert preview on failure
       const errorMessage = error.message === "Failed to fetch" 
         ? "Network error. Please check your internet connection."
         : error.message || 'Failed to upload image';
@@ -237,18 +255,32 @@ export default function Profile() {
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Banner size should be less than 10MB');
+    // Validate file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Banner size should be less than 50MB');
       return;
     }
+
+    // Set preview for instant visual feedback
+    const previewUrl = URL.createObjectURL(file);
+    setBannerPreview(previewUrl);
 
     const uploadToast = toast.loading('Uploading cover photo...');
     setIsUploadingBanner(true);
 
     try {
+      // Compress banner before upload for blazing fast uploads
+      toast.loading('Compressing banner...', { id: uploadToast });
+      const options = {
+        maxSizeMB: 1.5,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      };
+      const compressedFile = await imageCompression(file, options);
+
       // Upload to Cloudinary
-      const uploaded = await uploadToCloudinary(file);
+      toast.loading('Finishing upload...', { id: uploadToast });
+      const uploaded = await uploadToCloudinary(compressedFile);
       console.log('Banner uploaded to Cloudinary:', uploaded.url);
       
       const result = await updateProfile({ cover_url: uploaded.url } as Partial<ProfileType>);
@@ -260,6 +292,7 @@ export default function Profile() {
       }
     } catch (error: any) {
       console.error('Error uploading banner:', error);
+      setBannerPreview(null); // Revert preview on failure
       const errorMessage = error.message === "Failed to fetch" 
         ? "Network error. Please check your internet connection."
         : error.message || 'Failed to upload banner';
@@ -451,7 +484,7 @@ export default function Profile() {
             {/* User Quick Info */}
             <div className="flex items-center gap-3 pb-4 border-b border-border mb-4">
               <Avatar className="size-12">
-                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
                 <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                   {initials}
                 </AvatarFallback>
@@ -499,9 +532,9 @@ export default function Profile() {
           <div className="bg-surface border border-border rounded-xl overflow-hidden">
             {/* Banner Section */}
             <div className="relative h-32 sm:h-48 w-full group">
-              {profile?.cover_url ? (
+              {bannerPreview || profile?.cover_url ? (
                 <img
-                  src={profile.cover_url}
+                  src={bannerPreview || profile?.cover_url}
                   alt="Profile Banner"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -540,7 +573,7 @@ export default function Profile() {
                 {/* Avatar with Edit */}
                 <div className="relative shrink-0 -mt-12 sm:-mt-16">
                   <Avatar className="size-24 sm:size-32 border-4 border-surface shadow-xl">
-                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
                     <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
                       {initials}
                     </AvatarFallback>
