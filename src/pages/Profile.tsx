@@ -192,12 +192,13 @@ export default function Profile() {
       return;
     }
 
-    // Validate file size (max 10MB)
+    // Validate file size (max 10MB) - Important for mobile users
     if (file.size > 10 * 1024 * 1024) {
       toast.error('Image size should be less than 10MB');
       return;
     }
 
+    const uploadToast = toast.loading('Uploading profile image...');
     setIsUploadingImage(true);
 
     try {
@@ -208,23 +209,18 @@ export default function Profile() {
       const result = await updateProfile({ avatar_url: uploaded.url } as Partial<ProfileType>);
 
       if (result.success) {
-        toast.success('Profile image updated successfully!');
+        toast.success('Profile image updated successfully!', { id: uploadToast });
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
-
-      setIsUploadingImage(false);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
-      toast.error(errorMessage);
+      const errorMessage = error.message === "Failed to fetch" 
+        ? "Network error. Please check your internet connection."
+        : error.message || 'Failed to upload image';
+      toast.error(errorMessage, { id: uploadToast });
+    } finally {
       setIsUploadingImage(false);
-
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -247,31 +243,29 @@ export default function Profile() {
       return;
     }
 
+    const uploadToast = toast.loading('Uploading cover photo...');
     setIsUploadingBanner(true);
 
     try {
       // Upload to Cloudinary
       const uploaded = await uploadToCloudinary(file);
+      console.log('Banner uploaded to Cloudinary:', uploaded.url);
+      
       const result = await updateProfile({ cover_url: uploaded.url } as Partial<ProfileType>);
 
       if (result.success) {
-        toast.success('Cover photo updated successfully!');
+        toast.success('Cover photo updated successfully!', { id: uploadToast });
       } else {
         throw new Error(result.error || 'Failed to update cover photo');
       }
-
-      setIsUploadingBanner(false);
-
-      if (bannerInputRef.current) {
-        bannerInputRef.current.value = '';
-      }
-
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Error uploading banner:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload banner';
-      toast.error(errorMessage);
+      const errorMessage = error.message === "Failed to fetch" 
+        ? "Network error. Please check your internet connection."
+        : error.message || 'Failed to upload banner';
+      toast.error(errorMessage, { id: uploadToast });
+    } finally {
       setIsUploadingBanner(false);
-
       if (bannerInputRef.current) {
         bannerInputRef.current.value = '';
       }
