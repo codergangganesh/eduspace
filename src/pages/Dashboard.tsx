@@ -13,7 +13,7 @@ import { parseISO, format, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { PendingInvitationsPanel } from "@/components/student/PendingInvitationsPanel";
 import { JoinRequestModal } from "@/components/student/JoinRequestModal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
 import { useRealtimeInvitations } from "@/hooks/useRealtimeInvitations";
@@ -63,30 +63,26 @@ export default function Dashboard() {
     }
   );
 
-  const loading = assignmentsLoading || scheduleLoading || isOnboarding || streakLoading;
+  // Show the full-page skeleton ONLY when we have absolutely no data yet
+  // (i.e. true first-ever load). All caches are module-level so on subsequent
+  // navigations the hooks initialise with data and loading stays false.
+  const hasNoData = assignments.length === 0 && schedules.length === 0;
+  const loading = (assignmentsLoading || scheduleLoading || isOnboarding || streakLoading) && hasNoData;
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <DashboardSkeleton />
-      </DashboardLayout>
-    );
-  }
+  // Process upcoming assignments — computed before early return so useMemo can run unconditionally
+  const todayIndex = new Date().getDay();
 
-  // Process upcoming assignments
   const upcomingTasks = assignments
     .filter(a => {
-      // Include both 'published' (legacy) and 'active' (new system) statuses
       const isActiveOrPublished = a.status === 'published' || a.status === 'active';
       const isNotSubmitted = a.studentStatus ? (a.studentStatus === 'pending' || a.studentStatus === 'overdue') : true;
       return isActiveOrPublished && isNotSubmitted && a.due_date;
     })
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
-    .slice(0, 3) // Limit to 3 to save space
+    .slice(0, 3)
     .map(a => {
       const dateDate = parseISO(a.due_date!);
       const isUrgent = isBefore(dateDate, addDays(new Date(), 2)) && isAfter(dateDate, new Date());
-
       return {
         id: a.id,
         title: a.title,
@@ -98,24 +94,40 @@ export default function Dashboard() {
       };
     });
 
-  // Process upcoming classes
-  const todayIndex = new Date().getDay(); // 0 is Sunday
   const upcomingClasses = schedules
-    .filter(s => s.day_of_week >= todayIndex) // Today onwards
+    .filter(s => s.day_of_week >= todayIndex)
     .sort((a, b) => {
       if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
       return a.start_time.localeCompare(b.start_time);
     })
-    .slice(0, 4) // Limit to 4
+    .slice(0, 4)
     .map(s => ({
       id: s.id,
       title: s.title,
-      course: s.location || "Room TBD", // Using location as subtitle context
+      course: s.location || "Room TBD",
       dueDate: s.day_of_week === todayIndex ? "Today" : days[s.day_of_week],
       dueTime: s.start_time.slice(0, 5),
-      type: s.type as any, // 'lecture' | 'lab' etc
-      isUrgent: s.day_of_week === todayIndex // Highlight today's classes
+      type: s.type as any,
+      isUrgent: s.day_of_week === todayIndex
     }));
+
+  // ✅ useMemo MUST be before any early return — Rules of Hooks
+  const aiInsightData = useMemo(() => ({
+    upcomingAssignmentsCount: upcomingTasks.length,
+    overdueCount: stats.pending,
+    currentStreak: streak?.current_streak || 0,
+    nextClass: upcomingClasses[0]?.title,
+    nextClassTime: upcomingClasses[0]?.dueTime
+  }), [upcomingTasks.length, stats.pending, streak?.current_streak, upcomingClasses[0]?.title, upcomingClasses[0]?.dueTime]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <DashboardSkeleton />
+      </DashboardLayout>
+    );
+  }
+
 
   return (
     <DashboardLayout
@@ -133,15 +145,7 @@ export default function Dashboard() {
         <DashboardHero />
 
         {/* AI Insight Section */}
-        <AIInsightWidget 
-          data={{
-            upcomingAssignmentsCount: upcomingTasks.length,
-            overdueCount: stats.pending, // Using simplified pending for now
-            currentStreak: streak?.current_streak || 0,
-            nextClass: upcomingClasses[0]?.title,
-            nextClassTime: upcomingClasses[0]?.dueTime
-          }}
-        />
+        <AIInsightWidget data={aiInsightData} />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">

@@ -72,7 +72,7 @@ export function RootLayout() {
                         options.hideHeaderOnMobile && "pt-[var(--safe-top)]"
                     )}
                 >
-                    <PageTransition key={location.pathname} className="h-full w-full">
+                    <PageTransition className="h-full w-full">
                         <Outlet />
                     </PageTransition>
                 </main>

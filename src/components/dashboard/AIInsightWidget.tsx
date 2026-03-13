@@ -41,6 +41,9 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const { profile } = useAuth();
     const [hasLoadedChats, setHasLoadedChats] = useState(false);
+    // Guard: tracks the last data signature that was successfully fetched
+    // so we never re-call the AI on a simple tab switch / remount.
+    const lastFetchedSignatureRef = useRef<string | null>(null);
 
 
 
@@ -61,6 +64,12 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
             const todayStr = new Date().toISOString().split('T')[0];
             const dataSignature = `${data.upcomingAssignmentsCount}-${data.overdueCount}-${data.currentStreak}-${data.nextClass}`;
             const briefingKey = `briefing_${todayStr}`;
+
+            // ✅ If we already fetched this exact signature in this session, do nothing.
+            // This prevents re-calling the AI on tab switches or component remounts.
+            if (lastFetchedSignatureRef.current === dataSignature) {
+                return;
+            }
             
             setIsLoading(true);
 
@@ -77,6 +86,8 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
                     setInsight((existingNode.metadata as any).briefing);
                     setDeepDive((existingNode.metadata as any).deepDive || "");
                     setIsLoading(false);
+                    // Mark this signature as already handled so future remounts skip the AI call.
+                    lastFetchedSignatureRef.current = dataSignature;
                     return;
                 }
 
@@ -156,6 +167,9 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
                     } else {
                         await supabase.from('knowledge_nodes').insert(nodeData);
                     }
+
+                    // Mark as fetched so remounts don't re-trigger the AI.
+                    lastFetchedSignatureRef.current = dataSignature;
                 }
             } catch (error) {
                 console.error("Failed to generate AI insight:", error);

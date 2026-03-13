@@ -7,7 +7,6 @@ import { AppProviders } from "@/components/providers/AppProviders";
 import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
-import { AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -187,10 +186,8 @@ const AuthAppGuide = () => {
 };
 
 const AnimatedRoutes = () => {
-  const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Routes>
         <Route path="/p/:id" element={<PublicProfile />} />
         <Route path="/badge/:id" element={<PublicProfile />} />
         <Route path="/profile/:id" element={<PublicProfile />} />
@@ -255,8 +252,7 @@ const AnimatedRoutes = () => {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AnimatePresence>
+    </Routes>
   );
 };
 

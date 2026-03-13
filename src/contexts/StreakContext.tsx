@@ -6,6 +6,10 @@ import { StreakUpdateModal } from '@/components/streak/StreakUpdateModal';
 import { format, subDays } from 'date-fns';
 import { toast } from 'sonner';
 
+// ── Module-level streak cache ────────────────────────────────────────────────────
+let streakCache: UserStreak | null = null;
+let badgesCache: UserBadge[] | null = null;
+
 interface StreakContextType {
     streak: UserStreak | null;
     badges: UserBadge[];
@@ -21,10 +25,11 @@ const StreakContext = createContext<StreakContextType | undefined>(undefined);
 
 export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, role } = useAuth();
-    const [streak, setStreak] = useState<UserStreak | null>(null);
-    const [badges, setBadges] = useState<UserBadge[]>([]);
+    // Initialise from module-level cache if available so `loading` starts false
+    const [streak, setStreak] = useState<UserStreak | null>(streakCache);
+    const [badges, setBadges] = useState<UserBadge[]>(badgesCache ?? []);
     const [activityLog, setActivityLog] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(streakCache === null);
     const [unlockedBadge, setUnlockedBadge] = useState<BadgeType | null>(null);
     const [showCelebration, setShowCelebration] = useState(false);
     const [showStreakUpdate, setShowStreakUpdate] = useState(false);
@@ -48,6 +53,9 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 StreakService.getStreak(user.id),
                 StreakService.getBadges(user.id)
             ]);
+            // Update module-level cache so next mount starts instantly
+            streakCache = streakData;
+            badgesCache = badgesData;
             setStreak(streakData);
             setBadges(badgesData);
         } catch (error) {

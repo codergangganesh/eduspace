@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentPendingInvitations, linkEmailToAccount } from '@/lib/classInvitationService';
 import { checkPendingInvitations } from '@/lib/accessControlService';
 import { notifyPendingAccessRequest, clearAccessRequestNotification } from '@/lib/notificationService';
+
+// ── Session-level flag ────────────────────────────────────────────────────────
+// Tracks whether we have already run the onboarding network call this session.
+// This prevents Dashboard from re-showing the skeleton UI on every navigation.
+const ONBOARDING_CHECKED_KEY = 'eduspace_onboarding_checked';
+const hasCheckedOnboarding = (): boolean =>
+    sessionStorage.getItem(ONBOARDING_CHECKED_KEY) === 'true';
+const markOnboardingChecked = (): void =>
+    sessionStorage.setItem(ONBOARDING_CHECKED_KEY, 'true');
 
 export interface PendingInvitation {
     id: string;
@@ -56,6 +64,15 @@ export function useStudentOnboarding() {
             return;
         }
 
+        // Only run the full network check once per browser session.
+        // On subsequent navigations back to the dashboard the hook resolves
+        // immediately with isOnboarding=false so the skeleton never appears.
+        if (hasCheckedOnboarding()) {
+            setLoading(false);
+            setIsOnboarding(false);
+            return;
+        }
+
         checkAndLinkAccount();
     }, [user]);
 
@@ -88,6 +105,8 @@ export function useStudentOnboarding() {
         } finally {
             setLoading(false);
             setIsOnboarding(false);
+            // Mark as done so subsequent navigations skip this check entirely
+            markOnboardingChecked();
         }
     };
 
