@@ -3,6 +3,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookOpen, Users, FileText, Settings, HelpCircle, Shield } from "lucide-react";
@@ -18,6 +19,9 @@ export function HelpCenterDialog({ open, onOpenChange }: HelpCenterDialogProps) 
             <DialogContent className="max-w-4xl max-h-[80vh]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold">Help Center</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Learn how to use EduSpace and find answers to common questions.
+                    </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[60vh] pr-4">
                     <div className="space-y-8 text-sm">

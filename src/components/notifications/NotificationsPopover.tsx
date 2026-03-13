@@ -108,18 +108,18 @@ export function NotificationsPopover() {
         <Popover>
             <PopoverTrigger asChild>
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="relative"
+                    className="relative h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group"
                     aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
                 >
-                    <Bell className="h-5 w-5" />
+                    <Bell className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     {unreadCount > 0 && (
                         <Badge
                             variant="destructive"
                             className={cn(
                                 "absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1",
-                                "flex items-center justify-center text-xs font-bold",
+                                "flex items-center justify-center text-[10px] font-black border-2 border-background shadow-lg",
                                 "animate-in zoom-in-50 duration-200"
                             )}
                         >
@@ -128,7 +128,7 @@ export function NotificationsPopover() {
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-96 p-0" align="end">
+            <PopoverContent className="w-96 p-0 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95 overflow-hidden" align="end">
                 <div className="flex flex-col">
                     {/* Header */}
                     <div className="p-4 flex items-center justify-between border-b">

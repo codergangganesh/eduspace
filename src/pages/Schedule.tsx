@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -487,6 +487,9 @@ export default function Schedule() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add New Event</DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Create a new event in your schedule by filling out the details below.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     {/* Add Form */}
@@ -616,6 +619,9 @@ export default function Schedule() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Event</DialogTitle>
+              <DialogDescription className="sr-only">
+                Update the details of your schedule event.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">

@@ -88,7 +88,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 250 }}
             className={cn(
-              "fixed left-0 top-0 bottom-0 bg-surface border-r border-border lg:hidden transition-[width] duration-300 pt-[var(--safe-top)] pb-[var(--safe-bottom)]",
+              "fixed left-0 top-0 bottom-0 bg-surface border-r border-border lg:hidden transition-[width] duration-300 pt-[var(--safe-top)] pb-[var(--safe-bottom)] flex flex-col",
               isMobileSidebarCollapsed ? "w-20" : "w-72",
               document.body.getAttribute('data-tour-active') ? "z-[9999]" : "z-[70]"
             )}
@@ -103,7 +103,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   <div className="size-8 rounded-lg overflow-hidden border border-border shrink-0">
                     <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                   </div>
-                  {!isMobileSidebarCollapsed && <span className="text-xl font-bold tracking-tight">Eduspace</span>}
+                  {!isMobileSidebarCollapsed && <span className="text-xl font-bold tracking-tight text-foreground">Eduspace</span>}
                 </Link>
                 {!isMobileSidebarCollapsed && (
                   <button
@@ -121,17 +121,14 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   let isActive = false;
 
                   if (item.path.includes('?')) {
-                    // For items with query params (like AI Quiz), require exact match including search
                     isActive = (location.pathname + location.search) === item.path;
                   } else {
-                    // For standard items, match pathname but exclude if we're in a specific mode that has its own item
                     isActive = location.pathname === item.path;
                     if (item.path === '/lecturer/quizzes' && location.search.includes('mode=create-ai')) {
                       isActive = false;
                     }
                   }
 
-                  // Override isActive if this step is being highlighted by the onboarding tour
                   if (tourActiveStepId && item.id === tourActiveStepId && document.body.getAttribute('data-tour-active') === 'true') {
                     isActive = true;
                   }
@@ -161,35 +158,21 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                 })}
               </nav>
 
-              {/* Footer Section */}
-              <div className="mt-auto pt-6 border-t border-border flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    signOut();
-                    onClose();
-                  }}
-                  className={cn(
-                    "flex items-center rounded-2xl text-sm font-black bg-red-600 text-white hover:bg-red-700 transition-all active:scale-[0.98] shadow-lg shadow-red-600/20",
-                    isMobileSidebarCollapsed ? "justify-center p-3" : "gap-3 px-3 py-3 w-full"
-                  )}
-                  title="Sign Out"
-                >
-                  <LogOut className="size-5 shrink-0" />
-                  {!isMobileSidebarCollapsed && <span>Sign Out</span>}
-                </button>
-
+              {/* Footer Section with Integrated Sign Out */}
+              <div className="mt-auto pt-6 border-t border-border">
                 <div className={cn(
-                  "flex items-center mt-2 bg-secondary/30 rounded-2xl border border-border/50",
-                  isMobileSidebarCollapsed ? "justify-center p-2" : "gap-3 px-3 py-3"
+                  "flex items-center mt-2 bg-secondary/30 rounded-2xl border border-border/50 p-2",
+                  isMobileSidebarCollapsed ? "justify-center" : "gap-3"
                 )}>
-                  <Avatar className={cn("border border-border/50 shadow-sm", isMobileSidebarCollapsed ? "size-8" : "size-10")}>
+                  <Avatar className={cn("border border-border/50 shadow-sm", isMobileSidebarCollapsed ? "size-10" : "size-10")}>
                     <AvatarImage src={profile?.avatar_url || undefined} />
                     <AvatarFallback className="bg-primary/10 text-primary font-bold">
                       {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
+                  
                   {!isMobileSidebarCollapsed && (
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-sm font-black text-foreground truncate">
                         {profile?.full_name || 'User'}
                       </span>
@@ -197,6 +180,19 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                         {role}
                       </span>
                     </div>
+                  )}
+
+                  {!isMobileSidebarCollapsed && (
+                    <button
+                      onClick={() => {
+                        signOut();
+                        onClose();
+                      }}
+                      className="size-8 rounded-lg bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white transition-all active:scale-[0.98] flex items-center justify-center"
+                      title="Sign Out"
+                    >
+                      <LogOut className="size-4" />
+                    </button>
                   )}
                 </div>
               </div>

@@ -20,6 +20,7 @@ import { useRealtimeInvitations } from "@/hooks/useRealtimeInvitations";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useStreak } from "@/contexts/StreakContext";
 import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
+import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -130,6 +131,17 @@ export default function Dashboard() {
       <div className="space-y-8">
         {/* Hero Section */}
         <DashboardHero />
+
+        {/* AI Insight Section */}
+        <AIInsightWidget 
+          data={{
+            upcomingAssignmentsCount: upcomingTasks.length,
+            overdueCount: stats.pending, // Using simplified pending for now
+            currentStreak: streak?.current_streak || 0,
+            nextClass: upcomingClasses[0]?.title,
+            nextClassTime: upcomingClasses[0]?.dueTime
+          }}
+        />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">

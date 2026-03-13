@@ -1,0 +1,276 @@
+﻿diff --git a/src/components/ProfileNotificationSettings.tsx b/src/components/ProfileNotificationSettings.tsx
+index 1e1e90b..8f74840 100644
+--- a/src/components/ProfileNotificationSettings.tsx
++++ b/src/components/ProfileNotificationSettings.tsx
+@@ -104,10 +104,10 @@ export function ProfileNotificationSettings() {
+             <CardHeader>
+                 <CardTitle className="flex items-center gap-2">
+                     <Bell className="size-5" />
+-                    Notification Preferences
++                    Notification Preference
+                 </CardTitle>
+                 <CardDescription>
+-                    Control how and when you receive notifications
++                    Turn all EduSpace notifications on or off
+                 </CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-6">
+@@ -128,25 +128,6 @@ export function ProfileNotificationSettings() {
+                         disabled={pendingField !== null}
+                     />
+                 </div>
+-
+-                {notificationOptions.map((option) => (
+-                    <div key={option.field} className="flex items-center justify-between space-x-4 rounded-lg border p-4">
+-                        <div className="flex-1 space-y-1">
+-                            <Label htmlFor={option.field} className="text-base font-medium">
+-                                {option.title}
+-                            </Label>
+-                            <p className="text-sm text-muted-foreground">
+-                                {option.description}
+-                            </p>
+-                        </div>
+-                        <Switch
+-                            id={option.field}
+-                            checked={settings[option.field]}
+-                            onCheckedChange={(enabled) => handleToggle(option.field, enabled)}
+-                            disabled={pendingField !== null || !settings.notifications_enabled}
+-                        />
+-                    </div>
+-                ))}
+             </CardContent>
+         </Card>
+     );
+diff --git a/src/components/layout/DashboardHeader.tsx b/src/components/layout/DashboardHeader.tsx
+index f746e7b..bbed3bc 100644
+--- a/src/components/layout/DashboardHeader.tsx
++++ b/src/components/layout/DashboardHeader.tsx
+@@ -1,4 +1,5 @@
+-import { Menu, Sun, Moon, UserPlus, Search } from "lucide-react";
++import { useEffect, useState } from "react";
++import { Menu, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { useTheme } from "@/contexts/ThemeContext";
+ import { UserDropdown } from "./UserDropdown";
+@@ -6,6 +7,7 @@ import { NotificationsPopover } from "@/components/notifications/NotificationsPo
+ import { useAuth } from "@/contexts/AuthContext";
+ import { ReactNode } from "react";
+ import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
++import { toast } from "sonner";
+ 
+ interface DashboardHeaderProps {
+   onMenuClick: () => void;
+@@ -14,7 +16,9 @@ interface DashboardHeaderProps {
+ 
+ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) {
+   const { theme, setTheme } = useTheme();
+-  const { profile, role } = useAuth();
++  const { profile, role, updateProfile } = useAuth();
++  const [toolsExpanded, setToolsExpanded] = useState<boolean>(true);
++  const [isSavingPreference, setIsSavingPreference] = useState(false);
+   const isLecturer = role === "lecturer";
+ 
+   // "If notification icon should be enabled" logic
+@@ -25,6 +29,67 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps)
+   // so we default to true (show bell) to avoid confusion during dev.
+   const showNotifications = profile?.notifications_enabled !== false;
+ 
++  // Initialize and react to profile changes for persistent header tools state
++  useEffect(() => {
++    if (profile && typeof (profile as any).header_tools_expanded !== "undefined") {
++      setToolsExpanded((profile as any).header_tools_expanded);
++    } else {
++      setToolsExpanded(true);
++    }
++  }, [profile]);
++
++  const handleToggleTools = async () => {
++    const next = !toolsExpanded;
++    setToolsExpanded(next);
++
++    // Persist preference if profile/updateProfile are available
++    if (!profile || !updateProfile) return;
++
++    try {
++      setIsSavingPreference(true);
++      const result = await updateProfile({ header_tools_expanded: next } as any);
++      if (!result.success) {
++        throw new Error(result.error || "Failed to save header preference");
++      }
++    } catch (error) {
++      console.error("Error updating header tools preference:", error);
++      setToolsExpanded(!next);
++      toast.error("Could not save header preference");
++    } finally {
++      setIsSavingPreference(false);
++    }
++  };
++
++  const toolButtons = (
++    <>
++      <Button
++        id="tour-btn-invite"
++        variant="default"
++        size="sm"
++        onClick={() => window.dispatchEvent(new CustomEvent("open-invite-dialog"))}
++        className="h-9 px-3 gap-2 shadow-sm shrink-0"
++        title="Invite User"
++      >
++        <UserPlus className="size-4" />
++        <span className="hidden md:inline text-xs font-bold uppercase tracking-wider">Invite</span>
++      </Button>
++      {actions}
++
++      <StudentNotesDrawer />
++
++      {showNotifications && <NotificationsPopover />}
++
++      <Button
++        variant="ghost"
++        size="icon"
++        className="hidden lg:flex"
++        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
++      >
++        {theme === "light" ? <Sun className="size-5" /> : <Moon className="size-5" />}
++      </Button>
++    </>
++  );
++
+   return (
+     <header className="sticky top-0 z-30 flex min-h-16 items-center border-b bg-surface px-4 shadow-sm lg:px-6 pt-[var(--safe-top)]">
+       <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={onMenuClick}>
+@@ -52,32 +117,31 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps)
+         >
+           <Search className="size-5" />
+         </Button>
+-        <Button
+-          id="tour-btn-invite"
+-          variant="default"
+-          size="sm"
+-          onClick={() => window.dispatchEvent(new CustomEvent("open-invite-dialog"))}
+-          className="h-9 px-3 gap-2 shadow-sm shrink-0"
+-          title="Invite User"
+-        >
+-          <UserPlus className="size-4" />
+-          <span className="hidden md:inline text-xs font-bold uppercase tracking-wider">Invite</span>
+-        </Button>
+-        {actions}
+-
+-        <StudentNotesDrawer />
+-
+-        {showNotifications && <NotificationsPopover />}
++        {/* Mobile & small screens: keep tools always visible as before */}
++        <div className="flex items-center gap-2 lg:hidden">
++          {toolButtons}
++          <UserDropdown />
++        </div>
+ 
+-        <Button
+-          variant="ghost"
+-          size="icon"
+-          className="hidden lg:flex"
+-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+-        >
+-          {theme === "light" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+-        </Button>
+-        <UserDropdown />
++        {/* Desktop: arrow toggle to show/hide tools, with UserDropdown always visible */}
++        <div className="hidden lg:flex items-center gap-2">
++          <Button
++            variant="ghost"
++            size="icon"
++            className="shrink-0"
++            onClick={handleToggleTools}
++            disabled={isSavingPreference}
++            title={toolsExpanded ? "Hide header tools" : "Show header tools"}
++          >
++            {toolsExpanded ? <ChevronRight className="size-5" /> : <ChevronLeft className="size-5" />}
++          </Button>
++          {toolsExpanded && (
++            <div className="flex items-center gap-2">
++              {toolButtons}
++            </div>
++          )}
++          <UserDropdown />
++        </div>
+       </div>
+     </header>
+   );
+diff --git a/src/contexts/CallContext.tsx b/src/contexts/CallContext.tsx
+index e6e9dc2..212093d 100644
+--- a/src/contexts/CallContext.tsx
++++ b/src/contexts/CallContext.tsx
+@@ -466,16 +466,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
+             console.log("[CallContext] Initiating call to:", peerId, "type:", type);
+ 
+             // 1. Get current session
+-            let { data: { session }, error: sessionError } = await supabase.auth.getSession();
++            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
++            let effectiveSession = session;
+ 
+             // 2. Fallback refresh if no session or likely to be stale
+-            if (sessionError || !session) {
++            if (sessionError || !effectiveSession) {
+                 console.warn("[CallContext] No session found, refreshing...");
+                 const refreshed = await supabase.auth.refreshSession();
+-                session = refreshed.data.session;
++                effectiveSession = refreshed.data.session;
+             }
+ 
+-            if (!session) throw new Error("Please sign in to make calls.");
++            if (!effectiveSession) throw new Error("Please sign in to make calls.");
+ 
+             // 3. Manual fetch with "Gateway Pass-Through" Technique
+             // We send the public project ANON_KEY in the standard Authorization header.
+@@ -488,7 +489,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
+                     'Content-Type': 'application/json',
+                     'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                     'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+-                    'x-user-token': session.access_token
++                    'x-user-token': effectiveSession.access_token
+                 },
+                 body: JSON.stringify({
+                     receiver_id: peerId,
+diff --git a/src/pages/Profile.tsx b/src/pages/Profile.tsx
+index 3728615..e074001 100644
+--- a/src/pages/Profile.tsx
++++ b/src/pages/Profile.tsx
+@@ -1241,8 +1241,8 @@ export default function Profile() {
+             </div>
+           )}
+ 
+-          {/* Action Buttons */}
+-          {(activeTab === "personal" || activeTab === "academic" || activeTab === "social" || activeTab === "notifications" || activeTab === "preferences") && (
++          {/* Action Buttons (hidden for Notifications tab) */}
++          {(activeTab === "personal" || activeTab === "academic" || activeTab === "social" || activeTab === "preferences") && (
+             <div className="flex justify-end gap-3">
+               <Button variant="outline" onClick={() => setIsEditing(false)}>
+                 Cancel
+diff --git a/src/sw.js b/src/sw.js
+index 061d0bc..0625874 100644
+--- a/src/sw.js
++++ b/src/sw.js
+@@ -183,7 +183,7 @@ self.addEventListener('notificationclick', (event) => {
+   event.notification.close();
+ 
+   const notificationData = event.notification.data || {};
+-  let urlToOpen = notificationData.url || '/';
++  const urlToOpen = notificationData.url || '/';
+ 
+   console.log('[SW] Notification clicked:', event.action, 'URL:', urlToOpen);
+ 
+diff --git a/supabase/functions/ai-chat/index.ts b/supabase/functions/ai-chat/index.ts
+index 2bb23c4..c426d45 100644
+--- a/supabase/functions/ai-chat/index.ts
++++ b/supabase/functions/ai-chat/index.ts
+@@ -69,8 +69,8 @@ serve(async (req: Request) => {
+         for (const model of modelsToTry) {
+             console.log(`Attempting AI chat with Groq model: ${model}`);
+ 
+-            try {
+-                let response = await fetch(GROQ_API_URL, {
++                try {
++            const response = await fetch(GROQ_API_URL, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',

@@ -3,6 +3,9 @@ import { BookOpen, Users } from "lucide-react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { Drawer } from "vaul";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -89,6 +92,12 @@ export function RoleSelectionDialog({ open, onOpenChange, mode = "login" }: Role
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0 border-none bg-background/95 backdrop-blur-xl shadow-2xl duration-200">
+                <DialogHeader className="sr-only">
+                    <DialogTitle>Select Your Role</DialogTitle>
+                    <DialogDescription>
+                        Choose whether you are a student or a lecturer to access your personalized dashboard.
+                    </DialogDescription>
+                </DialogHeader>
                 <div className="grid md:grid-cols-2">
                     {/* Student Section */}
                     <div

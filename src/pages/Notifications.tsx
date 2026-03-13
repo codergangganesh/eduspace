@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -364,6 +365,9 @@ export default function Notifications() {
                   );
                 })()}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Detailed view of notification: {selectedNotification?.title}
+              </DialogDescription>
             </DialogHeader>
 
             {selectedNotification && (
@@ -456,6 +460,9 @@ export default function Notifications() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Clear All Notifications?</DialogTitle>
+              <DialogDescription className="sr-only">
+                Confirm deletion of all notifications.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">

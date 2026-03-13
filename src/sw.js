@@ -183,7 +183,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const notificationData = event.notification.data || {};
-  let urlToOpen = notificationData.url || '/';
+  const urlToOpen = notificationData.url || '/';
 
   console.log('[SW] Notification clicked:', event.action, 'URL:', urlToOpen);
 
@@ -214,20 +214,38 @@ self.addEventListener('notificationclose', (event) => {
 // ─── Helper: Open or focus existing window ──────────────────────────────────
 async function openOrFocusWindow(urlToOpen) {
   console.log('[SW] Attempting to open/focus:', urlToOpen);
+  
+  // Create a proper target URL object
+  let targetUrl;
+  try {
+    targetUrl = new URL(urlToOpen, self.location.origin);
+  } catch (err) {
+    console.error('[SW] Invalid URL format:', urlToOpen);
+    targetUrl = new URL('/', self.location.origin);
+  }
+
   const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 
-  // Try to find an existing window with our origin to focus & navigate
+  // 1. Try to find a client that is EXACTLY on this page already
   for (const client of clientList) {
     try {
       const clientUrl = new URL(client.url);
-      const targetUrl = new URL(urlToOpen, self.location.origin);
+      if (clientUrl.href === targetUrl.href && 'focus' in client) {
+        console.log('[SW] Found exact URL match, focusing...');
+        return client.focus();
+      }
+    } catch (e) {}
+  }
 
+  // 2. Fallback: Find any client on the same origin and navigate it
+  for (const client of clientList) {
+    try {
+      const clientUrl = new URL(client.url);
       if (clientUrl.origin === targetUrl.origin && 'focus' in client) {
-        console.log('[SW] Found existing client, focusing...');
+        console.log('[SW] Found same-origin client, focusing and navigating...');
         const focused = await client.focus();
         if (focused && focused.navigate) {
-          console.log('[SW] Navigating existing client to:', urlToOpen);
-          return focused.navigate(urlToOpen);
+          return focused.navigate(targetUrl.href);
         }
         return focused;
       }
@@ -236,9 +254,9 @@ async function openOrFocusWindow(urlToOpen) {
     }
   }
 
-  // No existing window — open a new one
+  // 3. No existing window — open a new one
   if (self.clients.openWindow) {
     console.log('[SW] No existing client found, opening new window...');
-    return self.clients.openWindow(urlToOpen);
+    return self.clients.openWindow(targetUrl.href);
   }
 }

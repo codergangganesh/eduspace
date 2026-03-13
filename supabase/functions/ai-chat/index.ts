@@ -69,8 +69,8 @@ serve(async (req: Request) => {
         for (const model of modelsToTry) {
             console.log(`Attempting AI chat with Groq model: ${model}`);
 
-            try {
-                let response = await fetch(GROQ_API_URL, {
+                try {
+            const response = await fetch(GROQ_API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

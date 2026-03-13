@@ -166,7 +166,6 @@ export function InviteUserDialog({
                     disabled={isLoading}
                     className="flex-1"
                 >
-                    <X className="size-4 mr-2" />
                     Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading} className="flex-1">

@@ -128,10 +128,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             setActiveCall(prev => prev ? { ...prev, status: 'active', startTime: Date.now() } : null);
             setIsMinimized(false);
 
-            await supabase.channel(`calls:${call.peerId}`).send({
-                type: 'broadcast',
-                event: 'call:accepted',
-                payload: { acceptorId: user?.id, callId: call.id },
+            const targetChannel = supabase.channel(`calls:${call.peerId}`);
+            targetChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    targetChannel.send({
+                        type: 'broadcast',
+                        event: 'call:accepted',
+                        payload: { acceptorId: user?.id, callId: call.id },
+                    }).then(() => {
+                        setTimeout(() => targetChannel.unsubscribe(), 2000);
+                    });
+                }
             });
         } catch (error) {
             console.error("Error auto-accepting call:", error);
@@ -147,10 +154,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                 .update({ status: 'rejected' })
                 .eq('id', sessionId);
 
-            await supabase.channel(`calls:${callerId}`).send({
-                type: 'broadcast',
-                event: 'call:rejected',
-                payload: { rejectorId: user.id, callId: sessionId },
+            const targetChannel = supabase.channel(`calls:${callerId}`);
+            targetChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    targetChannel.send({
+                        type: 'broadcast',
+                        event: 'call:rejected',
+                        payload: { rejectorId: user.id, callId: sessionId },
+                    }).then(() => {
+                        setTimeout(() => targetChannel.unsubscribe(), 2000);
+                    });
+                }
             });
 
             setActiveCall(prev => prev?.id === sessionId ? null : prev);
@@ -396,11 +410,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         channel
             .on('broadcast', { event: 'call:offer' }, ({ payload }) => {
                 if (activeCall) {
-                    // Send "busy" message if already in a call
-                    channel.send({
-                        type: 'broadcast',
-                        event: 'call:busy',
-                        payload: { callerId: payload.callerId },
+                    console.log("[CallContext] User is busy, signaling caller:", payload.callerId);
+                    const targetChannel = supabase.channel(`calls:${payload.callerId}`);
+                    targetChannel.subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            targetChannel.send({
+                                type: 'broadcast',
+                                event: 'call:busy',
+                                payload: { callerId: payload.callerId },
+                            }).then(() => {
+                                setTimeout(() => targetChannel.unsubscribe(), 2000);
+                            });
+                        }
                     });
                     return;
                 }
@@ -448,16 +469,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                     console.error(`[CallContext] Realtime subscription failed for user ${user.id}`);
                 }
                 if (status === 'CLOSED') {
-                    console.warn(`[CallContext] Realtime channel closed for user ${user.id}`);
+                    // This is expected during intentional cleanup, but we'll log it for debugging
+                    console.log(`[CallContext] Realtime channel status: ${status} for user ${user.id}`);
                 }
             });
 
         channelRef.current = channel;
 
         return () => {
+            // Only unsubscribe if the user actually changes or component unmounts
+            // We'll manage cleanup specifically when the user IDs don't match or on unmount
             channel.unsubscribe();
         };
-    }, [user, activeCall]);
+    }, [user?.id]); // Only resubscribe if the user changes
 
     const initiateCall = async (peerId: string, peerName: string, peerAvatar: string, type: CallType) => {
         if (!user) return;
@@ -466,16 +490,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             console.log("[CallContext] Initiating call to:", peerId, "type:", type);
 
             // 1. Get current session
-            let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            let effectiveSession = session;
 
             // 2. Fallback refresh if no session or likely to be stale
-            if (sessionError || !session) {
+            if (sessionError || !effectiveSession) {
                 console.warn("[CallContext] No session found, refreshing...");
                 const refreshed = await supabase.auth.refreshSession();
-                session = refreshed.data.session;
+                effectiveSession = refreshed.data.session;
             }
 
-            if (!session) throw new Error("Please sign in to make calls.");
+            if (!effectiveSession) throw new Error("Please sign in to make calls.");
 
             // 3. Manual fetch with "Gateway Pass-Through" Technique
             // We send the public project ANON_KEY in the standard Authorization header.
@@ -488,7 +513,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                     'Content-Type': 'application/json',
                     'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
                     'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                    'x-user-token': session.access_token
+                    'x-user-token': effectiveSession.access_token
                 },
                 body: JSON.stringify({
                     receiver_id: peerId,
@@ -524,16 +549,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             setActiveCall(call);
 
             // Signal the peer via Realtime
-            await supabase.channel(`calls:${peerId}`).send({
-                type: 'broadcast',
-                event: 'call:offer',
-                payload: {
-                    callId: callSession.id,
-                    callerId: user.id,
-                    callerName: profile?.full_name || 'Someone',
-                    callerAvatar: profile?.avatar_url,
-                    type: type,
-                },
+            // Signal the peer via Realtime (Subscribe first to avoid REST fallback)
+            const targetChannel = supabase.channel(`calls:${peerId}`);
+            targetChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    targetChannel.send({
+                        type: 'broadcast',
+                        event: 'call:offer',
+                        payload: {
+                            callId: callSession.id,
+                            callerId: user.id,
+                            callerName: profile?.full_name || 'Someone',
+                            callerAvatar: profile?.avatar_url,
+                            type: type,
+                        },
+                    }).then(() => {
+                        // Small delay before unmounting channel to ensure delivery
+                        setTimeout(() => targetChannel.unsubscribe(), 2000);
+                    });
+                }
             });
 
         } catch (error: any) {
@@ -561,10 +595,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             setActiveCall(prev => prev ? { ...prev, status: 'active', startTime: Date.now() } : null);
 
             // Signal the initiator
-            await supabase.channel(`calls:${activeCall.peerId}`).send({
-                type: 'broadcast',
-                event: 'call:accepted',
-                payload: { acceptorId: user.id, callId: activeCall.id },
+            // Signal the initiator (Subscribe first to avoid REST fallback)
+            const targetChannel = supabase.channel(`calls:${activeCall.peerId}`);
+            targetChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    targetChannel.send({
+                        type: 'broadcast',
+                        event: 'call:accepted',
+                        payload: { acceptorId: user.id, callId: activeCall.id },
+                    }).then(() => {
+                        setTimeout(() => targetChannel.unsubscribe(), 2000);
+                    });
+                }
             });
         } catch (error) {
             console.error("Accept call error:", error);
@@ -580,11 +622,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                 .update({ status: 'rejected' })
                 .eq('id', activeCall.id);
 
-            // Signal the peer
-            await supabase.channel(`calls:${activeCall.peerId}`).send({
-                type: 'broadcast',
-                event: 'call:rejected',
-                payload: { rejectorId: user?.id, callId: activeCall.id },
+            // Signal the peer (Subscribe first to avoid REST fallback)
+            const targetChannel = supabase.channel(`calls:${activeCall.peerId}`);
+            targetChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    targetChannel.send({
+                        type: 'broadcast',
+                        event: 'call:rejected',
+                        payload: { rejectorId: user?.id, callId: activeCall.id },
+                    }).then(() => {
+                        setTimeout(() => targetChannel.unsubscribe(), 2000);
+                    });
+                }
             });
 
             setActiveCall(null);
@@ -611,12 +660,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                 })
                 .eq('id', activeCall.id);
 
-            // Signal the peer
+            // Signal the peer (Subscribe first to avoid REST fallback)
             if (activeCall.peerId) {
-                await supabase.channel(`calls:${activeCall.peerId}`).send({
-                    type: 'broadcast',
-                    event: 'call:ended',
-                    payload: { callId: activeCall.id },
+                const targetChannel = supabase.channel(`calls:${activeCall.peerId}`);
+                targetChannel.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        targetChannel.send({
+                            type: 'broadcast',
+                            event: 'call:ended',
+                            payload: { callId: activeCall.id },
+                        }).then(() => {
+                            setTimeout(() => targetChannel.unsubscribe(), 2000);
+                        });
+                    }
                 });
             }
 

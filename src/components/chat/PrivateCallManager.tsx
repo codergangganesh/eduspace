@@ -22,14 +22,29 @@ export function PrivateCallManager() {
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
-    const [isSpeakerOn, setIsSpeakerOn] = useState(true); // Default to speaker on for mobile/web calls
+    const [isSpeakerOn, setIsSpeakerOn] = useState(true); // Default to speaker on for web calls
     const [isRemoteVideoOff, setIsRemoteVideoOff] = useState(false);
     const [timer, setTimer] = useState(0);
 
     const peerConnection = useRef<RTCPeerConnection | null>(null);
+    const signalingChannel = useRef<any>(null);
+    const isMediaJoining = useRef(false);
+    const pendingOffer = useRef<any>(null);
+    const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
+    const remoteDescriptionSet = useRef(false);
+    const isSignalingReady = useRef(false);
+    const pendingAnswer = useRef<any>(null);
+    const watchdogTimer = useRef<any>(null);
+    const outgoingChannel = useRef<any>(null);
+    
+    // Master Background References (Always Active)
+    const masterAudioRef = useRef<HTMLAudioElement>(null);
+    const masterRemoteVideoRef = useRef<HTMLVideoElement>(null);
+    const masterLocalVideoRef = useRef<HTMLVideoElement>(null);
+
+    // UI-Specific References (May Unmount)
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
-    const remoteAudioRef = useRef<HTMLAudioElement>(null);
     const ringtoneRef = useRef<HTMLAudioElement>(null);
     const timerInterval = useRef<any>(null);
 
@@ -37,8 +52,40 @@ export function PrivateCallManager() {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
         ],
     };
+
+    // Ensure streams are attached when UI elements mount/unmount
+    useEffect(() => {
+        // Master background sync
+        if (remoteStream) {
+            if (masterAudioRef.current && masterAudioRef.current.srcObject !== remoteStream) {
+                masterAudioRef.current.srcObject = remoteStream;
+                masterAudioRef.current.play().catch(() => {});
+            }
+            if (masterRemoteVideoRef.current && masterRemoteVideoRef.current.srcObject !== remoteStream) {
+                masterRemoteVideoRef.current.srcObject = remoteStream;
+                masterRemoteVideoRef.current.play().catch(() => {});
+            }
+            // UI video sync
+            if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== remoteStream) {
+                remoteVideoRef.current.srcObject = remoteStream;
+                remoteVideoRef.current.play().catch(() => {});
+            }
+        }
+        
+        if (localStream) {
+            if (masterLocalVideoRef.current && masterLocalVideoRef.current.srcObject !== localStream) {
+                masterLocalVideoRef.current.srcObject = localStream;
+            }
+            if (localVideoRef.current && localVideoRef.current.srcObject !== localStream) {
+                localVideoRef.current.srcObject = localStream;
+            }
+        }
+    }, [remoteStream, localStream, activeCall?.status, isMinimized, isRemoteVideoOff]);
 
     // Notification Permission Warning
     useEffect(() => {
@@ -138,6 +185,12 @@ export function PrivateCallManager() {
             if (activeCall?.status === 'incoming' && ringtoneRef.current) {
                 ringtoneRef.current.play().catch(() => { });
             }
+            // Explicitly resume remote audio on any interaction during active call
+            if (activeCall?.status === 'active') {
+                if (masterAudioRef.current) masterAudioRef.current.play().catch(() => {});
+                if (masterRemoteVideoRef.current) masterRemoteVideoRef.current.play().catch(() => {});
+                if (remoteVideoRef.current) remoteVideoRef.current.play().catch(() => {});
+            }
         };
 
         window.addEventListener('click', handleInteraction);
@@ -148,134 +201,184 @@ export function PrivateCallManager() {
         };
     }, [activeCall?.status]);
 
-    // WebRTC Logic
+    // WebRTC Connection Life-Cycle
     useEffect(() => {
         if (!activeCall || activeCall.category !== 'private' || !user) return;
 
-        const setupWebRTC = async () => {
-            console.log("Setting up WebRTC...", activeCall.type);
-            peerConnection.current = new RTCPeerConnection(iceServers);
+        const initConnection = () => {
+            if (peerConnection.current) return;
+            
+            console.log("[CallManager] Initializing PeerConnection for call:", activeCall.id);
+            const pc = new RTCPeerConnection(iceServers);
+            peerConnection.current = pc;
 
-            peerConnection.current.onconnectionstatechange = () => {
-                const state = peerConnection.current?.connectionState;
-                console.log("Connection state change:", state);
-                if (state === 'connected') {
-                    toast.success("Call connected");
-                } else if (state === 'failed') {
-                    toast.error("Connection failed");
-                    endCall();
-                } else if (state === 'disconnected') {
-                    toast.info("Peer disconnected");
+            pc.onconnectionstatechange = () => {
+                console.log(`[CallManager] PC State: ${pc.connectionState} | Signaling: ${pc.signalingState}`);
+                if (pc.connectionState === 'connected') {
+                    toast.success("Connection secured");
+                    if (watchdogTimer.current) clearInterval(watchdogTimer.current);
+                }
+                if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    console.warn("[CallManager] Connection lost, cleaning up...");
                     endCall();
                 }
             };
 
-            // Add local stream tracks to peer connection
-            if (activeCall.status === 'active') {
-                try {
-                    console.log("Requesting user media...");
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: activeCall.type === 'video',
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        },
-                    });
-                    setLocalStream(stream);
+            pc.onicegatheringstatechange = () => {
+                console.log("[CallManager] ICE Gathering State:", pc.iceGatheringState);
+            };
 
-                    stream.getTracks().forEach(track => {
-                        peerConnection.current?.addTrack(track, stream);
-                    });
-
-                    if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-                    // Don't play local audio to avoid feedback loop, but visualize?
-                } catch (err) {
-                    console.error("Error accessing media devices:", err);
-                    toast.error("Could not access camera/microphone");
-                    return; // Stop setup if media fails
+            pc.oniceconnectionstatechange = () => {
+                console.log("[CallManager] ICE Connection State:", pc.iceConnectionState);
+                if (pc.iceConnectionState === 'failed') {
+                    console.log("[CallManager] ICE failed. Restarting ICE...");
+                    pc.restartIce();
                 }
-            }
+            };
 
-            // Listen for remote tracks
-            peerConnection.current.ontrack = (event) => {
-                console.log("[CallManager] Remote track received:", event.track.kind);
-                if (event.streams && event.streams[0]) {
-                    setRemoteStream(event.streams[0]);
-                    if (remoteVideoRef.current) {
-                        remoteVideoRef.current.srcObject = event.streams[0];
-                        remoteVideoRef.current.play().catch(e => console.warn("[CallManager] Video play blocked:", e));
-                    }
-                    if (remoteAudioRef.current) {
-                        remoteAudioRef.current.srcObject = event.streams[0];
-                        remoteAudioRef.current.play().catch(e => console.warn("[CallManager] Audio play blocked:", e));
+            pc.onicecandidate = (event) => {
+                if (event.candidate && activeCall.peerId) {
+                    console.log("[CallManager] Local ICE candidate found");
+                    const channel = outgoingChannel.current;
+                    if (channel) {
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'call:ice-candidate',
+                            payload: { candidate: event.candidate, senderId: user.id },
+                        });
                     }
                 }
             };
 
-            // ICE Candidate handling
-            peerConnection.current.onicecandidate = (event) => {
-                if (event.candidate) {
-                    supabase.channel(`calls:${activeCall.peerId}`).send({
-                        type: 'broadcast',
-                        event: 'call:ice-candidate',
-                        payload: { candidate: event.candidate, senderId: user.id },
-                    });
-                }
-            };
-
-            // Negotiation handling
-            if (activeCall.isInitiator && activeCall.status === 'active') {
-                const offer = await peerConnection.current.createOffer();
-                await peerConnection.current.setLocalDescription(offer);
-                supabase.channel(`calls:${activeCall.peerId}`).send({
-                    type: 'broadcast',
-                    event: 'call:sdp-offer',
-                    payload: { sdp: offer, senderId: user.id },
+            pc.ontrack = (event) => {
+                console.log(`[CallManager] Remote ${event.track.kind} track received`);
+                
+                setRemoteStream(prev => {
+                    const stream = prev || new MediaStream();
+                    if (!stream.getTracks().find(t => t.id === event.track.id)) {
+                        stream.addTrack(event.track);
+                    }
+                    return new MediaStream(stream.getTracks());
                 });
-            }
+
+                // Attach to master refs immediately for stable audio/video playback
+                const stream = (event.streams && event.streams[0]) || new MediaStream([event.track]);
+                
+                if (event.track.kind === 'audio' && masterAudioRef.current) {
+                    masterAudioRef.current.srcObject = stream;
+                    masterAudioRef.current.play().catch(() => {});
+                }
+                
+                if (event.track.kind === 'video' && masterRemoteVideoRef.current) {
+                    masterRemoteVideoRef.current.srcObject = stream;
+                    masterRemoteVideoRef.current.play().catch(() => {});
+                }
+            };
+
+            pc.onnegotiationneeded = async () => {
+                try {
+                    // Critical: Wait for both signaling readiness AND initiator status
+                    if (activeCall.isInitiator && pc.signalingState === 'stable' && isSignalingReady.current) {
+                        console.log("[CallManager] Negotiation needed: Creating Offer...");
+                        const offer = await pc.createOffer();
+                        await pc.setLocalDescription(offer);
+                        
+                        const channel = outgoingChannel.current;
+                        if (channel) {
+                            channel.send({
+                                type: 'broadcast',
+                                event: 'call:sdp-offer',
+                                payload: { sdp: offer, senderId: user.id },
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error("[CallManager] Negotiation error:", err);
+                }
+            };
         };
 
-        if (activeCall.status === 'active') {
-            setupWebRTC();
-        }
+        initConnection();
 
         // Signaling listeners
-        const channel = supabase.channel(`calls:${user.id}`);
+        if (!signalingChannel.current) {
+            signalingChannel.current = supabase.channel(`calls:${user.id}`);
+        }
+        
+        const channel = signalingChannel.current;
         channel
             .on('broadcast', { event: 'call:sdp-offer' }, async ({ payload }) => {
-                if (peerConnection.current) {
-                    await peerConnection.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-                    const answer = await peerConnection.current.createAnswer();
-                    await peerConnection.current.setLocalDescription(answer);
-                    supabase.channel(`calls:${activeCall.peerId}`).send({
-                        type: 'broadcast',
-                        event: 'call:sdp-answer',
-                        payload: { sdp: answer, senderId: user.id },
-                    });
+                const pc = peerConnection.current;
+                if (!pc) return;
+
+                console.log("[CallManager] Received sdp-offer from", payload.senderId);
+                // If we don't have local media yet, queue the offer
+                if (activeCall.status !== 'active') {
+                    console.log("[CallManager] Queuing offer (waiting for active status)");
+                    pendingOffer.current = payload;
+                    return;
+                }
+
+                try {
+                    await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                    remoteDescriptionSet.current = true;
+                    
+                    // Process queued candidates
+                    while (iceCandidateQueue.current.length > 0) {
+                        const candidate = iceCandidateQueue.current.shift();
+                        if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    }
+
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    
+                    const outgoing = outgoingChannel.current;
+                    if (isSignalingReady.current && outgoing) {
+                        console.log("[CallManager] Sending Answer immediately");
+                        outgoing.send({
+                            type: 'broadcast',
+                            event: 'call:sdp-answer',
+                            payload: { sdp: answer, senderId: user.id },
+                        });
+                    } else {
+                        console.log("[CallManager] Queuing Answer (waiting for signaling/channel ready)");
+                        pendingAnswer.current = { sdp: answer };
+                    }
+                } catch (err) {
+                    console.error("[CallManager] Error processing offer:", err);
                 }
             })
             .on('broadcast', { event: 'call:sdp-answer' }, async ({ payload }) => {
-                if (peerConnection.current) {
-                    await peerConnection.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-                }
-            })
-            .on('broadcast', { event: 'call:ice-candidate' }, async ({ payload }) => {
-                if (peerConnection.current) {
+                const pc = peerConnection.current;
+                if (pc && pc.signalingState !== 'stable') {
+                    console.log("[CallManager] Received sdp-answer from", payload.senderId);
                     try {
-                        await peerConnection.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                    } catch (e) {
-                        console.error("Error adding ice candidate:", e);
+                        await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                        remoteDescriptionSet.current = true;
+                        
+                        // Process queued candidates
+                        while (iceCandidateQueue.current.length > 0) {
+                            const candidate = iceCandidateQueue.current.shift();
+                            if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        }
+                    } catch (err) {
+                        console.error("[CallManager] Error processing sdp-answer:", err);
                     }
                 }
             })
-            .on('broadcast', { event: 'call:accepted' }, () => {
-                // If we are initiator and they accepted, we move to active
-                // (Context already handles state update, but we might need trigger setup here)
-            })
-            .on('broadcast', { event: 'call:camera-toggle' }, ({ payload }) => {
-                if (payload.senderId === activeCall.peerId) {
-                    setIsRemoteVideoOff(payload.isCameraOff);
+            .on('broadcast', { event: 'call:ice-candidate' }, async ({ payload }) => {
+                const pc = peerConnection.current;
+                if (!pc) return;
+
+                try {
+                    if (remoteDescriptionSet.current) {
+                        await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                    } else {
+                        console.log("[CallManager] Queuing ICE candidate (waiting for remote description)");
+                        iceCandidateQueue.current.push(payload.candidate);
+                    }
+                } catch (e) {
+                    console.error("[CallManager] Ice error:", e);
                 }
             })
             .on('broadcast', { event: 'call:rejected' }, () => {
@@ -286,32 +389,149 @@ export function PrivateCallManager() {
                 toast.info("Call ended by peer");
                 endCall();
             })
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log("[CallManager] Incoming signaling ready");
+                    isSignalingReady.current = true;
+                    
+                    // Setup persistent outgoing channel to peer
+                    if (activeCall.peerId && !outgoingChannel.current) {
+                        console.log("[CallManager] Subscribing to outgoing channel:", activeCall.peerId);
+                        outgoingChannel.current = supabase.channel(`calls:${activeCall.peerId}`).subscribe((outStatus) => {
+                            if (outStatus === 'SUBSCRIBED') {
+                                console.log("[CallManager] Outgoing signaling ready");
+                                // 1. If we have a queued answer, send it now
+                                if (pendingAnswer.current && user) {
+                                    console.log("[CallManager] Sending queued Answer now that outgoing is ready");
+                                    outgoingChannel.current.send({
+                                        type: 'broadcast',
+                                        event: 'call:sdp-answer',
+                                        payload: { ...pendingAnswer.current, senderId: user.id },
+                                    });
+                                    pendingAnswer.current = null;
+                                }
+
+                                // 2. If we are initiator and connection is waiting, trigger offer
+                                if (activeCall.isInitiator && peerConnection.current?.signalingState === 'stable') {
+                                    console.log("[CallManager] Triggering deferred negotiation...");
+                                    peerConnection.current.onnegotiationneeded?.(new Event('negotiationneeded'));
+                                }
+                            }
+                        });
+                    }
+                }
+            });
 
         return () => {
-            channel.unsubscribe();
-            localStream?.getTracks().forEach(track => track.stop());
-            peerConnection.current?.close();
+            // No cleanup here - handle cleanup in a dedicated effect
         };
-    }, [activeCall?.status, activeCall?.category, user]);
+    }, [activeCall?.id, user?.id]);
 
-    // Ensure streams are attached when UI elements mount/unmount
-    // NOTE: This must be before any early returns to satisfy React's Rules of Hooks
+    // Media Acquisition Logic (Starts when active)
     useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) {
-            console.log("[CallManager] Attaching remote video stream");
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch(e => console.warn("Video play blocked:", e));
+        if (activeCall?.status === 'active' && !localStream && user) {
+            const startMedia = async () => {
+                if (isMediaJoining.current) return;
+                isMediaJoining.current = true;
+                
+                try {
+                    console.log("[CallManager] Acquiring media...");
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: activeCall.type === 'video',
+                        audio: { echoCancellation: true, noiseSuppression: true }
+                    });
+                    
+                    setLocalStream(stream);
+                    const pc = peerConnection.current;
+                    if (pc) {
+                        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+                        
+                        // If we had a pending offer, handle it now
+                        if (!activeCall.isInitiator && pendingOffer.current) {
+                            console.log("[CallManager] Handling pending offer after media acquisition");
+                            const payload = pendingOffer.current;
+                            pendingOffer.current = null;
+                            
+                            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                            remoteDescriptionSet.current = true;
+                            
+                            // Process queued ICE candidates
+                            while (iceCandidateQueue.current.length > 0) {
+                                const candidate = iceCandidateQueue.current.shift();
+                                if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                            }
+
+                            const answer = await pc.createAnswer();
+                            await pc.setLocalDescription(answer);
+                            supabase.channel(`calls:${activeCall.peerId}`).send({
+                                type: 'broadcast',
+                                event: 'call:sdp-answer',
+                                payload: { sdp: answer, senderId: user.id },
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error("[CallManager] Media error:", err);
+                    toast.error("Could not access camera/mic");
+                    endCall();
+                } finally {
+                    isMediaJoining.current = false;
+                }
+            };
+            startMedia();
         }
-        if (remoteAudioRef.current && remoteStream) {
-            console.log("[CallManager] Attaching remote audio stream");
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().catch(e => console.warn("Audio play blocked:", e));
+    }, [activeCall?.status, activeCall?.id, user]);
+
+    // Handshake Watchdog Effect
+    useEffect(() => {
+        if (activeCall?.status === 'active' && !remoteStream) {
+            console.log("[CallManager] Starting connection watchdog...");
+            // If after 8 seconds we still don't have video, force a re-negotiation
+            watchdogTimer.current = setInterval(() => {
+                const pc = peerConnection.current;
+                if (pc && pc.connectionState !== 'connected' && activeCall.isInitiator) {
+                    console.warn("[CallManager] Handshake timeout. Force-triggering re-negotiation...");
+                    pc.onnegotiationneeded?.(new Event('negotiationneeded'));
+                }
+            }, 8000);
+        } else {
+            if (watchdogTimer.current) clearInterval(watchdogTimer.current);
         }
-        if (localVideoRef.current && localStream) {
-            localVideoRef.current.srcObject = localStream;
-        }
-    }, [remoteStream, localStream, activeCall?.type, activeCall?.status, isRemoteVideoOff, isMinimized]);
+
+        return () => {
+            if (watchdogTimer.current) clearInterval(watchdogTimer.current);
+        };
+    }, [activeCall?.status, remoteStream, activeCall?.isInitiator]);
+
+    // Final Cleanup Effect
+    useEffect(() => {
+        return () => {
+            if (!activeCall) {
+                console.log("[CallManager] Final cleanup");
+                if (watchdogTimer.current) clearInterval(watchdogTimer.current);
+                if (signalingChannel.current) {
+                    signalingChannel.current.unsubscribe();
+                    signalingChannel.current = null;
+                }
+                if (outgoingChannel.current) {
+                    outgoingChannel.current.unsubscribe();
+                    outgoingChannel.current = null;
+                }
+                if (peerConnection.current) {
+                    peerConnection.current.close();
+                    peerConnection.current = null;
+                }
+                localStream?.getTracks().forEach(t => t.stop());
+                setLocalStream(null);
+                setRemoteStream(null);
+                pendingOffer.current = null;
+                pendingAnswer.current = null;
+                iceCandidateQueue.current = [];
+                remoteDescriptionSet.current = false;
+                isSignalingReady.current = false;
+            }
+        };
+    }, [activeCall?.id]);
 
     if (!activeCall || activeCall.category !== 'private') return null;
 
@@ -346,8 +566,8 @@ export function PrivateCallManager() {
             setIsCameraOff(newStatus);
 
             // Broadcast camera status to peer
-            if (activeCall?.peerId) {
-                supabase.channel(`calls:${activeCall.peerId}`).send({
+            if (activeCall?.peerId && outgoingChannel.current) {
+                outgoingChannel.current.send({
                     type: 'broadcast',
                     event: 'call:camera-toggle',
                     payload: { isCameraOff: newStatus, senderId: user?.id },
@@ -359,11 +579,31 @@ export function PrivateCallManager() {
     // Final Render Wrapper
     return (
         <>
+            {/* Hidden Media Elements - Visually hidden but active to ensure continuous playback regardless of UI changes */}
+            <div className="fixed opacity-0 pointer-events-none w-px h-px overflow-hidden">
+                <audio 
+                    ref={masterAudioRef} 
+                    autoPlay 
+                    playsInline 
+                />
+                <video 
+                    ref={masterLocalVideoRef} 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                />
+                <video 
+                    ref={masterRemoteVideoRef} 
+                    autoPlay 
+                    playsInline 
+                />
+            </div>
+
             {/* Hidden Ringtone Element - Always mounted when a call exists */}
             <audio
                 ref={ringtoneRef}
                 loop
-                src="/notification_ringtone.mp3"
+                src="/notification_ringtone.mp3.mpeg"
                 className="hidden"
                 preload="auto"
                 playsInline
@@ -441,9 +681,6 @@ export function PrivateCallManager() {
                 if (showAudioLayout) {
                     return (
                         <>
-                            {/* Audio Element (Always Active) */}
-                            <audio ref={remoteAudioRef} autoPlay playsInline />
-
                             {/* Minimized View */}
                             {isMinimized && (
                                 <div className="fixed bottom-4 right-4 z-[100000] w-auto bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-10 fade-in duration-300">

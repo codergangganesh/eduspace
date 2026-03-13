@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
 import { Drawer } from "vaul";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ interface Note {
     created_at: string;
 }
 
-export function StudentNotesDrawer() {
+export function StudentNotesDrawer({ showTrigger = true }: { showTrigger?: boolean }) {
     const { user } = useAuth();
     const [notes, setNotes] = useState<Note[]>([]);
     const [loading, setLoading] = useState(true);
@@ -68,6 +68,12 @@ export function StudentNotesDrawer() {
     useEffect(() => {
         if (user) fetchNotes();
     }, [user]);
+
+    useEffect(() => {
+        const handleOpen = () => setOpen(true);
+        window.addEventListener("open-student-notes", handleOpen);
+        return () => window.removeEventListener("open-student-notes", handleOpen);
+    }, []);
 
     const handleSave = async () => {
         if (!user || !title.trim()) return;
@@ -182,6 +188,9 @@ export function StudentNotesDrawer() {
                     <SheetTitle className="font-black text-foreground tracking-tight text-2xl">
                         {isEditing ? "Edit Note" : newNoteMode ? "New Note" : "My Notes"}
                     </SheetTitle>
+                    <SheetDescription className="sr-only">
+                        Manage your personal study notes, including creating, editing, and deleting notes.
+                    </SheetDescription>
 
                     <div className="flex items-center gap-3">
                         {/* New Note Button (Desktop Title Row) */}
@@ -376,11 +385,19 @@ export function StudentNotesDrawer() {
     if (isMobile) {
         return (
             <Drawer.Root open={open} onOpenChange={setOpen}>
-                <Drawer.Trigger asChild>
-                    <Button id="tour-nav-notes" variant="ghost" size="icon" className="h-9 w-9 text-slate-500" title="My Notes">
-                        <BookOpen className="h-5 w-5" />
-                    </Button>
-                </Drawer.Trigger>
+                {showTrigger && (
+                    <Drawer.Trigger asChild>
+                        <Button 
+                            id="tour-nav-notes" 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group" 
+                            title="My Notes"
+                        >
+                            <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Button>
+                    </Drawer.Trigger>
+                )}
                 <Drawer.Portal>
                     <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-[2px]" />
                     <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] flex flex-col bg-slate-50 dark:bg-slate-900 rounded-t-[32px] outline-none h-[92vh]">
@@ -397,11 +414,19 @@ export function StudentNotesDrawer() {
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-                <Button id="tour-nav-notes" variant="ghost" size="icon" className="h-9 w-9 text-slate-500" title="My Notes">
-                    <BookOpen className="h-5 w-5" />
-                </Button>
-            </SheetTrigger>
+            {showTrigger && (
+                <SheetTrigger asChild>
+                    <Button 
+                        id="tour-nav-notes" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group" 
+                        title="My Notes"
+                    >
+                        <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </Button>
+                </SheetTrigger>
+            )}
             <SheetContent
                 side="right"
                 className="flex flex-col p-0 border-none bg-background shadow-2xl transition-all duration-500 ease-in-out h-full w-full sm:max-w-md pt-[var(--safe-top)] z-[10001]"

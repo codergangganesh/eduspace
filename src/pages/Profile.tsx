@@ -23,6 +23,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   User,
@@ -1241,8 +1242,8 @@ export default function Profile() {
             </div>
           )}
 
-          {/* Action Buttons */}
-          {(activeTab === "personal" || activeTab === "academic" || activeTab === "social" || activeTab === "notifications" || activeTab === "preferences") && (
+          {/* Action Buttons (hidden for Notifications tab) */}
+          {(activeTab === "personal" || activeTab === "academic" || activeTab === "social" || activeTab === "preferences") && (
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setIsEditing(false)}>
                 Cancel
@@ -1270,6 +1271,9 @@ export default function Profile() {
         <DialogContent className="max-w-2xl">
           <DialogHeader className="pb-4 border-b">
             <DialogTitle>Public Profile View</DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview of your public academic profile.
+            </DialogDescription>
           </DialogHeader>
 
           {/* Academic Profile Preview */}
@@ -1491,6 +1495,12 @@ export default function Profile() {
       {/* Digital Business Card (QR Code) Modal */}
       <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
         <DialogContent className="max-w-sm rounded-3xl overflow-hidden p-0 border-none bg-transparent">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Digital Business Card</DialogTitle>
+            <DialogDescription>
+              Scan this QR code to connect with your academic profile.
+            </DialogDescription>
+          </DialogHeader>
           <div className="bg-white dark:bg-[#050b14] p-8 text-center relative overflow-hidden">
             {/* Decorative backgrounds */}
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-primary" />

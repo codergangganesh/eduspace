@@ -104,10 +104,10 @@ export function ProfileNotificationSettings() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Bell className="size-5" />
-                    Notification Preferences
+                    Notification Preference
                 </CardTitle>
                 <CardDescription>
-                    Control how and when you receive notifications
+                    Turn all EduSpace notifications on or off
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -128,25 +128,6 @@ export function ProfileNotificationSettings() {
                         disabled={pendingField !== null}
                     />
                 </div>
-
-                {notificationOptions.map((option) => (
-                    <div key={option.field} className="flex items-center justify-between space-x-4 rounded-lg border p-4">
-                        <div className="flex-1 space-y-1">
-                            <Label htmlFor={option.field} className="text-base font-medium">
-                                {option.title}
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                                {option.description}
-                            </p>
-                        </div>
-                        <Switch
-                            id={option.field}
-                            checked={settings[option.field]}
-                            onCheckedChange={(enabled) => handleToggle(option.field, enabled)}
-                            disabled={pendingField !== null || !settings.notifications_enabled}
-                        />
-                    </div>
-                ))}
             </CardContent>
         </Card>
     );

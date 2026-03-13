@@ -14,6 +14,7 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -510,6 +511,9 @@ export function PollBubble({ pollId }: { pollId: string }) {
                             <Users className="w-5 h-5" />
                             Poll Votes
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Details of votes for each option in the poll.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="max-h-[60vh] overflow-y-auto space-y-4">
                         {isLoadingVotes ? (

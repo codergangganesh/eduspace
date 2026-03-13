@@ -4,10 +4,11 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ChevronDown } from "lucide-react";
+import { Shield, CheckCircle2, ChevronDown } from "lucide-react";
 
 interface PrivacyPolicyDialogProps {
     open: boolean;
@@ -31,7 +32,6 @@ export function PrivacyPolicyDialog({ open, onOpenChange, onAgree, showAgreeButt
         if (!contentRef.current) return;
 
         const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-        // Allow a small buffer (e.g., 20px) for floating point inaccuracies or zoom levels
         const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
 
         if (isAtBottom) {
@@ -50,7 +50,8 @@ export function PrivacyPolicyDialog({ open, onOpenChange, onAgree, showAgreeButt
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
                 <DialogHeader className="p-6 border-b border-border bg-background/95 backdrop-blur-xl z-10">
-                    <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                    <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-3">
+                        <Shield className="size-6 text-primary" />
                         Privacy Policy
                         {!canAgree && showAgreeButton && (
                             <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
@@ -64,6 +65,9 @@ export function PrivacyPolicyDialog({ open, onOpenChange, onAgree, showAgreeButt
                             </span>
                         )}
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Please review our privacy policy to understand how we handle your data.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div
@@ -205,3 +209,4 @@ export function PrivacyPolicyDialog({ open, onOpenChange, onAgree, showAgreeButt
         </Dialog>
     );
 }
+

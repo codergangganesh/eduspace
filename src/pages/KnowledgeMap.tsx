@@ -278,11 +278,32 @@ export default function KnowledgeMap() {
         );
     };
 
+    const [focusNode, setFocusNode] = useState<string | null>(null);
+    const [neighbors, setNeighbors] = useState<Set<string>>(new Set());
+
+    const updateNeighbors = (nodeId: string | null) => {
+        if (!nodeId) {
+            setNeighbors(new Set());
+            return;
+        }
+        const connectedNodes = new Set<string>([nodeId]);
+        graphData.links.forEach((link: any) => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            if (sourceId === nodeId) connectedNodes.add(targetId);
+            if (targetId === nodeId) connectedNodes.add(sourceId);
+        });
+        setNeighbors(connectedNodes);
+    };
+
     const getNodeColor = (node: Node) => {
+        const isMastered = node.type === 'quiz' || node.type === 'assignment';
+        if (focusNode && !neighbors.has(node.id)) return 'rgba(148, 163, 184, 0.1)';
+        
         switch (node.type) {
             case 'chat': return '#6366f1'; // Indigo
             case 'note': return '#10b981'; // Emerald
-            case 'quiz': return '#f59e0b'; // Amber
+            case 'quiz': return isMastered ? '#f59e0b' : '#fbbf24'; // Amber
             case 'assignment': return '#ef4444'; // Red
             default: return '#94a3b8';
         }
@@ -433,7 +454,7 @@ export default function KnowledgeMap() {
                                                     <span class="mr-2">${typeIcon}</span>
                                                     ${node.label}
                                                 </h3>
-                                            </div>
+                                                    </div>
                                             <div class="pl-4 mt-2 text-[8px] font-bold text-white/40 uppercase tracking-[0.2em]" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5)">
                                                 Click to Focus
                                             </div>
@@ -441,26 +462,47 @@ export default function KnowledgeMap() {
                                     `;
                                 }}
                                 nodeThreeObject={(node: any) => {
+                                    const isFocused = focusNode === node.id;
+                                    const isNeighbor = neighbors.has(node.id);
+                                    const opacity = focusNode ? (isFocused || isNeighbor ? 1 : 0.15) : 1;
+                                    const glowFactor = isFocused ? 1.4 : 1;
+
                                     const canvas = document.createElement('canvas');
-                                    canvas.width = 120;
-                                    canvas.height = 120;
+                                    canvas.width = 160;
+                                    canvas.height = 160;
                                     const ctx = canvas.getContext('2d')!;
                                     const color = getNodeColor(node as Node);
+                                    
+                                    // Mastery Glow Effect
+                                    if (node.type === 'quiz' || node.type === 'assignment') {
+                                        ctx.shadowColor = color;
+                                        ctx.shadowBlur = 25 * (isFocused ? 1.5 : 1);
+                                    }
+
+                                    // Outer Ring for focus
+                                    if (isFocused) {
+                                        ctx.strokeStyle = color;
+                                        ctx.lineWidth = 6;
+                                        ctx.beginPath();
+                                        ctx.arc(80, 80, 74, 0, 2 * Math.PI);
+                                        ctx.stroke();
+                                    }
 
                                     // Base sphere glow
-                                    const gradient = ctx.createRadialGradient(60, 60, 0, 60, 60, 60);
+                                    const gradient = ctx.createRadialGradient(80, 80, 0, 80, 80, 70);
                                     gradient.addColorStop(0, color);
-                                    gradient.addColorStop(0.7, color);
+                                    gradient.addColorStop(0.6, color);
                                     gradient.addColorStop(1, 'rgba(255,255,255,0)');
 
+                                    ctx.globalAlpha = opacity;
                                     ctx.fillStyle = gradient;
                                     ctx.beginPath();
-                                    ctx.arc(60, 60, 50, 0, 2 * Math.PI);
+                                    ctx.arc(80, 80, 70, 0, 2 * Math.PI);
                                     ctx.fill();
 
-                                    // White icon inside
+                                    // Entity Icon
                                     ctx.fillStyle = 'white';
-                                    ctx.font = 'bold 42px Arial';
+                                    ctx.font = `bold ${isFocused ? 54 : 46}px Arial`;
                                     ctx.textAlign = 'center';
                                     ctx.textBaseline = 'middle';
                                     let icon = '✨';
@@ -468,28 +510,68 @@ export default function KnowledgeMap() {
                                     if (node.type === 'note') icon = '📝';
                                     if (node.type === 'quiz') icon = '🏆';
                                     if (node.type === 'assignment') icon = '📚';
-                                    ctx.fillText(icon, 60, 60);
+                                    ctx.fillText(icon, 80, 80);
 
                                     const texture = new THREE.CanvasTexture(canvas);
                                     const material = new THREE.SpriteMaterial({
                                         map: texture,
                                         transparent: true,
-                                        depthTest: false
+                                        depthTest: false,
+                                        opacity: opacity
                                     });
                                     const sprite = new THREE.Sprite(material);
-                                    sprite.scale.set(node.val * 1.5, node.val * 1.5, 1);
+                                    const scale = (node.val * 2.0) * glowFactor;
+                                    sprite.scale.set(scale, scale, 1);
                                     return sprite;
                                 }}
                                 nodeColor={(node: any) => getNodeColor(node as Node)}
                                 nodeRelSize={7}
                                 nodeVal={(node: any) => (node as Node).val}
-                                linkColor={() => 'rgba(79, 70, 229, 0.15)'}
-                                linkWidth={2}
-                                linkOpacity={0.2}
+                                linkColor={(link: any) => {
+                                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                                    
+                                    if (focusNode) {
+                                        return (sourceId === focusNode || targetId === focusNode) 
+                                            ? 'rgba(99, 102, 241, 0.8)' 
+                                            : 'rgba(148, 163, 184, 0.05)';
+                                    }
+                                    return 'rgba(79, 70, 229, 0.2)';
+                                }}
+                                linkWidth={(link: any) => {
+                                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                                    return (focusNode === sourceId || focusNode === targetId) ? 4 : 1.5;
+                                }}
+                                linkDirectionalParticles={(link: any) => {
+                                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                                    return (focusNode === sourceId || focusNode === targetId) ? 6 : 0;
+                                }}
+                                linkDirectionalParticleSpeed={0.012}
+                                linkDirectionalParticleWidth={2.5}
+                                linkOpacity={0.3}
                                 backgroundColor="rgba(0,0,0,0)"
                                 nodeThreeObjectExtend={false}
+                                onBackgroundClick={() => {
+                                    setFocusNode(null);
+                                    setNeighbors(new Set());
+                                    fgRef.current.cameraPosition({ x: 0, y: 0, z: 250 }, { x: 0, y: 0, z: 0 }, 1000);
+                                }}
                                 onNodeClick={(node: any) => {
-                                    const distance = 40;
+                                    if (focusNode === node.id) {
+                                        setFocusNode(null);
+                                        setNeighbors(new Set());
+                                        // Reset camera to overview
+                                        fgRef.current.cameraPosition({ x: 0, y: 0, z: 250 }, { x: 0, y: 0, z: 0 }, 1000);
+                                        return;
+                                    }
+
+                                    setFocusNode(node.id);
+                                    updateNeighbors(node.id);
+
+                                    // Move camera closer to node
+                                    const distance = 100;
                                     const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
                                     fgRef.current.cameraPosition(
                                         { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },

@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
-import { verifyCallActionToken } from "../_shared/callActionToken.ts";
+import { verifyCallActionToken } from "../shared/callActionToken.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -136,9 +136,9 @@ serve(async (req) => {
         auth: { persistSession: false, autoRefreshToken: false },
       });
 
-      const { data: authData, error: authError } = await userClient.auth.getUser();
+      const { data: authData, error: authError } = await userClient.auth.getUser(bearer);
       if (authError || !authData.user) {
-        return json(401, { error: "Invalid auth token" });
+        return json(401, { error: "Invalid auth token", details: authError?.message || "Auth session missing!" });
       }
 
       actorUserId = authData.user.id;

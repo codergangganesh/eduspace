@@ -1,5 +1,5 @@
 import React from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Info, Image as ImageIcon, MessageSquare, Phone, Video, ChevronRight } from "lucide-react";
@@ -25,6 +25,9 @@ export const ChatProfilePopup = ({
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="p-0 overflow-visible md:overflow-hidden bg-transparent border-none shadow-none sm:max-w-[320px] md:max-w-[320px] gap-0 outline-none flex items-center justify-center">
                 <DialogTitle className="sr-only">Profile Preview</DialogTitle>
+                <DialogDescription className="sr-only">
+                    Preview of {userName}'s profile with quick actions.
+                </DialogDescription>
 
                 <AnimatePresence>
                     {isOpen && (

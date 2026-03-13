@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { create } from "https://deno.land/x/djwt@v2.8/mod.ts";
 
@@ -221,9 +221,9 @@ serve(async (req) => {
             auth: { persistSession: false, autoRefreshToken: false },
         });
 
-        const { data: authData, error: authError } = await userClient.auth.getUser();
+        const { data: authData, error: authError } = await userClient.auth.getUser(token);
         if (authError || !authData.user) {
-            return json(401, { error: "Invalid auth token" });
+            return json(401, { error: "Invalid auth token", details: authError?.message || "Auth session missing!" });
         }
 
         const callerId = authData.user.id;
