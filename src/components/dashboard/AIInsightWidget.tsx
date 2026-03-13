@@ -35,11 +35,14 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
     const [isSpeaking, setIsSpeaking] = useState(false);
     
     // Follow-up Chat State
-    const [chatMessages, setChatMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
+    const [chatMessages, setChatMessages] = useState<{role: 'user' | 'assistant', content: string, id?: string}[]>([]);
     const [userQuestion, setUserQuestion] = useState("");
     const [isChatLoading, setIsChatLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const { profile } = useAuth();
+    const [hasLoadedChats, setHasLoadedChats] = useState(false);
+
+
 
     // Auto-scroll effect
     useEffect(() => {
@@ -197,10 +200,14 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
     const handleFollowUp = async () => {
         if (!userQuestion.trim() || isChatLoading) return;
 
-        const newMessage = { role: 'user' as const, content: userQuestion };
+        const questionText = userQuestion;
+        const newMessage = { role: 'user' as const, content: questionText };
         setChatMessages(prev => [...prev, newMessage]);
         setUserQuestion("");
         setIsChatLoading(true);
+
+
+        const tempAIMessageId = crypto.randomUUID();
 
         try {
             const contextPrompt = `
@@ -208,30 +215,40 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
                 TODAY'S BRIEFING: "${insight}"
                 DETAILED PLAN: "${deepDive}"
                 
-                STUDENT QUESTION: "${userQuestion}"
+                STUDENT QUESTION: "${questionText}"
                 
                 Answer the student's question based on their data and your coaching plan. Keep it concise, motivational, and strategic. Max 60 words.
             `;
 
             const messages = [
                 { role: 'system', content: 'You are an elite academic performance coach.' },
-                ...chatMessages.slice(-4), // Keep some history
+                ...chatMessages.slice(-4).map(({ role, content }) => ({ role, content })),
                 { role: 'user', content: contextPrompt }
             ];
 
             let aiResponse = "";
-            setChatMessages(prev => [...prev, { role: 'assistant' as const, content: "" }]);
+            setChatMessages(prev => [...prev, { role: 'assistant' as const, content: "", id: tempAIMessageId }]);
 
             await aiChatService.streamChat(messages, (token) => {
                 aiResponse += token;
                 setChatMessages(prev => {
                     const updated = [...prev];
-                    updated[updated.length - 1].content = aiResponse;
+                    // Find the AI placeholder by id, searching from the end
+                    for (let i = updated.length - 1; i >= 0; i--) {
+                        if (updated[i].id === tempAIMessageId) {
+                            updated[i] = { ...updated[i], content: aiResponse };
+                            break;
+                        }
+                    }
                     return updated;
                 });
             });
+
+
         } catch (error) {
-            console.error("Follow-up error:", error);
+            console.error("AI streaming error:", error);
+            // Only remove the placeholder if AI streaming itself failed (not a DB save error)
+            setChatMessages(prev => prev.filter(msg => msg.id !== tempAIMessageId));
         } finally {
             setIsChatLoading(false);
         }
@@ -364,19 +381,51 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
                                             msg.role === 'user' ? "flex-row-reverse" : "flex-row"
                                         )}
                                     >
-                                        <div className={cn(
-                                            "h-7 w-7 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                                            msg.role === 'user' ? "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" : "bg-indigo-600"
-                                        )}>
-                                            {msg.role === 'user' ? <User className="h-4 w-4 text-slate-600 dark:text-slate-300" /> : <Bot className="h-4 w-4 text-white" />}
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className={cn(
+                                                "h-7 w-7 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden border",
+                                                msg.role === 'user' 
+                                                    ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" 
+                                                    : "bg-transparent border-transparent"
+                                            )}>
+                                                {msg.role === 'user' ? (
+                                                    profile?.avatar_url ? (
+                                                        <img 
+                                                            src={profile.avatar_url} 
+                                                            alt={profile.full_name || 'User'}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <User className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                                                    )
+                                                ) : (
+                                                    <div className="h-full w-full bg-white dark:bg-slate-900 rounded-full p-1 flex items-center justify-center">
+                                                        <img 
+                                                            src="/favicon.png" 
+                                                            alt="Eduspace AI"
+                                                            className="h-full w-full object-contain"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className={cn(
-                                            "max-w-[85%] text-xs p-3.5 rounded-2xl shadow-sm",
-                                            msg.role === 'user' 
-                                                ? "bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200" 
-                                                : "bg-indigo-600 text-white"
-                                        )}>
-                                            {msg.content || <Loader2 className="h-3 w-3 animate-spin" />}
+                                        <div className="flex flex-col gap-1 max-w-[85%]">
+                                            <span className={cn(
+                                                "text-[10px] font-bold uppercase tracking-wider",
+                                                msg.role === 'user' 
+                                                    ? "text-slate-500 dark:text-slate-400" 
+                                                    : "text-indigo-500"
+                                            )}>
+                                                {msg.role === 'user' ? (profile?.full_name || 'You') : 'Eduspace AI'}
+                                            </span>
+                                            <div className={cn(
+                                                "text-xs p-3.5 rounded-2xl shadow-sm",
+                                                msg.role === 'user' 
+                                                    ? "bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200" 
+                                                    : "bg-indigo-600 text-white"
+                                            )}>
+                                                {msg.content || <Loader2 className="h-3 w-3 animate-spin" />}
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ))}

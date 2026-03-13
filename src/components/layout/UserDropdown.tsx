@@ -44,12 +44,12 @@ export function UserDropdown() {
     <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
       <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 pl-3 pr-1.5 py-1.5 rounded-xl border border-transparent hover:border-border/50 hover:bg-muted/30 transition-all duration-300 active:scale-95 group shadow-sm">
+          <button className="flex items-center gap-2 pl-2 pr-1 h-10 rounded-xl border border-transparent hover:bg-muted/30 transition-all duration-300 group">
             <div className="hidden sm:block text-right">
               <p className="text-sm font-black tracking-tight text-foreground/90 group-hover:text-foreground">{displayName}</p>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{displayRole}</p>
             </div>
-            <Avatar className="size-9 border-2 border-background shadow-md">
+            <Avatar className="size-8 border border-border/50 shadow-sm">
               <AvatarImage src={profile?.avatar_url || ""} />
               <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
                 {initials}

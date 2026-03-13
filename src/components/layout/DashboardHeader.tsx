@@ -167,41 +167,46 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
               <Button 
                 variant="outline" 
                 size="icon" 
-                className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm"
+                className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 transition-all shadow-sm group active:bg-muted/50"
               >
-                <MoreVertical className="size-5" />
+                <MoreVertical className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95 z-[10002]">
-              <DropdownMenuItem 
-                onSelect={() => {
-                  // Tiny delay ensures the dropdown closes before the new modal/drawer opens
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent("open-invite-dialog"));
-                  }, 150);
-                }}
-                className="rounded-xl p-2.5 font-bold cursor-pointer"
-              >
-                <UserPlus className="mr-2 size-4 text-primary" />
-                <span>Invite User</span>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                onSelect={() => {
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent("open-student-notes"));
-                  }, 150);
-                }}
-                className="rounded-xl p-2.5 font-bold cursor-pointer"
-              >
-                <NotebookPen className="mr-2 size-4 text-primary" />
-                <span>Student Notes</span>
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-48 p-2 rounded-[20px] border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95 z-[10002]">
+              <div className="grid grid-cols-2 gap-2">
+                <DropdownMenuItem 
+                  onSelect={() => {
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("open-invite-dialog"));
+                    }, 150);
+                  }}
+                  className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl cursor-pointer hover:bg-primary/5 focus:bg-primary/5 transition-all text-center border border-transparent hover:border-primary/10"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <UserPlus className="size-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-foreground">Invite</span>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  onSelect={() => {
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("open-student-notes"));
+                    }, 150);
+                  }}
+                  className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl cursor-pointer hover:bg-primary/5 focus:bg-primary/5 transition-all text-center border border-transparent hover:border-primary/10"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <NotebookPen className="size-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-foreground">Notes</span>
+                </DropdownMenuItem>
+              </div>
               
               {actions && (
                 <>
-                  <DropdownMenuSeparator className="my-1.5" />
-                  <div className="p-1">
+                  <DropdownMenuSeparator className="my-1.5 opacity-50" />
+                  <div className="p-1 px-1.5">
                     {actions}
                   </div>
                 </>
@@ -209,9 +214,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="transition-transform active:scale-90">
-            <UserDropdown />
-          </div>
+          <UserDropdown />
         </div>
 
         <div className="hidden lg:flex items-center gap-2">
@@ -230,9 +233,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
               {toolButtons}
             </div>
           )}
-          <div className="transition-transform active:scale-90">
-            <UserDropdown />
-          </div>
+          <UserDropdown />
         </div>
       </div>
     </header>
