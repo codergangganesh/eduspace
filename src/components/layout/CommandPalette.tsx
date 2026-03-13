@@ -16,7 +16,7 @@ import {
     Plus,
     Search,
     Settings,
-    Sparkles,
+    Bot,
     Sun,
     User,
     ArrowRight,
@@ -26,7 +26,8 @@ import {
     Globe,
     Zap,
     History,
-    Orbit
+    Orbit,
+    GraduationCap
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -43,6 +44,7 @@ export function CommandPalette() {
         assignments: any[];
         quizzes: any[];
         chats: any[];
+        coach?: any;
     }>({ assignments: [], quizzes: [], chats: [] });
     const [isSearching, setIsSearching] = useState(false);
     
@@ -62,7 +64,8 @@ export function CommandPalette() {
                             { id: 'feed', title: 'Class Feed', desc: 'Stay updated with global announcements and class-specific news.', icon: MessageSquare },
                             { id: 'schedule', title: 'Schedule', desc: 'Your personalized academic calendar with classes and lab sessions.', icon: Calendar },
                             { id: 'knowledge-map', title: 'Knowledge Map', desc: 'Visualize your academic connections and learning history in 3D.', icon: Orbit },
-                            { id: 'ai-chat', title: 'AI Chat', desc: 'Interact with EduSpace AI for tutoring, brainstorming, and support.', icon: Sparkles },
+                            { id: 'ai-chat', title: 'AI Chat', desc: 'Interact with EduSpace AI for tutoring, brainstorming, and support.', icon: Bot },
+                            { id: 'ai-coach', title: 'AI Coach', desc: 'Get personalized academic insights and coaching strategies from your AI mentor.', icon: GraduationCap },
                             { id: 'help', title: 'Help Center', desc: 'Access documentation, tutorials, and contact support for assistance.', icon: HelpCircle },
                             { id: 'logout', title: 'Logout', desc: 'Securely sign out of your EduSpace account.', icon: LogOut },
                             { id: 'light', title: 'Light Theme', desc: 'Switch to a bright, readable interface.', icon: Sun },
@@ -76,7 +79,8 @@ export function CommandPalette() {
         if (results.quizzes.some(q => q.id === selectedId)) return 'rgba(168, 85, 247, 0.6)'; // Purple
         if (results.chats.some(c => c.id === selectedId)) return 'rgba(16, 185, 129, 0.6)'; // Emerald
         if (selectedId === 'logout') return 'rgba(239, 68, 68, 0.6)'; // Red
-        if (selectedId === 'ai-chat') return 'rgba(99, 102, 241, 0.8)'; // Sparkles Indigo
+        if (selectedId === 'ai-chat') return 'rgba(99, 102, 241, 0.8)'; // Bot Indigo
+        if (selectedId === 'ai-coach') return 'rgba(79, 70, 229, 0.8)'; // Indigo 600
         return 'rgba(99, 102, 241, 0.5)';
     };
 
@@ -113,7 +117,8 @@ export function CommandPalette() {
                 setResults({
                     assignments: assignmentsSearch.data || [],
                     quizzes: quizzesSearch.data || [],
-                    chats: chatsSearch.data || []
+                    chats: chatsSearch.data || [],
+                    coach: "AI Coach".toLowerCase().includes(search.toLowerCase()) ? { id: 'ai-coach', title: 'AI Coach' } : null
                 });
             } catch (err) {
                 console.error("Search error:", err);
@@ -182,6 +187,11 @@ export function CommandPalette() {
             window.removeEventListener("open-command-palette", handleOpen);
         };
     }, [role, navigate, signOut, setTheme]);
+
+    const handleToggleCoach = () => {
+        window.dispatchEvent(new CustomEvent("toggle-ai-coach"));
+        setOpen(false);
+    };
 
     const runCommand = (command: () => void) => {
         setOpen(false);
@@ -310,6 +320,39 @@ export function CommandPalette() {
                         </Command.Group>
                     )}
 
+                    {results.coach && (
+                        <Command.Group heading="AI Intelligence" className="p-2">
+                             <Item value="ai-coach" onSelect={() => handleToggleCoach()}>
+                                <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
+                                    <GraduationCap className="h-4 w-4 text-indigo-600" />
+                                </div>
+                                <div className="flex flex-col flex-1 truncate">
+                                    <span className="font-bold">AI Performance Coach</span>
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Personal Mentor</span>
+                                </div>
+                            </Item>
+                        </Command.Group>
+                    )}
+
+                    <Command.Group heading="AI Intelligence" className="p-2">
+                         <Item value="ai-coach" onSelect={() => handleToggleCoach()}>
+                            <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
+                                <GraduationCap className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <div className="flex flex-col flex-1 truncate">
+                                <span className="font-bold">AI Performance Coach</span>
+                                <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Personal Mentor</span>
+                            </div>
+                        </Item>
+                        <Item value="ai-chat" onSelect={() => runCommand(() => navigate("/ai-chat"))}>
+                            <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 mr-3 transition-colors group-aria-selected:bg-primary/20">
+                                <Bot className="h-4 w-4 text-primary" />
+                            </div>
+                            <span>EduSpace AI Chat</span>
+                            <Shortcut>Alt + J</Shortcut>
+                        </Item>
+                    </Command.Group>
+
                     <Command.Group heading="General" className="p-2">
                         <Item value="dashboard" onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'))}>
                             <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
@@ -401,13 +444,6 @@ export function CommandPalette() {
                                 <Shortcut>Alt + E</Shortcut>
                             </Item>
                         )}
-                        <Item value="ai-chat" onSelect={() => runCommand(() => navigate("/ai-chat"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 mr-3 transition-colors group-aria-selected:bg-primary/20">
-                                <Sparkles className="h-4 w-4 text-primary" />
-                            </div>
-                            <span>EduSpace AI Chat</span>
-                            <Shortcut>Alt + J</Shortcut>
-                        </Item>
                     </Command.Group>
 
                     <Command.Group heading="Appearance" className="p-2">
@@ -537,7 +573,7 @@ export function CommandPalette() {
                                         <div className="size-5 rounded-md bg-muted/20 flex items-center justify-center font-bold">↵</div>
                                         <span>Press Enter to Open</span>
                                     </div>
-                                    <Sparkles className="size-4 text-primary opacity-30" />
+                                    <Bot className="size-4 text-primary opacity-30" />
                                 </div>
                             </div>
                         </motion.div>

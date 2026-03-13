@@ -6,8 +6,16 @@ import { format, startOfWeek, addDays, isSameDay, differenceInCalendarDays, pars
 import { cn } from '@/lib/utils';
 import { BadgeType, getStreakHeat } from '@/services/streakService';
 
-export const DashboardStreakWeekly = () => {
-    const { streak, badges } = useStreak();
+interface DashboardStreakWeeklyProps {
+    streak?: any;
+    badges?: any[];
+}
+
+export const DashboardStreakWeekly = ({ streak: propStreak, badges: propBadges }: DashboardStreakWeeklyProps) => {
+    const { streak: contextStreak, badges: contextBadges } = useStreak();
+    
+    const streak = propStreak || contextStreak;
+    const badges = propBadges || contextBadges || [];
 
     // Generate current week days
     const today = new Date();

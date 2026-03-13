@@ -20,6 +20,7 @@ import { useRealtimeInvitations } from "@/hooks/useRealtimeInvitations";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useStreak } from "@/contexts/StreakContext";
 import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
+import { supabase } from "@/integrations/supabase/client";
 import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -63,16 +64,47 @@ export default function Dashboard() {
     }
   );
 
-  // Show the full-page skeleton ONLY when we have absolutely no data yet
-  // (i.e. true first-ever load). All caches are module-level so on subsequent
-  // navigations the hooks initialise with data and loading stays false.
-  const hasNoData = assignments.length === 0 && schedules.length === 0;
-  const loading = (assignmentsLoading || scheduleLoading || isOnboarding || streakLoading) && hasNoData;
+  // --- Dashboard Snapshot Logic ---
+  const [snapshot, setSnapshot] = useState<any>(null);
+  const [isSnapshotLoading, setIsSnapshotLoading] = useState(true);
 
-  // Process upcoming assignments — computed before early return so useMemo can run unconditionally
+  // Load existing snapshot for today
+  useEffect(() => {
+    const loadSnapshot = async () => {
+      if (!user?.id || role !== 'student') {
+        setIsSnapshotLoading(false);
+        return;
+      }
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      const snapshotKey = `dashboard_snapshot_${todayStr}`;
+
+      try {
+        const { data: existingSnapshot, error } = await supabase
+          .from('knowledge_nodes')
+          .select('metadata')
+          .eq('user_id', user.id)
+          .eq('entity_type', 'dashboard_snapshot')
+          .eq('label', snapshotKey)
+          .maybeSingle();
+
+        if (existingSnapshot && existingSnapshot.metadata) {
+          console.log('[Dashboard] Loaded today\'s snapshot');
+          setSnapshot(existingSnapshot.metadata);
+        }
+      } catch (e) {
+        console.error("[Dashboard] Error loading snapshot:", e);
+      } finally {
+        setIsSnapshotLoading(false);
+      }
+    };
+    loadSnapshot();
+  }, [user?.id, role]);
+
+  // Process live data (always needed for calculation and initial snapshot)
   const todayIndex = new Date().getDay();
 
-  const upcomingTasks = assignments
+  const liveUpcomingTasks = useMemo(() => assignments
     .filter(a => {
       const isActiveOrPublished = a.status === 'published' || a.status === 'active';
       const isNotSubmitted = a.studentStatus ? (a.studentStatus === 'pending' || a.studentStatus === 'overdue') : true;
@@ -92,9 +124,9 @@ export default function Dashboard() {
         type: "assignment" as const,
         isUrgent
       };
-    });
+    }), [assignments]);
 
-  const upcomingClasses = schedules
+  const liveUpcomingClasses = useMemo(() => schedules
     .filter(s => s.day_of_week >= todayIndex)
     .sort((a, b) => {
       if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
@@ -109,16 +141,60 @@ export default function Dashboard() {
       dueTime: s.start_time.slice(0, 5),
       type: s.type as any,
       isUrgent: s.day_of_week === todayIndex
-    }));
+    })), [schedules, todayIndex]);
 
-  // ✅ useMemo MUST be before any early return — Rules of Hooks
+  // Create snapshot if none exists and live data is ready
+  useEffect(() => {
+    const createSnapshot = async () => {
+        // Only snapshot for students when we have actual data and snapshot isn't loaded yet
+        if (role !== 'student' || snapshot || isSnapshotLoading || assignmentsLoading || scheduleLoading || streakLoading) return;
+        if (assignments.length === 0 && schedules.length === 0) return;
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const snapshotKey = `dashboard_snapshot_${todayStr}`;
+        
+        const newSnapshot = {
+            stats,
+            streak,
+            upcomingTasks: liveUpcomingTasks,
+            upcomingClasses: liveUpcomingClasses
+        };
+
+        console.log('[Dashboard] Creating fresh snapshot for today');
+        try {
+            await supabase.from('knowledge_nodes').insert({
+                user_id: user.id || '',
+                entity_type: 'dashboard_snapshot',
+                label: snapshotKey,
+                source_id: '00000000-0000-0000-0000-000000000000',
+                metadata: newSnapshot as any,
+                updated_at: new Date().toISOString()
+            });
+            setSnapshot(newSnapshot);
+        } catch (e) {
+            console.error("[Dashboard] Error saving snapshot:", e);
+        }
+    };
+    createSnapshot();
+  }, [role, snapshot, isSnapshotLoading, assignmentsLoading, scheduleLoading, streakLoading, assignments, schedules, stats, streak, liveUpcomingTasks, liveUpcomingClasses, user?.id]);
+
+  // Derived values: use snapshot if available, otherwise live data
+  const displayStats = snapshot?.stats || stats;
+  const displayStreak = snapshot?.streak || streak;
+  const displayUpcomingTasks = snapshot?.upcomingTasks || liveUpcomingTasks;
+  const displayUpcomingClasses = snapshot?.upcomingClasses || liveUpcomingClasses;
+
+  // AI Insight Data based on display data
   const aiInsightData = useMemo(() => ({
-    upcomingAssignmentsCount: upcomingTasks.length,
-    overdueCount: stats.pending,
-    currentStreak: streak?.current_streak || 0,
-    nextClass: upcomingClasses[0]?.title,
-    nextClassTime: upcomingClasses[0]?.dueTime
-  }), [upcomingTasks.length, stats.pending, streak?.current_streak, upcomingClasses[0]?.title, upcomingClasses[0]?.dueTime]);
+    upcomingAssignmentsCount: displayUpcomingTasks.length,
+    overdueCount: displayStats.pending,
+    currentStreak: displayStreak?.current_streak || 0,
+    nextClass: displayUpcomingClasses[0]?.title,
+    nextClassTime: displayUpcomingClasses[0]?.dueTime
+  }), [displayUpcomingTasks.length, displayStats.pending, displayStreak?.current_streak, displayUpcomingClasses]);
+
+  const hasNoData = assignments.length === 0 && schedules.length === 0;
+  const loading = (assignmentsLoading || scheduleLoading || isOnboarding || streakLoading || isSnapshotLoading) && hasNoData;
 
   if (loading) {
     return (
@@ -127,7 +203,6 @@ export default function Dashboard() {
       </DashboardLayout>
     );
   }
-
 
   return (
     <DashboardLayout
@@ -144,14 +219,17 @@ export default function Dashboard() {
         {/* Hero Section */}
         <DashboardHero />
 
-        {/* AI Insight Section */}
-        <AIInsightWidget data={aiInsightData} />
+        {role === 'student' && (
+          <div className="max-w-4xl mx-auto -mt-4 mb-4">
+            <AIInsightWidget data={aiInsightData} />
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <PremiumStatsCard
             title="ASSIGNED"
-            value={stats.total}
+            value={displayStats.total}
             subtitle="Total active tasks"
             icon={FileText}
             backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
@@ -160,7 +238,7 @@ export default function Dashboard() {
           />
           <PremiumStatsCard
             title="STREAK"
-            value={streak?.current_streak || 0}
+            value={displayStreak?.current_streak || 0}
             subtitle="Day blaze"
             icon={Flame}
             backgroundColor="bg-gradient-to-br from-orange-500 to-red-600"
@@ -169,7 +247,7 @@ export default function Dashboard() {
           />
           <PremiumStatsCard
             title="COMPLETED"
-            value={stats.completed}
+            value={displayStats.completed}
             subtitle="Tasks finished"
             icon={CheckCircle}
             backgroundColor="bg-gradient-to-br from-green-600 to-emerald-700"
@@ -177,7 +255,7 @@ export default function Dashboard() {
           />
           <PremiumStatsCard
             title="PENDING"
-            value={stats.pending}
+            value={displayStats.pending}
             subtitle="Require attention"
             icon={AlertCircle}
             backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
@@ -208,7 +286,7 @@ export default function Dashboard() {
                   Momentum Tracker
                 </h3>
               </div>
-              <DashboardStreakWeekly />
+              <DashboardStreakWeekly streak={displayStreak} />
             </div>
 
             <div>
@@ -229,7 +307,7 @@ export default function Dashboard() {
                   Momentum Tracker
                 </h3>
               </div>
-              <DashboardStreakWeekly />
+              <DashboardStreakWeekly streak={displayStreak} />
             </div>
 
             {/* Upcoming Classes Widget */}
@@ -239,8 +317,8 @@ export default function Dashboard() {
                 Upcoming Classes
               </h3>
               <div className="space-y-3">
-                {upcomingClasses.length > 0 ? (
-                  upcomingClasses.map(cls => (
+                {displayUpcomingClasses.length > 0 ? (
+                  displayUpcomingClasses.map((cls: any) => (
                     <UpcomingTask
                       key={cls.id}
                       {...cls}
@@ -267,8 +345,8 @@ export default function Dashboard() {
                 Assignments Due
               </h3>
               <div className="space-y-3">
-                {upcomingTasks.length > 0 ? (
-                  upcomingTasks.map(task => (
+                {displayUpcomingTasks.length > 0 ? (
+                  displayUpcomingTasks.map((task: any) => (
                     <UpcomingTask
                       key={task.id}
                       {...task}

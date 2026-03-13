@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { useLayout } from "@/contexts/LayoutContext";
 import PageTransition from "./PageTransition";
 import { CommandPalette } from "./CommandPalette";
+import { AICoachWidget } from "@/components/dashboard/AICoachWidget";
 
 
 export function RootLayout() {
@@ -88,6 +89,7 @@ export function RootLayout() {
                     />
                 )
             }
+            {location.pathname === '/dashboard' && <AICoachWidget />}
         </div >
     );
 }
