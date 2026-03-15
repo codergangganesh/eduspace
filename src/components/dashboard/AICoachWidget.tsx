@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useStreak } from "@/contexts/StreakContext";
+import { useNavigate } from "react-router-dom";
+import { useLayout } from "@/contexts/LayoutContext";
 import {
     Sheet,
     SheetContent,
@@ -23,26 +25,82 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
  * briefing and an interactive "Coach's Notebook" for personal academic performance.
  */
 export function AICoachWidget() {
-    const { profile, role } = useAuth();
+    const { profile, user, role } = useAuth();
     const { streak } = useStreak();
 
     const [insight, setInsight] = useState<string>("");
     const [deepDive, setDeepDive] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
     const [isDeepLoading, setIsDeepLoading] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const { isAICoachOpen: isOpen, setIsAICoachOpen: setIsOpen, isMobileMenuOpen } = useLayout();
     const [activeTab, setActiveTab] = useState<'today' | 'chat'>('today');
 
     // Chat State
     const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant', content: string, id?: string }[]>([]);
+    const [allHistory, setAllHistory] = useState<any[]>([]);
+    const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
     const [userQuestion, setUserQuestion] = useState("");
     const [isChatLoading, setIsChatLoading] = useState(false);
+    const [isVisible, setIsVisible] = useState(true);
+    const lastScrollY = useRef(0);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [hasLoadedChats, setHasLoadedChats] = useState(false);
     const lastFetchedDateRef = useRef<string | null>(null);
+
+    const loadHistory = async () => {
+        if (!user?.id) return;
+        try {
+            // Cleanup: Delete messages older than 24 hours
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            await supabase
+                .from('coach_notebook_chats')
+                .delete()
+                .eq('user_id', user.id)
+                .lt('created_at', twentyFourHoursAgo);
+
+            const { data, error } = await supabase
+                .from('coach_notebook_chats')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            if (data) {
+                // Group messages by date for the History tab
+                const grouped = data.reduce((acc: any, msg: any) => {
+                    const dateStr = new Date(msg.created_at).toLocaleDateString('en-CA'); // YYYY-MM-DD
+                    if (!acc[dateStr]) acc[dateStr] = [];
+                    acc[dateStr].push(msg);
+                    return acc;
+                }, {});
+
+                // Convert back to sorted array for history display (descending dates)
+                const sortedHistory = Object.keys(grouped)
+                    .sort((a, b) => b.localeCompare(a))
+                    .map(date => ({ date, messages: grouped[date] }));
+
+                setAllHistory(sortedHistory);
+
+                // For the "Today" view, populate the current session
+                const todayStr = new Date().toLocaleDateString('en-CA');
+                const todayMessages = data.filter((m: any) =>
+                    new Date(m.created_at).toLocaleDateString('en-CA') === todayStr
+                );
+
+                if (todayMessages.length > 0 && chatMessages.length === 0) {
+                    setChatMessages(todayMessages.map((m: any) => ({
+                        role: m.role as 'user' | 'assistant',
+                        content: m.content
+                    })));
+                }
+            }
+        } catch (err) {
+            console.error("Coach History load error:", err);
+        }
+    };
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -69,10 +127,42 @@ export function AICoachWidget() {
         return () => window.removeEventListener("toggle-ai-coach", handleToggle);
     }, []);
 
+    // Refresh history when opened
+    useEffect(() => {
+        if (isOpen) {
+            loadHistory();
+            setIsVisible(true); // Always show when open
+        }
+    }, [isOpen]);
+
+    // Handle Scroll visibility (Hide on scroll down, show on scroll up)
+    useEffect(() => {
+        const mainContent = document.querySelector('main');
+        if (!mainContent) return;
+
+        const handleScroll = () => {
+            const currentScrollY = mainContent.scrollTop;
+            
+            // Show at the very top or if scrolling up
+            if (currentScrollY <= 10 || currentScrollY < lastScrollY.current) {
+                setIsVisible(true);
+            } 
+            // Hide if scrolling down past a threshold
+            else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+                setIsVisible(false);
+            }
+            
+            lastScrollY.current = currentScrollY;
+        };
+
+        mainContent.addEventListener('scroll', handleScroll, { passive: true });
+        return () => mainContent.removeEventListener('scroll', handleScroll);
+    }, []);
+
     // Load or Generate Daily Insights
     useEffect(() => {
         const generateInsight = async () => {
-            if (!profile?.id) return;
+            if (!user?.id) return;
             const todayStr = new Date().toISOString().split('T')[0];
             const globalKey = `global_briefing_${todayStr}`;
             const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
@@ -144,39 +234,16 @@ export function AICoachWidget() {
             }
         };
         generateInsight();
-    }, [profile?.id]);
+        loadHistory();
+    }, [user?.id]);
 
-    // Persistent Chat History
-    useEffect(() => {
-        const loadChats = async () => {
-            if (!profile?.id || hasLoadedChats) return;
-            const todayStr = new Date().toISOString().split('T')[0];
-            const chatKey = `daily_chat_${todayStr}`;
 
-            try {
-                const { data } = await supabase
-                    .from('knowledge_nodes')
-                    .select('metadata')
-                    .eq('user_id', profile.id)
-                    .eq('entity_type', 'daily_chat_history')
-                    .eq('label', chatKey)
-                    .maybeSingle();
-
-                if (data && (data.metadata as any)?.messages) {
-                    setChatMessages((data.metadata as any).messages);
-                }
-                setHasLoadedChats(true);
-            } catch (err) {
-                console.error("Chat load error:", err);
-            }
-        };
-        loadChats();
-    }, [profile?.id, hasLoadedChats]);
 
     const handleFollowUp = async () => {
         if (!userQuestion.trim() || isChatLoading) return;
         const q = userQuestion;
         const newUserMsg = { role: 'user' as const, content: q };
+        const currentMessages = [...chatMessages];
         setChatMessages(prev => [...prev, newUserMsg]);
         setUserQuestion("");
         setIsChatLoading(true);
@@ -192,18 +259,20 @@ export function AICoachWidget() {
                 setChatMessages(prev => prev.map(m => m.id === tempID ? { ...m, content: aiRes } : m));
             });
 
-            // Persist
-            const todayStr = new Date().toISOString().split('T')[0];
-            await supabase.from('knowledge_nodes').upsert({
-                user_id: profile?.id,
-                entity_type: 'daily_chat_history',
-                source_id: '00000000-0000-0000-0000-000000000000',
-                label: `daily_chat_${todayStr}`,
-                metadata: { messages: [...chatMessages, newUserMsg, { role: 'assistant', content: aiRes }] },
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,label' });
+            // Persist to the dedicated coach messages table
+            await supabase.from('coach_notebook_chats').insert([
+                { user_id: user?.id, role: 'user', content: q },
+                { user_id: user?.id, role: 'assistant', content: aiRes }
+            ]);
 
-        } catch (err) { console.error(err); } finally { setIsChatLoading(false); }
+            // Refresh history list
+            await loadHistory();
+
+        } catch (err) {
+            console.error("AI Chat handleFollowUp error:", err);
+        } finally {
+            setIsChatLoading(false);
+        }
     };
 
     const handleSpeak = (e: React.MouseEvent) => {
@@ -217,7 +286,16 @@ export function AICoachWidget() {
 
     return (
         <TooltipProvider>
-            <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-2 sm:gap-3 pointer-events-none">
+            <motion.div 
+                initial={false}
+                animate={{ 
+                    opacity: isVisible ? 1 : 0,
+                    y: isVisible ? 0 : 20,
+                    pointerEvents: isVisible ? 'auto' : 'none'
+                }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-2 sm:gap-3 pointer-events-none"
+            >
                 {/* Floating Preview Slogan */}
                 <AnimatePresence>
                     {showPreview && insight && (
@@ -267,7 +345,7 @@ export function AICoachWidget() {
                         <TooltipContent side="left" className="font-bold hidden sm:block">AI Coach's Notebook</TooltipContent>
                     </Tooltip>
 
-                    <SheetContent 
+                    <SheetContent
                         side="right"
                         className="w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/50 dark:border-slate-800/50 p-0 overflow-hidden flex flex-col"
                     >
@@ -282,29 +360,13 @@ export function AICoachWidget() {
                                         <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest -mt-1">Performance Intelligence</span>
                                     </div>
                                 </div>
-                                
-                                 <button
-                                    onClick={() => setActiveTab(prev => prev === 'today' ? 'chat' : 'today')}
-                                    className={cn(
-                                        "p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center border mr-6",
-                                        activeTab === 'chat' 
-                                            ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20" 
-                                            : "bg-white dark:bg-slate-800 border-border text-slate-500 hover:border-indigo-500/50 hover:text-indigo-500"
-                                    )}
-                                >
-                                    {activeTab === 'today' ? (
-                                        <History className="size-5" />
-                                    ) : (
-                                        <LayoutDashboard className="size-5" />
-                                    )}
-                                </button>
                             </div>
                         </SheetHeader>
 
                         <ScrollArea ref={scrollRef} className="flex-1">
                             <AnimatePresence mode="wait">
                                 {activeTab === 'today' ? (
-                                    <motion.div 
+                                    <motion.div
                                         key="today-view"
                                         initial={{ opacity: 0, scale: 0.98 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -359,46 +421,102 @@ export function AICoachWidget() {
                                                     <MessageCircle className="size-3.5 text-indigo-500" />
                                                     Clarification Chat
                                                 </h3>
+                                                
+                                                 <button
+                                                    onClick={() => {
+                                                        setActiveTab('chat');
+                                                        loadHistory();
+                                                    }}
+                                                    className="p-1.5 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300"
+                                                    title="View Full History"
+                                                >
+                                                    <History className="size-4" />
+                                                </button>
                                             </div>
                                             <ChatMessages messages={chatMessages} profile={profile} />
                                         </div>
+
                                     </motion.div>
                                 ) : (
-                                    <motion.div 
+                                    <motion.div
                                         key="chat-view"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
-                                        className="p-6 space-y-6"
+                                        className="p-6 space-y-8"
                                     >
                                         <div className="flex items-center justify-between mb-2">
                                             <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] flex items-center gap-2">
                                                 <History className="size-3.5 text-indigo-500" />
                                                 Conversation History
                                             </h3>
-                                            <span className="text-[10px] font-bold text-indigo-500/60 uppercase">Full Log</span>
+                                            
+                                            <button
+                                               onClick={() => setActiveTab('today')}
+                                               className="p-1.5 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300"
+                                                title="Back to Active Briefing"
+                                            >
+                                                <LayoutDashboard className="size-4" />
+                                            </button>
                                         </div>
-                                        <ChatMessages messages={chatMessages} profile={profile} />
+
+                                        {allHistory.length > 0 ? (
+                                            <div className="space-y-10">
+                                                {allHistory.map((day) => (
+                                                    <div key={day.date} className="space-y-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
+                                                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap bg-white dark:bg-slate-900 px-2">
+                                                                {new Date(day.date).toLocaleDateString(undefined, {
+                                                                    weekday: 'short',
+                                                                    month: 'short',
+                                                                    day: 'numeric'
+                                                                })}
+                                                            </span>
+                                                            <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
+                                                        </div>
+                                                        <ChatMessages
+                                                            messages={day.messages || []}
+                                                            profile={profile}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                                                <div className="size-20 rounded-[2.5rem] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-700">
+                                                    <History className="size-10 text-slate-300 dark:text-slate-700" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">No history yet</p>
+                                                    <p className="text-[10px] text-slate-500">Your future daily debriefs will appear here.</p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         </ScrollArea>
 
                         <div className="p-4 border-t border-border/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
-                            <div className="flex gap-2">
-                                <Input 
-                                    value={userQuestion} 
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserQuestion(e.target.value)} 
-                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleFollowUp()} 
-                                    placeholder="Ask the coach..." 
-                                    className="h-12 rounded-2xl bg-white dark:bg-slate-800 border-none shadow-inner" 
+                            <div className="flex gap-2 mb-2">
+                                <Input
+                                    value={userQuestion}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserQuestion(e.target.value)}
+                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleFollowUp()}
+                                    placeholder="Ask the coach..."
+                                    className="h-12 rounded-2xl bg-white dark:bg-slate-800 border-none shadow-inner"
                                 />
                                 <Button size="icon" onClick={() => handleFollowUp()} disabled={!userQuestion.trim() || isChatLoading} className="h-12 w-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"><Send className="size-5" /></Button>
                             </div>
+                            <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 font-semibold flex items-center justify-center gap-1.5 italic">
+                                <Bot className="size-2.5 opacity-50" />
+                                Conversations automatically cleared after 24 hours
+                            </p>
                         </div>
                     </SheetContent>
                 </Sheet>
-            </div>
+            </motion.div>
         </TooltipProvider>
     );
 }
@@ -453,8 +571,8 @@ function ChatMessages({ messages, profile }: { messages: ChatMessage[], profile:
                     </div>
                     <div className={cn(
                         "p-4 rounded-2xl text-xs shadow-sm max-w-[85%] leading-relaxed",
-                        m.role === 'user' 
-                            ? "bg-white dark:bg-slate-800 border rounded-tr-none text-slate-700 dark:text-slate-200" 
+                        m.role === 'user'
+                            ? "bg-white dark:bg-slate-800 border rounded-tr-none text-slate-700 dark:text-slate-200"
                             : "bg-indigo-600 text-white rounded-tl-none font-medium"
                     )}>
                         {m.content || <Loader2 className="size-3 animate-spin" />}

@@ -21,7 +21,7 @@ import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useStreak } from "@/contexts/StreakContext";
 import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
 import { supabase } from "@/integrations/supabase/client";
-import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
+
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -184,14 +184,7 @@ export default function Dashboard() {
   const displayUpcomingTasks = snapshot?.upcomingTasks || liveUpcomingTasks;
   const displayUpcomingClasses = snapshot?.upcomingClasses || liveUpcomingClasses;
 
-  // AI Insight Data based on display data
-  const aiInsightData = useMemo(() => ({
-    upcomingAssignmentsCount: displayUpcomingTasks.length,
-    overdueCount: displayStats.pending,
-    currentStreak: displayStreak?.current_streak || 0,
-    nextClass: displayUpcomingClasses[0]?.title,
-    nextClassTime: displayUpcomingClasses[0]?.dueTime
-  }), [displayUpcomingTasks.length, displayStats.pending, displayStreak?.current_streak, displayUpcomingClasses]);
+
 
   const hasNoData = assignments.length === 0 && schedules.length === 0;
   const loading = (assignmentsLoading || scheduleLoading || isOnboarding || streakLoading || isSnapshotLoading) && hasNoData;
@@ -219,11 +212,7 @@ export default function Dashboard() {
         {/* Hero Section */}
         <DashboardHero />
 
-        {role === 'student' && (
-          <div className="max-w-4xl mx-auto -mt-4 mb-4">
-            <AIInsightWidget data={aiInsightData} />
-          </div>
-        )}
+
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -38,6 +39,7 @@ import {
 export function LegalHeader() {
     const [showRoleDialog, setShowRoleDialog] = useState(false);
     const [roleMode, setRoleMode] = useState<"login" | "register">("login");
+    const { isAuthenticated } = useAuth();
     const [showHelpDialog, setShowHelpDialog] = useState(false);
     const [showContactDialog, setShowContactDialog] = useState(false);
 
@@ -178,19 +180,23 @@ export function LegalHeader() {
 
                     {/* Action Buttons & Mobile Menu */}
                     <div className="flex items-center gap-3">
-                        <Button
-                            variant="ghost"
-                            onClick={() => openRoleDialog("login")}
-                            className="hidden lg:inline-flex text-white hover:bg-white/10 text-sm font-bold tracking-tight"
-                        >
-                            Sign in
-                        </Button>
-                        <Button
-                            onClick={() => openRoleDialog("register")}
-                            className="hidden lg:inline-flex bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-black text-sm px-5 h-9 rounded-md transition-all active:scale-95 shadow-lg shadow-[#3ECF8E]/20"
-                        >
-                            Join EduSpace
-                        </Button>
+                        {!isAuthenticated && (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => openRoleDialog("login")}
+                                    className="hidden lg:inline-flex text-white hover:bg-white/10 text-sm font-bold tracking-tight"
+                                >
+                                    Sign in
+                                </Button>
+                                <Button
+                                    onClick={() => openRoleDialog("register")}
+                                    className="hidden lg:inline-flex bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-black text-sm px-5 h-9 rounded-md transition-all active:scale-95 shadow-lg shadow-[#3ECF8E]/20"
+                                >
+                                    Join EduSpace
+                                </Button>
+                            </>
+                        )}
 
                         {/* Mobile Navigation Drawer */}
                         <div className="lg:hidden">
@@ -246,20 +252,22 @@ export function LegalHeader() {
                                     </div>
 
                                     {/* Action Buttons at Bottom */}
-                                    <div className="p-6 pb-12 bg-[#0C0C0C] border-t border-white/5 grid grid-cols-2 gap-3">
-                                        <Button
-                                            onClick={() => openRoleDialog("login")}
-                                            className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold h-11 rounded-xl transition-all text-xs"
-                                        >
-                                            Sign in
-                                        </Button>
-                                        <Button
-                                            onClick={() => openRoleDialog("register")}
-                                            className="w-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-black h-11 rounded-xl transition-all shadow-xl shadow-[#3ECF8E]/10 text-xs"
-                                        >
-                                            Start for Free
-                                        </Button>
-                                    </div>
+                                    {!isAuthenticated && (
+                                        <div className="p-6 pb-12 bg-[#0C0C0C] border-t border-white/5 grid grid-cols-2 gap-3">
+                                            <Button
+                                                onClick={() => openRoleDialog("login")}
+                                                className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold h-11 rounded-xl transition-all text-xs"
+                                            >
+                                                Sign in
+                                            </Button>
+                                            <Button
+                                                onClick={() => openRoleDialog("register")}
+                                                className="w-full bg-[#3ECF8E] hover:bg-[#34b27b] text-black font-black h-11 rounded-xl transition-all shadow-xl shadow-[#3ECF8E]/10 text-xs"
+                                            >
+                                                Start for Free
+                                            </Button>
+                                        </div>
+                                    )}
                                 </SheetContent>
                             </Sheet>
                         </div>

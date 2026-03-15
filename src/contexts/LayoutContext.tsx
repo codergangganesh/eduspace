@@ -14,11 +14,13 @@ interface LayoutContextType {
     options: LayoutOptions;
     setOptions: (options: LayoutOptions) => void;
     isMobileMenuOpen: boolean;
-    setIsMobileMenuOpen: (open: boolean) => void;
+    setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isMobileSidebarCollapsed: boolean;
-    setIsMobileSidebarCollapsed: (collapsed: boolean) => void;
+    setIsMobileSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
     tourActiveStepId: string | null;
     setTourActiveStepId: (id: string | null) => void;
+    isAICoachOpen: boolean;
+    setIsAICoachOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -40,6 +42,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(false);
     const [tourActiveStepId, setTourActiveStepId] = useState<string | null>(null);
+    const [isAICoachOpen, setIsAICoachOpen] = useState(false);
 
     // Sync with profile on load (if not set in localstorage, or just to keep in sync)
     useEffect(() => {
@@ -74,7 +77,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
             isMobileSidebarCollapsed,
             setIsMobileSidebarCollapsed,
             tourActiveStepId,
-            setTourActiveStepId
+            setTourActiveStepId,
+            isAICoachOpen,
+            setIsAICoachOpen
         }}>
             {children}
         </LayoutContext.Provider>
