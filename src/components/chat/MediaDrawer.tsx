@@ -20,8 +20,10 @@ import {
     Play,
     Download,
     ExternalLink,
+    Eye,
 } from "lucide-react";
 import { format } from "date-fns";
+import { downloadAssignmentFile } from "@/lib/supabaseStorage";
 
 interface Message {
     id: string;
@@ -115,7 +117,7 @@ export const MediaDrawer = ({ isOpen, onOpenChange, messages, otherUserName }: M
                         ) : (
                             <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 {docs.map((m, i) => (
-                                    <div key={i} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" onClick={() => window.open(m.attachment_url!, '_blank')}>
+                                    <div key={i} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 group/item transition-all">
                                         <div className="size-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
                                             <FileText className="size-6 text-blue-500" />
                                         </div>
@@ -123,8 +125,24 @@ export const MediaDrawer = ({ isOpen, onOpenChange, messages, otherUserName }: M
                                             <p className="text-sm font-semibold truncate">{m.attachment_name || 'Document'}</p>
                                             <p className="text-[10px] text-slate-400 uppercase tracking-wider">{m.attachment_size} • {m.attachment_type?.split('/')[1] || 'FILE'}</p>
                                         </div>
-                                        <div className="size-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400">
-                                            <Download className="size-4" />
+                                        <div className="flex gap-1">
+                                            <button 
+                                                title="View"
+                                                onClick={() => window.open(m.attachment_url!, '_blank')}
+                                                className="size-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-blue-500"
+                                            >
+                                                <Eye className="size-4" />
+                                            </button>
+                                            <button 
+                                                title="Download"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    downloadAssignmentFile(m.attachment_url!, m.attachment_name || 'document', 'message-attachments');
+                                                }}
+                                                className="size-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-emerald-500"
+                                            >
+                                                <Download className="size-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

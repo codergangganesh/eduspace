@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, FileText, Loader2, CheckCircle, Download, ExternalLink, Calendar, Clock, Trophy, AlertCircle, File, MoreVertical, Trash2 } from "lucide-react";
+import { Upload, X, FileText, Loader2, CheckCircle, Download, ExternalLink, Calendar, Clock, Trophy, AlertCircle, File, MoreVertical, Trash2, Eye } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { validateAssignmentFile, uploadAssignmentFile } from "@/lib/supabaseStorage";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import confetti from 'canvas-confetti';
 import { Card, CardContent } from "@/components/ui/card";
 import { formatFileSize, getFileTypeDisplay } from "@/lib/fileUtils";
+import { resolveAnyStorageUrl, downloadAssignmentFile } from "@/lib/supabaseStorage";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -59,6 +60,12 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
     const hasSubmission = !!existingSubmission;
     const isGraded = existingSubmission?.status === 'graded';
 
+    // Resolved URLs for viewing
+    const [resolvedMaterialUrl, setResolvedMaterialUrl] = useState<string | null>(null);
+    const [resolvedSubmissionUrl, setResolvedSubmissionUrl] = useState<string | null>(null);
+    const [materialPath, setMaterialPath] = useState<string | null>(null);
+    const [submissionPath, setSubmissionPath] = useState<string | null>(null);
+
     const prevOpenRef = useRef(false);
 
     // Reset form only when dialog transition from closed to open
@@ -89,6 +96,32 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
     };
 
     const { recordAcademicAction } = useStreak();
+
+    // Resolve URLs when dialog opens or assignment changes
+    useEffect(() => {
+        const resolveUrls = async () => {
+            if (isOpen) {
+                if (assignment?.attachment_url) {
+                    setMaterialPath(assignment.attachment_url);
+                    const url = await resolveAnyStorageUrl(assignment.attachment_url);
+                    setResolvedMaterialUrl(url);
+                } else {
+                    setResolvedMaterialUrl(null);
+                    setMaterialPath(null);
+                }
+
+                if (existingSubmission?.attachment_url) {
+                    setSubmissionPath(existingSubmission.attachment_url);
+                    const url = await resolveAnyStorageUrl(existingSubmission.attachment_url);
+                    setResolvedSubmissionUrl(url);
+                } else {
+                    setResolvedSubmissionUrl(null);
+                    setSubmissionPath(null);
+                }
+            }
+        };
+        resolveUrls();
+    }, [isOpen, assignment?.attachment_url, existingSubmission?.attachment_url]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -272,27 +305,37 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                                         </div>
                                     </div>
 
-                                    {assignment.attachment_url && (
-                                        <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-500/10 rounded-2xl p-4 transition-all hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-500/20 group">
+                                    {resolvedMaterialUrl && (
+                                        <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-500/10 rounded-2xl p-4 transition-all hover:shadow-md group">
                                             <Label className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-3 block uppercase tracking-wider">Resource Material</Label>
-                                            <a
-                                                href={assignment.attachment_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-4 group/link"
-                                            >
-                                                <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-xl">
                                                     <File className="size-6 text-indigo-600 dark:text-indigo-300" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover/link:underline decoration-indigo-500 underline-offset-2">
+                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                                                         {assignment.attachment_name || "Attached Material"}
                                                     </p>
-                                                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
-                                                        Click to view <ExternalLink className="size-3" />
-                                                    </p>
+                                                    <div className="flex gap-2 mt-2">
+                                                        <Button 
+                                                            variant="outline" 
+                                                            size="sm" 
+                                                            className="h-7 px-2 text-[10px] rounded-lg gap-1 border-indigo-200 dark:border-indigo-800"
+                                                            onClick={() => window.open(resolvedMaterialUrl, '_blank')}
+                                                        >
+                                                            <Eye className="size-3" /> View
+                                                        </Button>
+                                                        <Button 
+                                                            variant="secondary" 
+                                                            size="sm" 
+                                                            className="h-7 px-2 text-[10px] rounded-lg gap-1 bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200"
+                                                            onClick={() => downloadAssignmentFile(materialPath!, assignment.attachment_name || 'Resource', 'assignment-submissions')}
+                                                        >
+                                                            <Download className="size-3" /> Download
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                            </a>
+                                            </div>
                                         </div>
                                     )}
 
@@ -338,26 +381,38 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                                                 </div>
                                             )}
 
-                                            {existingSubmission.attachment_url ? (
-                                                <div>
-                                                    <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block uppercase tracking-wider">Attached File</Label>
-                                                    <a
-                                                        href={existingSubmission.attachment_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-3 p-3 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-500/40 transition-all group"
-                                                    >
-                                                        <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800 transition-colors">
-                                                            <FileText className="size-5" />
+                                            {resolvedSubmissionUrl ? (
+                                                <div className="space-y-3">
+                                                    <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">Attached File</Label>
+                                                    <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-white dark:bg-slate-900 shadow-sm">
+                                                        <div className="flex items-center gap-3 mb-3">
+                                                            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg text-emerald-600 dark:text-emerald-400">
+                                                                <FileText className="size-5" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="text-sm font-bold text-slate-800 dark:text-white truncate block">{existingSubmission.attachment_name || "Your Submission"}</span>
+                                                                <span className="text-[10px] text-muted-foreground uppercase">{getFileTypeDisplay(existingSubmission.file_type)} {existingSubmission.file_size ? `(${formatFileSize(existingSubmission.file_size)})` : ''}</span>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <span className="text-sm font-bold text-slate-800 dark:text-white truncate block">{existingSubmission.attachment_name || "Your Submission"}</span>
-                                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
-                                                                Download {getFileTypeDisplay(existingSubmission.file_type)} {existingSubmission.file_size ? `(${formatFileSize(existingSubmission.file_size)})` : ''}
-                                                            </span>
+                                                        <div className="flex gap-2">
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm" 
+                                                                className="flex-1 h-8 rounded-lg gap-1.5 text-xs border-emerald-200 dark:border-emerald-800"
+                                                                onClick={() => window.open(resolvedSubmissionUrl, '_blank')}
+                                                            >
+                                                                <Eye className="size-3.5" /> View
+                                                            </Button>
+                                                            <Button 
+                                                                variant="secondary" 
+                                                                size="sm" 
+                                                                className="flex-1 h-8 rounded-lg gap-1.5 text-xs bg-emerald-100 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-200"
+                                                                onClick={() => downloadAssignmentFile(submissionPath!, existingSubmission.attachment_name || 'Submission', 'assignment-submissions')}
+                                                            >
+                                                                <Download className="size-3.5" /> Download
+                                                            </Button>
                                                         </div>
-                                                        <Download className="size-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                                                    </a>
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 !existingSubmission.submission_text && <p className="text-sm text-muted-foreground italic text-center py-2">No files attached.</p>

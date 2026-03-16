@@ -11,6 +11,7 @@ export interface AssignmentSubmissionDetail {
     status: 'submitted' | 'pending' | 'graded' | 'returned';
     submitted_at?: string;
     file_url?: string;
+    file_path?: string;
     file_name?: string;
     file_type?: string;
     file_size?: number;
@@ -119,6 +120,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     status: submission ? (submission.status as any) : 'pending',
                     submitted_at: submission?.submitted_at,
                     file_url: submission?.resolved_url || submission?.attachment_url,
+                    file_path: submission?.attachment_url,
                     file_name: submission?.attachment_name,
                     file_type: submission?.file_type,
                     file_size: submission?.file_size,

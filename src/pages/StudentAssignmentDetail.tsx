@@ -30,7 +30,7 @@ import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmen
 import { useAssignments } from "@/hooks/useAssignments";
 import { formatFileSize, getFileTypeDisplay, getFileExtension } from "@/lib/fileUtils";
 import { useStreak } from "@/contexts/StreakContext";
-import { resolveAnyStorageUrl } from "@/lib/supabaseStorage";
+import { resolveAnyStorageUrl, downloadAssignmentFile } from "@/lib/supabaseStorage";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -42,6 +42,7 @@ interface AssignmentDetail {
     due_date: string | null;
     max_points: number;
     attachment_url: string | null;
+    attachment_path?: string | null;
     attachment_name: string | null;
     status: string;
     created_at: string;
@@ -57,6 +58,7 @@ interface Submission {
     id: string;
     submitted_at: string;
     attachment_url: string | null;
+    attachment_path?: string | null;
     attachment_name: string | null;
     file_type: string | null;
     file_size: number | null;
@@ -128,6 +130,7 @@ export default function StudentAssignmentDetail() {
                     lecturerName = lecturerData?.full_name;
                 }
 
+                const originalAttachmentPath = assignmentData?.attachment_url;
                 // Resolve Resource Material if present
                 if (assignmentData?.attachment_url) {
                     assignmentData.attachment_url = await resolveAnyStorageUrl(assignmentData.attachment_url);
@@ -135,6 +138,7 @@ export default function StudentAssignmentDetail() {
 
                 setAssignment({
                     ...assignmentData,
+                    attachment_path: originalAttachmentPath,
                     class_name: className,
                     subject_name: subjectName,
                     lecturer_name: lecturerName,
@@ -149,10 +153,12 @@ export default function StudentAssignmentDetail() {
                     .single();
 
                 if (submissionData) {
+                    const originalPath = submissionData.attachment_url;
                     const resolvedUrl = await resolveAnyStorageUrl(submissionData.attachment_url);
                     setSubmission({
                         ...submissionData,
-                        attachment_url: resolvedUrl
+                        attachment_url: resolvedUrl,
+                        attachment_path: originalPath
                     });
                 } else {
                     setSubmission(null);
@@ -382,7 +388,7 @@ export default function StudentAssignmentDetail() {
                                             <p className="text-xs text-slate-500 font-bold uppercase tracking-tight">Support Resource</p>
                                         </div>
                                         <Button
-                                            onClick={() => window.open(assignment.attachment_url!, '_blank')}
+                                            onClick={() => downloadAssignmentFile(assignment.attachment_path!, assignment.attachment_name || 'Resource', 'assignment-submissions')}
                                             className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white px-5 h-10 rounded-xl font-bold gap-2 text-xs"
                                         >
                                             <Download className="size-3.5" />
@@ -446,14 +452,12 @@ export default function StudentAssignmentDetail() {
                                                 View
                                             </Button>
                                             <Button
-                                                asChild
                                                 size="sm"
+                                                onClick={() => downloadAssignmentFile(submission.attachment_path!, submission.attachment_name || 'Submission', 'assignment-submissions')}
                                                 className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold gap-2 shadow-lg shadow-emerald-500/20 h-10 px-4 text-xs"
                                             >
-                                                <a href={submission.attachment_url!} target="_blank" rel="noreferrer" download>
-                                                    <Download className="size-3.5" />
-                                                    Download
-                                                </a>
+                                                <Download className="size-3.5" />
+                                                Download
                                             </Button>
                                         </div>
                                     </div>

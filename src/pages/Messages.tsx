@@ -65,7 +65,8 @@ import {
   Play,
   ArrowLeft,
   ExternalLink,
-  Maximize2
+  Maximize2,
+  Eye
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -80,6 +81,7 @@ import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { toast } from "sonner";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
+import { downloadAssignmentFile } from "@/lib/supabaseStorage";
 import { useEligibleStudents } from "@/hooks/useEligibleStudents";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { useCall } from "@/contexts/CallContext";
@@ -316,7 +318,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                     variant="ghost"
                     size="icon"
                     className="size-8 rounded-full"
-                    onClick={() => safeOpenUrl(message.attachment.url)}
+                    onClick={() => downloadAssignmentFile(message.attachment.url, message.attachment.name || 'voice-message.webm', 'message-attachments')}
                   >
                     <Download className="size-4 text-muted-foreground" />
                   </Button>
@@ -332,8 +334,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                 </div>
               ) : (
                 <div
-                  className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] cursor-pointer hover:bg-[#2a3942] transition-colors max-w-full overflow-hidden"
-                  onClick={() => safeOpenUrl(message.attachment.url)}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] transition-colors max-w-full overflow-hidden group/attach"
                 >
                   <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
                     <FileText className="size-5 text-emerald-500" />
@@ -342,7 +343,29 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                     <p className="text-sm font-medium truncate text-slate-200">{message.attachment.name}</p>
                     <p className="text-xs text-slate-400">{message.attachment.size}</p>
                   </div>
-                  <Download className="size-4 text-slate-400 shrink-0" />
+                  <div className="flex gap-1 shrink-0">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="size-8 rounded-full hover:bg-slate-700/50 text-slate-400 hover:text-emerald-400"
+                        onClick={() => safeOpenUrl(message.attachment.url)}
+                        title="View"
+                    >
+                      <Eye className="size-4" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="size-8 rounded-full hover:bg-slate-700/50 text-slate-400 hover:text-emerald-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadAssignmentFile(message.attachment.url, message.attachment.name || 'document', 'message-attachments');
+                        }}
+                        title="Download"
+                    >
+                      <Download className="size-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

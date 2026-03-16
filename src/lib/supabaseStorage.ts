@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface UploadResult {
     success: boolean;
@@ -73,38 +74,56 @@ export async function uploadAssignmentFile(
 /**
  * Download file from Supabase Storage
  */
-export async function downloadAssignmentFile(
-    filePath: string,
-    originalFileName: string
-): Promise<void> {
+export const downloadAssignmentFile = async (filePath: string, originalFileName: string = 'assignment-file', defaultBucket: string = 'assignments') => {
     try {
-        console.log('Downloading file:', { filePath, originalFileName });
+        if (!filePath) return;
+        
+        let blob: Blob;
 
-        const { data, error } = await supabase.storage
-            .from('assignment-submissions')
-            .download(filePath);
+        if (filePath.startsWith('http')) {
+            // If it's a full URL (Cloudinary or Supabase Public/Signed), fetch it directly
+            const response = await fetch(filePath);
+            if (!response.ok) throw new Error('Failed to fetch file');
+            blob = await response.blob();
+        } else {
+            let bucket = defaultBucket;
+            let finalPath = filePath;
 
-        if (error) {
-            console.error('Download error:', error);
-            throw error;
+            // Detect bucket from path if present (e.g., "assignment-submissions/guid/file.pdf")
+            const knownBuckets = ['assignments', 'assignment-submissions', 'message-attachments', 'avatars'];
+            for (const b of knownBuckets) {
+                if (filePath.startsWith(`${b}/`)) {
+                    bucket = b;
+                    finalPath = filePath.substring(b.length + 1);
+                    break;
+                }
+            }
+
+            // Use Supabase Storage for relative paths
+            const { data, error } = await supabase.storage
+                .from(bucket)
+                .download(finalPath);
+
+            if (error) throw error;
+            blob = data;
         }
 
-        // Create download link
-        const url = URL.createObjectURL(data);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = originalFileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        console.log('Download successful');
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = originalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
     } catch (error: any) {
-        console.error('File download error:', error);
-        throw new Error('Failed to download file');
+        console.error('Download error:', error);
+        toast.error('Failed to download file', {
+            description: error.message || 'Please try again later',
+        });
     }
-}
+};
 
 /**
  * Validate file before upload
@@ -167,7 +186,7 @@ export async function resolveAnyStorageUrl(urlOrPath: string | null | undefined)
     if (urlOrPath.includes('token=')) return urlOrPath;
 
     let path = urlOrPath;
-    let bucket = 'assignment-submissions';
+    let bucket = 'assignment-submissions'; // Default bucket
 
     console.log('[resolveAnyStorageUrl] Input:', urlOrPath);
 
@@ -211,7 +230,8 @@ export async function resolveAnyStorageUrl(urlOrPath: string | null | undefined)
 
     // 2. Try to get a signed URL (required for private/restricted buckets)
     try {
-        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 7200); // 2 hours
+        // Use download: false to ensure disposition is 'inline' when possible
+        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 7200, { download: false });
         if (error) {
             console.error(`[resolveAnyStorageUrl] Signed URL error for ${bucket}/${path}:`, error.message);
             throw error;

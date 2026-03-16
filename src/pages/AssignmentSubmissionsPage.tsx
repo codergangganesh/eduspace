@@ -32,6 +32,7 @@ import { useEffect } from 'react';
 import { formatFileSize } from '@/lib/fileUtils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { downloadAssignmentFile } from '@/lib/supabaseStorage';
 import {
     Dialog,
     DialogContent,
@@ -121,30 +122,16 @@ export default function AssignmentSubmissionsPage() {
      * Handles file download by fetching the blob to force the browser to download rather than open
      * Improved to handle absolute and relative Supabase URLs
      */
-    const handleDownload = async (e: React.MouseEvent, url: string, filename: string) => {
+    const handleDownload = async (e: React.MouseEvent, path: string, filename: string) => {
         e.preventDefault();
         e.stopPropagation();
         
-        if (!url) return;
+        if (!path) return;
 
         try {
-            // If the URL is just a path, it shouldn't reach here because the hook resolves it,
-            // but we check anyway.
-            const finalUrl = url.startsWith('http') ? url : 
-                supabase.storage.from('assignment-submissions').getPublicUrl(url).data.publicUrl;
-
-            // Use a simpler approach that is less likely to be blocked by CORS
-            // for public storage files.
-            const link = document.createElement('a');
-            link.href = finalUrl;
-            link.setAttribute('download', filename || 'submission');
-            link.setAttribute('target', '_blank');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            await downloadAssignmentFile(path, filename || 'submission');
         } catch (error) {
             console.error('Download failed:', error);
-            window.open(url, '_blank');
         }
     };
 
@@ -460,7 +447,7 @@ export default function AssignmentSubmissionsPage() {
                                                                 variant="ghost" 
                                                                 size="icon" 
                                                                 className="size-10 rounded-xl bg-muted/30 hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all duration-300" 
-                                                                onClick={(e) => handleDownload(e, student.file_url!, student.file_name || 'submission')}
+                                                                onClick={(e) => handleDownload(e, student.file_path || student.file_url!, student.file_name || 'submission')}
                                                             >
                                                                 <Download className="size-4" />
                                                             </Button>
@@ -549,7 +536,7 @@ export default function AssignmentSubmissionsPage() {
                                                                     variant="outline"
                                                                     size="icon"
                                                                     className="size-9 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 active:scale-95 transition-all"
-                                                                    onClick={(e) => handleDownload(e, student.file_url!, student.file_name || 'submission')}
+                                                                    onClick={(e) => handleDownload(e, student.file_path || student.file_url!, student.file_name || 'submission')}
                                                                 >
                                                                     <Download className="size-4 text-muted-foreground" />
                                                                 </Button>
@@ -753,7 +740,7 @@ export default function AssignmentSubmissionsPage() {
                                                 variant="ghost" 
                                                 size="icon" 
                                                 className="size-8 rounded-lg hover:bg-white dark:hover:bg-white/10"
-                                                onClick={(e) => handleDownload(e, selectedSubmission.file_url!, selectedSubmission.file_name || 'submission')}
+                                                onClick={(e) => handleDownload(e, selectedSubmission.file_path || selectedSubmission.file_url!, selectedSubmission.file_name || 'submission')}
                                             >
                                                 <Download className="size-4 opacity-50 hover:opacity-100" />
                                             </Button>
