@@ -42,6 +42,7 @@ import {
     DialogFooter
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AssignmentSubmissionsPage() {
     const { classId, assignmentId } = useParams<{ classId: string; assignmentId: string }>();
@@ -192,21 +193,7 @@ export default function AssignmentSubmissionsPage() {
         );
     };
 
-    if (submissionsLoading || assignmentLoading) {
-        return (
-            <div className="h-screen w-full flex flex-col items-center justify-center gap-4 bg-background">
-                <div className="relative">
-                    <div className="size-16 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <FileText className="size-6 text-primary" />
-                    </div>
-                </div>
-                <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase">
-                    Loading Submissions...
-                </p>
-            </div>
-        );
-    }
+    const isLoading = submissionsLoading || assignmentLoading;
 
     return (
         <DashboardLayout>
@@ -239,59 +226,84 @@ export default function AssignmentSubmissionsPage() {
                                 <Bookmark className="size-5 md:size-6 text-primary" />
                             </div>
                             <div>
-                                <h1 className="text-2xl md:text-4xl font-black tracking-tight text-foreground leading-tight">
-                                    Review Submissions
-                                </h1>
-                                <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-0.5 md:mt-1">
-                                    {assignment?.title || "Assignment Details"}
-                                </p>
+                                {isLoading ? (
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-10 w-64" />
+                                        <Skeleton className="h-4 w-48" />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h1 className="text-2xl md:text-4xl font-black tracking-tight text-foreground leading-tight">
+                                            Review Submissions
+                                        </h1>
+                                        <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-0.5 md:mt-1">
+                                            {assignment?.title || "Assignment Details"}
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Stats Grid - Premium */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full lg:w-auto">
-                        <Card className="border-none bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-transparent shadow-none rounded-2xl md:rounded-3xl overflow-hidden border border-indigo-500/20 group backdrop-blur-sm">
-                            <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
-                                <div className="p-2 md:p-3 bg-indigo-500/20 rounded-lg md:rounded-2xl border border-indigo-500/20 text-indigo-500 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
-                                    <Users className="size-4 md:size-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] md:text-[10px] text-indigo-500 font-black uppercase tracking-widest opacity-60 text-left">
-                                        Total
-                                    </p>
-                                    <p className="text-lg md:text-2xl font-black text-foreground text-left">{stats.total}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {isLoading ? (
+                            [1, 2, 3].map((i) => (
+                                <Card key={i} className="border-none bg-slate-500/5 shadow-none rounded-2xl md:rounded-3xl border border-border/50">
+                                    <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
+                                        <Skeleton className="size-10 md:size-12 rounded-xl shrink-0" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-3 w-16" />
+                                            <Skeleton className="h-6 w-12" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        ) : (
+                            <>
+                                <Card className="border-none bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-transparent shadow-none rounded-2xl md:rounded-3xl overflow-hidden border border-indigo-500/20 group backdrop-blur-sm">
+                                    <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
+                                        <div className="p-2 md:p-3 bg-indigo-500/20 rounded-lg md:rounded-2xl border border-indigo-500/20 text-indigo-500 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
+                                            <Users className="size-4 md:size-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] md:text-[10px] text-indigo-500 font-black uppercase tracking-widest opacity-60 text-left">
+                                                Total
+                                            </p>
+                                            <p className="text-lg md:text-2xl font-black text-foreground text-left">{stats.total}</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                        <Card className="border-none bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent shadow-none rounded-2xl md:rounded-3xl overflow-hidden border border-emerald-500/20 group backdrop-blur-sm">
-                            <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
-                                <div className="p-2 md:p-3 bg-emerald-500/20 rounded-lg md:rounded-2xl border border-emerald-500/20 text-emerald-500 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
-                                    <CheckCircle2 className="size-4 md:size-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] md:text-[10px] text-emerald-500 font-black uppercase tracking-widest opacity-60 text-left">
-                                        Received
-                                    </p>
-                                    <p className="text-lg md:text-2xl font-black text-foreground text-left">{stats.submitted}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                <Card className="border-none bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent shadow-none rounded-2xl md:rounded-3xl overflow-hidden border border-emerald-500/20 group backdrop-blur-sm">
+                                    <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
+                                        <div className="p-2 md:p-3 bg-emerald-500/20 rounded-lg md:rounded-2xl border border-emerald-500/20 text-emerald-500 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
+                                            <CheckCircle2 className="size-4 md:size-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] md:text-[10px] text-emerald-500 font-black uppercase tracking-widest opacity-60 text-left">
+                                                Received
+                                            </p>
+                                            <p className="text-lg md:text-2xl font-black text-foreground text-left">{stats.submitted}</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                        <Card className="border-none bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent shadow-none rounded-2xl md:rounded-3xl overflow-hidden border border-blue-500/20 group backdrop-blur-sm col-span-2 md:col-span-1">
-                            <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
-                                <div className="p-2 md:p-3 bg-blue-500/20 rounded-lg md:rounded-2xl border border-blue-500/20 text-blue-500 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
-                                    <TrendingUp className="size-4 md:size-5" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[9px] md:text-[10px] text-blue-500 font-black uppercase tracking-widest opacity-60 text-left">
-                                        Rate
-                                    </p>
-                                    <p className="text-lg md:text-2xl font-black text-foreground text-left">{stats.submissionRate}%</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                <Card className="border-none bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent shadow-none rounded-2xl md:rounded-3xl overflow-hidden border border-blue-500/20 group backdrop-blur-sm col-span-2 md:col-span-1">
+                                    <CardContent className="p-4 md:p-5 flex items-center gap-3 md:gap-4 h-full">
+                                        <div className="p-2 md:p-3 bg-blue-500/20 rounded-lg md:rounded-2xl border border-blue-500/20 text-blue-500 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
+                                            <TrendingUp className="size-4 md:size-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[9px] md:text-[10px] text-blue-500 font-black uppercase tracking-widest opacity-60 text-left">
+                                                Rate
+                                            </p>
+                                            <p className="text-lg md:text-2xl font-black text-foreground text-left">{stats.submissionRate}%</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -330,97 +342,127 @@ export default function AssignmentSubmissionsPage() {
                     {/* Submissions Container */}
                     <div className="bg-white/30 dark:bg-[#1a1625]/30 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-xl md:shadow-2xl overflow-hidden flex flex-col">
                         {/* List Headers - Desktop Only */}
-                        <div className="hidden md:grid md:grid-cols-[1fr,300px,150px,200px] gap-8 px-10 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-500/5 items-center">
+                        <div className="hidden md:grid md:grid-cols-[1.2fr,350px,100px,120px,160px] gap-6 px-8 py-4 border-b border-slate-200 dark:border-white/5 bg-slate-500/5 items-center">
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Student Profile</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Submission Details</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Submission Preview</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Grade</span>
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Status</span>
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right pr-4">Actions</span>
                         </div>
 
                         <div className="divide-y divide-slate-200 dark:divide-white/5">
-                            {paginatedSubmissions.length > 0 ? (
+                            {isLoading ? (
+                                [1, 2, 3, 4, 5].map((i) => (
+                                    <div key={i}>
+                                        {/* Desktop Skeleton */}
+                                        <div className="hidden md:grid md:grid-cols-[1.2fr,350px,100px,120px,160px] items-center gap-6 px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <Skeleton className="size-12 rounded-full" />
+                                                <div className="space-y-2">
+                                                    <Skeleton className="h-4 w-32" />
+                                                    <Skeleton className="h-3 w-20" />
+                                                </div>
+                                            </div>
+                                            <Skeleton className="h-12 w-full rounded-xl" />
+                                            <div className="flex justify-center"><Skeleton className="h-8 w-12 rounded-lg" /></div>
+                                            <div className="flex justify-center"><Skeleton className="h-6 w-24 rounded-full" /></div>
+                                            <div className="flex items-center justify-end gap-2 pr-2">
+                                                <Skeleton className="h-9 w-24 rounded-xl" />
+                                                <Skeleton className="size-9 rounded-xl" />
+                                            </div>
+                                        </div>
+                                        {/* Mobile Skeleton */}
+                                        <div className="md:hidden p-4 space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <Skeleton className="size-12 rounded-full" />
+                                                <div className="space-y-2">
+                                                    <Skeleton className="h-4 w-24" />
+                                                    <Skeleton className="h-3 w-16" />
+                                                </div>
+                                            </div>
+                                            <Skeleton className="h-16 w-full rounded-2xl" />
+                                        </div>
+                                    </div>
+                                ))
+                            ) : paginatedSubmissions.length > 0 ? (
                                 paginatedSubmissions.map((student) => (
                                     <div key={student.student_id} className="group hover:bg-slate-500/10 dark:hover:bg-white/[0.04] transition-all duration-300">
                                         
                                         {/* Desktop Item Layout */}
-                                        <div className="hidden md:grid md:grid-cols-[1fr,300px,150px,200px] items-center gap-8 px-10 py-8">
+                                         <div className="hidden md:grid md:grid-cols-[1.2fr,350px,100px,120px,160px] items-center gap-6 px-8 py-6">
                                             {/* Student Profile Info */}
                                             <div className="flex items-center gap-4">
                                                 <div className="relative">
-                                                    <Avatar className="size-14 border-2 border-primary/20 bg-primary/5 shadow-2xl transition-transform group-hover:scale-105 duration-500">
+                                                    <Avatar className="size-12 border-2 border-primary/20 bg-primary/5 shadow-lg group-hover:scale-105 transition-transform duration-500">
                                                         <AvatarImage src={student.profile_image || undefined} />
-                                                        <AvatarFallback className="bg-transparent text-primary text-sm font-black text-center">
+                                                        <AvatarFallback className="bg-transparent text-primary text-xs font-black">
                                                             {student.student_name.substring(0, 2).toUpperCase()}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <div className={cn(
-                                                        "absolute -bottom-1 -right-1 size-4 border-2 border-white dark:border-[#1a1625] rounded-full shadow-lg transition-colors",
-                                                        student.status !== 'pending' ? "bg-emerald-500" : "bg-slate-300"
-                                                    )} />
                                                 </div>
                                                 <div className="min-w-0 flex flex-col text-left">
-                                                    <h4 className="font-black text-base text-foreground truncate group-hover:text-primary transition-colors">
+                                                    <h4 className="font-black text-sm text-foreground truncate group-hover:text-primary transition-colors">
                                                         {student.student_name}
                                                     </h4>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted/50 px-2 py-0.5 rounded-lg border border-border/50 text-left">
-                                                            {student.register_number || "REG-N/A"}
-                                                        </span>
-                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic hidden sm:inline text-left">
-                                                            {student.email}
-                                                        </span>
-                                                    </div>
+                                                    <span className="text-[9px] font-black text-muted-foreground uppercase opacity-60 tracking-widest mt-0.5">
+                                                        {student.register_number || "REG-N/A"}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {/* Submission Details Box */}
+                                            {/* Submission Preview Box */}
                                             <div className="w-full">
                                                 {student.file_url || student.submission_text ? (
-                                                    <div className="relative flex items-center gap-4 bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3.5 rounded-2xl group/sub shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
-                                                        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 shadow-inner group-hover/sub:scale-110 transition-transform">
-                                                            {student.file_url ? <FileText className="size-5" /> : <MessageSquare className="size-5" />}
+                                                    <div className="relative flex items-center gap-3 bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-2 rounded-xl group/sub shadow-sm hover:border-primary/30 transition-all duration-300 overflow-hidden">
+                                                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 shrink-0">
+                                                            {student.file_url ? <FileText className="size-4" /> : <MessageSquare className="size-4" />}
                                                         </div>
                                                         <div className="flex-1 min-w-0 text-left">
-                                                            <p className="text-xs font-black text-foreground truncate">
-                                                                {student.file_name || (student.submission_text ? "Text Submission" : "Submission File")}
+                                                            <p className="text-[10px] font-black text-foreground truncate">
+                                                                {student.file_name || "Submission"}
                                                             </p>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                {student.file_url ? (
-                                                                    <>
-                                                                        <span className="text-[9px] text-muted-foreground font-black uppercase tracking-tighter text-left">
-                                                                            {student.file_type?.toUpperCase() || "FILE"}
-                                                                        </span>
-                                                                        <span className="size-1 rounded-full bg-muted-foreground/20" />
-                                                                        <span className="text-[9px] text-muted-foreground font-black uppercase tracking-tighter text-left">
-                                                                            {formatFileSize(student.file_size)}
-                                                                        </span>
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-tighter text-left">
-                                                                        Text Responses
+                                                            {student.submission_text && !student.file_url && (
+                                                                <p className="text-[9px] text-muted-foreground/60 italic truncate mt-0.5 leading-none">
+                                                                    "{student.submission_text.substring(0, 40)}..."
+                                                                </p>
+                                                            )}
+                                                            {student.file_url && (
+                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                    <span className="text-[8px] text-muted-foreground/60 font-black uppercase tracking-tighter">
+                                                                        {student.file_type?.toUpperCase() || "FILE"}
                                                                     </span>
-                                                                )}
-                                                            </div>
+                                                                    <span className="size-0.5 rounded-full bg-muted-foreground/20" />
+                                                                    <span className="text-[8px] text-muted-foreground/60 font-black uppercase tracking-tighter">
+                                                                        {formatFileSize(student.file_size)}
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        {/* Direct View Icon in Desktop strip */}
                                                         {student.file_url && (
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="size-8 rounded-lg opacity-0 group-hover/sub:opacity-100 transition-opacity bg-primary/5 hover:bg-primary/20 text-primary"
-                                                                asChild
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); window.open(student.file_url, '_blank'); }}
+                                                                className="size-7 rounded-lg opacity-0 group-hover/sub:opacity-100 transition-opacity bg-primary/5 hover:bg-primary/20 text-primary flex items-center justify-center"
                                                             >
-                                                                <a href={student.file_url} target="_blank" rel="noopener noreferrer">
-                                                                    <Eye className="size-4" />
-                                                                </a>
-                                                            </Button>
+                                                                <Eye className="size-3.5" />
+                                                            </button>
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-rose-500/60 w-full justify-start">
-                                                        <AlertCircle className="size-4" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest italic opacity-60">No Submission Found</span>
+                                                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/5 text-rose-500/40 w-full justify-start text-[9px] font-black uppercase tracking-widest italic">
+                                                        <AlertCircle className="size-3.5 shrink-0" />
+                                                        Missing
                                                     </div>
+                                                )}
+                                            </div>
+
+                                            {/* Grade Column */}
+                                            <div className="flex justify-center flex-col items-center">
+                                                {student.grade ? (
+                                                    <span className="font-black text-sm text-primary px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                                                        {student.grade}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest"> ungraded </span>
                                                 )}
                                             </div>
 
@@ -430,32 +472,31 @@ export default function AssignmentSubmissionsPage() {
                                             </div>
 
                                             {/* Action Buttons */}
-                                            <div className="flex items-center justify-end gap-3">
+                                            <div className="flex items-center justify-end gap-2 pr-2">
                                                 {student.status !== 'pending' ? (
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1.5">
                                                         <Button 
-                                                            variant="outline" 
+                                                            variant="default" 
                                                             size="sm" 
-                                                            className="h-10 px-4 rounded-xl border-slate-200 dark:border-white/10 hover:bg-primary hover:text-white dark:hover:bg-primary transition-all duration-300 font-bold text-xs gap-2 group/btn shadow-sm" 
+                                                            className="h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all font-black text-[10px] uppercase tracking-widest gap-2" 
                                                             onClick={() => handleReviewClick(student)}
                                                         >
-                                                            <Eye className="size-4 group-hover/btn:scale-110 transition-transform" />
                                                             Review
                                                         </Button>
                                                         {student.file_url && (
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="icon" 
-                                                                className="size-10 rounded-xl bg-muted/30 hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all duration-300" 
+                                                                className="size-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-muted-foreground transition-all" 
                                                                 onClick={(e) => handleDownload(e, student.file_path || student.file_url!, student.file_name || 'submission')}
                                                             >
-                                                                <Download className="size-4" />
+                                                                <Download className="size-3.5" />
                                                             </Button>
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <div className="px-4 py-2 bg-slate-500/5 rounded-xl border border-border/50">
-                                                        <span className="text-[10px] font-black text-muted-foreground/40 tracking-widest uppercase">Awaiting</span>
+                                                    <div className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-lg border border-border/50">
+                                                        <span className="text-[8px] font-black text-muted-foreground/30 tracking-widest uppercase italic">Waiting</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -594,53 +635,63 @@ export default function AssignmentSubmissionsPage() {
 
                         {/* Pagination Footer - Premium Design */}
                         <div className="px-4 md:px-10 py-5 md:py-6 border-t border-slate-200 dark:border-white/5 bg-slate-500/5 flex flex-col sm:flex-row items-center justify-between gap-5 md:gap-6">
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 text-center md:text-left">
-                                Showing <span className="text-primary">{filteredSubmissions.length === 0 ? 0 : startIndex + 1} — {endIndex}</span> of <span className="text-foreground">{filteredSubmissions.length}</span> students in class
-                            </p>
+                            {isLoading ? (
+                                <Skeleton className="h-4 w-64" />
+                            ) : (
+                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 text-center md:text-left">
+                                    Showing <span className="text-primary">{filteredSubmissions.length === 0 ? 0 : startIndex + 1} — {endIndex}</span> of <span className="text-foreground">{filteredSubmissions.length}</span> students in class
+                                </p>
+                            )}
 
                             <div className="flex items-center gap-4 md:gap-6">
-                                <div className="flex items-center gap-1 p-1 bg-black/5 dark:bg-black/20 rounded-xl md:rounded-2xl border border-white/5">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                        className="size-9 md:size-10 rounded-lg md:rounded-xl hover:bg-white dark:hover:bg-white/10 disabled:opacity-20 transition-all font-black"
-                                    >
-                                        <ChevronLeft className="size-4 md:size-5" />
-                                    </Button>
-                                    
-                                    <div className="flex items-center gap-1 px-1 md:px-3">
-                                        {[...Array(Math.min(3, totalPages))].map((_, i) => {
-                                            const pageNum = i + 1;
-                                            return (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => setCurrentPage(pageNum)}
-                                                    className={cn(
-                                                        "size-8 rounded-lg text-[10px] font-black transition-all",
-                                                        currentPage === pageNum 
-                                                            ? "bg-primary text-white shadow-lg shadow-primary/25" 
-                                                            : "text-muted-foreground hover:bg-white/5"
-                                                    )}
+                                    <div className="flex items-center gap-1 p-1 bg-black/5 dark:bg-black/20 rounded-xl md:rounded-2xl border border-white/5">
+                                        {isLoading ? (
+                                            <Skeleton className="h-10 w-48 rounded-xl" />
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                    disabled={currentPage === 1}
+                                                    className="size-9 md:size-10 rounded-lg md:rounded-xl hover:bg-white dark:hover:bg-white/10 disabled:opacity-20 transition-all font-black"
                                                 >
-                                                    {pageNum}
-                                                </button>
-                                            )
-                                        })}
-                                        {totalPages > 3 && <span className="text-muted-foreground px-1 text-xs">...</span>}
-                                    </div>
+                                                    <ChevronLeft className="size-4 md:size-5" />
+                                                </Button>
+                                                
+                                                <div className="flex items-center gap-1 px-1 md:px-3">
+                                                    {[...Array(Math.min(3, totalPages))].map((_, i) => {
+                                                        const pageNum = i + 1;
+                                                        return (
+                                                            <button
+                                                                key={pageNum}
+                                                                onClick={() => setCurrentPage(pageNum)}
+                                                                className={cn(
+                                                                    "size-8 rounded-lg text-[10px] font-black transition-all",
+                                                                    currentPage === pageNum 
+                                                                        ? "bg-primary text-white shadow-lg shadow-primary/25" 
+                                                                        : "text-muted-foreground hover:bg-white/5"
+                                                                )}
+                                                            >
+                                                                {pageNum}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                    {totalPages > 3 && <span className="text-muted-foreground px-1 text-xs">...</span>}
+                                                </div>
 
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage >= totalPages || totalPages === 0}
-                                        className="size-9 md:size-10 rounded-lg md:rounded-xl hover:bg-white dark:hover:bg-white/10 disabled:opacity-20 transition-all font-black"
-                                    >
-                                        <ChevronRight className="size-4 md:size-5" />
-                                    </Button>
-                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                    disabled={currentPage >= totalPages || totalPages === 0}
+                                                    className="size-9 md:size-10 rounded-lg md:rounded-xl hover:bg-white dark:hover:bg-white/10 disabled:opacity-20 transition-all font-black"
+                                                >
+                                                    <ChevronRight className="size-4 md:size-5" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
                             </div>
                         </div>
                     </div>
@@ -649,59 +700,57 @@ export default function AssignmentSubmissionsPage() {
 
             {/* Review Modal - The "Proper" UI for reviewing individual submission */}
             <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-                <DialogContent className="max-w-3xl rounded-3xl md:rounded-[2.5rem] p-0 border-none bg-white dark:bg-[#1a1625] shadow-2xl overflow-hidden sm:w-[95vw]">
+                <DialogContent className="max-w-xl w-[90vw] rounded-[2.5rem] p-0 border-none bg-white dark:bg-[#1a1625] shadow-2xl overflow-hidden focus:outline-none">
                     <div className="relative">
                         {/* Header Banner */}
-                        <div className="h-24 md:h-32 bg-gradient-to-br from-indigo-600 to-blue-700 relative flex flex-col justify-end p-6 md:p-8 text-white">
-                            <div className="absolute top-0 right-0 p-4 md:p-8 opacity-10">
-                                <FileText className="size-16 md:size-24 rotate-12" />
+                        <div className="h-20 md:h-24 bg-gradient-to-r from-indigo-600 to-blue-600 relative flex flex-col justify-center px-6 md:px-8 text-white">
+                            <div className="absolute right-0 p-4 opacity-10">
+                                <FileText className="size-16 md:size-20 rotate-12" />
                             </div>
-                            <h2 className="text-xl md:text-2xl font-black tracking-tight truncate pr-10">{selectedSubmission?.student_name}</h2>
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-60">Student Submission Details</p>
+                            <h2 className="text-lg md:text-xl font-black tracking-tight truncate pr-16">{selectedSubmission?.student_name}</h2>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-70 mt-0.5">Submission Details</p>
                         </div>
 
-                        <div className="p-6 md:p-8 space-y-6 md:space-y-8">
+                        <div className="p-5 md:p-6 space-y-5">
                             {/* Metadata Row */}
-                            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                                <div className="space-y-1">
-                                    <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">ID Number</p>
-                                    <p className="font-bold text-xs md:text-sm truncate">{selectedSubmission?.register_number}</p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div className="space-y-1 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                    <p className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/50">Register Number</p>
+                                    <p className="font-bold text-xs truncate">{selectedSubmission?.register_number || 'N/A'}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Timestamp</p>
-                                    <p className="font-bold text-xs md:text-sm">
+                                <div className="space-y-1 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                    <p className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/50">Timestamp</p>
+                                    <p className="font-bold text-xs whitespace-nowrap">
                                         {selectedSubmission?.submitted_at ? new Date(selectedSubmission.submitted_at).toLocaleDateString() : 'N/A'}
                                     </p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">State</p>
-                                    <Badge variant="outline" className="font-black text-[8px] md:text-[9px] uppercase tracking-tighter h-5">
-                                        {selectedSubmission?.status}
-                                    </Badge>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Grade</p>
-                                    <p className="font-black text-xs md:text-sm text-primary">{selectedSubmission?.grade || 'N/A'}</p>
+                                <div className="space-y-1 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                    <p className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/50">Status</p>
+                                    <div className="flex">
+                                        <Badge variant="secondary" className="font-black text-[8px] uppercase px-1.5 py-0 rounded bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300">
+                                            {selectedSubmission?.status}
+                                        </Badge>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-3 md:space-y-4">
+                            <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg md:rounded-xl">
-                                        <MessageSquare className="size-3.5 md:size-4 text-primary" />
+                                    <div className="p-1.5 bg-primary/10 rounded-lg">
+                                        <MessageSquare className="size-3.5 text-primary" />
                                     </div>
-                                    <h3 className="font-black text-xs md:text-sm">Submission Content</h3>
+                                    <h3 className="font-black text-xs uppercase tracking-wider">Submission Content</h3>
                                 </div>
                                 
-                                <ScrollArea className="h-[150px] md:h-[200px] w-full rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-black/20 p-4 md:p-6">
+                                <ScrollArea className="h-32 md:h-40 w-full rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-black/30 p-4 md:p-5">
                                     {selectedSubmission?.submission_text ? (
                                         <p className="text-xs md:text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                                             {selectedSubmission.submission_text}
                                         </p>
                                     ) : (
-                                        <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-2">
-                                            <MessageSquare className="size-7 md:size-8" />
-                                            <p className="text-[10px] font-bold italic tracking-wider">No text responses provided</p>
+                                        <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-2 py-4">
+                                            <MessageSquare className="size-6" />
+                                            <p className="text-[10px] font-bold italic">No text responses</p>
                                         </div>
                                     )}
                                 </ScrollArea>
@@ -709,58 +758,51 @@ export default function AssignmentSubmissionsPage() {
 
                             {/* File Listing */}
                             {selectedSubmission?.file_url && (
-                                <div className="space-y-3 md:space-y-4">
+                                <div className="space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 md:p-2 bg-indigo-500/10 rounded-lg md:rounded-xl">
-                                            <FileText className="size-3.5 md:size-4 text-indigo-500" />
+                                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
+                                            <FileText className="size-3.5 text-indigo-500" />
                                         </div>
-                                        <h3 className="font-black text-xs md:text-sm">Attached Assets</h3>
+                                        <h3 className="font-black text-xs uppercase tracking-wider">Attached Asset</h3>
                                     </div>
                                     
-                                    <div className="flex items-center gap-4 bg-indigo-500/5 border border-indigo-500/20 p-4 md:p-5 rounded-2xl md:rounded-3xl group">
-                                        <div className="size-9 md:size-10 bg-indigo-500 text-white rounded-xl md:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                                            <FileText className="size-4 md:size-5" />
+                                    <div className="flex items-center gap-4 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 p-4 rounded-2xl group transition-all">
+                                        <div className="size-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg">
+                                            <FileText className="size-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs md:text-sm font-black truncate">{selectedSubmission.file_name || "Attachment"}</p>
-                                            <p className="text-[9px] md:text-[10px] font-bold opacity-40 uppercase tracking-widest">{formatFileSize(selectedSubmission.file_size)}</p>
+                                            <p className="text-xs font-black truncate">{selectedSubmission.file_name || "Attachment"}</p>
+                                            <p className="text-[9px] font-bold opacity-40 uppercase mt-0.5">{formatFileSize(selectedSubmission.file_size)}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="size-8 rounded-lg hover:bg-white dark:hover:bg-white/10" 
-                                                asChild
+                                            <button 
+                                                onClick={() => window.open(selectedSubmission.file_url, '_blank')}
+                                                className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                                                title="View"
                                             >
-                                                <a href={selectedSubmission.file_url} target="_blank" rel="noopener noreferrer">
-                                                    <Eye className="size-4 opacity-50 hover:opacity-100" />
-                                                </a>
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="size-8 rounded-lg hover:bg-white dark:hover:bg-white/10"
+                                                <Eye className="size-4" />
+                                            </button>
+                                            <button 
                                                 onClick={(e) => handleDownload(e, selectedSubmission.file_path || selectedSubmission.file_url!, selectedSubmission.file_name || 'submission')}
+                                                className="p-2 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
+                                                title="Download"
                                             >
-                                                <Download className="size-4 opacity-50 hover:opacity-100" />
-                                            </Button>
+                                                <Download className="size-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        <DialogFooter className="p-6 md:p-8 pt-0 flex flex-row gap-2">
-                            <Button variant="ghost" onClick={() => setIsReviewOpen(false)} className="flex-1 md:flex-none rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-widest h-11">
+                        <DialogFooter className="p-5 md:p-6 flex justify-end bg-slate-50/50 dark:bg-transparent border-t border-slate-100 dark:border-white/5">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => setIsReviewOpen(false)} 
+                                className="rounded-xl px-6 h-10 font-black uppercase text-[10px] tracking-widest border-slate-200 dark:border-white/10"
+                            >
                                 Close
                             </Button>
-                            {selectedSubmission?.file_url && (
-                                <Button className="flex-[2] md:flex-none rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-widest h-11 shadow-xl shadow-primary/25" asChild>
-                                    <a href={selectedSubmission.file_url} target="_blank" rel="noopener noreferrer">
-                                        Full Preview
-                                    </a>
-                                </Button>
-                            )}
                         </DialogFooter>
                     </div>
                 </DialogContent>
