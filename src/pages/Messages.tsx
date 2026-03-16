@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -107,6 +107,46 @@ const getDateLabel = (date: Date) => {
   if (isToday(date)) return "TODAY";
   if (isYesterday(date)) return "YESTERDAY";
   return format(date, "MM/dd/yy");
+};
+
+// Allowed file types for upload
+const ALLOWED_FILE_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg',
+  'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv'
+];
+
+const ALLOWED_FILE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|mp3|wav|ogg|pdf|doc|docx|ppt|pptx|xls|xlsx|txt|csv)$/i;
+
+/** Safely open a URL — only allows https:// URLs from trusted domains */
+const safeOpenUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const trustedDomains = [
+      'res.cloudinary.com',
+      'trbetpcdiysfirjaxdfi.supabase.co',
+      'supabase.co',
+      'cloudinary.com',
+    ];
+    if (parsed.protocol !== 'https:') {
+      toast.error('Cannot open insecure URL');
+      return;
+    }
+    const isTrusted = trustedDomains.some(domain => parsed.hostname.endsWith(domain));
+    if (!isTrusted) {
+      // Still allow opening but warn user
+      const confirmed = window.confirm(`Open external link?\n${url}`);
+      if (!confirmed) return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } catch {
+    toast.error('Invalid URL');
+  }
 };
 
 // Message Bubble Component
@@ -276,7 +316,7 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                     variant="ghost"
                     size="icon"
                     className="size-8 rounded-full"
-                    onClick={() => window.open(message.attachment.url, '_blank')}
+                    onClick={() => safeOpenUrl(message.attachment.url)}
                   >
                     <Download className="size-4 text-muted-foreground" />
                   </Button>
@@ -287,13 +327,13 @@ const MessageBubble = ({ message, setMessageToDelete, onEdit }: {
                     src={message.attachment.url}
                     alt="Attachment"
                     className="max-w-full max-h-64 object-cover rounded-lg cursor-pointer"
-                    onClick={() => window.open(message.attachment.url, '_blank')}
+                    onClick={() => safeOpenUrl(message.attachment.url)}
                   />
                 </div>
               ) : (
                 <div
                   className="flex items-center gap-3 p-3 rounded-xl bg-[#1f2c34] dark:bg-[#1f2c34] cursor-pointer hover:bg-[#2a3942] transition-colors max-w-full overflow-hidden"
-                  onClick={() => window.open(message.attachment.url, '_blank')}
+                  onClick={() => safeOpenUrl(message.attachment.url)}
                 >
                   <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
                     <FileText className="size-5 text-emerald-500" />
@@ -379,7 +419,7 @@ export default function Messages() {
     conversations, messages, sendMessage, deleteMessage, selectedConversationId, setSelectedConversationId,
     loading, typingUsers, sendTyping, startConversation, clearChat, deleteChat, hideChat, unhideChat,
     finalizeDeleteChat, editMessage, hasMore, loadMoreMessages, markMessagesAsRead,
-    toggleAutoDelete
+    toggleAutoDelete, unreadCounts
   } = useMessages();
   const { instructors, loading: instructorsLoading } = useInstructors();
   const { students: eligibleStudents, classGroups, loading: studentsLoading } = useEligibleStudents();
@@ -393,6 +433,7 @@ export default function Messages() {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string>("");
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -639,14 +680,40 @@ export default function Messages() {
         toast.error("File size must be less than 20MB");
         return;
       }
+      // Validate file type
+      if (!ALLOWED_FILE_TYPES.includes(file.type) && !ALLOWED_FILE_EXTENSIONS.test(file.name)) {
+        toast.error("Unsupported file type. Please upload images, videos, audio, PDFs, or documents.");
+        return;
+      }
+      if (file.type.startsWith('image/')) {
+        const url = URL.createObjectURL(file);
+        setFilePreviewUrl(url);
+      }
       setSelectedFile(file);
     }
   };
 
-  const clearSelectedFile = () => {
+  const clearSelectedFile = useCallback(() => {
+    if (filePreviewUrl) {
+      URL.revokeObjectURL(filePreviewUrl);
+      setFilePreviewUrl("");
+    }
     setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [filePreviewUrl]);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrl) {
+        URL.revokeObjectURL(filePreviewUrl);
+      }
+    };
+  }, [filePreviewUrl]);
+
+
 
   // Handle auto-send for audio recording
   useEffect(() => {
@@ -704,9 +771,17 @@ export default function Messages() {
   };
 
   const { recordAcademicAction } = useStreak();
+  const lastSendTimeRef = useRef<number>(0);
 
   const handleSendMessage = async () => {
     if ((!messageInput.trim() && !selectedFile) || !selectedConversation || !user || isUploading) return;
+
+    // Throttle: prevent sending faster than 500ms
+    const now = Date.now();
+    if (now - lastSendTimeRef.current < 500) {
+      return;
+    }
+    lastSendTimeRef.current = now;
 
     // Record academic action (Participating in class interaction)
     if (role === 'student') {
@@ -755,7 +830,7 @@ export default function Messages() {
     }
   };
 
-  const handleStartNewChat = async (targetId: string) => {
+  const handleStartNewChat = useCallback(async (targetId: string) => {
     const existing = conversations.find(c =>
       (c.participant_1 === user?.id && c.participant_2 === targetId) ||
       (c.participant_1 === targetId && c.participant_2 === user?.id)
@@ -777,7 +852,7 @@ export default function Messages() {
       toast.error("Failed to start conversation");
     }
     setIsNewChatOpen(false);
-  };
+  }, [conversations, user?.id, startConversation, setSelectedConversationId]);
 
   // Handle auto-open from navigation state
   useEffect(() => {
@@ -1162,10 +1237,18 @@ export default function Messages() {
                         {isTyping ? "typing..." : (item.last_message || 'No messages yet')}
                       </p>
                     </div>
-                    {isVirtual && (
+                    {isVirtual ? (
                       <div className="size-5 rounded-full bg-emerald-500 flex items-center justify-center">
                         <Plus className="size-3 text-white" />
                       </div>
+                    ) : (
+                      !!(unreadCounts[item.id]) && selectedConversationId !== item.id && (
+                        <div className="size-5 min-w-[20px] rounded-full bg-emerald-500 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-white leading-none">
+                            {unreadCounts[item.id] > 99 ? '99+' : unreadCounts[item.id]}
+                          </span>
+                        </div>
+                      )
                     )}
                   </button>
                 );
@@ -1267,17 +1350,21 @@ export default function Messages() {
                     </div>
                   </div>
                   <div className="flex items-center shrink-0 ml-1">
+                    {/* Audio Call Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
+                          title="Audio Call"
                         >
                           <Phone className="size-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Audio Call</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDirectCall('audio', 'private')}>
                           <ShieldAlert className="size-4 mr-2 text-emerald-500" />
                           <span>🔒 Private Audio Call</span>
@@ -1289,17 +1376,21 @@ export default function Messages() {
                       </DropdownMenuContent>
                     </DropdownMenu>
 
+                    {/* Video Call Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="size-9 min-w-[36px] text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-white shrink-0"
+                          title="Video Call"
                         >
                           <Video className="size-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Video Call</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDirectCall('video', 'private')}>
                           <ShieldAlert className="size-4 mr-2 text-emerald-500" />
                           <span>🔒 Private Video Call</span>
@@ -1421,9 +1512,17 @@ export default function Messages() {
               {selectedFile && (
                 <div className="mb-2 p-3 bg-[#1f2c34] rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2">
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                      <FileText className="size-5 text-emerald-600" />
-                    </div>
+                    {selectedFile.type.startsWith('image/') && filePreviewUrl ? (
+                      <img
+                        src={filePreviewUrl}
+                        alt="Preview"
+                        className="size-12 rounded-lg object-cover border border-slate-600"
+                      />
+                    ) : (
+                      <div className="size-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                        <FileText className="size-5 text-emerald-600" />
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate text-slate-200">{selectedFile.name}</p>
                       <p className="text-xs text-slate-400">{formatFileSize(selectedFile.size)}</p>
@@ -1476,7 +1575,7 @@ export default function Messages() {
                   ref={fileInputRef}
                   className="hidden"
                   onChange={handleFileSelect}
-                  accept="*"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv"
                 />
 
                 {/* Message Pill */}

@@ -130,39 +130,63 @@ export function AIChatSidebar({
                 )}
             </div>
 
-            <div className="px-6 pb-2">
-                <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-2">
-                        Recent History
-                    </p>
+            <div className="px-4 pb-2">
+                <div className="flex items-center justify-between mb-2 h-9 min-h-[36px]">
+                    <AnimatePresence mode="wait">
+                        {!showSearch ? (
+                            <motion.p
+                                key="history-label"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-2"
+                            >
+                                Recent History
+                            </motion.p>
+                        ) : (
+                            <motion.div
+                                key="search-input-box"
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: "100%" }}
+                                exit={{ opacity: 0, width: 0 }}
+                                className="flex-1 px-2 flex items-center gap-2"
+                            >
+                                <div className="relative flex-1 group">
+                                    <Input
+                                        ref={searchInputRef}
+                                        placeholder="Search chats..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="h-8 text-xs bg-background/50 border-border/40 focus-visible:ring-primary/20 pr-7"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery("")}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 hover:text-muted-foreground flex items-center justify-center"
+                                        >
+                                            <X className="h-2.5 w-2.5" />
+                                        </button>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => setShowSearch(!showSearch)}
+                        onClick={() => {
+                            if (showSearch) setSearchQuery("");
+                            setShowSearch(!showSearch);
+                        }}
                         className={cn(
-                            "h-6 w-6 rounded-md transition-colors",
-                            showSearch ? "bg-primary/10 text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"
+                            "h-7 w-7 rounded-lg transition-all shrink-0 ml-1",
+                            showSearch ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
                         )}
                     >
-                        <Search className="h-3.5 w-3.5" />
+                        {showSearch ? <X className="h-4 w-4" /> : <Search className="h-3.5 w-3.5" />}
                     </Button>
                 </div>
-
-                {showSearch && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="px-2 mb-2"
-                    >
-                        <Input
-                            ref={searchInputRef}
-                            placeholder="Search chats..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-8 text-xs bg-background/50 border-border/40 focus-visible:ring-primary/20"
-                        />
-                    </motion.div>
-                )}
             </div>
 
             <ScrollArea className="flex-1 px-3">

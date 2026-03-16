@@ -41,8 +41,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // "If notification icon should be enabled" logic
-  const showNotifications = profile?.notifications_enabled !== false;
+
 
   // Initialize and react to profile changes for persistent header tools state
   useEffect(() => {
@@ -99,8 +98,6 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
       >
           <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
       </Button>
-
-      {showNotifications && <NotificationsPopover />}
 
       <Button
         variant="outline"
@@ -160,7 +157,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
             <Search className="size-5" />
           </Button>
 
-          {showNotifications && <NotificationsPopover />}
+          <NotificationsPopover />
           
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
@@ -233,6 +230,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
               {toolButtons}
             </div>
           )}
+          <NotificationsPopover />
           <UserDropdown />
         </div>
       </div>

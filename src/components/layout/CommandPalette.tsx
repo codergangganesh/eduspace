@@ -61,6 +61,7 @@ export function CommandPalette() {
                             { id: 'assignments', title: 'Assignments', desc: 'View all your active coursework, submit assignments, and track grades.', icon: FileText },
                             { id: 'quizzes', title: 'Quizzes', desc: 'Take academic quizzes, view results, and track your performance.', icon: BookOpen },
                             { id: 'streak', title: 'Streak', desc: 'Track your daily academic momentum and earn rewards for consistency.', icon: Flame },
+                            { id: 'messages', title: 'Messages', desc: 'Securely communicate with your classmates and instructors in real-time.', icon: MessageSquare },
                             { id: 'feed', title: 'Class Feed', desc: 'Stay updated with global announcements and class-specific news.', icon: MessageSquare },
                             { id: 'schedule', title: 'Schedule', desc: 'Your personalized academic calendar with classes and lab sessions.', icon: Calendar },
                             { id: 'knowledge-map', title: 'Knowledge Map', desc: 'Visualize your academic connections and learning history in 3D.', icon: Orbit },
@@ -152,9 +153,14 @@ export function CommandPalette() {
                     q: role === 'lecturer' ? '/lecturer/quizzes' : '/student/quizzes',
                     m: '/streak',
                     f: '/class-feed',
+                    g: '/messages',
                     c: '/schedule',
                     e: '/student/knowledge-map',
                     j: '/ai-chat',
+                    r: () => handleToggleCoach(),
+                    t: '/lecturer/timetable',
+                    u: '/all-students',
+                    v: '/lecturer/create-ai-quiz',
                     h: '/help',
                     i: () => {
                         if (role === 'lecturer') window.dispatchEvent(new CustomEvent("open-invite-dialog"));
@@ -320,36 +326,23 @@ export function CommandPalette() {
                         </Command.Group>
                     )}
 
-                    {results.coach && (
-                        <Command.Group heading="AI Intelligence" className="p-2">
-                             <Item value="ai-coach" onSelect={() => handleToggleCoach()}>
-                                <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
-                                    <GraduationCap className="h-4 w-4 text-indigo-600" />
-                                </div>
-                                <div className="flex flex-col flex-1 truncate">
-                                    <span className="font-bold">AI Performance Coach</span>
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Personal Mentor</span>
-                                </div>
-                            </Item>
-                        </Command.Group>
-                    )}
 
                     <Command.Group heading="AI Intelligence" className="p-2">
-                         <Item value="ai-coach" onSelect={() => handleToggleCoach()}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
-                                <GraduationCap className="h-4 w-4 text-indigo-600" />
-                            </div>
-                            <div className="flex flex-col flex-1 truncate">
-                                <span className="font-bold">AI Performance Coach</span>
-                                <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Personal Mentor</span>
-                            </div>
-                        </Item>
                         <Item value="ai-chat" onSelect={() => runCommand(() => navigate("/ai-chat"))}>
                             <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 mr-3 transition-colors group-aria-selected:bg-primary/20">
                                 <Bot className="h-4 w-4 text-primary" />
                             </div>
                             <span>EduSpace AI Chat</span>
-                            <Shortcut>Alt + J</Shortcut>
+                            <div className="flex items-center gap-2 ml-auto">
+                                <Shortcut>Alt + J</Shortcut>
+                            </div>
+                        </Item>
+                        <Item value="ai-coach-toggle" onSelect={() => handleToggleCoach()}>
+                            <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
+                                <GraduationCap className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <span>Toggle AI Coach Drawer</span>
+                            <Shortcut>Alt + R</Shortcut>
                         </Item>
                     </Command.Group>
 
@@ -428,6 +421,13 @@ export function CommandPalette() {
                             <span>Class News Feed</span>
                             <Shortcut>Alt + F</Shortcut>
                         </Item>
+                        <Item value="messages" onSelect={() => runCommand(() => navigate("/messages"))}>
+                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                <MessageSquare className="h-4 w-4" />
+                            </div>
+                            <span>Direct Messages</span>
+                            <Shortcut>Alt + G</Shortcut>
+                        </Item>
                         <Item value="schedule" onSelect={() => runCommand(() => navigate("/schedule"))}>
                             <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
                                 <Calendar className="h-4 w-4" />
@@ -435,6 +435,31 @@ export function CommandPalette() {
                             <span>Full Schedule</span>
                             <Shortcut>Alt + C</Shortcut>
                         </Item>
+                        {role === 'lecturer' && (
+                            <>
+                                <Item value="students" onSelect={() => runCommand(() => navigate("/all-students"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <GraduationCap className="h-4 w-4" />
+                                    </div>
+                                    <span>All Students</span>
+                                    <Shortcut>Alt + U</Shortcut>
+                                </Item>
+                                <Item value="timetable" onSelect={() => runCommand(() => navigate("/lecturer/timetable"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <History className="h-4 w-4" />
+                                    </div>
+                                    <span>Time Table</span>
+                                    <Shortcut>Alt + T</Shortcut>
+                                </Item>
+                                <Item value="ai-gen" onSelect={() => runCommand(() => navigate("/lecturer/create-ai-quiz"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <Plus className="h-4 w-4" />
+                                    </div>
+                                    <span>AI Quiz Generator</span>
+                                    <Shortcut>Alt + V</Shortcut>
+                                </Item>
+                            </>
+                        )}
                         {role === 'student' && (
                             <Item value="knowledge-map" onSelect={() => runCommand(() => navigate("/student/knowledge-map"))}>
                                 <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">

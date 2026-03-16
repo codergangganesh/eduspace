@@ -18,7 +18,7 @@ interface CallModalProps {
 }
 
 export function CallModal({ isOpen, onClose, type, conversationId, userName, isMeeting, isMinimized, onMinimize }: CallModalProps) {
-    const appId = "vpaas-magic-cookie-f796d7a3ec46435793193a60b0aef396";
+    const appId = import.meta.env.VITE_JITSI_APP_ID || "vpaas-magic-cookie-f796d7a3ec46435793193a60b0aef396";
     const domain = "8x8.vc";
     const [isLoading, setIsLoading] = useState(true);
 

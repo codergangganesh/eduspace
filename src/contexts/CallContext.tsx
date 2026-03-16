@@ -79,10 +79,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const [isMinimized, setIsMinimized] = useState(false);
     const channelRef = useRef<any>(null);
     const activeCallIdRef = useRef<string | undefined>(undefined);
+    const activeCallRef = useRef<CallState | null>(null);
 
     useEffect(() => {
         activeCallIdRef.current = activeCall?.id;
-    }, [activeCall?.id]);
+        activeCallRef.current = activeCall;
+    }, [activeCall]);
 
     const clearCallActionParams = useCallback(() => {
         if (!location.search.includes('session=') && !location.search.includes('action=')) {
@@ -409,7 +411,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
         channel
             .on('broadcast', { event: 'call:offer' }, ({ payload }) => {
-                if (activeCall) {
+                if (activeCallRef.current) {
                     console.log("[CallContext] User is busy, signaling caller:", payload.callerId);
                     const targetChannel = supabase.channel(`calls:${payload.callerId}`);
                     targetChannel.subscribe((status) => {
@@ -441,18 +443,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                 setActiveCall(null);
             })
             .on('broadcast', { event: 'call:accepted' }, ({ payload }) => {
-                if (activeCall && activeCall.id === payload.callId) {
+                const current = activeCallRef.current;
+                if (current && current.id === payload.callId) {
                     setActiveCall(prev => prev ? { ...prev, status: 'active', startTime: Date.now() } : null);
                 }
             })
             .on('broadcast', { event: 'call:rejected' }, ({ payload }) => {
-                if (activeCall && (!payload.callId || activeCall.id === payload.callId)) {
+                const current = activeCallRef.current;
+                if (current && (!payload.callId || current.id === payload.callId)) {
                     toast.error("Call rejected");
                     setActiveCall(null);
                 }
             })
             .on('broadcast', { event: 'call:ended' }, ({ payload }) => {
-                if (activeCall && activeCall.id === payload.callId) {
+                const current = activeCallRef.current;
+                if (current && current.id === payload.callId) {
                     toast.info("Call ended");
                     setActiveCall(null);
                 }

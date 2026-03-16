@@ -48,6 +48,7 @@ interface Attachment {
 export function useMessages() {
     const { user, profile } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
     const [messages, setMessages] = useState<Message[]>([]);
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -176,15 +177,98 @@ export function useMessages() {
         };
     }, [user, fetchConversations]);
 
+    // Fetch unread message counts for all conversations in one go
+    const fetchUnreadCounts = useCallback(async () => {
+        if (!user) return;
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('conversation_id')
+                .eq('receiver_id', user.id)
+                .is('read_at', null);
+
+            if (error) {
+                console.warn('Error fetching unread counts:', error);
+                return;
+            }
+
+            const counts: Record<string, number> = {};
+            (data || []).forEach(msg => {
+                counts[msg.conversation_id] = (counts[msg.conversation_id] || 0) + 1;
+            });
+            setUnreadCounts(counts);
+        } catch (err) {
+            console.error('Error fetching unread counts:', err);
+        }
+    }, [user]);
+
+    // Global listener for new messages to update unread counts
+    useEffect(() => {
+        if (!user) return;
+
+        const channel = supabase
+            .channel('global_unread_counts')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${user.id}`
+                },
+                (payload) => {
+                    const newMessage = payload.new as Message;
+                    // Only increment if it's not the currently active conversation
+                    // (since active conversation marks as read instantly)
+                    if (newMessage.conversation_id !== selectedConversationId) {
+                        setUnreadCounts(prev => ({
+                            ...prev,
+                            [newMessage.conversation_id]: (prev[newMessage.conversation_id] || 0) + 1
+                        }));
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${user.id}`
+                },
+                () => {
+                    // If a message status changes (e.g. marked read on another device), refresh all counts
+                    fetchUnreadCounts();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user, selectedConversationId, fetchUnreadCounts]);
+
+    useEffect(() => {
+        fetchUnreadCounts();
+    }, [fetchUnreadCounts]);
+
     const markMessagesAsRead = useCallback(async (conversationId: string) => {
         if (!user) return;
         try {
-            await supabase
+            const { error } = await supabase
                 .from('messages')
                 .update({ is_read: true, read_at: new Date().toISOString() })
                 .eq('conversation_id', conversationId)
                 .eq('receiver_id', user.id)
-                .is('read_at', null); // Only update if not already read
+                .is('read_at', null);
+            
+            if (!error) {
+                // Update local state immediately for better UX
+                setUnreadCounts(prev => ({
+                    ...prev,
+                    [conversationId]: 0
+                }));
+            }
         } catch (err) {
             console.error('Error marking messages as read:', err);
         }
@@ -626,6 +710,7 @@ export function useMessages() {
         markMessagesAsRead,
         loading,
         error,
+        unreadCounts,
         refreshConversations: fetchConversations,
         typingUsers,
         sendTyping,
