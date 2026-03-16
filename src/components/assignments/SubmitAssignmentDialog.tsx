@@ -7,8 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, FileText, Loader2, CheckCircle, Download, ExternalLink, Calendar, Clock, Trophy, AlertCircle, File, MoreVertical, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { validateAssignmentFile } from "@/lib/supabaseStorage";
-import { uploadToSupabaseStorage } from "@/lib/supastorage";
+import { validateAssignmentFile, uploadAssignmentFile } from "@/lib/supabaseStorage";
 import { useStreak } from "@/contexts/StreakContext";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -122,10 +121,10 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                     return;
                 }
 
-                const uploadResult = await uploadToSupabaseStorage(file);
+                const uploadResult = await uploadAssignmentFile(file, profile?.user_id || "", assignment.id);
 
-                if (!uploadResult.url) {
-                    throw new Error('Upload failed');
+                if (!uploadResult.success || !uploadResult.url) {
+                    throw new Error(uploadResult.error || 'Upload failed');
                 }
                 attachmentUrl = uploadResult.url;
                 attachmentName = file.name;

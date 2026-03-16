@@ -158,6 +158,79 @@ export function validateAssignmentFile(file: File): {
 }
 
 /**
+ * Resolve any storage string (path or legacy URL) to a working signed URL
+ */
+export async function resolveAnyStorageUrl(urlOrPath: string | null | undefined): Promise<string> {
+    if (!urlOrPath) return '';
+    
+    // If it's already a signed URL (contains token), return as is
+    if (urlOrPath.includes('token=')) return urlOrPath;
+
+    let path = urlOrPath;
+    let bucket = 'assignment-submissions';
+
+    console.log('[resolveAnyStorageUrl] Input:', urlOrPath);
+
+    // 1. Determine bucket and extract relative path
+    if (urlOrPath.startsWith('http')) {
+        if (urlOrPath.includes('/message-attachments/')) {
+            bucket = 'message-attachments';
+            path = urlOrPath.split('/message-attachments/').pop() || '';
+            // If it still has object/public prefix segments, clean them
+            if (path.includes('object/public/')) {
+                path = path.split('object/public/').pop()?.split('/').slice(1).join('/') || path;
+            }
+        } else if (urlOrPath.includes('/assignment-submissions/')) {
+            bucket = 'assignment-submissions';
+            path = urlOrPath.split('/assignment-submissions/').pop() || '';
+        } else if (urlOrPath.includes('.supabase.co/storage/v1/object/')) {
+            // General supabase storage URL
+            const parts = urlOrPath.split('/object/public/');
+            if (parts.length > 1) {
+                const subParts = parts[1].split('/');
+                bucket = subParts[0];
+                path = subParts.slice(1).join('/');
+            } else {
+                const signParts = urlOrPath.split('/object/sign/');
+                if (signParts.length > 1) {
+                    const subParts = signParts[1].split('/');
+                    bucket = subParts[0];
+                    path = subParts.slice(1).join('/').split('?')[0];
+                }
+            }
+        } else {
+            // Not a recognized Supabase Storage URL
+            return urlOrPath;
+        }
+    }
+
+    // Sanitize path (remove query params if any)
+    path = path.split('?')[0];
+    
+    console.log('[resolveAnyStorageUrl] Path resolved to:', { bucket, path });
+
+    // 2. Try to get a signed URL (required for private/restricted buckets)
+    try {
+        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 7200); // 2 hours
+        if (error) {
+            console.error(`[resolveAnyStorageUrl] Signed URL error for ${bucket}/${path}:`, error.message);
+            throw error;
+        }
+        if (data?.signedUrl) {
+            console.log('[resolveAnyStorageUrl] SIGNED URL CREATED:', data.signedUrl);
+            return data.signedUrl;
+        }
+    } catch (e) {
+        console.warn('[resolveAnyStorageUrl] Failed to sign, falling back to public URL', e);
+        // 3. Fallback: Return public URL
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        return data.publicUrl;
+    }
+    
+    return urlOrPath;
+}
+
+/**
  * Format file size for display
  */
 export function formatFileSize(bytes: number): string {

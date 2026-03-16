@@ -30,6 +30,7 @@ import { SubmitAssignmentDialog } from "@/components/assignments/SubmitAssignmen
 import { useAssignments } from "@/hooks/useAssignments";
 import { formatFileSize, getFileTypeDisplay, getFileExtension } from "@/lib/fileUtils";
 import { useStreak } from "@/contexts/StreakContext";
+import { resolveAnyStorageUrl } from "@/lib/supabaseStorage";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -127,12 +128,17 @@ export default function StudentAssignmentDetail() {
                     lecturerName = lecturerData?.full_name;
                 }
 
+                // Resolve Resource Material if present
+                if (assignmentData?.attachment_url) {
+                    assignmentData.attachment_url = await resolveAnyStorageUrl(assignmentData.attachment_url);
+                }
+
                 setAssignment({
                     ...assignmentData,
                     class_name: className,
                     subject_name: subjectName,
                     lecturer_name: lecturerName,
-                });
+                } as any);
 
                 // Fetch student's submission
                 const { data: submissionData } = await supabase
@@ -142,7 +148,15 @@ export default function StudentAssignmentDetail() {
                     .eq('student_id', user.id)
                     .single();
 
-                setSubmission(submissionData || null);
+                if (submissionData) {
+                    const resolvedUrl = await resolveAnyStorageUrl(submissionData.attachment_url);
+                    setSubmission({
+                        ...submissionData,
+                        attachment_url: resolvedUrl
+                    });
+                } else {
+                    setSubmission(null);
+                }
             } catch (err) {
                 console.error('Error fetching assignment details:', err);
             } finally {

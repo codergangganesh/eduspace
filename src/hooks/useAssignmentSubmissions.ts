@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { resolveAnyStorageUrl } from '@/lib/supabaseStorage';
 
 export interface AssignmentSubmissionDetail {
     student_id: string;
@@ -39,7 +40,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
 
             if (studentsError) throw studentsError;
 
-            // 2. Fetch all submissions for this assignment directly (RLS protected)
+            // 2. Fetch all submissions for this assignment directly
             const { data: submitted, error: submissionsError } = await supabase
                 .from('assignment_submissions')
                 .select('*')
@@ -50,12 +51,12 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                 throw submissionsError;
             }
 
-            // 2.5 Fetch student emails for matching
+            // 2.5 Fetch student emails and profiles
             const allSubmissionUserIds = [...new Set((submitted || []).map(s => s.student_id).filter(Boolean))] as string[];
             const submittedEmailsMap: Record<string, string> = {}; // user_id -> email
 
             if (allSubmissionUserIds.length > 0) {
-                const { data: profileEmails, error: emailsError } = await supabase
+                const { data: profileEmails } = await supabase
                     .from('profiles')
                     .select('user_id, email')
                     .in('user_id', allSubmissionUserIds);
@@ -67,20 +68,17 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                 }
             }
 
-            console.log('[useAssignmentSubmissions] Fetched submissions:', submitted?.length, submitted);
-            console.log('[useAssignmentSubmissions] Total students:', students?.length);
-
             // 2.6 Fetch profile images
             const studentIds = (students || []).map(s => s.student_id);
             const profileMap: Record<string, string> = {};
 
             if (studentIds.length > 0) {
-                const { data: profiles, error: profilesError } = await supabase
+                const { data: profiles } = await supabase
                     .from('student_profiles')
                     .select('user_id, profile_image')
                     .in('user_id', studentIds);
 
-                if (!profilesError && profiles) {
+                if (profiles) {
                     profiles.forEach(p => {
                         if (p.profile_image) {
                             profileMap[p.user_id] = p.profile_image;
@@ -89,17 +87,23 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                 }
             }
 
-            // 3. Merge data
+            // 3. Resolve Storage URLs properly using the robust resolver
+            const resolvedSubmissions = await Promise.all((submitted || []).map(async (s) => {
+                const finalUrl = await resolveAnyStorageUrl(s.attachment_url);
+                return { ...s, resolved_url: finalUrl };
+            }));
+
+            // 4. Merge data
             const combinedData: AssignmentSubmissionDetail[] = (students || []).map(student => {
-                const submission = submitted?.find(s => {
-                    // 1. Match by student_id (UUID)
+                const submission = resolvedSubmissions?.find(s => {
+                    // Match by student_id
                     const matchId = (s.student_id && student.student_id && s.student_id === student.student_id);
 
-                    // 2. Match by register_number
+                    // Match by register_number
                     const matchReg = (s.register_number && student.register_number &&
                         s.register_number.trim().toLowerCase() === student.register_number.trim().toLowerCase());
 
-                    // 3. Match by email (ultimate fallback)
+                    // Match by email fallback
                     const submittedEmail = s.student_id ? submittedEmailsMap[s.student_id] : null;
                     const matchEmail = (submittedEmail && student.email &&
                         submittedEmail.trim().toLowerCase() === student.email.trim().toLowerCase());
@@ -114,7 +118,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     email: student.email,
                     status: submission ? (submission.status as any) : 'pending',
                     submitted_at: submission?.submitted_at,
-                    file_url: submission?.attachment_url,
+                    file_url: submission?.resolved_url || submission?.attachment_url,
                     file_name: submission?.attachment_name,
                     file_type: submission?.file_type,
                     file_size: submission?.file_size,
@@ -125,10 +129,6 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     profile_image: profileMap[student.student_id] || null
                 };
             });
-
-            // Do not filter here, return all students to allow filtering in the UI
-            console.log('[useAssignmentSubmissions] Total students:', combinedData.length);
-            console.log('[useAssignmentSubmissions] Students with submissions:', submitted.length);
 
             setSubmissions(combinedData);
 
@@ -147,7 +147,6 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
 
         fetchData();
 
-        // Subscribe to changes
         const subscription = supabase
             .channel(`assignment_subs_${assignmentId}`)
             .on(
@@ -158,11 +157,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     table: 'assignment_submissions',
                     filter: `assignment_id=eq.${assignmentId}`
                 },
-                (payload) => {
-                    console.log('[useAssignmentSubmissions] Submission change detected:', payload.eventType, payload);
-                    if (payload.eventType === 'DELETE') {
-                        console.log('[useAssignmentSubmissions] Submission deleted, refreshing list...');
-                    }
+                () => {
                     fetchData();
                 }
             )
