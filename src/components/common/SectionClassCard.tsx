@@ -34,7 +34,7 @@ export interface ClassData {
 
 export interface SectionClassCardProps {
     classData: ClassData;
-    variant?: 'assignments' | 'schedule' | 'students' | 'quizzes';
+    variant?: 'assignments' | 'schedule' | 'students' | 'quizzes' | 'attendance';
     onAction?: (id: string, actionType?: string) => void;
     index?: number;
     onEdit?: (classData: ClassData) => void;
@@ -57,6 +57,7 @@ export const SectionClassCard = ({
             case 'schedule': return Calendar;
             case 'students': return Users;
             case 'quizzes': return FileCheck;
+            case 'attendance': return ClipboardList;
             default: return BookOpen;
         }
     };
@@ -174,7 +175,7 @@ export const SectionClassCard = ({
                         "bg-white/60 dark:bg-white/10 text-slate-700 dark:text-white backdrop-blur-md border border-white/40 dark:border-white/20",
                         "group-hover:scale-105 active:scale-95"
                     )}>
-                        {variant === 'assignments' ? 'Assignments' : variant === 'students' ? 'Students' : variant === 'quizzes' ? 'Quizzes' : 'Schedule'}
+                        {variant === 'assignments' ? 'Assignments' : variant === 'students' ? 'Students' : variant === 'quizzes' ? 'Quizzes' : variant === 'attendance' ? 'Attendance' : 'Schedule'}
                         <ArrowRight className="size-2.5 md:size-3 group-hover:translate-x-1 transition-transform" />
                     </div>
                 </div>

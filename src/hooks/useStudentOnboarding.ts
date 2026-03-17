@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStudentPendingInvitations, linkEmailToAccount } from '@/lib/classInvitationService';
 import { checkPendingInvitations } from '@/lib/accessControlService';
 import { notifyPendingAccessRequest, clearAccessRequestNotification } from '@/lib/notificationService';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ── Session-level flag ────────────────────────────────────────────────────────
 // Tracks whether we have already run the onboarding network call this session.
@@ -51,6 +52,7 @@ const saveDismissedRequests = (requests: Set<string>) => {
 
 export function useStudentOnboarding() {
     const { user } = useAuth();
+    const queryClient = useQueryClient();
     const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasPending, setHasPending] = useState(false);
@@ -95,6 +97,8 @@ export function useStudentOnboarding() {
 
                 if (success) {
                     console.log(`Linked ${linkedCount} email-based records to account`);
+                    // Invalidate attendance queries to show linked data immediately
+                    queryClient.invalidateQueries({ queryKey: ['student_attendance'] });
                 }
 
                 // Fetch pending invitations

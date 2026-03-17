@@ -1,5 +1,5 @@
 // Imports
-import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight, Megaphone, Heart, Send } from "lucide-react";
+import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight, Megaphone, Heart, Send, ClipboardList } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,7 +116,7 @@ export default function LecturerDashboard() {
           <div className="space-y-6">
 
             {/* Quick Actions Grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 pb-6">
               <button
                 onClick={() => navigate('/schedule')}
                 className="flex flex-col gap-3 p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-indigo-100 dark:border-indigo-900/50 hover:shadow-md transition-all text-left group"
@@ -140,6 +140,19 @@ export default function LecturerDashboard() {
                 <div>
                   <h3 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">Students</h3>
                   <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">View directory</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/lecturer/attendance')}
+                className="flex flex-col gap-3 p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-100 dark:border-amber-900/50 hover:shadow-md transition-all text-left group col-span-2"
+              >
+                <div className="size-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                  <ClipboardList className="size-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100">Attendance Tracker</h3>
+                  <p className="text-xs text-amber-600/80 dark:text-amber-400/80">Mark & track presence</p>
                 </div>
               </button>
             </div>

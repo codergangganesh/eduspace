@@ -73,6 +73,9 @@ const AIChat = lazy(() => import("./pages/AIChat"));
 const CallHistory = lazy(() => import("./pages/CallHistory"));
 const StreakPage = lazy(() => import("./pages/StreakPage"));
 const KnowledgeMap = lazy(() => import("./pages/KnowledgeMap"));
+const StudentAttendance = lazy(() => import("./pages/StudentAttendance"));
+const LecturerClassesAttendance = lazy(() => import("./pages/LecturerClassesAttendance"));
+const LecturerAttendance = lazy(() => import("./pages/LecturerAttendance"));
 
 const LoadingFallback = () => {
   useEffect(() => {
@@ -233,6 +236,9 @@ const AnimatedRoutes = () => {
           <Route path="/lecturer/quizzes/:classId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><ClassQuizzesView /></ProtectedRoute>} />
           <Route path="/lecturer/quizzes/:classId/:quizId/edit" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><EditQuiz /></ProtectedRoute>} />
           <Route path="/lecturer/quizzes/:classId/:quizId/results" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><QuizResultsView /></ProtectedRoute>} />
+          <Route path="/lecturer/attendance" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerClassesAttendance /></ProtectedRoute>} />
+          <Route path="/lecturer/attendance/:classId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerAttendance /></ProtectedRoute>} />
+          <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={["student", "admin"]}><StudentAttendance /></ProtectedRoute>} />
           <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
           <Route path="/assignments/:id/submit" element={<ProtectedRoute><AssignmentSubmit /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

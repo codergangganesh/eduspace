@@ -1,9 +1,10 @@
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import React from "react";
 
 interface PremiumStatsCardProps {
   title: string;
-  value: string | number;
+  value: React.ReactNode;
   subtitle?: string;
   icon: LucideIcon;
   backgroundColor: string;

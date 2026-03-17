@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Clock, Flame } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Clock, Flame, PieChart } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
@@ -21,6 +21,7 @@ import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useStreak } from "@/contexts/StreakContext";
 import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudentAttendance } from "@/hooks/useAttendance";
 
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const { assignments, stats, loading: assignmentsLoading } = useAssignments();
   const { schedules, loading: scheduleLoading } = useSchedule();
   const { streak, loading: streakLoading } = useStreak();
+  const { stats: attendanceStats, isLoading: attendanceLoading } = useStudentAttendance();
   const navigate = useNavigate();
   const { profile, user, role } = useAuth();
   const { recordAcademicAction } = useStreak();
@@ -215,7 +217,7 @@ export default function Dashboard() {
 
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
           <PremiumStatsCard
             title="ASSIGNED"
             value={displayStats.total}
@@ -233,6 +235,7 @@ export default function Dashboard() {
             backgroundColor="bg-gradient-to-br from-orange-500 to-red-600"
             iconBackgroundColor="bg-white/10"
             onClick={() => navigate("/streak")}
+            className="hidden md:flex"
           />
           <PremiumStatsCard
             title="COMPLETED"
@@ -249,6 +252,15 @@ export default function Dashboard() {
             icon={AlertCircle}
             backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
             iconBackgroundColor="bg-white/10"
+          />
+          <PremiumStatsCard
+            title="ATTENDANCE"
+            value={attendanceLoading ? <div className="animate-spin"><Clock className="size-4" /></div> : attendanceStats ? `${attendanceStats.percentage}%` : "0%"}
+            subtitle="Overall presence"
+            icon={PieChart}
+            backgroundColor="bg-gradient-to-br from-indigo-600 to-primary"
+            iconBackgroundColor="bg-white/10"
+            onClick={() => navigate("/student/attendance")}
           />
           <PremiumStatsCard
             title="SCHEDULE"

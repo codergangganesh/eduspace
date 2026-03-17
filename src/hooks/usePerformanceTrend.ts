@@ -6,6 +6,7 @@ import { startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date
 export interface TrendData {
     week: string;
     score: number;
+    attendance: number;
     fullDate: Date;
 }
 
@@ -35,69 +36,85 @@ export function usePerformanceTrend() {
 
             const classIds = classes.map(c => c.id);
 
-            // 2. Fetch quizzes for these classes
+            // 2. Fetch data sources from the last 8 weeks
+            const eightWeeksAgo = subWeeks(new Date(), 8);
+
+            // A. Quizzes & Submissions
             const { data: quizzes } = await supabase
                 .from('quizzes')
                 .select('id, total_marks')
                 .in('class_id', classIds);
 
-            if (!quizzes || quizzes.length === 0) {
-                setData([]);
-                setLoading(false);
-                return;
-            }
+            const quizIds = quizzes?.map(q => q.id) || [];
+            const quizMarksMap = new Map(quizzes?.map(q => [q.id, q.total_marks]) || []);
 
-            const quizIds = quizzes.map(q => q.id);
-            const quizMarksMap = new Map(quizzes.map(q => [q.id, q.total_marks]));
-
-            // 3. Fetch submissions for these quizzes from the last 8 weeks
-            const eightWeeksAgo = subWeeks(new Date(), 8);
             const { data: submissions } = await supabase
                 .from('quiz_submissions')
                 .select('quiz_id, total_obtained, submitted_at')
                 .in('quiz_id', quizIds)
-                .gte('submitted_at', eightWeeksAgo.toISOString())
-                .order('submitted_at', { ascending: true });
+                .gte('submitted_at', eightWeeksAgo.toISOString());
 
-            if (!submissions || submissions.length === 0) {
-                // Return empty but structured data if no submissions
-                const emptyData = Array.from({ length: 8 }).map((_, i) => ({
-                    week: `Week ${8 - i}`,
-                    score: 0,
-                    fullDate: subWeeks(new Date(), 7 - i)
-                }));
-                setData(emptyData);
-                setLoading(false);
-                return;
-            }
+            // B. Attendance Sessions & Records
+            const { data: sessions } = await supabase
+                .from('attendance_sessions')
+                .select('id, session_date')
+                .in('class_id', classIds)
+                .gte('session_date', eightWeeksAgo.toISOString());
 
-            // 4. Aggregate data by week
+            const sessionIds = sessions?.map(s => s.id) || [];
+            
+            const { data: attendanceRecords } = await supabase
+                .from('attendance_records')
+                .select('session_id, status, created_at')
+                .in('session_id', sessionIds);
+
+            // 3. Aggregate data by week
             const weeklyData: TrendData[] = [];
             for (let i = 7; i >= 0; i--) {
                 const weekStart = startOfWeek(subWeeks(new Date(), i));
                 const weekEnd = endOfWeek(subWeeks(new Date(), i));
 
-                const weekSubmissions = submissions.filter(s =>
+                // Calculate Performance Score
+                const weekSubmissions = submissions?.filter(s =>
                     isWithinInterval(new Date(s.submitted_at), { start: weekStart, end: weekEnd })
-                );
+                ) || [];
 
-                let avgPercentage = 0;
+                let avgScore = 0;
                 if (weekSubmissions.length > 0) {
                     const percentages = weekSubmissions.map(s => {
                         const totalMarks = quizMarksMap.get(s.quiz_id) || 100;
                         return (s.total_obtained / totalMarks) * 100;
                     });
-                    avgPercentage = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+                    avgScore = Math.round(percentages.reduce((a, b) => a + b, 0) / percentages.length);
+                }
+
+                // Calculate Attendance Percentage
+                const weekSessions = sessions?.filter(s => 
+                    isWithinInterval(new Date(s.session_date), { start: weekStart, end: weekEnd })
+                ) || [];
+                const weekSessionIds = weekSessions.map(s => s.id);
+                const weekAttendanceRecords = attendanceRecords?.filter(r => 
+                    weekSessionIds.includes(r.session_id)
+                ) || [];
+
+                let avgAttendance = 0;
+                if (weekAttendanceRecords.length > 0) {
+                    const positiveRecords = weekAttendanceRecords.filter(r => r.status === 'present' || r.status === 'late').length;
+                    avgAttendance = Math.round((positiveRecords / weekAttendanceRecords.length) * 100);
+                } else if (i > 0) {
+                    // Fallback to previous week if no sessions this week, to keep the line smooth
+                    avgAttendance = weeklyData.length > 0 ? weeklyData[weeklyData.length - 1].attendance : 0;
                 }
 
                 weeklyData.push({
-                    week: `Week ${8 - i}`,
-                    score: Math.round(avgPercentage),
+                    week: format(weekStart, 'MMM dd'),
+                    score: avgScore,
+                    attendance: avgAttendance,
                     fullDate: weekStart
                 });
             }
 
-            // 5. Calculate trend percentage (comparing last week to the one before)
+            // 4. Calculate trend percentage (Performance focus)
             if (weeklyData.length >= 2) {
                 const lastWeek = weeklyData[weeklyData.length - 1].score;
                 const prevWeek = weeklyData[weeklyData.length - 2].score;

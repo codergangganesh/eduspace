@@ -49,29 +49,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const studentNavItems = [
-  { id: "tour-nav-dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { id: "tour-nav-feed", icon: Megaphone, label: "Class Feed", path: "/class-feed" },
-  { id: "tour-nav-schedule", icon: Calendar, label: "Schedule", path: "/schedule" },
-  { id: "tour-nav-assignments", icon: ClipboardList, label: "Assignments", path: "/student/assignments" },
-  { id: "tour-nav-quizzes", icon: FileCheck, label: "Quizzes", path: "/student/quizzes" },
-  { id: "tour-nav-matrix", icon: Orbit, label: "EduMatrix", path: "/student/knowledge-map" },
-  { id: "tour-nav-ai", icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
-  { id: "tour-nav-streak", icon: Flame, label: "Academic Streak", path: "/streak" },
-  { id: "tour-nav-messages", icon: MessageSquare, label: "Messages", path: "/messages" },
+  { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/dashboard" },
+  { id: "tour-nav-feed", icon: Megaphone, imageUrl: "/feed-icon.png", label: "Class Feed", path: "/class-feed" },
+  { id: "tour-nav-schedule", icon: Calendar, imageUrl: "/schedule-icon.png", label: "Schedule", path: "/schedule" },
+  { id: "tour-nav-assignments", icon: ClipboardList, imageUrl: "/assignment-icon.png", label: "Assignments", path: "/student/assignments" },
+  { id: "tour-nav-quizzes", icon: FileCheck, imageUrl: "/quiz-icon.png", label: "Quizzes", path: "/student/quizzes" },
+  { id: "tour-nav-matrix", icon: Orbit, imageUrl: "/edumatrix-icon.png", label: "EduMatrix", path: "/student/knowledge-map" },
+  { id: "tour-nav-ai", icon: Bot, imageUrl: "/ai-icon.png", label: "Eduspace AI", path: "/ai-chat" },
+  { id: "tour-nav-streak", icon: Flame, imageUrl: "/streak-icon.png", label: "Academic Streak", path: "/streak" },
+  { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/student/attendance" },
+  { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
 
 ];
 
+
 const lecturerNavItems = [
-  { id: "tour-nav-dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/lecturer-dashboard" },
-  { id: "tour-nav-feed", icon: Megaphone, label: "Class Feed", path: "/class-feed" },
-  { id: "tour-nav-students", icon: Users, label: "All Students", path: "/all-students" },
-  { id: "tour-nav-timetable", icon: Table, label: "Time Table", path: "/lecturer/timetable" },
-  { id: "tour-nav-schedule", icon: Calendar, label: "Schedule", path: "/schedule" },
-  { id: "tour-nav-assignments", icon: ClipboardList, label: "Assignments", path: "/lecturer/assignments" },
-  { id: "tour-nav-quizzes", icon: FileCheck, label: "Quizzes", path: "/lecturer/quizzes" },
-  { id: "tour-nav-ai", icon: Bot, label: "Eduspace AI", path: "/ai-chat" },
-  { id: "tour-nav-ai-gen", icon: Brain, label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
-  { id: "tour-nav-messages", icon: MessageSquare, label: "Messages", path: "/messages" },
+  { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/lecturer-dashboard" },
+  { id: "tour-nav-feed", icon: Megaphone, imageUrl: "/feed-icon.png", label: "Class Feed", path: "/class-feed" },
+  { id: "tour-nav-students", icon: Users, imageUrl: "/students-icon.png", label: "All Students", path: "/all-students" },
+  { id: "tour-nav-timetable", icon: Table, imageUrl: "/timetable-icon.png", label: "Time Table", path: "/lecturer/timetable" },
+  { id: "tour-nav-schedule", icon: Calendar, imageUrl: "/schedule-icon.png", label: "Schedule", path: "/schedule" },
+  { id: "tour-nav-assignments", icon: ClipboardList, imageUrl: "/assignment-icon.png", label: "Assignments", path: "/lecturer/assignments" },
+  { id: "tour-nav-quizzes", icon: FileCheck, imageUrl: "/quiz-icon.png", label: "Quizzes", path: "/lecturer/quizzes" },
+  { id: "tour-nav-ai", icon: Bot, imageUrl: "/ai-icon.png", label: "Eduspace AI", path: "/ai-chat" },
+  { id: "tour-nav-ai-gen", icon: Brain, imageUrl: "/ai-quiz-gen-icon.png", label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
+  { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/lecturer/attendance" },
+  { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
 
 ];
 
@@ -195,7 +198,15 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}
                   >
-                    <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        className={cn("size-6 shrink-0 rounded-full object-cover transition-transform duration-200", !isActive && "group-hover:scale-110")}
+                        alt={item.label}
+                      />
+                    ) : (
+                      <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
+                    )}
                     {!isCollapsed && <span>{item.label}</span>}
                   </Link>
                 );

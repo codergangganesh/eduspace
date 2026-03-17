@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -144,6 +144,107 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_records: {
+        Row: {
+          class_id: string
+          created_at: string
+          enrollment_id: string
+          id: string
+          marked_by: string
+          remarks: string | null
+          session_id: string
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          enrollment_id: string
+          id?: string
+          marked_by: string
+          remarks?: string | null
+          session_id: string
+          status: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          enrollment_id?: string
+          id?: string
+          marked_by?: string
+          remarks?: string | null
+          session_id?: string
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_sessions: {
+        Row: {
+          class_id: string
+          created_at: string
+          created_by: string
+          end_time: string | null
+          id: string
+          note: string | null
+          session_date: string
+          start_time: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          created_by: string
+          end_time?: string | null
+          id?: string
+          note?: string | null
+          session_date?: string
+          start_time?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          created_by?: string
+          end_time?: string | null
+          id?: string
+          note?: string | null
+          session_date?: string
+          start_time?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_sessions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
