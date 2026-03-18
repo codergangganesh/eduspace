@@ -7,12 +7,10 @@ import {
     LineChart,
     MessageSquare,
     LifeBuoy,
-    Users,
     Shield,
     Gavel,
     ExternalLink,
     Menu,
-    X,
 } from "lucide-react";
 import { useState } from "react";
 import { RoleSelectionDialog } from "@/components/auth/RoleSelectionDialog";
@@ -22,7 +20,6 @@ import {
     Sheet,
     SheetContent,
     SheetTrigger,
-    SheetHeader,
 } from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -35,6 +32,11 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+
+type MobileNavItem = {
+    label: string;
+    path: string;
+};
 
 export function LegalHeader() {
     const [showRoleDialog, setShowRoleDialog] = useState(false);
@@ -279,7 +281,7 @@ export function LegalHeader() {
 }
 
 // Helper component for mobile nav items with accordion effect
-function MobileNavLink({ title, items, onClickItem }: { title: string; items: any[]; onClickItem?: () => void }) {
+function MobileNavLink({ title, items, onClickItem }: { title: string; items: MobileNavItem[]; onClickItem?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (

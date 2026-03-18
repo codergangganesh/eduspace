@@ -1,30 +1,22 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  GraduationCap,
   LayoutDashboard,
   Calendar,
-  FileText,
   MessageSquare,
   Settings,
   LogOut,
   ChevronDown,
-  Minimize2,
-  MousePointer2,
-  PanelLeft,
   Table,
   User,
   Users,
-  Sparkles,
   Bot,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   FileCheck,
-  Wand2,
   Orbit,
   Brain,
   Flame,
-  Building2,
   Megaphone,
 } from "lucide-react";
 import {
@@ -39,14 +31,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useLecturerStudents } from "@/hooks/useLecturerStudents";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const studentNavItems = [
   { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/dashboard" },
@@ -96,7 +80,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   const { signOut, role } = useAuth();
   const { tourActiveStepId } = useLayout();
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
-  const [showControls, setShowControls] = useState(false);
+  void onHoverChange;
 
   // Fetch students ONLY if user is a lecturer
   const { students } = useLecturerStudents();

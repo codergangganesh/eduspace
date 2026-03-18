@@ -1,5 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { X, Loader2, Minimize2, Maximize2, Video } from "lucide-react";
+import { X, Loader2, Minimize2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";

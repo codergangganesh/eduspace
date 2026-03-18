@@ -1,17 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, FileText, Loader2, CheckCircle, Download, ExternalLink, Calendar, Clock, Trophy, AlertCircle, File, MoreVertical, Trash2, Eye } from "lucide-react";
+import { Upload, X, FileText, Loader2, CheckCircle, Download, Clock, Trophy, AlertCircle, File, MoreVertical, Trash2, Eye } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { validateAssignmentFile, uploadAssignmentFile } from "@/lib/supabaseStorage";
 import { useStreak } from "@/contexts/StreakContext";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import confetti from 'canvas-confetti';
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,8 +46,6 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     // Form State
-    const [studentName, setStudentName] = useState(profile?.full_name || "");
-    const [regNumber, setRegNumber] = useState(profile?.student_id || "");
     const [notes, setNotes] = useState("");
     const [file, setFile] = useState<File | null>(null);
 
@@ -71,8 +67,6 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
     // Reset form only when dialog transition from closed to open
     useEffect(() => {
         if (isOpen && !prevOpenRef.current) {
-            setStudentName(profile?.full_name || "");
-            setRegNumber(profile?.student_id || "");
             setFile(null);
             setNotes("");
         }
@@ -211,9 +205,10 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
                 toast.error(result.error || "Submission failed");
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('[SubmitAssignmentDialog] Error:', error);
-            toast.error("Error submitting assignment: " + error.message);
+            const message = error instanceof Error ? error.message : "Unknown error";
+            toast.error("Error submitting assignment: " + message);
         } finally {
             setSubmitting(false);
         }
@@ -227,7 +222,7 @@ export function SubmitAssignmentDialog({ isOpen, onClose, assignment, onSubmit, 
             toast.success("Submission deleted successfully");
             setDeleteDialogOpen(false);
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('[SubmitAssignmentDialog] Delete error:', error);
             toast.error("Failed to delete submission");
         }

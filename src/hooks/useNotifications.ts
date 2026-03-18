@@ -142,17 +142,33 @@ export function useNotifications() {
                 (payload) => {
                     const updatedNotification = payload.new as Notification;
 
-                    // Update the notification in state
-                    setNotifications((prev) =>
-                        prev.map((n) =>
-                            n.id === updatedNotification.id ? updatedNotification : n
-                        )
-                    );
-
-                    // Recalculate unread count
+                    // Update state in one pass to avoid race conditions
                     setNotifications((prev) => {
-                        setUnreadCount(prev.filter(n => !n.is_read).length);
-                        return prev;
+                        const next = prev.map((n) =>
+                            n.id === updatedNotification.id ? updatedNotification : n
+                        );
+                        // Update derived count
+                        setUnreadCount(next.filter(n => !n.is_read).length);
+                        return next;
+                    });
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "DELETE",
+                    schema: "public",
+                    table: "notifications",
+                    filter: `recipient_id=eq.${user.id}`,
+                },
+                (payload) => {
+                    const deletedId = (payload.old as any)?.id || (payload.new as any)?.id;
+                    if (!deletedId) return;
+
+                    setNotifications((prev) => {
+                        const next = prev.filter((n) => n.id !== deletedId);
+                        setUnreadCount(next.filter(n => !n.is_read).length);
+                        return next;
                     });
                 }
             )
@@ -199,18 +215,32 @@ export function useNotifications() {
     };
 
     const clearAllNotifications = async () => {
+        if (!user?.id) return;
+        
         try {
-            const { error } = await supabase
+            console.log("Initiating delete for recipient_id:", user.id);
+            
+            // Delete notifications from database
+            const { error, count, status } = await supabase
                 .from("notifications")
                 .delete()
-                .eq("recipient_id", user?.id);
+                .eq("recipient_id", user.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase error during delete:", error);
+                throw error;
+            }
+            
+            console.log(`Delete successful. Status: ${status}, Count: ${count}`);
 
+            // Update local state IMMEDIATELY
             setNotifications([]);
             setUnreadCount(0);
+            
+            return { success: true, deletedCount: count };
         } catch (error) {
             console.error("Error clearing all notifications:", error);
+            throw error;
         }
     };
 

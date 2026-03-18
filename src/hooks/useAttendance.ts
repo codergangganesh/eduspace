@@ -291,7 +291,7 @@ export function useStudentAttendance(classId?: string) {
       const enrolledClassIds = enrollments.map(e => e.class_id);
 
       // 2. Fetch all attendance sessions for the relevant classes (filtered by selection)
-      let sessionQuery = supabase
+      const sessionQuery = supabase
         .from('attendance_sessions')
         .select('*')
         .in('class_id', classId ? [classId] : enrolledClassIds)

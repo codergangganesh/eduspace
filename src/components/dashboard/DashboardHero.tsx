@@ -5,7 +5,7 @@ import { CalendarDays, Calendar } from "lucide-react";
 import { TypewriterName } from "../common/TypewriterName";
 
 export function DashboardHero() {
-    const { profile, updateProfile } = useAuth();
+    const { profile } = useAuth();
     const navigate = useNavigate();
     const fullName = profile?.full_name || "Student";
 

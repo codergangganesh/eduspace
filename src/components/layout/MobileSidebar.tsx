@@ -1,26 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  GraduationCap,
   LayoutDashboard,
   Calendar,
-  FileText,
   MessageSquare,
-  Settings,
   LogOut,
   X,
   Users,
-  Sparkles,
   Table,
   ClipboardList,
   FileCheck,
   Bot,
   Brain,
-  Wand2,
   Orbit,
   Flame,
   Megaphone,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -54,6 +48,14 @@ const lecturerNavItems = [
   { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/lecturer/attendance" },
 ];
 
+type NavItem = {
+  id: string;
+  icon: typeof LayoutDashboard;
+  imageUrl?: string;
+  label: string;
+  path: string;
+};
+
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -65,7 +67,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { role, signOut, profile } = useAuth();
   const { isMobileSidebarCollapsed, tourActiveStepId } = useLayout();
 
-  const navItems = role === "lecturer" ? lecturerNavItems : studentNavItems;
+  const navItems: NavItem[] = role === "lecturer" ? lecturerNavItems : studentNavItems;
 
   return (
     <AnimatePresence>
@@ -138,7 +140,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   return (
                     <Link
                       key={item.path + item.label}
-                      id={(item as any).id}
+                      id={item.id}
                       to={item.path}
                       onClick={() => {
                         if (!tourActiveStepId) {
@@ -153,9 +155,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       )}
                     >
-                      {(item as any).imageUrl ? (
+                      {item.imageUrl ? (
                         <img 
-                          src={(item as any).imageUrl} 
+                          src={item.imageUrl} 
                           className={cn("size-6 shrink-0 rounded-full object-cover", !isActive && "group-hover:scale-110")} 
                           alt={item.label} 
                         />

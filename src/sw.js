@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
   let data = {};
   try {
     data = event.data.json();
-  } catch (e) {
+  } catch {
     data = { title: 'EduSpace', body: event.data?.text() || 'New update available' };
   }
 
@@ -207,7 +207,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ─── Notification Close Handler ─────────────────────────────────────────────
-self.addEventListener('notificationclose', (event) => {
+self.addEventListener('notificationclose', () => {
   // Analytics or cleanup can go here in the future
 });
 
@@ -219,7 +219,7 @@ async function openOrFocusWindow(urlToOpen) {
   let targetUrl;
   try {
     targetUrl = new URL(urlToOpen, self.location.origin);
-  } catch (err) {
+  } catch {
     console.error('[SW] Invalid URL format:', urlToOpen);
     targetUrl = new URL('/', self.location.origin);
   }
@@ -234,7 +234,9 @@ async function openOrFocusWindow(urlToOpen) {
         console.log('[SW] Found exact URL match, focusing...');
         return client.focus();
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[SW] Failed to parse existing client URL:', e);
+    }
   }
 
   // 2. Fallback: Find any client on the same origin and navigate it

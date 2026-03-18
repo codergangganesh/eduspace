@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GraduationCap, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { HelpCenterDialog } from "@/components/support/HelpCenterDialog";

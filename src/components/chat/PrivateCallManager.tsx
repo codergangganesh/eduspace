@@ -603,7 +603,7 @@ export function PrivateCallManager() {
             <audio
                 ref={ringtoneRef}
                 loop
-                src="/notification_ringtone.mp3.mpeg"
+                src="/notification_ringtone.mp3"
                 className="hidden"
                 preload="auto"
                 playsInline

@@ -16,7 +16,7 @@ interface EditStudentModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     student: ClassStudent | null;
-    onSave: (studentId: string, data: any) => Promise<void>;
+    onSave: (studentId: string, data: Record<string, string>) => Promise<void>;
 }
 
 export function EditStudentModal({
@@ -73,7 +73,7 @@ export function EditStudentModal({
             await onSave(student.id, formData);
             toast.success("Student updated successfully");
             onOpenChange(false);
-        } catch (error) {
+        } catch {
             toast.error("An error occurred while saving");
         } finally {
             setSaving(false);

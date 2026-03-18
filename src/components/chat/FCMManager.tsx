@@ -12,8 +12,6 @@ export function FCMManager() {
     useEffect(() => {
         if (!user) return;
 
-        let pushListeners: any[] = [];
-
         const initFCM = async () => {
             try {
                 const { Capacitor } = await import('@capacitor/core');
@@ -127,7 +125,7 @@ export function FCMManager() {
                     }
                 });
 
-                pushListeners = [l1, l2, l3];
+                void [l1, l2, l3];
                 registerPush();
 
             } catch (err) {

@@ -1,12 +1,12 @@
-#  EduSpace - Advanced Learning Management System (LMS)
+﻿#  EduSpace - Advanced Learning Management System (LMS)
 
 EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
 <img width="1918" height="866" alt="image" src="https://github.com/user-attachments/assets/d7780a60-71c1-44de-9d55-28745701ac57" />
 
-[🎥 Watch Demo Video](public/Eduspace%20recording%20video.mp4)
+[Watch Demo Video](https://www.youtube.com/watch?v=TMe3jbI36OY&t=10s)
 
-> **Note:** The video file is large and hosted via Git LFS. Click the link above to view or download it.
+> **Note:** The demo is available on YouTube at the link above.
 
 ![Project Status](https://img.shields.io/badge/Status-Active-success)
 
@@ -17,9 +17,9 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 ---
 
 
-## 🌟 Key Features
+## ðŸŒŸ Key Features
 
-### 🔐 Authentication & Security
+### ðŸ” Authentication & Security
 *   **Role-Based Access Control (RBAC):** Distinct environments for **Students**, **Lecturers**, and **Admins**.
     *   *Admins*: System oversight.
     *   *Lecturers*: Course creation, grading, student management.
@@ -27,7 +27,7 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 *   **Secure Authentication:** Powered by Supabase Auth (Email/Password & Google OAuth).
 *   **Row Level Security (RLS):** Database-level security policies ensuring users can only access data they are permitted to see.
 
-### 👨‍🏫 Lecturer Hub
+### ðŸ‘¨â€ðŸ« Lecturer Hub
 *   **Class Management:** Create, update, and manage multiple sub-courses/subjects.
 *   **Student Management:**
     *   **Bulk Import:** Upload student lists via Excel/CSV.
@@ -36,21 +36,21 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 *   **Curriculum Planning:** Schedule classes, labs, and exams with a built-in calendar.
 *   **Assignments & Grading:** Create assignments, upload resource materials, view submissions, and grade student work with feedback.
 
-### 👨‍🎓 Student Portal
+### ðŸ‘¨â€ðŸŽ“ Student Portal
 *   **Interactive Dashboard:** A centralized hub for upcoming classes, pending assignments, and recent notifications.
 *   **Course Enrollment:** Browse active courses and request access.
 *   **Assignment Submission:** Submit work directly through the portal (text or file attachments).
 *   **Academic Progress:** Track grades, attendance, and credits completed.
 *   **Profile Management:** Customizable profile with avatar upload (Base64 optimized) and academic history.
 
-### 💬 Communication & Collaboration
+### ðŸ’¬ Communication & Collaboration
 *   **Real-time Messaging:** Direct messaging system between students and lecturers.
 *   **Notifications:** Real-time system alerts for new assignments, grades, and class updates.
 *   **Class Feeds:** Stay updated with course-specific announcements.
 
 ---
 
-## 🛠️ Technology Stack
+## ðŸ› ï¸ Technology Stack
 
 ### Frontend
 *   **Framework:** [React](https://reactjs.org/) (v18) with [Vite](https://vitejs.dev/) for lightning-fast build tooling.
@@ -70,40 +70,40 @@ EduSpace is a modern, comprehensive, and scalable Learning Management System des
 
 ---
 
-## 📂 Project Structure
+## ðŸ“‚ Project Structure
 
 ```text
 eduspace/
-├── .env                    # Environment variables configuration
-├── public/                 # Static assets (images, icons)
-├── src/
-│   ├── components/
-│   │   ├── admin/          # Admin-specific components
-│   │   ├── common/         # Shared components (loaders, errors)
-│   │   ├── layout/         # Layout wrappers (Sidebar, Topbar)
-│   │   ├── lecturer/       # Lecturer-specific components
-│   │   ├── student/        # Student-specific components
-│   │   └── ui/             # shadcn/ui primitive components
-│   ├── contexts/           # Global State (AuthContext, ThemeContext)
-│   ├── hooks/              # Custom React Hooks
-│   ├── i18n/               # i18n configuration
-│   ├── integrations/       # Supabase client & DB types
-│   ├── lib/                # Utility functions & libraries
-│   ├── locales/            # Translation files
-│   ├── pages/              # Application Routes/Screens
-│   ├── types/              # TypeScript type definitions
-│   ├── utils/              # General utility functions
-│   ├── App.tsx             # Main App Component
-│   └── main.tsx            # Entry Point
-├── supabase/
-│   ├── functions/          # Supabase Edge Functions
-│   └── migrations/         # SQL migration files
-└── vite.config.ts          # Vite configuration
+â”œâ”€â”€ .env                    # Environment variables configuration
+â”œâ”€â”€ public/                 # Static assets (images, icons)
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ components/
+â”‚   â”‚   â”œâ”€â”€ admin/          # Admin-specific components
+â”‚   â”‚   â”œâ”€â”€ common/         # Shared components (loaders, errors)
+â”‚   â”‚   â”œâ”€â”€ layout/         # Layout wrappers (Sidebar, Topbar)
+â”‚   â”‚   â”œâ”€â”€ lecturer/       # Lecturer-specific components
+â”‚   â”‚   â”œâ”€â”€ student/        # Student-specific components
+â”‚   â”‚   â””â”€â”€ ui/             # shadcn/ui primitive components
+â”‚   â”œâ”€â”€ contexts/           # Global State (AuthContext, ThemeContext)
+â”‚   â”œâ”€â”€ hooks/              # Custom React Hooks
+â”‚   â”œâ”€â”€ i18n/               # i18n configuration
+â”‚   â”œâ”€â”€ integrations/       # Supabase client & DB types
+â”‚   â”œâ”€â”€ lib/                # Utility functions & libraries
+â”‚   â”œâ”€â”€ locales/            # Translation files
+â”‚   â”œâ”€â”€ pages/              # Application Routes/Screens
+â”‚   â”œâ”€â”€ types/              # TypeScript type definitions
+â”‚   â”œâ”€â”€ utils/              # General utility functions
+â”‚   â”œâ”€â”€ App.tsx             # Main App Component
+â”‚   â””â”€â”€ main.tsx            # Entry Point
+â”œâ”€â”€ supabase/
+â”‚   â”œâ”€â”€ functions/          # Supabase Edge Functions
+â”‚   â””â”€â”€ migrations/         # SQL migration files
+â””â”€â”€ vite.config.ts          # Vite configuration
 ```
 
 ---
 
-## 🚀 Getting Started
+## ðŸš€ Getting Started
 
 Follow these steps to set up the project locally.
 
@@ -181,11 +181,11 @@ Follow these steps to set up the project locally.
     ```bash
     npm run dev
     ```
-    Open the local URL printed by Vite in the terminal. By default this is [http://localhost:8082](http://localhost:8082), but if that port is already in use Vite will automatically use the next available port.
+    Open the local URL printed by Vite in the terminal. By default this is [http://localhost:8080](http://localhost:8080), but if that port is already in use Vite will automatically use the next available port.
 
 ---
 
-## 🔧 Advanced Configuration
+## ðŸ”§ Advanced Configuration
 
 ### Setting up Email Linking System
 The system allows lecturers to add student emails before they register.
@@ -195,7 +195,7 @@ The system allows lecturers to add student emails before they register.
 ### Google OAuth Setup
 To enable "Continue with Google":
 1.  **Google Cloud Console:** Create credentials for a Web Application.
-    *   Authorized Origin: `http://localhost:8082` (and your production URL)
+    *   Authorized Origin: `http://localhost:8080` (and your production URL)
     *   If Vite falls back to a different local port during development, update `APP_URL` and your OAuth authorized origin to match that port.
     *   Redirect URI: `https://<your-project-id>.supabase.co/auth/v1/callback`
 2.  **Supabase:** Go to Authentication -> Providers -> Google.
@@ -204,7 +204,7 @@ To enable "Continue with Google":
 
 ---
 
-## 🐛 Troubleshooting
+## ðŸ› Troubleshooting
 
 ### Common Issues
 
@@ -222,7 +222,7 @@ To enable "Continue with Google":
 
 ---
 
-## 🗺️ Roadmap
+## ðŸ—ºï¸ Roadmap
 
 *   [ ] **Mobile App:** React Native version for iOS/Android.
 *   [ ] **Video Conferencing:** Integration with Zoom or WebRTC for live classes.
@@ -231,7 +231,7 @@ To enable "Continue with Google":
 
 ---
 
-## 🤝 Contributing
+## ðŸ¤ Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -244,4 +244,4 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-**Developed by the EduSpace Team**
+**Developed by the Mannam Ganesh Babu**

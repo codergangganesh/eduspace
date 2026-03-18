@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { FileText, Terminal, CheckCircle2, AlertCircle } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import SEO from "@/components/SEO";
 import { LegalHeader } from "@/components/layout/LegalHeader";
 import { LegalFooter } from "@/components/layout/LegalFooter";

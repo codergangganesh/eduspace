@@ -94,7 +94,6 @@ export function RootLayout() {
         };
     }, [isMobileMenuOpen, setIsMobileMenuOpen, isAICoachOpen, setIsAICoachOpen, location.pathname]);
 
-    const isLecturer = role === "lecturer";
     const isCollapsed = sidebarMode === 'collapsed' || (sidebarMode === 'hover' && !isHovered);
 
     return (

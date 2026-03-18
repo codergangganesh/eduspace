@@ -1,8 +1,8 @@
 import React from 'react';
 import { Bar, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { usePerformanceTrend, TrendData } from '@/hooks/usePerformanceTrend';
-import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { usePerformanceTrend } from '@/hooks/usePerformanceTrend';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from '@/lib/utils';
 

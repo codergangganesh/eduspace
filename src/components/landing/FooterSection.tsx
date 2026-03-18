@@ -17,6 +17,8 @@ interface FooterSectionProps {
 }
 
 export function FooterSection({ onOpenPrivacy, onOpenTerms, onOpenContact, onOpenHelp }: FooterSectionProps) {
+    void onOpenPrivacy;
+    void onOpenTerms;
     return (
         <footer className="bg-transparent dark:bg-slate-900/90 backdrop-blur-lg border-t border-white/10 dark:border-slate-800">
             <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">

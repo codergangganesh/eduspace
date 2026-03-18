@@ -5,7 +5,7 @@ import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => ({
           ]
         }
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['apple-touch-icon.png'],
       manifest: {
         name: 'Eduspace Learning Management System',
         short_name: 'Eduspace',

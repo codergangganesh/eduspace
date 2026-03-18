@@ -29,7 +29,6 @@ import { validateAssignmentFile } from '@/lib/supabaseStorage';
 import { uploadToSupabaseStorage } from '@/lib/supastorage';
 import { useClassAssignments, CreateClassAssignmentDTO } from '@/hooks/useClassAssignments';
 import { Subject } from '@/hooks/useClassSubjects';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -51,7 +50,6 @@ export function CreateClassAssignmentDialog({
     showTrigger = true
 }: Props) {
     const { createAssignment } = useClassAssignments(classId);
-    const { user } = useAuth();
     const [internalOpen, setInternalOpen] = useState(false);
     const open = externalOpen !== undefined ? externalOpen : internalOpen;
     const setOpen = setExternalOpen !== undefined ? setExternalOpen : setInternalOpen;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PanelLeft, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight, MoreVertical, Bell, NotebookPen, BookOpen } from "lucide-react";
+import { PanelLeft, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight, MoreVertical, NotebookPen, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
@@ -7,7 +7,6 @@ import { NotificationsPopover } from "@/components/notifications/NotificationsPo
 import { useAuth } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
 import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
-import { useNavigate, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -25,12 +24,11 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) {
   const { theme, setTheme } = useTheme();
-  const { profile, role, updateProfile } = useAuth();
-  const navigate = useNavigate();
+  const { profile, updateProfile } = useAuth();
   const [toolsExpanded, setToolsExpanded] = useState<boolean>(true);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const isLecturer = role === "lecturer";
+  const headerToolsExpanded = (profile as (typeof profile & { header_tools_expanded?: boolean }) | null)?.header_tools_expanded;
 
   // Track scroll for dynamic header styling
   useEffect(() => {
@@ -45,12 +43,12 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
 
   // Initialize and react to profile changes for persistent header tools state
   useEffect(() => {
-    if (profile && typeof (profile as any).header_tools_expanded !== "undefined") {
-      setToolsExpanded((profile as any).header_tools_expanded);
+    if (typeof headerToolsExpanded !== "undefined") {
+      setToolsExpanded(headerToolsExpanded);
     } else {
       setToolsExpanded(true);
     }
-  }, [profile]);
+  }, [headerToolsExpanded]);
 
   const handleToggleTools = async () => {
     const next = !toolsExpanded;
@@ -61,7 +59,10 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
 
     try {
       setIsSavingPreference(true);
-      const result = await updateProfile({ header_tools_expanded: next } as any);
+      const headerPreferenceUpdate: Parameters<typeof updateProfile>[0] & { header_tools_expanded?: boolean } = {
+        header_tools_expanded: next,
+      };
+      const result = await updateProfile(headerPreferenceUpdate);
       if (!result.success) {
         throw new Error(result.error || "Failed to save header preference");
       }

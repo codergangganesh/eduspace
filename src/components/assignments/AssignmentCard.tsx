@@ -10,18 +10,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     Calendar,
-    CheckCircle, // Added CheckCircle
     CheckCircle2,
     Clock,
     Edit,
     Eye,
-    FileText,
     MoreVertical,
     Trophy,
     Trash2,
     UploadCloud,
     Users,
-    XCircle,
     AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -27,14 +27,21 @@ import {
   Loader2,
   Clock,
   GraduationCap,
+  Filter,
+  Search,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAccessRequests } from "@/hooks/useAccessRequests";
 import { AccessRequestCard } from "@/components/student/AccessRequestCard";
@@ -115,8 +122,10 @@ export default function Notifications() {
     markRequestAsHandled
   } = useStudentOnboarding();
   const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedNotification, setSelectedNotification] = useState<NotificationData | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
 
@@ -137,16 +146,43 @@ export default function Notifications() {
   };
 
   const handleClearAll = async () => {
-    await clearAllNotifications();
-    setShowClearConfirm(false);
-    toast.success("All notifications cleared");
+    try {
+      setIsClearing(true);
+      const result = await clearAllNotifications();
+      
+      // If we cleared the local state but the DB returned 0 deleted rows, 
+      // it might indicate a policy/permission issue on the server.
+      if (result && result.deletedCount === 0 && notifications.length > 0) {
+        console.warn("Delete call returned 0 rows despite having state. Possible RLS/Permission issue.");
+      }
+
+      toast.success("Notifications cleared successfully");
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+      toast.error("Could not clear notifications. Please try again.");
+    } finally {
+      setIsClearing(false);
+      setShowClearConfirm(false);
+    }
   };
 
   const filteredNotifications = notifications.filter((notification) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "unread") return !notification.is_read;
-    if (activeTab === "access_requests") return notification.type === "access_request";
-    return notification.type === activeTab;
+    // Tab Filter
+    const matchesTab = activeTab === "all" 
+      || (activeTab === "unread" && !notification.is_read)
+      || (activeTab === "access_requests" && notification.type === "access_request")
+      || notification.type === activeTab;
+    
+    // Search Filter
+    const searchLow = searchQuery.toLowerCase();
+    const title = (notification.title || "").toLowerCase();
+    const message = (notification.message || "").toLowerCase();
+    
+    const matchesSearch = !searchQuery 
+      || title.includes(searchLow)
+      || message.includes(searchLow);
+
+    return matchesTab && matchesSearch;
   });
 
   if (loading && loadingRequests) {
@@ -158,43 +194,109 @@ export default function Notifications() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <DashboardLayout fullHeight>
+      <div className="h-full flex flex-col space-y-6 p-4 lg:p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">Notifications</h1>
-              {unreadCount > 0 && (
-                <Badge variant="default">{unreadCount} new</Badge>
+        <div className="flex flex-col gap-4 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold">Notifications</h1>
+                {unreadCount > 0 && (
+                  <Badge variant="default">{unreadCount} new</Badge>
+                )}
+              </div>
+              <p className="text-muted-foreground hidden sm:block">
+                Stay updated with your courses, assignments, and messages
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={markAllAsRead} 
+                disabled={unreadCount === 0}
+                className="h-9 px-3 sm:px-4"
+              >
+                <Check className="size-4 sm:mr-2" />
+                <span className="hidden sm:inline">Mark all as read</span>
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowClearConfirm(true)}
+                    disabled={notifications.length === 0}
+                  >
+                    <Trash2 className="size-4 mr-2" />
+                    Clear all notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/profile?tab=notifications')}>
+                    <Settings className="size-4 mr-2" />
+                    Notification settings
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Search and Filters Bar */}
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Search notifications..."
+                className="pl-9 h-10 w-full bg-surface/50 border-border/50 focus:ring-primary/20 transition-all font-medium"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
               )}
             </div>
-            <p className="text-muted-foreground">
-              Stay updated with your courses, assignments, and messages
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0}>
-              <Check className="size-4 mr-2" />
-              Mark all as read
-            </Button>
+
+            {/* Category Filter Preset Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreHorizontal className="size-4" />
+                <Button variant="outline" className="h-10 px-3 gap-2 border-border/50 bg-surface/50 font-semibold">
+                  <Filter className="size-4" />
+                  <span className="hidden sm:inline capitalize">{activeTab.replace('_', ' ')}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => setShowClearConfirm(true)}
-                  disabled={notifications.length === 0}
-                >
-                  <Trash2 className="size-4 mr-2" />
-                  Clear all notifications
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-xs uppercase tracking-widest opacity-50">Filter Presets</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setActiveTab("all")} className={cn("gap-2", activeTab === "all" && "bg-primary/10 text-primary font-bold")}>
+                  <Bell className="size-4" /> All Activity
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/profile?tab=notifications')}>
-                  <Settings className="size-4 mr-2" />
-                  Notification settings
+                <DropdownMenuItem onClick={() => setActiveTab("unread")} className={cn("gap-2", activeTab === "unread" && "bg-primary/10 text-primary font-bold")}>
+                  <div className="size-1.5 rounded-full bg-primary" /> Unread Only
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setActiveTab("access_requests")} className={cn("gap-2", activeTab === "access_requests" && "bg-primary/10 text-primary font-bold")}>
+                  <GraduationCap className="size-4" /> Class Invitations
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("assignment")} className={cn("gap-2", activeTab === "assignment" && "bg-primary/10 text-primary font-bold")}>
+                  <FileText className="size-4" /> Assignments
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("message")} className={cn("gap-2", activeTab === "message" && "bg-primary/10 text-primary font-bold")}>
+                  <MessageSquare className="size-4" /> Messages
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("announcement")} className={cn("gap-2", activeTab === "announcement" && "bg-primary/10 text-primary font-bold")}>
+                  <Bell className="size-4" /> Announcements
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -203,7 +305,7 @@ export default function Notifications() {
 
         {/* Access Requests Section */}
         {accessRequests.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-4 shrink-0">
             <div className="flex items-center gap-2">
               <GraduationCap className="size-5 text-primary" />
               <h2 className="text-lg font-semibold">Pending Class Invitations</h2>
@@ -222,8 +324,8 @@ export default function Notifications() {
         )}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start overflow-x-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full justify-start overflow-x-auto shrink-0 hidden md:flex">
             <TabsTrigger value="all" className="gap-2">
               All
               <Badge variant="secondary" className="ml-1">{notifications.length}</Badge>
@@ -234,14 +336,13 @@ export default function Notifications() {
             </TabsTrigger>
             <TabsTrigger value="access_requests">Class Invitations</TabsTrigger>
             <TabsTrigger value="assignment">Assignments</TabsTrigger>
-            <TabsTrigger value="course">Courses</TabsTrigger>
             <TabsTrigger value="message">Messages</TabsTrigger>
             <TabsTrigger value="announcement">Announcements</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-4">
+          <TabsContent value={activeTab} className="mt-4 flex-1 min-h-0">
             {filteredNotifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center bg-surface rounded-xl border border-border">
+              <div className="flex flex-col items-center justify-center py-16 text-center bg-surface rounded-xl border border-border h-full">
                 <div className="size-16 rounded-full bg-secondary flex items-center justify-center mb-4">
                   <Bell className="size-8 text-muted-foreground" />
                 </div>
@@ -253,7 +354,7 @@ export default function Notifications() {
                 </p>
               </div>
             ) : (
-              <ScrollArea className="h-[calc(100vh-24rem)]">
+              <ScrollArea className="h-full pr-4">
                 <div className="space-y-2">
                   {filteredNotifications.map((notification) => {
                     const Icon = getNotificationIcon(notification.type);
@@ -473,9 +574,18 @@ export default function Notifications() {
                 <Button variant="outline" onClick={() => setShowClearConfirm(false)}>
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={handleClearAll}>
-                  <Trash2 className="size-4 mr-2" />
-                  Clear All
+                <Button variant="destructive" onClick={handleClearAll} disabled={isClearing}>
+                  {isClearing ? (
+                    <>
+                      <Loader2 className="size-4 mr-2 animate-spin" />
+                      Clearing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="size-4 mr-2" />
+                      Clear All
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

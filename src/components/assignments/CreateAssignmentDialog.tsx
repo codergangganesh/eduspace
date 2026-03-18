@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -14,14 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Upload, X, Plus, AlertCircle } from "lucide-react";
+import { CalendarIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { CreateAssignmentDTO, Subject } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface CreateAssignmentDialogProps {
     courses: { id: string; title: string; course_code: string }[];
@@ -32,6 +30,8 @@ export interface CreateAssignmentDialogProps {
 }
 
 export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open: controlledOpen, onOpenChange: setControlledOpen }: CreateAssignmentDialogProps) {
+    void courses;
+    void fetchSubjects;
     const [internalOpen, setInternalOpen] = useState(false);
 
     const isControlled = controlledOpen !== undefined;
@@ -111,9 +111,10 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
                 console.error("Create assignment error:", result.error);
                 toast.error(result.error || "Failed to create assignment");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Process failure in CreateAssignmentDialog:", error);
-            toast.error(error.message || "Failed to upload attachment or create assignment");
+            const message = error instanceof Error ? error.message : "Failed to upload attachment or create assignment";
+            toast.error(message);
         } finally {
             setLoading(false);
         }

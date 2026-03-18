@@ -1492,63 +1492,71 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      {/* Digital Business Card (QR Code) Modal */}
       <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
-        <DialogContent className="max-w-sm rounded-3xl overflow-hidden p-0 border-none bg-transparent">
+        <DialogContent className="max-w-[320px] rounded-[2rem] overflow-hidden p-0 border-none bg-transparent shadow-2xl [&>button]:hidden">
           <DialogHeader className="sr-only">
-            <DialogTitle>Digital Business Card</DialogTitle>
+            <DialogTitle>Academic Identity</DialogTitle>
             <DialogDescription>
               Scan this QR code to connect with your academic profile.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-white dark:bg-[#050b14] p-8 text-center relative overflow-hidden">
-            {/* Decorative backgrounds */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-primary" />
-            <div className="absolute -top-24 -right-24 size-48 bg-primary/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-24 -left-24 size-48 bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="bg-slate-50 dark:bg-[#050b14] p-6 text-center relative overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-[2rem]">
+            {/* Professional Accents */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-primary/40" />
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Shield className="size-16 text-primary rotate-12" />
+            </div>
+            
+            {/* Subtle Grid Pattern */}
+            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02] pointer-events-none" 
+                 style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
 
             <div className="relative z-10 flex flex-col items-center">
-              <div className="mb-6">
-                <div className="size-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 mx-auto">
-                  <QrCode className="size-10 text-primary" />
+              <div className="mb-5">
+                <div className="size-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center mb-3 mx-auto shadow-sm border border-slate-100 dark:border-white/5">
+                  <QrCode className="size-7 text-primary" strokeWidth={1.5} />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Digital Business Card</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Scan to connect with {formData.full_name?.split(' ')[0]}</p>
+                <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Academic ID</h2>
+                <div className="flex items-center justify-center gap-1.5 mt-1">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Verified Profile</p>
+                </div>
               </div>
 
-              {/* QR Code Frame */}
-              <div className="p-4 bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-slate-100 mb-8 aspect-square flex items-center justify-center">
+              {/* QR Code Container - Glass Look */}
+              <div className="relative p-4 bg-white dark:bg-slate-900/50 rounded-[1.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-white/10 mb-6 group transition-all">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity" />
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://eduspaceacademy.online/p/${user?.id}`)}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://eduspaceacademy.online/p/${user?.id}`)}`}
                   alt="QR Code"
-                  className="size-48 object-contain"
+                  className="size-36 object-contain relative z-10 dark:invert-[0.05]"
                 />
               </div>
 
-              <div className="w-full space-y-3">
+              <div className="w-full space-y-2.5">
                 <Button
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 py-6"
+                  className="w-full rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-lg shadow-slate-950/10 h-11 text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
                   onClick={() => {
                     const profileUrl = `https://eduspaceacademy.online/p/${user?.id}`;
                     navigator.clipboard.writeText(profileUrl);
                     toast.success("Profile link copied!");
                   }}
                 >
-                  <Copy className="size-4 mr-2" />
+                  <Copy className="size-3.5 mr-2" />
                   Copy Profile Link
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full rounded-xl border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 py-6"
+                <button
                   onClick={() => setShowQRCode(false)}
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors py-2"
                 >
-                  Close
-                </Button>
+                  Dismiss
+                </button>
               </div>
 
-              <div className="mt-8 flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                <Shield className="size-3" />
-                Eduspace Verified Student
+              <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-white/5 w-full flex items-center justify-center gap-2">
+                <div className="px-2 py-0.5 rounded bg-primary/10 text-[9px] font-bold text-primary uppercase tracking-tighter">
+                  Eduspace Digital
+                </div>
               </div>
             </div>
           </div>

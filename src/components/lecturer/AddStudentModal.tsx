@@ -26,6 +26,7 @@ export function AddStudentModal({
     classId,
     onStudentAdded,
 }: AddStudentModalProps) {
+    void classId;
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -96,7 +97,7 @@ export function AddStudentModal({
             });
 
             onOpenChange(false);
-        } catch (error) {
+        } catch {
             // Error handling is done in parent component
         } finally {
             setLoading(false);

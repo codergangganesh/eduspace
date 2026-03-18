@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useInView, animate, motion } from "framer-motion";
+import { animate, motion } from "framer-motion";
 
 function Counter({ start = false, from = 0, to, duration = 2.5, suffix = "" }: { start?: boolean; from?: number; to: number; duration?: number; suffix?: string }) {
     const nodeRef = useRef<HTMLSpanElement>(null);

@@ -13,13 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parseISO } from "date-fns";
-import { CalendarIcon, Loader2, Upload, X, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
 import { CreateAssignmentDTO, Assignment } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Props {
     open: boolean;

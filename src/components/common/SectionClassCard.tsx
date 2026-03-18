@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,7 @@ export interface ClassData {
     course_code: string;
     lecturer_department?: string;
     student_count?: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface SectionClassCardProps {

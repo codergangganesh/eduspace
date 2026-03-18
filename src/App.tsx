@@ -7,7 +7,6 @@ import { AppProviders } from "@/components/providers/AppProviders";
 import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
@@ -134,7 +133,7 @@ const LoadingFallback = () => {
 };
 
 // Global polyfill for chunk errors
-window.addEventListener('error', (e: any) => {
+window.addEventListener('error', (e: ErrorEvent) => {
   // Defensive check for message to prevent "cannot read properties of undefined (reading 'includes')"
   const message = (e && typeof e.message === 'string') ? e.message : "";
   if (message && (message.includes('Loading chunk') || message.includes('CSS chunk'))) {

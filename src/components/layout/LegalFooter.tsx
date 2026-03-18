@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, Gavel, Mail, MapPin, Phone, Github, Twitter, Linkedin, Facebook } from "lucide-react";
+import { Shield, Gavel, Mail, MapPin, Phone, Github, Twitter, Linkedin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export function LegalFooter() {

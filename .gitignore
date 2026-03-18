@@ -24,3 +24,4 @@ dev-dist
 *.sln
 *.sw?
 .env
+android/build_*.txt

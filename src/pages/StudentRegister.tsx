@@ -301,7 +301,7 @@ export default function StudentRegister() {
                                 type="checkbox"
                                 id="terms"
                                 checked={agreedToTerms}
-                                onChange={(e) => {
+                                onChange={() => {
                                     if (!agreedToTerms) {
                                         setShowTerms(true);
                                     } else {

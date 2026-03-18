@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Send, Loader2, X } from "lucide-react";
+import { Mail, Send, Loader2 } from "lucide-react";
 import { Drawer } from "vaul";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {

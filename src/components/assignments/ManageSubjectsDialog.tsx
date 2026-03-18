@@ -53,7 +53,7 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
             await createSubject(formData);
             setFormData({ name: '', code: '', description: '' });
             setIsAdding(false);
-        } catch (error) {
+        } catch {
             // Error handled in hook
         }
     };
@@ -77,7 +77,7 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
             await updateSubject(editingId, formData);
             setEditingId(null);
             setFormData({ name: '', code: '', description: '' });
-        } catch (error) {
+        } catch {
             // Error handled in hook
         }
     };
@@ -284,7 +284,7 @@ export function ManageSubjectsDialog({ open, onOpenChange, classId }: Props) {
                     if (subjectToDelete) {
                         try {
                             await deleteSubject(subjectToDelete);
-                        } catch (error) {
+                        } catch {
                             // Error handled in hook
                         }
                         setSubjectToDelete(null);

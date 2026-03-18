@@ -14,6 +14,7 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
+    void onOpenRoleSelection;
     return (
         <section className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-28 pb-24 lg:pt-56 lg:pb-40 min-h-[90vh] flex flex-col justify-center">
             <div className="grid lg:grid-cols-[1.2fr,0.8fr] gap-20 items-center">

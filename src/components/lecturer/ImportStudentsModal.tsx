@@ -6,7 +6,6 @@ import { useExcelImport, StudentData, ValidationError } from "@/hooks/useExcelIm
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 
 interface ImportStudentsModalProps {
     open: boolean;
@@ -16,6 +15,7 @@ interface ImportStudentsModalProps {
 }
 
 export function ImportStudentsModal({ open, onOpenChange, classId, onImport }: ImportStudentsModalProps) {
+    void classId;
     const { toast } = useToast();
     const { parseExcelFile, validateStudentData, generateTemplate } = useExcelImport();
     const [loading, setLoading] = useState(false);

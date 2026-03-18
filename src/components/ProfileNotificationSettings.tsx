@@ -22,33 +22,6 @@ const defaultSettings: NotificationSettingsState = {
     course_announcements: true,
 };
 
-const notificationOptions: Array<{
-    field: keyof NotificationSettingsState;
-    title: string;
-    description: string;
-}> = [
-    {
-        field: "assignment_reminders",
-        title: "Assignments",
-        description: "New assignments and assignment updates.",
-    },
-    {
-        field: "message_notifications",
-        title: "Messages",
-        description: "Direct chat messages and conversation alerts.",
-    },
-    {
-        field: "grade_updates",
-        title: "Grades",
-        description: "Grading, feedback, and result updates.",
-    },
-    {
-        field: "course_announcements",
-        title: "Announcements",
-        description: "Class announcements, quizzes, and schedule changes.",
-    },
-];
-
 export function ProfileNotificationSettings() {
     const { profile, updateProfile } = useAuth();
     const [settings, setSettings] = useState<NotificationSettingsState>({
