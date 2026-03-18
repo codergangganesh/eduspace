@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Sparkles, Bot, Trophy, Send, MessageCircle, User, Volume2, X, ChevronRight, GraduationCap, History, LayoutDashboard } from "lucide-react";
+import { Loader2, Sparkles, Bot, Trophy, Send, MessageCircle, User, Volume2, X, ChevronRight, GraduationCap, History, LayoutDashboard, ChevronUp, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { aiChatService } from "@/lib/aiChatService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +47,8 @@ export function AICoachWidget() {
     const [isVisible, setIsVisible] = useState(true);
     const lastScrollY = useRef(0);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const [isAtTop, setIsAtTop] = useState(true);
+    const [isAtBottom, setIsAtBottom] = useState(true);
     const [hasLoadedChats, setHasLoadedChats] = useState(false);
     const lastFetchedDateRef = useRef<string | null>(null);
 
@@ -135,6 +137,60 @@ export function AICoachWidget() {
         }
     }, [isOpen]);
 
+    // Watch ScrollArea for Top/Bottom positions (Ultra-Fast Response Sync)
+    useEffect(() => {
+        // Fast-fail if the drawer isn't even open yet
+        if (!isOpen) return;
+
+        let checkInterval: NodeJS.Timeout;
+        let observer: MutationObserver;
+
+        const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+        
+        const checkScroll = () => {
+            if (!viewport) return;
+            const { scrollTop, scrollHeight, clientHeight } = viewport;
+            
+            // Higher precision for instant feedback
+            const atTop = scrollTop <= 5;
+            const atBottom = Math.ceil(scrollTop + clientHeight) >= scrollHeight - 40;
+            
+            setIsAtTop(atTop);
+            setIsAtBottom(atBottom);
+        };
+
+        if (viewport) {
+            viewport.addEventListener('scroll', checkScroll, { passive: true });
+            
+            observer = new MutationObserver(checkScroll);
+            observer.observe(viewport, { 
+                childList: true, 
+                subtree: true, 
+                characterData: true
+            });
+
+            // Perform manual checks in a rapid loop during initial load (Extreme aggressive sync)
+            let checksRun = 0;
+            checkInterval = setInterval(() => {
+                checkScroll();
+                checksRun++;
+                if (checksRun > 20) clearInterval(checkInterval); // Stop after 1 second of rapid checks
+            }, 50);
+            
+            checkScroll();
+        } else {
+            // Viewport might not be in DOM yet, retry once
+            const retryTimeout = setTimeout(checkScroll, 50);
+            return () => clearTimeout(retryTimeout);
+        }
+        
+        return () => {
+            if (viewport) viewport.removeEventListener('scroll', checkScroll);
+            if (observer) observer.disconnect();
+            if (checkInterval) clearInterval(checkInterval);
+        };
+    }, [chatMessages, isChatLoading, isOpen, activeTab, deepDive, insight]);
+
     // Handle Scroll visibility (Hide on scroll down, show on scroll up)
     useEffect(() => {
         const mainContent = document.querySelector('main');
@@ -142,16 +198,16 @@ export function AICoachWidget() {
 
         const handleScroll = () => {
             const currentScrollY = mainContent.scrollTop;
-            
+
             // Show at the very top or if scrolling up
             if (currentScrollY <= 10 || currentScrollY < lastScrollY.current) {
                 setIsVisible(true);
-            } 
+            }
             // Hide if scrolling down past a threshold
             else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
                 setIsVisible(false);
             }
-            
+
             lastScrollY.current = currentScrollY;
         };
 
@@ -164,78 +220,108 @@ export function AICoachWidget() {
         const generateInsight = async () => {
             if (!user?.id) return;
             const todayStr = new Date().toISOString().split('T')[0];
-            const globalKey = `global_briefing_${todayStr}`;
-            const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
-
+            const personalKey = `personal_briefing_${todayStr}`;
+            
+            // Check for existing personal briefing first
             if (lastFetchedDateRef.current === todayStr && insight) return;
-            if ((window as any)._isGlobalBriefingGenerating) return;
+            if ((window as any)._isBriefingGenerating) return;
 
             setIsLoading(true);
             try {
-                // Check for existing global briefing
-                const { data: globalNode } = await supabase
+                // 1. Try to load existing personal briefing
+                const { data: existingNode } = await supabase
                     .from('knowledge_nodes')
                     .select('metadata')
+                    .eq('user_id', user.id)
                     .eq('entity_type', 'chat')
-                    .eq('label', globalKey)
+                    .eq('label', personalKey)
                     .maybeSingle();
 
-                if (globalNode && (globalNode.metadata as any)?.briefing) {
-                    setInsight((globalNode.metadata as any).briefing);
-                    setDeepDive((globalNode.metadata as any).deepDive || "");
+                if (existingNode && (existingNode.metadata as any)?.briefing) {
+                    setInsight((existingNode.metadata as any).briefing);
+                    setDeepDive((existingNode.metadata as any).deepDive || "");
                     setIsLoading(false);
                     lastFetchedDateRef.current = todayStr;
-                    // Show a mini-preview on first load for desktop
-                    if (window.innerWidth > 1024) {
-                        setTimeout(() => setShowPreview(true), 1500);
-                        setTimeout(() => setShowPreview(false), 8000);
-                    }
                     return;
                 }
 
-                // Generate new if needed
-                (window as any)._isGlobalBriefingGenerating = true;
-                setInsight("");
-                setDeepDive("");
+                // 2. No personal briefing found, generate one using RAG (Context Retrieval)
+                (window as any)._isBriefingGenerating = true;
+                setIsDeepLoading(true);
 
-                const briefingPrompt = "Generate one elite performance slogan (max 80 chars, no names/emojis) for students today.";
+                // --- RETRIEVAL PHASE (RAG) ---
+                const { data: notes } = await supabase
+                    .from('student_notes')
+                    .select('title, content')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(3);
+
+                const { data: quizzes } = await supabase
+                    .from('quiz_submissions')
+                    .select('total_obtained, quizzes(title, total_marks)')
+                    .eq('student_id', user.id)
+                    .order('submitted_at', { ascending: false })
+                    .limit(2);
+
+                const studentName = profile?.full_name || "Student";
+                const streakCount = (streak as any)?.current_streak || 0;
+
+                let studentContext = `STUDENT PROFILE: ${studentName}, Current Streak: ${streakCount} days.\n`;
+                if (notes && notes.length > 0) {
+                    studentContext += `RECENT NOTES: ${notes.map(n => n.title).join(", ")}\n`;
+                }
+                if (quizzes && quizzes.length > 0) {
+                    studentContext += `RECENT QUIZ PERFORMANCE: ${quizzes.map(q => `${(q as any).quizzes?.title}: ${q.total_obtained}/${(q as any).quizzes?.total_marks}`).join(", ")}\n`;
+                }
+
+                // --- GENERATION PHASE ---
+                const briefingPrompt = `As an elite academic coach, generate a one-line motivational slogan (max 80 chars) for this student. 
+                CONTEXT: ${studentContext}
+                Theme: High-performance and persistence. No emojis.`;
+
                 let finalBriefing = "";
                 await aiChatService.streamChat([{ role: 'user', content: briefingPrompt }], (token: string) => {
                     finalBriefing += token;
                     setInsight(finalBriefing);
                 });
 
-                setIsDeepLoading(true);
-                const deepDivePrompt = "Write a platform-wide 'Coach's Notebook' for today. Focus on a high-performance theme (Cognitive Persistence or tactical planning). Format: Perspective (1 para) + Daily Directives (3 bullets). Max 180 words.";
+                const notebookPrompt = `As an elite academic coach, write a short "Coach's Notebook" entry for today. 
+                CONTEXT: ${studentContext}
+                Structure: 
+                1. A brief "Perspective" (1 paragraph) analyzing their current momentum.
+                2. "Daily Directives" (3 specific bullets) based on their recent activity (notes/quizzes).
+                Max 150 words. Be direct, tactical, and motivating.`;
+
                 let finalDeepDive = "";
-                await aiChatService.streamChat([{ role: 'user', content: deepDivePrompt }], (token: string) => {
+                await aiChatService.streamChat([{ role: 'user', content: notebookPrompt }], (token: string) => {
                     finalDeepDive += token;
                     setDeepDive(finalDeepDive);
                 });
 
-                if (finalBriefing) {
-                    await supabase.from('knowledge_nodes').upsert({
-                        user_id: SYSTEM_USER_ID,
-                        entity_type: 'chat',
-                        source_id: SYSTEM_USER_ID,
-                        label: globalKey,
-                        metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id,label' });
-                    lastFetchedDateRef.current = todayStr;
-                }
+                // Save for today
+                await supabase.from('knowledge_nodes').upsert({
+                    user_id: user.id,
+                    entity_type: 'chat',
+                    source_id: user.id,
+                    label: personalKey,
+                    metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id,label' });
+
+                lastFetchedDateRef.current = todayStr;
             } catch (err) {
-                console.error("AI Insight error:", err);
-                setInsight("Strive for excellence. Progress is a choice.");
+                console.error("AI Personalized Insight error:", err);
+                setInsight("Focus on the process. Excellence is a habit.");
             } finally {
-                (window as any)._isGlobalBriefingGenerating = false;
+                (window as any)._isBriefingGenerating = false;
                 setIsLoading(false);
                 setIsDeepLoading(false);
             }
         };
         generateInsight();
         loadHistory();
-    }, [user?.id]);
+    }, [user?.id, profile?.full_name, streak]);
 
 
 
@@ -250,7 +336,23 @@ export function AICoachWidget() {
 
         const tempID = crypto.randomUUID();
         try {
-            const prompt = `CONTEXT: You are the student coach. Briefing: "${insight}". Perspective: "${deepDive}". Question: "${q}". Answer concisely (max 60 words).`;
+            // Retrieve additional context for the question if needed
+            const { data: recentNotes } = await supabase
+                .from('student_notes')
+                .select('title, content')
+                .eq('user_id', user?.id)
+                .order('created_at', { ascending: false })
+                .limit(2);
+
+            const conversationContext = recentNotes?.map(n => `Note "${n.title}": ${n.content}`).join("\n") || "";
+
+            const prompt = `CONTEXT: You are the student coach. 
+            Briefing: "${insight}"
+            Perspective: "${deepDive}"
+            Relevant Notes: ${conversationContext}
+            Question: "${q}"
+            Answer concisely (max 80 words), referring to their notes if relevant.`;
+
             let aiRes = "";
             setChatMessages(prev => [...prev, { role: 'assistant', content: "", id: tempID }]);
 
@@ -284,17 +386,34 @@ export function AICoachWidget() {
         window.speechSynthesis.speak(u);
     };
 
+    const scrollToTop = () => {
+        if (scrollRef.current) {
+            const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) viewport.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const scrollToBottom = () => {
+        if (scrollRef.current) {
+            const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+        }
+    };
+
     return (
         <TooltipProvider>
-            <motion.div 
+            <motion.div
                 initial={false}
-                animate={{ 
+                animate={{
                     opacity: isVisible ? 1 : 0,
                     y: isVisible ? 0 : 20,
                     pointerEvents: isVisible ? 'auto' : 'none'
                 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-2 sm:gap-3 pointer-events-none"
+                className={cn(
+                    "fixed bottom-6 right-6 flex flex-col items-end gap-2 sm:gap-3 pointer-events-none",
+                    isOpen ? "z-40" : "z-[60]"
+                )}
             >
                 {/* Floating Preview Slogan */}
                 <AnimatePresence>
@@ -327,11 +446,11 @@ export function AICoachWidget() {
                             <SheetTrigger asChild>
                                 <button
                                     className={cn(
-                                        "pointer-events-auto group relative flex size-11 sm:size-14 items-center justify-center rounded-xl sm:rounded-2xl bg-indigo-600 text-white shadow-xl transition-all duration-500 hover:scale-110 hover:bg-indigo-700 active:scale-95",
+                                        "pointer-events-auto group relative flex size-12 sm:size-16 aspect-square flex-shrink-0 items-center justify-center rounded-full bg-indigo-600/80 backdrop-blur-xl text-white shadow-[0_8px_32px_rgba(79,70,229,0.4)] border border-white/30 transition-all duration-500 hover:scale-110 hover:bg-indigo-600 active:scale-95",
                                         isOpen && "opacity-0 pointer-events-none translate-y-10 scale-50"
                                     )}
                                 >
-                                    <GraduationCap className="size-5 sm:size-7 transition-all duration-300" />
+                                    <GraduationCap className="size-6 sm:size-8 transition-all duration-300 group-hover:rotate-12" />
 
                                     {!isOpen && (
                                         <span className="absolute -top-1 -right-1 flex h-3 w-3 sm:h-4 sm:w-4">
@@ -347,7 +466,7 @@ export function AICoachWidget() {
 
                     <SheetContent
                         side="right"
-                        className="w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/50 dark:border-slate-800/50 p-0 overflow-hidden flex flex-col"
+                        className="w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200/50 dark:border-slate-800/50 p-0 overflow-hidden flex flex-col z-[70]"
                     >
                         <SheetHeader className="p-6 pb-2 border-b border-border/50">
                             <div className="flex items-center justify-between">
@@ -421,8 +540,8 @@ export function AICoachWidget() {
                                                     <MessageCircle className="size-3.5 text-indigo-500" />
                                                     Clarification Chat
                                                 </h3>
-                                                
-                                                 <button
+
+                                                <button
                                                     onClick={() => {
                                                         setActiveTab('chat');
                                                         loadHistory();
@@ -450,10 +569,10 @@ export function AICoachWidget() {
                                                 <History className="size-3.5 text-indigo-500" />
                                                 Conversation History
                                             </h3>
-                                            
+
                                             <button
-                                               onClick={() => setActiveTab('today')}
-                                               className="p-1.5 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300"
+                                                onClick={() => setActiveTab('today')}
+                                                className="p-1.5 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300"
                                                 title="Back to Active Briefing"
                                             >
                                                 <LayoutDashboard className="size-4" />
@@ -498,16 +617,94 @@ export function AICoachWidget() {
                             </AnimatePresence>
                         </ScrollArea>
 
-                        <div className="p-4 border-t border-border/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+                        {/* Smart Floating Scroll Control */}
+                        <div className="absolute right-4 bottom-24 z-10 pointer-events-none">
+                            <AnimatePresence mode="wait">
+                                {isAtTop && !isAtBottom ? (
+                                    <motion.button 
+                                        key="scroll-down"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        onClick={scrollToBottom}
+                                        className="pointer-events-auto size-9 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all active:scale-95"
+                                        title="Scroll to Bottom"
+                                    >
+                                        <ChevronDown className="size-5" />
+                                    </motion.button>
+                                ) : isAtBottom && !isAtTop ? (
+                                    <motion.button 
+                                        key="scroll-up"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        onClick={scrollToTop}
+                                        className="pointer-events-auto size-9 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all active:scale-95"
+                                        title="Scroll to Top"
+                                    >
+                                        <ChevronUp className="size-5" />
+                                    </motion.button>
+                                ) : !isAtTop && !isAtBottom ? (
+                                    <div className="flex flex-col gap-2">
+                                        <motion.button 
+                                            key="scroll-up-mid"
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.8 }}
+                                            onClick={scrollToTop}
+                                            className="pointer-events-auto size-8 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-border/50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all active:scale-95"
+                                            title="Scroll to Top"
+                                        >
+                                            <ChevronUp className="size-4" />
+                                        </motion.button>
+                                        <motion.button 
+                                            key="scroll-down-mid"
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.8 }}
+                                            onClick={scrollToBottom}
+                                            className="pointer-events-auto size-8 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-border/50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all active:scale-95"
+                                            title="Scroll to Bottom"
+                                        >
+                                            <ChevronDown className="size-4" />
+                                        </motion.button>
+                                    </div>
+                                ) : null}
+                            </AnimatePresence>
+                        </div>
+
+                        <div 
+                            className="p-4 border-t border-border/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="flex gap-2 mb-2">
                                 <Input
                                     value={userQuestion}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserQuestion(e.target.value)}
-                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleFollowUp()}
+                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleFollowUp();
+                                        }
+                                    }}
                                     placeholder="Ask the coach..."
                                     className="h-12 rounded-2xl bg-white dark:bg-slate-800 border-none shadow-inner"
                                 />
-                                <Button size="icon" onClick={() => handleFollowUp()} disabled={!userQuestion.trim() || isChatLoading} className="h-12 w-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"><Send className="size-5" /></Button>
+                                <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleFollowUp();
+                                    }} 
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    disabled={!userQuestion.trim() || isChatLoading} 
+                                    className="size-12 aspect-square flex-shrink-0 rounded-full bg-indigo-600/90 backdrop-blur-md border border-white/30 shadow-lg shadow-indigo-600/20 flex items-center justify-center text-white transition-all hover:bg-indigo-600 active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed relative z-[80]"
+                                >
+                                    <Send className="size-5 pointer-events-none" />
+                                </button>
                             </div>
                             <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 font-semibold flex items-center justify-center gap-1.5 italic">
                                 <Bot className="size-2.5 opacity-50" />
