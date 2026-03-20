@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
     ChevronDown,
@@ -35,19 +35,50 @@ import {
 
 type MobileNavItem = {
     label: string;
-    path: string;
+    icon: React.ElementType;
+    description?: string;
+    action?: () => void;
+    link?: string;
+    feature?: string;
 };
 
 export function LegalHeader() {
     const [showRoleDialog, setShowRoleDialog] = useState(false);
     const [roleMode, setRoleMode] = useState<"login" | "register">("login");
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, role } = useAuth();
     const [showHelpDialog, setShowHelpDialog] = useState(false);
     const [showContactDialog, setShowContactDialog] = useState(false);
+    const navigate = useNavigate();
 
     const openRoleDialog = (mode: "login" | "register") => {
         setRoleMode(mode);
         setShowRoleDialog(true);
+    };
+
+    const handleProductClick = (feature: string) => {
+        if (isAuthenticated) {
+            // Navigate based on role and feature
+            const prefix = role === "lecturer" ? "/lecturer" : "/student";
+            
+            switch (feature) {
+                case "quizzes":
+                    navigate(`${prefix}/quizzes`);
+                    break;
+                case "assignments":
+                    navigate(`${prefix}/assignments`);
+                    break;
+                case "gpa":
+                    navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard");
+                    break;
+                case "chat":
+                    navigate("/messages");
+                    break;
+                default:
+                    navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard");
+            }
+        } else {
+            openRoleDialog("login");
+        }
     };
 
     return (
@@ -89,7 +120,7 @@ export function LegalHeader() {
                                     <DropdownMenuLabel className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 px-2">Core Features</DropdownMenuLabel>
                                     <div className="grid gap-1">
                                         <DropdownMenuItem
-                                            onClick={() => openRoleDialog("login")}
+                                            onClick={() => handleProductClick("quizzes")}
                                             className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
                                         >
                                             <div className="size-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 border-none">
@@ -101,7 +132,7 @@ export function LegalHeader() {
                                             </div>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => openRoleDialog("login")}
+                                            onClick={() => handleProductClick("assignments")}
                                             className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
                                         >
                                             <div className="size-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border-none">
@@ -113,7 +144,7 @@ export function LegalHeader() {
                                             </div>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => openRoleDialog("login")}
+                                            onClick={() => handleProductClick("gpa")}
                                             className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
                                         >
                                             <div className="size-9 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0 border-none">
@@ -125,7 +156,7 @@ export function LegalHeader() {
                                             </div>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => openRoleDialog("login")}
+                                            onClick={() => handleProductClick("chat")}
                                             className="flex items-start gap-4 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
                                         >
                                             <div className="size-9 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 border-none">
@@ -228,12 +259,12 @@ export function LegalHeader() {
                                             <MobileNavLink
                                                 title="Product"
                                                 items={[
-                                                    { label: "Exams & Quizzes", description: "Secure online testing with AI monitoring", icon: BookOpen },
-                                                    { label: "Assignments", description: "Submit work and track feedback easily", icon: ClipboardList },
-                                                    { label: "GPA Tracker", description: "Monitor your academic performance", icon: LineChart },
-                                                    { label: "Class Chat", description: "Collaborate with peers in real-time", icon: MessageSquare },
+                                                    { label: "Exams & Quizzes", description: "Secure online testing with AI monitoring", icon: BookOpen, feature: "quizzes" },
+                                                    { label: "Assignments", description: "Submit work and track feedback easily", icon: ClipboardList, feature: "assignments" },
+                                                    { label: "GPA Tracker", description: "Monitor your academic performance", icon: LineChart, feature: "gpa" },
+                                                    { label: "Class Chat", description: "Collaborate with peers in real-time", icon: MessageSquare, feature: "chat" },
                                                 ]}
-                                                onClickItem={() => openRoleDialog("login")}
+                                                onClickItem={(item) => item.feature && handleProductClick(item.feature)}
                                             />
                                             <MobileNavLink
                                                 title="Resources"
@@ -281,7 +312,7 @@ export function LegalHeader() {
 }
 
 // Helper component for mobile nav items with accordion effect
-function MobileNavLink({ title, items, onClickItem }: { title: string; items: MobileNavItem[]; onClickItem?: () => void }) {
+function MobileNavLink({ title, items, onClickItem }: { title: string; items: MobileNavItem[]; onClickItem?: (item: MobileNavItem) => void }) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -332,7 +363,7 @@ function MobileNavLink({ title, items, onClickItem }: { title: string; items: Mo
                                         key={idx}
                                         onClick={() => {
                                             if (item.action) item.action();
-                                            else if (onClickItem) onClickItem();
+                                            else if (onClickItem) onClickItem(item);
                                         }}
                                         className="cursor-pointer"
                                     >

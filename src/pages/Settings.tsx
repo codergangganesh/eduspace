@@ -187,7 +187,7 @@ export default function Settings() {
                 <div className="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/10 border border-transparent hover:border-border/50">
                   <div className="flex items-center gap-3">
                     <Lock className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Review Govening Policies</span>
+                    <span className="text-sm font-medium">Review Governing Policies</span>
                   </div>
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </div>
