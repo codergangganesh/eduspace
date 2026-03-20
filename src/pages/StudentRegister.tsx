@@ -6,8 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { PasswordStrength, getPasswordRules } from "@/components/auth/PasswordStrength";
 import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
+import DOMPurify from "dompurify";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registerSchema, RegisterFormValues } from "@/lib/validations/auth";
 
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
@@ -25,12 +30,13 @@ export default function StudentRegister() {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
     const [hasNavigated, setHasNavigated] = useState(false); // Prevent multiple navigations
-    const [formData, setFormData] = useState({
-        fullName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
+    const { register, handleSubmit: hookFormSubmit, formState: { errors }, watch } = useForm<RegisterFormValues>({
+        resolver: zodResolver(registerSchema),
+        mode: "onChange",
+        defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" }
     });
+
+    const passwordWatch = watch("password");
 
     // Redirect if already authenticated (only after component has mounted)
     useEffect(() => {
@@ -41,24 +47,7 @@ export default function StudentRegister() {
         }
     }, [isAuthenticated, role, navigate, hasNavigated]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-            toast.error("Please fill in all fields");
-            return;
-        }
-
-        if (formData.password !== formData.confirmPassword) {
-            toast.error("Passwords do not match");
-            return;
-        }
-
-        if (formData.password.length < 6) {
-            toast.error("Password must be at least 6 characters");
-            return;
-        }
-
+    const onValidSubmit = async (data: RegisterFormValues) => {
         if (!agreedToTerms) {
             toast.error("Please agree to the Terms of Service and Privacy Policy");
             return;
@@ -66,7 +55,16 @@ export default function StudentRegister() {
 
         setIsLoading(true);
 
-        const result = await signUp(formData.email, formData.password, formData.fullName, "student", captchaToken);
+        const sanitizedFullName = DOMPurify.sanitize(data.fullName.trim());
+        const sanitizedEmail = DOMPurify.sanitize(data.email.trim());
+
+        if (!sanitizedFullName || !sanitizedEmail) {
+            toast.error("Invalid input detected in required fields");
+            setIsLoading(false);
+            return;
+        }
+
+        const result = await signUp(sanitizedEmail, data.password, sanitizedFullName, "student", captchaToken);
 
         if (result.success) {
             setHasNavigated(true); // Mark that we're about to navigate
@@ -99,9 +97,6 @@ export default function StudentRegister() {
         }
     };
 
-    const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    };
 
     return (
         <AuthLayout title="Student Registration" subtitle="Join Eduspace and start your learning journey" noScroll={true}>
@@ -127,7 +122,7 @@ export default function StudentRegister() {
             />
             <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-4 lg:shadow-sm overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* OAuth Buttons - Top on mobile, Bottom on desktop */}
-                <div className="flex flex-col lg:hidden mb-8">
+                <div className="flex flex-col lg:hidden mb-4">
                     <div className="flex justify-center gap-4 lg:grid lg:grid-cols-2 lg:gap-3">
                         <button
                             onClick={handleGoogleSignIn}
@@ -175,7 +170,7 @@ export default function StudentRegister() {
                         </button>
                     </div>
 
-                    <div className="relative mt-8 mb-4">
+                    <div className="relative mt-4 mb-3">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border/50"></div>
                         </div>
@@ -186,7 +181,7 @@ export default function StudentRegister() {
                 </div>
 
                 {/* Form */}
-                <form className="space-y-3 lg:space-y-3" onSubmit={handleSubmit}>
+                <form className="space-y-2 lg:space-y-3" onSubmit={hookFormSubmit(onValidSubmit)}>
                     {/* Full Name Field */}
                     <div className="space-y-1">
                         <label className="text-[12px] font-bold text-foreground lg:block hidden">
@@ -199,12 +194,13 @@ export default function StudentRegister() {
                             <Input
                                 type="text"
                                 placeholder="Full Name"
-                                value={formData.fullName}
-                                onChange={handleChange("fullName")}
-                                className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                {...register("fullName")}
+                                maxLength={100}
+                                className="pl-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
                             />
                         </div>
+                        {errors.fullName && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.fullName.message}</p>}
                     </div>
 
                     {/* Email Field */}
@@ -219,16 +215,17 @@ export default function StudentRegister() {
                             <Input
                                 type="email"
                                 placeholder="Email Address"
-                                value={formData.email}
-                                onChange={handleChange("email")}
-                                className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                {...register("email")}
+                                maxLength={255}
+                                className="pl-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
                             />
                         </div>
+                        {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
                     </div>
 
                     {/* Password Fields in a row on desktop, stacked on mobile */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4">
                         <div className="space-y-1">
                             <label className="text-[12px] font-bold text-foreground lg:block hidden">
                                 Password
@@ -240,9 +237,9 @@ export default function StudentRegister() {
                                 <Input
                                     type={showPassword ? "text" : "password"}
                                     placeholder="Password"
-                                    value={formData.password}
-                                    onChange={handleChange("password")}
-                                    className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                    {...register("password")}
+                                    maxLength={128}
+                                    className="pl-12 pr-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                     disabled={isLoading}
                                 />
                                 <button
@@ -253,6 +250,7 @@ export default function StudentRegister() {
                                     {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                                 </button>
                             </div>
+                            {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
                         </div>
 
                         <div className="space-y-1">
@@ -266,9 +264,9 @@ export default function StudentRegister() {
                                 <Input
                                     type={showConfirmPassword ? "text" : "password"}
                                     placeholder="Confirm Password"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange("confirmPassword")}
-                                    className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                    {...register("confirmPassword")}
+                                    maxLength={128}
+                                    className="pl-12 pr-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                     disabled={isLoading}
                                 />
                                 <button
@@ -279,8 +277,11 @@ export default function StudentRegister() {
                                     {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                                 </button>
                             </div>
+                            {errors.confirmPassword && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.confirmPassword.message}</p>}
                         </div>
                     </div>
+
+                    {passwordWatch && <PasswordStrength password={passwordWatch} />}
 
                     {/* Terms Agreement */}
                     <div className="flex items-start gap-3 mt-2">
@@ -327,7 +328,7 @@ export default function StudentRegister() {
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-12 lg:h-10 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1 lg:mt-0" disabled={isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -340,7 +341,7 @@ export default function StudentRegister() {
                 </form>
 
                 {/* Footer - Only on mobile */}
-                <div className="mt-8 text-center lg:hidden">
+                <div className="mt-4 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
                         Already have an account? <Link to="/student/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                     </p>

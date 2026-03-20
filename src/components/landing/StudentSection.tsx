@@ -11,6 +11,7 @@ import {
     Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 export function StudentSection() {
     const studentFeatures = [
@@ -41,79 +42,136 @@ export function StudentSection() {
         }
     ];
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: { opacity: 1, x: 0 }
+    };
+
     return (
-        <section id="students" className="py-24 lg:py-40">
+        <section id="students" className="py-24 lg:py-40 relative">
             <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
-                    <div className="space-y-8">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-sm font-medium">
+                    <motion.div 
+                        variants={containerVariants}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        className="space-y-8"
+                    >
+                        <motion.div 
+                            variants={itemVariants}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-black uppercase tracking-widest"
+                        >
                             <GraduationCap className="size-4" />
                             For Students
-                        </div>
-                        <h2 className="text-4xl lg:text-5xl font-bold text-white dark:text-white">
+                        </motion.div>
+                        <motion.h2 
+                            variants={itemVariants}
+                            className="text-4xl lg:text-7xl font-black text-white dark:text-white leading-tight tracking-tight"
+                        >
                             Your Academic Success, Simplified
-                        </h2>
-                        <p className="text-lg text-slate-200 dark:text-slate-400">
+                        </motion.h2>
+                        <motion.p 
+                            variants={itemVariants}
+                            className="text-xl text-slate-200 dark:text-slate-400 leading-relaxed font-medium"
+                        >
                             Stay organized, track your progress, and achieve your academic goals with tools designed specifically for students.
-                        </p>
-                        <div className="space-y-4">
+                        </motion.p>
+                        <div className="space-y-6">
                             {studentFeatures.map((feature, index) => (
-                                <div key={index} className="flex gap-4">
-                                    <div className="flex-shrink-0 p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 h-fit">
-                                        <feature.icon className="size-5 text-purple-600 dark:text-purple-400" />
+                                <motion.div 
+                                    key={index} 
+                                    variants={itemVariants}
+                                    className="flex gap-5 group"
+                                >
+                                    <div className="flex-shrink-0 p-3 rounded-2xl bg-blue-100 dark:bg-blue-900/30 h-fit group-hover:bg-blue-600 transition-all duration-300">
+                                        <feature.icon className="size-6 text-blue-600 dark:text-blue-400 group-hover:text-white transition-colors" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-white dark:text-white mb-1">
+                                        <h3 className="text-xl font-black text-white dark:text-white mb-1 tracking-tight">
                                             {feature.title}
                                         </h3>
-                                        <p className="text-slate-200 dark:text-slate-400 text-sm">
+                                        <p className="text-slate-200 dark:text-slate-400 leading-relaxed font-medium">
                                             {feature.description}
                                         </p>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
-                        <Link to="/student/login">
-                            <Button
-                                className="bg-purple-600 hover:bg-purple-700 text-white gap-2 w-full"
+                        <motion.div variants={itemVariants} className="pt-4">
+                            <Link to="/student/login">
+                                <Button
+                                    size="lg"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white gap-2 w-full sm:w-auto px-10 h-14 font-black uppercase tracking-widest shadow-xl shadow-blue-600/20"
+                                >
+                                    Get Started as Student
+                                    <ArrowRight className="size-5" />
+                                </Button>
+                            </Link>
+                        </motion.div>
+                    </motion.div>
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8, x: 50 }}
+                        whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        viewport={{ once: true }}
+                        className="relative"
+                    >
+                        <div className="bg-blue-500/5 dark:from-blue-900/10 dark:to-indigo-900/10 backdrop-blur-3xl rounded-[40px] p-12 space-y-8 border border-white/10 shadow-3xl">
+                            <motion.div 
+                                whileHover={{ y: -5 }}
+                                className="bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/10"
                             >
-                                Get Started as Student
-                                <ArrowRight className="size-4" />
-                            </Button>
-                        </Link>
-                    </div>
-                    <div className="relative">
-                        <div className="bg-purple-500/5 dark:from-purple-900/30 dark:to-blue-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6 border border-white/5">
-                            <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <Star className="size-6 text-yellow-500" />
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="p-3 rounded-2xl bg-yellow-500/20">
+                                        <Star className="size-8 text-yellow-500" />
+                                    </div>
                                     <div>
-                                        <div className="font-bold text-white dark:text-white">4.2 GPA</div>
-                                        <div className="text-xs text-slate-300 dark:text-slate-400">Current Semester</div>
+                                        <div className="text-3xl font-black text-white dark:text-white">4.2 GPA</div>
+                                        <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Current Semester</div>
                                     </div>
                                 </div>
-                                <div className="h-2 bg-slate-800 dark:bg-slate-700 rounded-full">
-                                    <div className="h-full bg-gradient-to-r from-purple-600 to-blue-600 rounded-full" style={{ width: '84%' }} />
+                                <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        whileInView={{ width: '84%' }}
+                                        transition={{ duration: 1.5, delay: 0.5 }}
+                                        className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full" 
+                                    />
                                 </div>
-                            </div>
-                            <div className="bg-white/5 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-sm font-bold text-white dark:text-white">Upcoming Deadlines</span>
-                                    <Clock className="size-4 text-blue-400 dark:text-blue-400" />
+                            </motion.div>
+                            <motion.div 
+                                whileHover={{ y: -5 }}
+                                className="bg-white/5 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/10"
+                            >
+                                <div className="flex items-center justify-between mb-6">
+                                    <span className="text-lg font-black text-white dark:text-white uppercase tracking-widest">Upcoming Tasks</span>
+                                    <Clock className="size-6 text-blue-400 dark:text-blue-400 animate-pulse" />
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm mb-2">
-                                        <span className="text-slate-200 dark:text-slate-400 font-medium">Physics Lab Report</span>
-                                        <span className="text-orange-400 dark:text-orange-400 font-medium">2 days</span>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                                        <span className="text-white font-bold">Physics Lab Report</span>
+                                        <span className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-xs font-black uppercase tracking-tighter">In 2 days</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-200 dark:text-slate-400 font-medium">Math Assignment</span>
-                                        <span className="text-green-400 dark:text-green-400 font-medium">5 days</span>
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                                        <span className="text-white font-bold">Math Assignment</span>
+                                        <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-black uppercase tracking-tighter">In 5 days</span>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </section>

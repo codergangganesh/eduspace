@@ -67,6 +67,7 @@ import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { ProfileNotificationSettings } from "@/components/ProfileNotificationSettings";
 import SEO from "@/components/SEO";
 import imageCompression from "browser-image-compression";
+import DOMPurify from "dompurify";
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -358,38 +359,50 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
+    // Basic validation to prevent payload bloat before sanitization
+    if (formData.full_name && formData.full_name.length > 100) {
+        toast.error("Full name cannot exceed 100 characters");
+        return;
+    }
+    if (formData.bio && formData.bio.length > 500) {
+        toast.error("Bio cannot exceed 500 characters");
+        return;
+    }
+
     setIsSaving(true);
+    
+    // Sanitize all text inputs to prevent XSS payloads
     const result = await updateProfile({
-      full_name: formData.full_name,
+      full_name: DOMPurify.sanitize(formData.full_name.trim()),
       email: formData.email,
-      phone: formData.phone,
+      phone: DOMPurify.sanitize(formData.phone.trim()),
       date_of_birth: formData.date_of_birth || null,
-      bio: formData.bio,
-      street: formData.street,
-      city: formData.city,
-      state: formData.state,
-      zip_code: formData.zip_code,
-      country: formData.country,
-      student_id: formData.student_id,
-      program: formData.program,
-      year: formData.year,
-      department: formData.department,
+      bio: DOMPurify.sanitize(formData.bio.trim()),
+      street: DOMPurify.sanitize(formData.street.trim()),
+      city: DOMPurify.sanitize(formData.city.trim()),
+      state: DOMPurify.sanitize(formData.state.trim()),
+      zip_code: DOMPurify.sanitize(formData.zip_code.trim()),
+      country: DOMPurify.sanitize(formData.country.trim()),
+      student_id: DOMPurify.sanitize(formData.student_id.trim()),
+      program: DOMPurify.sanitize(formData.program.trim()),
+      year: DOMPurify.sanitize(formData.year.trim()),
+      department: DOMPurify.sanitize(formData.department.trim()),
       gpa: formData.gpa ? parseFloat(formData.gpa) : null,
       credits_completed: formData.credits_completed ? parseInt(formData.credits_completed) : null,
       credits_required: formData.credits_required ? parseInt(formData.credits_required) : null,
-      advisor: formData.advisor,
+      advisor: DOMPurify.sanitize(formData.advisor.trim()),
       enrollment_date: formData.enrollment_date || null,
       expected_graduation: formData.expected_graduation || null,
       notifications_enabled: formData.notifications_enabled,
       language: formData.language,
       timezone: formData.timezone,
       theme: formData.theme,
-      batch: formData.batch,
-      hod_name: formData.hod_name,
-      linkedin_url: formData.linkedin_url,
-      github_url: formData.github_url,
-      twitter_url: formData.twitter_url,
-      portfolio_url: formData.portfolio_url,
+      batch: DOMPurify.sanitize(formData.batch.trim()),
+      hod_name: DOMPurify.sanitize(formData.hod_name.trim()),
+      linkedin_url: DOMPurify.sanitize(formData.linkedin_url.trim()),
+      github_url: DOMPurify.sanitize(formData.github_url.trim()),
+      twitter_url: DOMPurify.sanitize(formData.twitter_url.trim()),
+      portfolio_url: DOMPurify.sanitize(formData.portfolio_url.trim()),
     } as Partial<ProfileType>);
 
     if (result.success) {

@@ -92,23 +92,23 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                     </div>
 
                     {/* Content Panel */}
-                    <div className={`flex-1 px-6 lg:px-10 py-6 lg:py-7 bg-background lg:bg-background/80 lg:backdrop-blur-md flex flex-col justify-center lg:justify-start relative pb-safe ${!noScroll ? 'lg:overflow-y-auto custom-scrollbar' : 'lg:overflow-hidden'}`}>
-                        <div className="hidden lg:flex justify-end gap-5 text-sm font-bold mb-3 lg:mb-4">
+                    <div className={`flex-1 px-6 lg:px-10 py-6 lg:py-4 bg-background lg:bg-background/80 lg:backdrop-blur-md flex flex-col justify-center lg:justify-start relative pb-safe ${!noScroll ? 'lg:overflow-y-auto custom-scrollbar' : 'lg:overflow-hidden'}`}>
+                        <div className="hidden lg:flex justify-end gap-5 text-sm font-bold mb-2 lg:mb-2">
                             <button onClick={() => setShowHelp(true)} className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider text-[10px]">Help</button>
                             <button onClick={() => setShowContact(true)} className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider text-[10px]">Support</button>
                         </div>
 
                         <div className={`w-full ${contentMaxWidth} mx-auto`}>
-                            <div className="mb-4 lg:mb-6 text-center lg:text-left hidden lg:block">
-                                <h2 className="text-xl lg:text-2xl font-black text-foreground tracking-tight mb-1 uppercase">{title}</h2>
-                                <p className="text-xs lg:text-sm text-muted-foreground font-medium">{subtitle}</p>
+                            <div className="mb-4 lg:mb-3 text-center lg:text-left hidden lg:block">
+                                <h2 className="text-xl lg:text-2xl font-black text-foreground tracking-tight mb-0 uppercase">{title}</h2>
+                                <p className="text-xs lg:text-[13px] text-muted-foreground font-medium">{subtitle}</p>
                             </div>
 
                             <div className="mt-1 lg:mt-0">
                                 {children}
                             </div>
 
-                            <div className={`${noScroll ? 'mt-2 lg:mt-3' : 'mt-4 lg:mt-5'} py-2 border-t border-border/50 lg:border-none text-center text-[10px] text-muted-foreground font-medium`}>
+                            <div className={`${noScroll ? 'mt-1 lg:mt-2' : 'mt-4 lg:mt-5'} py-1 lg:py-0 border-t border-border/50 lg:border-none text-center text-[10px] text-muted-foreground font-medium`}>
                                 By continuing, you agree to our{" "}
                                 <Link to="/terms-of-service" className="underline hover:text-primary font-bold">Terms of Service</Link>
                                 {" "}and{" "}

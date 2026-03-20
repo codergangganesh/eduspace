@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 import { renderCanvas } from "@/components/ui/canvas";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { MobileOnboarding } from "@/components/landing/MobileOnboarding";
+import { LandingScrollControls } from "@/components/landing/LandingScrollControls";
+import { ReadingProgressBar } from "@/components/landing/ReadingProgressBar";
+
+import { FAQSection } from "@/components/landing/FAQSection";
 
 // Lazy load sections (HeroSection is eager loaded for LCP)
 const AnoAI = lazy(() => import("@/components/ui/animated-shader-background"));
@@ -41,6 +45,48 @@ export default function LandingPage() {
     const [showTerms, setShowTerms] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showContact, setShowContact] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [activeSection, setActiveSection] = useState("");
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+        const handleMouseMove = (e: MouseEvent) => {
+            setMousePos({ x: e.clientX, y: e.clientY });
+        };
+        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, []);
+
+    useEffect(() => {
+        const sections = ["features", "students", "lecturers", "faq"];
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -60% 0px', // When the section is in the middle-ish of the view
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    setActiveSection(entry.target.id);
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         const canvas = document.getElementById("canvas");
@@ -60,6 +106,9 @@ export default function LandingPage() {
 
     return (
         <div className="min-h-screen bg-slate-950 dark:bg-background font-sans text-white dark:text-foreground relative overflow-x-hidden selection:bg-blue-500/30">
+            {/* Mouse Spotlight Effect */}
+            <ReadingProgressBar />
+            <LandingScrollControls />
             <SEO
                 title="Home | Modern Learning Management System"
                 description="EduSpace is a powerful learning management system for students and lecturers. Track progress, manage assignments, and enhance your learning journey."
@@ -144,147 +193,206 @@ export default function LandingPage() {
                 <MobileOnboarding onComplete={() => setShowRoleDialog(true)} />
             </div>
 
-            <div className="hidden md:block relative z-10 backdrop-blur-[2px]">
-                {/* Navigation */}
-                <nav className="border-b border-white/10 dark:border-slate-800/50 bg-white/10 dark:bg-slate-950/70 backdrop-blur-xl fixed top-0 w-full z-[100] transition-all duration-300 pt-[var(--safe-top)]">
-                    <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
-                        <div className="flex items-center justify-between min-h-20">
-                            {/* Logo */}
-                            <div className="flex items-center gap-2">
-                                <Link to="/" className="flex items-center gap-2 group">
-                                    <div className="size-10 rounded-xl overflow-hidden border border-white/20 group-hover:border-blue-500/50 transition-all duration-300">
-                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+            {/* Navigation - MOVED OUTSIDE FOR UNIVERSAL VISIBILITY */}
+            <nav className={cn(
+                "fixed top-0 w-full z-[100] transition-all duration-500 pt-[calc(var(--safe-top)+0.5rem)] pb-2",
+                isScrolled
+                    ? "border-b border-white/10 bg-slate-950/80 backdrop-blur-2xl py-3"
+                    : "bg-transparent py-4"
+            )}>
+                <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
+                    <div className="flex items-center justify-between min-h-16">
+                        {/* Logo */}
+                        <div className="flex items-center gap-2">
+                            <Link to="/" className="flex items-center gap-2 group">
+                                <div className="size-10 rounded-xl overflow-hidden border border-white/20 group-hover:border-blue-500/50 transition-all duration-300">
+                                    <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                </div>
+                                <span className="text-2xl font-bold text-white dark:text-white tracking-tight">
+                                    Eduspace
+                                </span>
+                            </Link>
+                        </div>
+
+                        {/* Mobile Navigation & Actions */}
+                        <div className="flex md:hidden items-center gap-3">
+                            <Button
+                                size="sm"
+                                onClick={() => setShowRoleDialog(true)}
+                                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] rounded-lg shadow-lg shadow-blue-600/20"
+                            >
+                                Get Started
+                            </Button>
+
+                            <Sheet>
+                                <SheetTrigger asChild>
+                                    <button className="p-2 text-white dark:text-white hover:bg-white/10 rounded-lg transition-colors outline-none">
+                                        <Menu className="size-6" />
+                                    </button>
+                                </SheetTrigger>
+                                <SheetContent
+                                    side="right"
+                                    className="w-full sm:max-w-md bg-slate-950 dark:bg-slate-950 border-white/10 p-0 flex flex-col pt-[calc(1.5rem+var(--safe-top,0px))]"
+                                >
+                                    {/* Drawer Branding Header */}
+                                    <div className="px-6 pb-6 border-b border-white/5 flex items-center justify-between">
+                                        <Link to="/" className="flex items-center gap-2">
+                                            <div className="size-8 rounded-lg overflow-hidden border border-white/20">
+                                                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                            </div>
+                                            <span className="text-xl font-bold text-white tracking-tight">
+                                                Eduspace
+                                            </span>
+                                        </Link>
                                     </div>
-                                    <span className="text-2xl font-bold text-white dark:text-white tracking-tight">
-                                        Eduspace
-                                    </span>
-                                </Link>
-                            </div>
 
-                            {/* Mobile Navigation & Actions */}
-                            <div className="flex md:hidden items-center gap-2">
-
-                                <Sheet>
-                                    <SheetTrigger asChild>
-                                        <button className="p-2 text-white dark:text-white hover:bg-white/10 rounded-lg transition-colors outline-none">
-                                            <Menu className="size-7" />
-                                        </button>
-                                    </SheetTrigger>
-                                    <SheetContent
-                                        side="right"
-                                        className="w-full sm:max-w-md bg-slate-950 dark:bg-slate-950 border-white/10 p-0 flex flex-col pt-[calc(1.5rem+var(--safe-top,0px))]"
-                                    >
-                                        {/* Drawer Branding Header */}
-                                        <div className="px-6 pb-6 border-b border-white/5 flex items-center justify-between">
-                                            <Link to="/" className="flex items-center gap-2">
-                                                <div className="size-8 rounded-lg overflow-hidden border border-white/20">
-                                                    <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                    {/* Drawer Body - Navigation Links */}
+                                    <div className="flex-1 overflow-y-auto px-4 py-8 custom-scrollbar">
+                                        <div className="space-y-2">
+                                            <a
+                                                href="#features"
+                                                onClick={() => setActiveSection("features")}
+                                                className={cn(
+                                                    "flex items-center gap-4 px-4 py-4 text-lg font-bold rounded-2xl transition-all group",
+                                                    activeSection === "features" ? "text-blue-400 bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "size-10 rounded-xl flex items-center justify-center transition-all",
+                                                    activeSection === "features" ? "bg-blue-500 text-white" : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white"
+                                                )}>
+                                                    <LayoutGrid className="size-5" />
                                                 </div>
-                                                <span className="text-xl font-bold text-white tracking-tight">
-                                                    Eduspace
-                                                </span>
-                                            </Link>
-                                        </div>
-
-                                        {/* Drawer Body - Navigation Links */}
-                                        <div className="flex-1 overflow-y-auto px-4 py-8 custom-scrollbar">
-                                            <div className="space-y-2">
-                                                <a
-                                                    href="#features"
-                                                    className="flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
-                                                >
-                                                    <div className="size-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                                                        <LayoutGrid className="size-5" />
-                                                    </div>
-                                                    Features
-                                                </a>
-                                                <a
-                                                    href="#students"
-                                                    className="flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
-                                                >
-                                                    <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                                                        <Users className="size-5" />
-                                                    </div>
-                                                    For Students
-                                                </a>
-                                                <a
-                                                    href="#lecturers"
-                                                    className="flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
-                                                >
-                                                    <div className="size-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all">
-                                                        <GraduationCap className="size-5" />
-                                                    </div>
-                                                    For Lecturers
-                                                </a>
-                                                <button
-                                                    onClick={() => {
-                                                        setShowContact(true);
-                                                    }}
-                                                    className="w-full flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
-                                                >
-                                                    <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                                                        <LifeBuoy className="size-5" />
-                                                    </div>
-                                                    Support Center
-                                                </button>
-
-                                                <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between px-4">
-                                                    <span className="text-sm font-medium text-white/40">Appearance</span>
-                                                    <ThemeToggle />
+                                                Features
+                                            </a>
+                                            <a
+                                                href="#students"
+                                                onClick={() => setActiveSection("students")}
+                                                className={cn(
+                                                    "flex items-center gap-4 px-4 py-4 text-lg font-bold rounded-2xl transition-all group",
+                                                    activeSection === "students" ? "text-emerald-400 bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "size-10 rounded-xl flex items-center justify-center transition-all",
+                                                    activeSection === "students" ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white"
+                                                )}>
+                                                    <Users className="size-5" />
                                                 </div>
+                                                For Students
+                                            </a>
+                                            <a
+                                                href="#lecturers"
+                                                onClick={() => setActiveSection("lecturers")}
+                                                className={cn(
+                                                    "flex items-center gap-4 px-4 py-4 text-lg font-bold rounded-2xl transition-all group",
+                                                    activeSection === "lecturers" ? "text-purple-400 bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "size-10 rounded-xl flex items-center justify-center transition-all",
+                                                    activeSection === "lecturers" ? "bg-purple-500 text-white" : "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white"
+                                                )}>
+                                                    <GraduationCap className="size-5" />
+                                                </div>
+                                                For Lecturers
+                                            </a>
+                                            <button
+                                                onClick={() => {
+                                                    setShowContact(true);
+                                                }}
+                                                className="w-full flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
+                                            >
+                                                <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                                                    <LifeBuoy className="size-5" />
+                                                </div>
+                                                Support Center
+                                            </button>
+
+                                            <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between px-4">
+                                                <span className="text-sm font-medium text-white/40">Appearance</span>
+                                                <ThemeToggle />
                                             </div>
                                         </div>
+                                    </div>
 
-                                        {/* Drawer Footer - Action Buttons */}
-                                        <div className="p-6 pb-12 bg-slate-900/50 border-t border-white/5 grid grid-cols-2 gap-3">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setShowRoleDialog(true)}
-                                                className="w-full h-11 rounded-xl bg-transparent border-white/20 text-white hover:bg-white/5 font-bold transition-all text-xs"
-                                            >
-                                                Sign in
-                                            </Button>
-                                            <Button
-                                                onClick={() => setShowRoleDialog(true)}
-                                                className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black transition-all shadow-xl shadow-blue-600/20 text-xs px-2"
-                                            >
-                                                Join Now
-                                            </Button>
-                                        </div>
-                                    </SheetContent>
-                                </Sheet>
-                            </div>
+                                    {/* Drawer Footer - Action Buttons */}
+                                    <div className="px-6 py-6 border-t border-white/5 bg-slate-900/50">
+                                        <Button
+                                            onClick={() => setShowRoleDialog(true)}
+                                            className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black transition-all shadow-xl shadow-blue-600/20 tracking-widest text-sm"
+                                        >
+                                            Get Started
+                                        </Button>
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
+                        </div>
 
-                            {/* Navigation Links */}
-                            <div className="hidden md:flex items-center gap-8">
-                                <a href="#features" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
-                                    Features
-                                </a>
-                                <a href="#students" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
-                                    Students
-                                </a>
-                                <a href="#lecturers" className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors">
-                                    Lecturers
-                                </a>
-                                <button
-                                    onClick={() => setShowContact(true)}
-                                    className="text-sm font-medium text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors"
-                                >
-                                    Support
-                                </button>
-                                <div className="h-6 w-px bg-white/10 mx-2" />
-                                <ThemeToggle />
-                                <Button
-                                    onClick={() => setShowRoleDialog(true)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg shadow-blue-600/20"
-                                >
-                                    Sign In
-                                </Button>
-                            </div>
+                        {/* Navigation Links (Desktop) */}
+                        <div className="hidden md:flex items-center gap-6">
+                            <a
+                                href="#features"
+                                onClick={() => setActiveSection("features")}
+                                className={cn(
+                                    "text-xs font-black uppercase tracking-widest transition-all relative py-1",
+                                    activeSection === "features" ? "text-blue-500" : "text-slate-200 dark:text-slate-400 hover:text-blue-400"
+                                )}
+                            >
+                                Features
+                                {activeSection === "features" && (
+                                    <motion.div layoutId="nav-underline" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600" />
+                                )}
+                            </a>
+                            <a
+                                href="#students"
+                                onClick={() => setActiveSection("students")}
+                                className={cn(
+                                    "text-xs font-black uppercase tracking-widest transition-all relative py-1",
+                                    activeSection === "students" ? "text-blue-500" : "text-slate-200 dark:text-slate-400 hover:text-blue-400"
+                                )}
+                            >
+                                Students
+                                {activeSection === "students" && (
+                                    <motion.div layoutId="nav-underline" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600" />
+                                )}
+                            </a>
+                            <a
+                                href="#lecturers"
+                                onClick={() => setActiveSection("lecturers")}
+                                className={cn(
+                                    "text-xs font-black uppercase tracking-widest transition-all relative py-1",
+                                    activeSection === "lecturers" ? "text-blue-500" : "text-slate-200 dark:text-slate-400 hover:text-blue-400"
+                                )}
+                            >
+                                Lecturers
+                                {activeSection === "lecturers" && (
+                                    <motion.div layoutId="nav-underline" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600" />
+                                )}
+                            </a>
+                            <button
+                                onClick={() => setShowContact(true)}
+                                className="text-xs font-black uppercase tracking-widest text-slate-200 dark:text-slate-400 hover:text-blue-400 transition-colors"
+                            >
+                                Support
+                            </button>
+
+                            <div className="h-6 w-px bg-white/10 mx-2" />
+
+                            <ThemeToggle />
+
+                            <Button
+                                onClick={() => setShowRoleDialog(true)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg shadow-blue-600/20 font-black uppercase tracking-widest text-[11px] h-10"
+                            >
+                                Get Started
+                            </Button>
                         </div>
                     </div>
-                </nav>
+                </div>
+            </nav>
 
+            <div className="relative z-10 backdrop-blur-[2px]">
                 <HeroSection onOpenRoleSelection={setShowRoleDialog} />
 
                 <Suspense fallback={<LoadingFallback />}>
@@ -320,6 +428,10 @@ export default function LandingPage() {
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>
+                    <FAQSection />
+                </Suspense>
+
+                <Suspense fallback={<LoadingFallback />}>
                     <CTASection onOpenRoleSelection={setShowRoleDialog} onOpenHelp={setShowHelp} />
                 </Suspense>
 
@@ -335,3 +447,4 @@ export default function LandingPage() {
         </div>
     );
 }
+

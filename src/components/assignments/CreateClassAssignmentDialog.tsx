@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import { validateAssignmentFile } from '@/lib/supabaseStorage';
 import { uploadToSupabaseStorage } from '@/lib/supastorage';
+import DOMPurify from 'dompurify';
 import { useClassAssignments, CreateClassAssignmentDTO } from '@/hooks/useClassAssignments';
 import { Subject } from '@/hooks/useClassSubjects';
 import { toast } from 'sonner';
@@ -104,10 +105,10 @@ export function CreateClassAssignmentDialog({
             }
 
             const assignmentData: CreateClassAssignmentDTO = {
-                title: formData.title,
-                description: formData.description,
-                subject_id: formData.subjectId,
-                topic: formData.topic || undefined,
+                title: DOMPurify.sanitize(formData.title.trim()),
+                description: DOMPurify.sanitize(formData.description.trim()),
+                subject_id: DOMPurify.sanitize(formData.subjectId.trim()),
+                topic: formData.topic ? DOMPurify.sanitize(formData.topic.trim()) : undefined,
                 due_date: date,
                 attachment_url: uploadResult.url,
                 attachment_name: file.name,

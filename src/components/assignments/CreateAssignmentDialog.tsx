@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { CalendarIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadToSupabaseStorage } from "@/lib/supastorage";
+import DOMPurify from "dompurify";
 import { CreateAssignmentDTO, Subject } from "@/hooks/useLecturerAssignments";
 import { toast } from "sonner";
 
@@ -88,10 +89,10 @@ export function CreateAssignmentDialog({ courses, onCreate, fetchSubjects, open:
             console.log("Supabase upload successful:", uploadResult.url);
 
             const assignmentData: CreateAssignmentDTO = {
-                title: formData.title.trim(),
-                description: formData.description.trim(),
-                course_id: formData.courseId,
-                subject_id: formData.subjectId,
+                title: DOMPurify.sanitize(formData.title.trim()),
+                description: DOMPurify.sanitize(formData.description.trim()),
+                course_id: DOMPurify.sanitize(formData.courseId.trim()),
+                subject_id: DOMPurify.sanitize(formData.subjectId.trim()),
                 due_date: date,
                 attachment_url: uploadResult.url,
                 attachment_name: file.name,

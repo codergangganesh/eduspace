@@ -8,16 +8,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
 
 export default function LecturerLogin() {
     const navigate = useNavigate();
     const location = useLocation();
     const { signIn, isAuthenticated, role } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
+
+    const { register, handleSubmit: hookFormSubmit, formState: { errors } } = useForm<LoginFormValues>({
+        resolver: zodResolver(loginSchema),
+        mode: "onChange",
+        defaultValues: { email: "", password: "" }
+    });
 
     // Show registration success message if redirected from registration
     useEffect(() => {
@@ -35,17 +42,10 @@ export default function LecturerLogin() {
         }
     }, [isAuthenticated, role, navigate]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!email || !password) {
-            toast.error("Please fill in all fields");
-            return;
-        }
-
+    const onValidSubmit = async (data: LoginFormValues) => {
         setIsLoading(true);
 
-        const result = await signIn(email, password, captchaToken);
+        const result = await signIn(data.email, data.password, captchaToken);
 
         if (result.success) {
             toast.success("Welcome back!");
@@ -79,7 +79,7 @@ export default function LecturerLogin() {
             />
             <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-6 lg:shadow-sm">
                 {/* Form */}
-                <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
+                <form className="space-y-4 lg:space-y-5" onSubmit={hookFormSubmit(onValidSubmit)}>
                     {/* Institutional Email Field */}
                     <div className="space-y-1.5">
                         <label className="text-sm font-medium text-foreground lg:block hidden">
@@ -92,13 +92,12 @@ export default function LecturerLogin() {
                             <Input
                                 type="email"
                                 placeholder="Institutional Email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                {...register("email")}
                                 className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
-                                required
                             />
                         </div>
+                        {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
                     </div>
 
                     {/* Password Field */}
@@ -113,11 +112,9 @@ export default function LecturerLogin() {
                             <Input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                {...register("password")}
                                 className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
                                 disabled={isLoading}
-                                required
                             />
                             <button
                                 type="button"
@@ -127,6 +124,7 @@ export default function LecturerLogin() {
                                 {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                             </button>
                         </div>
+                        {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
                     </div>
 
                     {/* Forgot Password Link */}

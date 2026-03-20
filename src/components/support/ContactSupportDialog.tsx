@@ -13,6 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import DOMPurify from "dompurify";
+import { contactSupportSchema, ContactSupportFormValues } from "@/lib/validations/support";
 
 interface ContactSupportDialogProps {
     open: boolean;
@@ -20,31 +24,23 @@ interface ContactSupportDialogProps {
 }
 
 export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialogProps) {
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
+    const { register, handleSubmit: hookFormSubmit, formState: { errors }, reset } = useForm<ContactSupportFormValues>({
+        resolver: zodResolver(contactSupportSchema),
+        mode: "onChange",
+        defaultValues: { name: "", email: "", subject: "", message: "" }
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.name || !formData.email || !formData.subject || !formData.message) {
-            toast.error("Please fill in all fields");
-            return;
-        }
-
+    const onValidSubmit = async (data: ContactSupportFormValues) => {
         setIsSubmitting(true);
         try {
             const { error: fnError } = await supabase.functions.invoke('contact-support', {
                 body: {
-                    name: formData.name,
-                    email: formData.email,
-                    subject: formData.subject,
-                    message: formData.message,
+                    name: DOMPurify.sanitize(data.name.trim()),
+                    email: DOMPurify.sanitize(data.email.trim()),
+                    subject: DOMPurify.sanitize(data.subject.trim()),
+                    message: DOMPurify.sanitize(data.message.trim()),
                 },
             });
 
@@ -57,7 +53,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             // Reset form after 3 seconds
             setTimeout(() => {
                 setIsSubmitted(false);
-                setFormData({ name: "", email: "", subject: "", message: "" });
+                reset();
                 onOpenChange(false);
             }, 3000);
 
@@ -66,13 +62,6 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             toast.error("Failed to send message. Please ensure you are connected to the internet.");
             setIsSubmitting(false);
         }
-
-    };
-
-    const handleChange = (field: string) => (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => {
-        setFormData(prev => ({ ...prev, [field]: e.target.value }));
     };
 
     return (
@@ -165,18 +154,18 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                 </div>
                             </div>
                         ) : (
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                            <form onSubmit={hookFormSubmit(onValidSubmit)} className="space-y-5">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Name</Label>
                                         <Input
                                             id="name"
                                             placeholder="John Doe"
-                                            value={formData.name}
-                                            onChange={handleChange("name")}
+                                            {...register("name")}
                                             disabled={isSubmitting}
                                             className="bg-background border-border focus:ring-blue-500"
                                         />
+                                        {errors.name && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.name.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email</Label>
@@ -184,11 +173,11 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                             id="email"
                                             type="email"
                                             placeholder="john@example.com"
-                                            value={formData.email}
-                                            onChange={handleChange("email")}
+                                            {...register("email")}
                                             disabled={isSubmitting}
                                             className="bg-background border-border focus:ring-blue-500"
                                         />
+                                        {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
                                     </div>
                                 </div>
 
@@ -197,11 +186,11 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                     <Input
                                         id="subject"
                                         placeholder="How can we help?"
-                                        value={formData.subject}
-                                        onChange={handleChange("subject")}
+                                        {...register("subject")}
                                         disabled={isSubmitting}
                                         className="bg-background border-border focus:ring-blue-500"
                                     />
+                                    {errors.subject && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.subject.message}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -210,10 +199,10 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                         id="message"
                                         placeholder="Tell us more about your inquiry..."
                                         className="min-h-[120px] resize-none bg-background border-border focus:ring-blue-500"
-                                        value={formData.message}
-                                        onChange={handleChange("message")}
+                                        {...register("message")}
                                         disabled={isSubmitting}
                                     />
+                                    {errors.message && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.message.message}</p>}
                                 </div>
 
                                 <div className="pt-2 flex gap-3 justify-end">

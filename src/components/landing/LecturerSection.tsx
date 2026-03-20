@@ -8,6 +8,7 @@ import {
     ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 export function LecturerSection() {
     const lecturerFeatures = [
@@ -33,82 +34,140 @@ export function LecturerSection() {
         }
     ];
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, x: 20 },
+        visible: { opacity: 1, x: 0 }
+    };
+
     return (
-        <section id="lecturers" className="py-24 lg:py-40 bg-transparent dark:bg-slate-900/50">
-            <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
+        <section id="lecturers" className="py-24 lg:py-40 bg-transparent dark:bg-slate-900/50 relative overflow-hidden">
+            <div className="max-w-[1600px] mx-auto px-6 lg:px-12 relative z-10">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
-                    <div className="order-2 lg:order-1 relative">
-                        <div className="bg-blue-500/5 dark:from-blue-900/30 dark:to-indigo-900/30 backdrop-blur-sm rounded-3xl p-12 space-y-6 border border-white/5">
-                            <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-sm font-bold text-white dark:text-white">Class Overview</span>
-                                    <Users className="size-4 text-blue-400 dark:text-blue-400" />
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8, x: -50 }}
+                        whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        viewport={{ once: true }}
+                        className="order-2 lg:order-1 relative"
+                    >
+                        <div className="bg-indigo-500/5 dark:from-indigo-900/10 dark:to-blue-900/10 backdrop-blur-3xl rounded-[40px] p-12 space-y-8 border border-white/10 shadow-3xl">
+                            <motion.div 
+                                whileHover={{ y: -5 }}
+                                className="bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/10"
+                            >
+                                <div className="flex items-center justify-between mb-6">
+                                    <span className="text-lg font-black text-white dark:text-white uppercase tracking-widest">Class Overview</span>
+                                    <Users className="size-6 text-blue-400 dark:text-blue-400" />
                                 </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div>
-                                        <div className="text-2xl font-bold text-white dark:text-white">42</div>
-                                        <div className="text-xs text-slate-300 dark:text-slate-400">Students</div>
+                                <div className="grid grid-cols-3 gap-6">
+                                    <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="text-3xl font-black text-white dark:text-white">42</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Students</div>
                                     </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-white dark:text-white">12</div>
-                                        <div className="text-xs text-slate-300 dark:text-slate-400">Assignments</div>
+                                    <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="text-3xl font-black text-white dark:text-white">12</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Tasks</div>
                                     </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-white dark:text-white">89%</div>
-                                        <div className="text-xs text-slate-300 dark:text-slate-400">Avg Grade</div>
+                                    <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="text-3xl font-black text-white dark:text-white">89%</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Avg Grade</div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="bg-white/5 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <BarChart3 className="size-5 text-indigo-400 dark:text-indigo-400" />
-                                    <span className="text-sm font-bold text-white dark:text-white">Performance Trends</span>
+                            </motion.div>
+                            <motion.div 
+                                whileHover={{ y: -5 }}
+                                className="bg-white/5 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/10"
+                            >
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="p-3 rounded-2xl bg-indigo-500/20">
+                                        <BarChart3 className="size-6 text-indigo-400 dark:text-indigo-400" />
+                                    </div>
+                                    <span className="text-lg font-black text-white dark:text-white uppercase tracking-widest">Performance Trends</span>
                                 </div>
-                                <div className="flex items-end gap-2 h-24">
+                                <div className="flex items-end gap-3 h-24 px-2">
                                     {[65, 72, 68, 85, 78, 89, 92].map((height, i) => (
-                                        <div key={i} className="flex-1 bg-gradient-to-t from-blue-500 to-indigo-500 rounded-t opacity-80" style={{ height: `${height}%` }} />
+                                        <motion.div 
+                                            key={i} 
+                                            initial={{ height: 0 }}
+                                            whileInView={{ height: `${height}%` }}
+                                            transition={{ duration: 1, delay: 0.5 + (i * 0.1) }}
+                                            className="flex-1 bg-gradient-to-t from-blue-600 to-indigo-600 rounded-t-lg opacity-90 shadow-[0_0_15px_rgba(37,99,235,0.3)]" 
+                                        />
                                     ))}
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
-                    </div>
-                    <div className="order-1 lg:order-2 space-y-8">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium">
+                    </motion.div>
+                    <motion.div 
+                        variants={containerVariants}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        className="order-1 lg:order-2 space-y-8"
+                    >
+                        <motion.div 
+                            variants={itemVariants}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-sm font-black uppercase tracking-widest"
+                        >
                             <BookOpen className="size-4" />
                             For Lecturers
-                        </div>
-                        <h2 className="text-4xl lg:text-5xl font-bold text-white dark:text-white">
+                        </motion.div>
+                        <motion.h2 
+                            variants={itemVariants}
+                            className="text-4xl lg:text-7xl font-black text-white dark:text-white leading-tight tracking-tight"
+                        >
                             Teach Smarter, Not Harder
-                        </h2>
-                        <p className="text-lg text-slate-200 dark:text-slate-400">
+                        </motion.h2>
+                        <motion.p 
+                            variants={itemVariants}
+                            className="text-xl text-slate-200 dark:text-slate-400 leading-relaxed font-medium"
+                        >
                             Streamline your teaching workflow with powerful tools for class management, grading, and student engagement.
-                        </p>
-                        <div className="space-y-4">
+                        </motion.p>
+                        <div className="space-y-6">
                             {lecturerFeatures.map((feature, index) => (
-                                <div key={index} className="flex gap-4">
-                                    <div className="flex-shrink-0 p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 h-fit">
-                                        <feature.icon className="size-5 text-blue-600 dark:text-blue-400" />
+                                <motion.div 
+                                    key={index} 
+                                    variants={itemVariants}
+                                    className="flex gap-5 group"
+                                >
+                                    <div className="flex-shrink-0 p-3 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 h-fit group-hover:bg-indigo-600 transition-all duration-300">
+                                        <feature.icon className="size-6 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-white dark:text-white mb-1">
+                                        <h3 className="text-xl font-black text-white dark:text-white mb-1 tracking-tight">
                                             {feature.title}
                                         </h3>
-                                        <p className="text-slate-200 dark:text-slate-400 text-sm">
+                                        <p className="text-slate-200 dark:text-slate-400 leading-relaxed font-medium">
                                             {feature.description}
                                         </p>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
-                        <Link to="/lecturer/login">
-                            <Button
-                                className="bg-blue-600 hover:bg-blue-700 text-white gap-2 w-full"
-                            >
-                                Get Started as Lecturer
-                                <ArrowRight className="size-4" />
-                            </Button>
-                        </Link>
-                    </div>
+                        <motion.div variants={itemVariants} className="pt-4">
+                            <Link to="/lecturer/login">
+                                <Button
+                                    size="lg"
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 w-full sm:w-auto px-10 h-14 font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20"
+                                >
+                                    Get Started as Lecturer
+                                    <ArrowRight className="size-5" />
+                                </Button>
+                            </Link>
+                        </motion.div>
+                    </motion.div>
                 </div>
             </div>
         </section>
