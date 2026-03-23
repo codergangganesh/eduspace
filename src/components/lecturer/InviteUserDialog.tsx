@@ -131,6 +131,7 @@ export function InviteUserDialog({
                         className="pr-10"
                         disabled={isLoading}
                         required
+                        autoFocus
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
                         <Mail className="size-5" />
@@ -194,10 +195,10 @@ export function InviteUserDialog({
                         <div className="mx-auto w-12 h-1.5 flex-shrink-0 cursor-grab rounded-full bg-border mt-4 mb-2" />
                         <div className="p-6 overflow-y-auto">
                             <div className="mb-6">
-                                <h2 className="text-2xl font-black text-foreground tracking-tight">Invite User</h2>
-                                <p className="text-muted-foreground text-sm font-medium mt-1">
+                                <Drawer.Title className="text-2xl font-black text-foreground tracking-tight">Invite User</Drawer.Title>
+                                <Drawer.Description className="text-muted-foreground text-sm font-medium mt-1">
                                     Send an invitation email to join Eduspace.
-                                </p>
+                                </Drawer.Description>
                             </div>
                             {renderForm()}
                         </div>
@@ -209,7 +210,7 @@ export function InviteUserDialog({
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[500px] z-[10001]">
+            <DialogContent className="sm:max-w-[500px] z-[10001]" aria-describedby={undefined}>
                 <DialogHeader>
                     <DialogTitle>Invite User to Eduspace</DialogTitle>
                     <DialogDescription>

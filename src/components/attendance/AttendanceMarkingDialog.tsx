@@ -6,17 +6,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  HelpCircle, 
-  Search, 
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  HelpCircle,
+  Search,
   Users,
   CheckCircle,
   Save,
@@ -69,7 +70,7 @@ export function AttendanceMarkingDialog({
 
   const handleStatusChange = (enrollment_id: string, status: AttendanceStatus) => {
     triggerHaptic('light');
-    setStudents(prev => prev.map(s => 
+    setStudents(prev => prev.map(s =>
       s.enrollment_id === enrollment_id ? { ...s, status } : s
     ));
   };
@@ -77,16 +78,16 @@ export function AttendanceMarkingDialog({
   const handleMarkAllPresent = async () => {
     setIsMarkingAll(true);
     triggerHaptic('medium');
-    
+
     // Simulate a brief calculation/processing delay for visual polish
     await new Promise(resolve => setTimeout(resolve, 600));
-    
+
     setStudents(prev => prev.map(s => ({ ...s, status: 'present' })));
     setIsMarkingAll(false);
   };
 
   const filteredStudents = useMemo(() => {
-    return students.filter(s => 
+    return students.filter(s =>
       s.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.register_number.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -122,7 +123,7 @@ export function AttendanceMarkingDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-[95vw] h-[90vh] flex flex-col rounded-[2.5rem] p-0 border-none bg-white dark:bg-[#1a1625] shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-3xl w-[95vw] h-[90vh] flex flex-col rounded-[2.5rem] p-0 border-none bg-white dark:bg-[#1a1625] shadow-2xl overflow-hidden" aria-describedby={undefined}>
         <DialogHeader className="p-5 md:p-6 bg-slate-900 text-white shrink-0 relative">
           <div className="absolute top-0 right-0 p-6 opacity-10">
             <Users className="size-20" />
@@ -135,50 +136,53 @@ export function AttendanceMarkingDialog({
               <DialogTitle className="text-lg md:text-2xl font-black tracking-tight leading-none">
                 {session?.title || 'Untitled Session'}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Mark attendance for the current session. Choose the status for each student.
+              </DialogDescription>
               <p className="text-[9px] md:text-xs font-bold text-white/40 uppercase tracking-widest">
                 {session?.session_date ? format(new Date(session.session_date), 'EEEE, MMMM do, yyyy') : ''}
               </p>
             </div>
-            
+
             <div className="flex items-center gap-3 md:gap-4 overflow-x-auto pb-1 md:pb-0">
-               {Object.entries(stats).map(([key, val]) => {
-                 if (key === 'total') return null;
-                 return (
-                   <div key={key} className="flex flex-col items-center min-w-[40px]">
-                      <span className="text-sm md:text-lg font-black">{val}</span>
-                      <span className="text-[7px] font-black uppercase tracking-tighter opacity-40">{key}</span>
-                   </div>
-                 );
-               })}
-               <div className="h-6 w-px bg-white/10 mx-1 hidden md:block" />
-               <div className="flex flex-col items-center min-w-[40px]">
-                  <span className="text-sm md:text-lg font-black text-primary">{stats.total}</span>
-                  <span className="text-[7px] font-black uppercase tracking-tighter opacity-40">Total</span>
-               </div>
+              {Object.entries(stats).map(([key, val]) => {
+                if (key === 'total') return null;
+                return (
+                  <div key={key} className="flex flex-col items-center min-w-[40px]">
+                    <span className="text-sm md:text-lg font-black">{val}</span>
+                    <span className="text-[7px] font-black uppercase tracking-tighter opacity-40">{key}</span>
+                  </div>
+                );
+              })}
+              <div className="h-6 w-px bg-white/10 mx-1 hidden md:block" />
+              <div className="flex flex-col items-center min-w-[40px]">
+                <span className="text-sm md:text-lg font-black text-primary">{stats.total}</span>
+                <span className="text-[7px] font-black uppercase tracking-tighter opacity-40">Total</span>
+              </div>
             </div>
           </div>
         </DialogHeader>
 
         <div className="p-4 md:p-5 bg-slate-500/5 border-b border-border/50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-           <div className="relative w-full sm:w-[250px]">
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/40" />
-             <Input 
-               placeholder="Search student..."
-               className="h-9 pl-10 rounded-xl bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 font-bold text-xs"
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-             />
-           </div>
+          <div className="relative w-full sm:w-[250px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/40" />
+            <Input
+              placeholder="Search student..."
+              className="h-9 pl-10 rounded-xl bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 font-bold text-xs"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-           <Button 
-             variant="outline" 
-             disabled={isMarkingAll || students.length === 0}
-             className="w-full sm:w-auto h-9 rounded-xl border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/5 font-black uppercase tracking-widest text-[9px] gap-2 shrink-0 bg-white"
-             onClick={handleMarkAllPresent}
-           >
-             {isMarkingAll ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle className="size-3.5" />}
-             {isMarkingAll ? 'Marking...' : 'Mark All Present'}
-           </Button>
+          <Button
+            variant="outline"
+            disabled={isMarkingAll || students.length === 0}
+            className="w-full sm:w-auto h-9 rounded-xl border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/5 font-black uppercase tracking-widest text-[9px] gap-2 shrink-0 bg-white"
+            onClick={handleMarkAllPresent}
+          >
+            {isMarkingAll ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle className="size-3.5" />}
+            {isMarkingAll ? 'Marking...' : 'Mark All Present'}
+          </Button>
         </div>
 
         <ScrollArea className="flex-1 px-4 md:px-5">
@@ -190,8 +194,8 @@ export function AttendanceMarkingDialog({
               </div>
             ) : filteredStudents.length > 0 ? (
               filteredStudents.map((student) => (
-                <div 
-                  key={student.enrollment_id} 
+                <div
+                  key={student.enrollment_id}
                   className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 hover:border-primary/20 transition-all flex flex-col sm:flex-row items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -219,8 +223,8 @@ export function AttendanceMarkingDialog({
                           onClick={() => handleStatusChange(student.enrollment_id, status as AttendanceStatus)}
                           className={cn(
                             "flex flex-col items-center justify-center gap-1 p-1.5 rounded-lg border transition-all flex-1 sm:w-14 sm:flex-none",
-                            isActive 
-                              ? config.color 
+                            isActive
+                              ? config.color
                               : "bg-transparent border-transparent text-muted-foreground/30 hover:bg-slate-500/5"
                           )}
                         >
@@ -247,14 +251,14 @@ export function AttendanceMarkingDialog({
               Ensure all students are marked correctly before saving.
             </p>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={onClose}
                 className="h-10 rounded-xl font-black uppercase tracking-widest text-[9px] px-4"
               >
                 Discard
               </Button>
-              <Button 
+              <Button
                 onClick={handleSave}
                 disabled={saving || loading || students.length === 0}
                 className="h-10 flex-1 sm:flex-none px-8 rounded-xl bg-primary text-white hover:bg-primary/90 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 gap-2"

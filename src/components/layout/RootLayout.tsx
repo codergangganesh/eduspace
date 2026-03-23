@@ -25,7 +25,7 @@ export function RootLayout() {
         isAICoachOpen,
         setIsAICoachOpen
     } = useLayout();
-    
+
     const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
 
@@ -58,7 +58,7 @@ export function RootLayout() {
 
             // Only act if horizontal movement is dominant
             if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                
+
                 // --- CASE 1: RIGTH SWIPE (Finger moves Left -> Right) ---
                 if (deltaX > SWIPE_THRESHOLD) {
                     // Priority 1: If Coach is open, close it first
@@ -70,7 +70,7 @@ export function RootLayout() {
                         setIsMobileMenuOpen(true);
                     }
                 }
-                
+
                 // --- CASE 2: LEFT SWIPE (Finger moves Right -> Left) ---
                 else if (deltaX < -SWIPE_THRESHOLD) {
                     // Priority 1: If Sidebar is open, close it first

@@ -48,6 +48,7 @@ export default function LandingPage() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState("");
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [showOnboarding, setShowOnboarding] = useState(true);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -189,9 +190,14 @@ export default function LandingPage() {
             <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
             <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
-            <div className="block md:hidden relative z-50 transition-all duration-500">
-                <MobileOnboarding onComplete={() => setShowRoleDialog(true)} />
-            </div>
+            {showOnboarding && (
+                <div className="block md:hidden relative z-[150] transition-all duration-500">
+                    <MobileOnboarding onComplete={() => {
+                        setShowOnboarding(false);
+                        setShowRoleDialog(true);
+                    }} />
+                </div>
+            )}
 
             {/* Navigation - MOVED OUTSIDE FOR UNIVERSAL VISIBILITY */}
             <nav className={cn(
@@ -214,119 +220,8 @@ export default function LandingPage() {
                             </Link>
                         </div>
 
-                        {/* Mobile Navigation & Actions */}
+                        {/* Mobile Navigation & Actions removed as requested */}
                         <div className="flex md:hidden items-center gap-3">
-                            <Button
-                                size="sm"
-                                onClick={() => setShowRoleDialog(true)}
-                                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] rounded-lg shadow-lg shadow-blue-600/20"
-                            >
-                                Get Started
-                            </Button>
-
-                            <Sheet>
-                                <SheetTrigger asChild>
-                                    <button className="p-2 text-white dark:text-white hover:bg-white/10 rounded-lg transition-colors outline-none">
-                                        <Menu className="size-6" />
-                                    </button>
-                                </SheetTrigger>
-                                <SheetContent
-                                    side="right"
-                                    className="w-full sm:max-w-md bg-slate-950 dark:bg-slate-950 border-white/10 p-0 flex flex-col pt-[calc(1.5rem+var(--safe-top,0px))]"
-                                >
-                                    {/* Drawer Branding Header */}
-                                    <div className="px-6 pb-6 border-b border-white/5 flex items-center justify-between">
-                                        <Link to="/" className="flex items-center gap-2">
-                                            <div className="size-8 rounded-lg overflow-hidden border border-white/20">
-                                                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
-                                            </div>
-                                            <span className="text-xl font-bold text-white tracking-tight">
-                                                Eduspace
-                                            </span>
-                                        </Link>
-                                    </div>
-
-                                    {/* Drawer Body - Navigation Links */}
-                                    <div className="flex-1 overflow-y-auto px-4 py-8 custom-scrollbar">
-                                        <div className="space-y-2">
-                                            <a
-                                                href="#features"
-                                                onClick={() => setActiveSection("features")}
-                                                className={cn(
-                                                    "flex items-center gap-4 px-4 py-4 text-lg font-bold rounded-2xl transition-all group",
-                                                    activeSection === "features" ? "text-blue-400 bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "size-10 rounded-xl flex items-center justify-center transition-all",
-                                                    activeSection === "features" ? "bg-blue-500 text-white" : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white"
-                                                )}>
-                                                    <LayoutGrid className="size-5" />
-                                                </div>
-                                                Features
-                                            </a>
-                                            <a
-                                                href="#students"
-                                                onClick={() => setActiveSection("students")}
-                                                className={cn(
-                                                    "flex items-center gap-4 px-4 py-4 text-lg font-bold rounded-2xl transition-all group",
-                                                    activeSection === "students" ? "text-emerald-400 bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "size-10 rounded-xl flex items-center justify-center transition-all",
-                                                    activeSection === "students" ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white"
-                                                )}>
-                                                    <Users className="size-5" />
-                                                </div>
-                                                For Students
-                                            </a>
-                                            <a
-                                                href="#lecturers"
-                                                onClick={() => setActiveSection("lecturers")}
-                                                className={cn(
-                                                    "flex items-center gap-4 px-4 py-4 text-lg font-bold rounded-2xl transition-all group",
-                                                    activeSection === "lecturers" ? "text-purple-400 bg-white/5" : "text-white/70 hover:text-white hover:bg-white/5"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "size-10 rounded-xl flex items-center justify-center transition-all",
-                                                    activeSection === "lecturers" ? "bg-purple-500 text-white" : "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white"
-                                                )}>
-                                                    <GraduationCap className="size-5" />
-                                                </div>
-                                                For Lecturers
-                                            </a>
-                                            <button
-                                                onClick={() => {
-                                                    setShowContact(true);
-                                                }}
-                                                className="w-full flex items-center gap-4 px-4 py-4 text-lg font-bold text-white/70 hover:text-white hover:bg-white/5 rounded-2xl transition-all group"
-                                            >
-                                                <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                                                    <LifeBuoy className="size-5" />
-                                                </div>
-                                                Support Center
-                                            </button>
-
-                                            <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between px-4">
-                                                <span className="text-sm font-medium text-white/40">Appearance</span>
-                                                <ThemeToggle />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Drawer Footer - Action Buttons */}
-                                    <div className="px-6 py-6 border-t border-white/5 bg-slate-900/50">
-                                        <Button
-                                            onClick={() => setShowRoleDialog(true)}
-                                            className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black transition-all shadow-xl shadow-blue-600/20 tracking-widest text-sm"
-                                        >
-                                            Get Started
-                                        </Button>
-                                    </div>
-                                </SheetContent>
-                            </Sheet>
                         </div>
 
                         {/* Navigation Links (Desktop) */}

@@ -89,15 +89,15 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
         <span className="hidden md:inline text-xs font-bold uppercase tracking-wider">Invite</span>
       </Button>
       {actions}
-      <Button 
-          id="tour-nav-notes" 
-          variant="outline" 
-          size="icon" 
-          className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group" 
-          onClick={() => window.dispatchEvent(new CustomEvent("open-student-notes"))}
-          title="My Notes"
+      <Button
+        id="tour-nav-notes"
+        variant="outline"
+        size="icon"
+        className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group"
+        onClick={() => window.dispatchEvent(new CustomEvent("open-student-notes"))}
+        title="My Notes"
       >
-          <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+        <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
       </Button>
 
       <Button
@@ -114,15 +114,15 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
   return (
     <header className={cn(
       "sticky top-0 z-[50] flex min-h-16 items-center px-4 lg:px-6 pt-[var(--safe-top)] transition-all duration-300",
-      scrolled 
-        ? "bg-surface/80 backdrop-blur-xl border-b border-border/40 shadow-lg shadow-black/5" 
+      scrolled
+        ? "bg-surface/80 backdrop-blur-xl border-b border-border/40 shadow-lg shadow-black/5"
         : "bg-surface/0 border-b border-transparent"
     )}>
       <StudentNotesDrawer showTrigger={false} />
       <div className="flex items-center transition-all duration-300">
-        <Button 
-          variant="outline" 
-          size="icon" 
+        <Button
+          variant="outline"
+          size="icon"
           className="lg:hidden mr-3 h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
           onClick={onMenuClick}
         >
@@ -159,12 +159,12 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
           </Button>
 
           <NotificationsPopover />
-          
+
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 transition-all shadow-sm group active:bg-muted/50"
               >
                 <MoreVertical className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -172,7 +172,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 p-2 rounded-[20px] border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95 z-[10002]">
               <div className="grid grid-cols-2 gap-2">
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onSelect={() => {
                     setTimeout(() => {
                       window.dispatchEvent(new CustomEvent("open-invite-dialog"));
@@ -185,8 +185,8 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
                   </div>
                   <span className="text-[10px] font-bold text-foreground">Invite</span>
                 </DropdownMenuItem>
-                
-                <DropdownMenuItem 
+
+                <DropdownMenuItem
                   onSelect={() => {
                     setTimeout(() => {
                       window.dispatchEvent(new CustomEvent("open-student-notes"));
@@ -200,7 +200,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
                   <span className="text-[10px] font-bold text-foreground">Notes</span>
                 </DropdownMenuItem>
               </div>
-              
+
               {actions && (
                 <>
                   <DropdownMenuSeparator className="my-1.5 opacity-50" />

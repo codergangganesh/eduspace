@@ -89,8 +89,18 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-3xl"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-white/20 blur-3xl"></div>
 
+                {/* Branding: Logo and Name */}
+                <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
+                    <div className="size-8 rounded-lg overflow-hidden border border-white/20 shadow-lg">
+                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                    </div>
+                    <span className="text-white font-bold text-lg tracking-tight">
+                        Eduspace
+                    </span>
+                </div>
+
                 {/* Skip Button */}
-                <div className="absolute top-10 right-6 z-30">
+                <div className="absolute top-4 right-4 z-30">
                     <button
                         onClick={onComplete}
                         className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold py-2 px-6 rounded-full text-sm transition-all"

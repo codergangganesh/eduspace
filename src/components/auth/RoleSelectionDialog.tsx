@@ -41,8 +41,8 @@ export function RoleSelectionDialog({ open, onOpenChange, mode = "login" }: Role
                             <div className="mx-auto w-12 h-1.5 flex-shrink-0 cursor-grab rounded-full bg-slate-200 dark:bg-slate-800 mt-4 mb-8" />
 
                             <div className="mb-0 text-center">
-                                <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-4">Select your role</h2>
-                                <p className="text-slate-500 dark:text-slate-400 mt-1 mb-8">To personalize your experience</p>
+                                <Drawer.Title className="text-2xl font-black text-slate-900 dark:text-white mt-4">Select your role</Drawer.Title>
+                                <Drawer.Description className="text-slate-500 dark:text-slate-400 mt-1 mb-8">To personalize your experience</Drawer.Description>
                             </div>
 
                             <div className="grid gap-4">
