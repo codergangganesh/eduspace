@@ -60,6 +60,8 @@ export function useMessages() {
     const PAGE_SIZE = 20;
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const loadedMessageCountRef = useRef(0);
+    // Persistent Set for O(1) dedup instead of rebuilding from array each time
+    const messageIdsRef = useRef<Set<string>>(new Set());
 
     const filterMessagesForCurrentUser = useCallback((rawMessages: Message[], conversationId: string) => {
         if (!user) return rawMessages;
@@ -99,49 +101,57 @@ export function useMessages() {
                     !conv.visible_to || conv.visible_to.includes(user.id)
                 );
 
-                // Fetch other user details
-                const conversationsWithUsers = await Promise.all(
-                    visibleConversations.map(async (conv) => {
-                        const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+                // Batch-fetch other user details instead of N+1 individual queries
+                // Step 1: Collect all unique other-user IDs
+                const otherUserIds = [...new Set(visibleConversations.map(conv =>
+                    conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1
+                ))] as string[];
 
-                        const { data: profileData } = await supabase
-                            .from('profiles')
-                            .select('full_name, avatar_url')
-                            .eq('user_id', otherUserId)
-                            .maybeSingle();
+                // Step 2: Batch fetch profiles, class_students, and roles in parallel (3 queries total instead of 3×N)
+                const [profilesResult, classStudentsResult, rolesResult] = await Promise.all([
+                    supabase.from('profiles').select('user_id, full_name, avatar_url').in('user_id', otherUserIds),
+                    supabase.from('class_students').select('student_id, student_name, student_image_url').in('student_id', otherUserIds),
+                    supabase.from('user_roles').select('user_id, role').in('user_id', otherUserIds),
+                ]);
 
-                        // If no profile data, try class_students table (for imported students who haven't registered)
-                        let otherUserName = profileData?.full_name;
-                        let otherUserAvatar = profileData?.avatar_url;
+                // Step 3: Build HashMaps for O(1) lookups
+                const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+                (profilesResult.data || []).forEach(p => profileMap.set(p.user_id, p));
 
-                        if (!otherUserName) {
-                            const { data: classStudentData } = await supabase
-                                .from('class_students')
-                                .select('student_name, student_image_url')
-                                .eq('student_id', otherUserId)
-                                .limit(1)
-                                .maybeSingle();
+                const classStudentMap = new Map<string, { student_name: string; student_image_url: string | null }>();
+                (classStudentsResult.data || []).forEach(cs => {
+                    // Only store if not already present (first match wins, like .limit(1).maybeSingle())
+                    if (!classStudentMap.has(cs.student_id)) {
+                        classStudentMap.set(cs.student_id, cs);
+                    }
+                });
 
-                            if (classStudentData) {
-                                otherUserName = classStudentData.student_name;
-                                otherUserAvatar = classStudentData.student_image_url || otherUserAvatar;
-                            }
+                const roleMap = new Map<string, string>();
+                (rolesResult.data || []).forEach(r => roleMap.set(r.user_id, r.role));
+
+                // Step 4: Enrich conversations using HashMap lookups — O(1) per conversation
+                const conversationsWithUsers = visibleConversations.map(conv => {
+                    const otherUserId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+                    const profileData = profileMap.get(otherUserId);
+                    let otherUserName = profileData?.full_name;
+                    let otherUserAvatar = profileData?.avatar_url;
+
+                    // Fallback to class_students for imported students who haven't registered
+                    if (!otherUserName) {
+                        const classStudentData = classStudentMap.get(otherUserId);
+                        if (classStudentData) {
+                            otherUserName = classStudentData.student_name;
+                            otherUserAvatar = classStudentData.student_image_url || otherUserAvatar;
                         }
+                    }
 
-                        const { data: roleData } = await supabase
-                            .from('user_roles')
-                            .select('role')
-                            .eq('user_id', otherUserId)
-                            .maybeSingle();
-
-                        return {
-                            ...conv,
-                            other_user_name: otherUserName || 'Unknown User',
-                            other_user_avatar: otherUserAvatar,
-                            other_user_role: roleData?.role,
-                        };
-                    })
-                );
+                    return {
+                        ...conv,
+                        other_user_name: otherUserName || 'Unknown User',
+                        other_user_avatar: otherUserAvatar,
+                        other_user_role: roleMap.get(otherUserId),
+                    };
+                });
 
                 setConversations(conversationsWithUsers);
             }
@@ -278,6 +288,7 @@ export function useMessages() {
     useEffect(() => {
         if (!selectedConversationId || !user) {
             loadedMessageCountRef.current = 0;
+            messageIdsRef.current = new Set();
             setMessages([]);
             setHasMore(false);
             return;
@@ -303,10 +314,12 @@ export function useMessages() {
                 const newMessages = [...filteredData].reverse();
                 if (isLoadMore) {
                     setMessages(prev => {
-                        const existingIds = new Set(prev.map(message => message.id));
-                        return [...newMessages.filter(message => !existingIds.has(message.id)), ...prev];
+                        const deduped = newMessages.filter(message => !messageIdsRef.current.has(message.id));
+                        deduped.forEach(m => messageIdsRef.current.add(m.id));
+                        return [...deduped, ...prev];
                     });
                 } else {
+                    messageIdsRef.current = new Set(newMessages.map(m => m.id));
                     setMessages(newMessages);
                 }
                 setHasMore(rawMessages.length === PAGE_SIZE);
@@ -316,6 +329,7 @@ export function useMessages() {
         };
 
         loadedMessageCountRef.current = 0;
+        messageIdsRef.current = new Set();
         setHasMore(false);
         fetchMessages();
 
@@ -690,8 +704,9 @@ export function useMessages() {
             const filteredMessages = filterMessagesForCurrentUser(rawMessages, selectedConversationId);
             const newMessages = [...filteredMessages].reverse();
             setMessages(prev => {
-                const existingIds = new Set(prev.map(message => message.id));
-                return [...newMessages.filter(message => !existingIds.has(message.id)), ...prev];
+                const deduped = newMessages.filter(message => !messageIdsRef.current.has(message.id));
+                deduped.forEach(m => messageIdsRef.current.add(m.id));
+                return [...deduped, ...prev];
             });
             setHasMore(rawMessages.length === PAGE_SIZE);
         } catch (err) {

@@ -31,6 +31,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useLecturerStudents } from "@/hooks/useLecturerStudents";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const studentNavItems = [
   { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/dashboard" },
@@ -77,7 +85,7 @@ interface SidebarProps {
 export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, role } = useAuth();
+  const { signOut, role, profile } = useAuth();
   const { tourActiveStepId } = useLayout();
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
   void onHoverChange;
@@ -250,62 +258,81 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
           </nav>
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="flex flex-col gap-1.5 mt-auto">
-          <TooltipProvider>
-            {bottomNavItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              const content = (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group active:scale-[0.98] active:opacity-80",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  )}
-                >
-                  <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
-                  {!isCollapsed && <span>{item.label}</span>}
+        {/* Bottom Profile Section */}
+        <div className={cn(
+          "mt-auto pt-4 border-t border-border/50",
+          isCollapsed ? "px-0" : "px-2"
+        )}>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button className={cn(
+                "flex items-center w-full gap-3 p-2 rounded-xl border border-transparent hover:bg-muted/50 transition-all duration-300 group outline-none",
+                isCollapsed ? "justify-center px-0" : "px-3"
+              )}>
+                <Avatar className={cn(
+                  "border border-border/50 shadow-sm transition-transform duration-300 group-hover:scale-105",
+                  isCollapsed ? "size-10" : "size-9"
+                )}>
+                  <AvatarImage src={profile?.avatar_url || ""} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
+                    {profile?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {!isCollapsed && (
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-black tracking-tight text-foreground/90 truncate group-hover:text-foreground transition-colors">
+                      {profile?.full_name || "User"}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 truncate">
+                      {role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student"}
+                    </p>
+                  </div>
+                )}
+                
+                {!isCollapsed && (
+                  <ChevronDown className="size-4 text-muted-foreground group-hover:text-foreground transition-colors opacity-40 group-hover:opacity-100" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            
+            <DropdownMenuContent 
+              side={isCollapsed ? "right" : "bottom"} 
+              align={isCollapsed ? "end" : "center"}
+              sideOffset={12}
+              className="w-64 p-1.5 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95 z-[10001]"
+            >
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1 py-1">
+                  <p className="text-sm font-semibold leading-none tracking-tight">{profile?.full_name || "User"}</p>
+                  <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">
+                    {profile?.email || "No email provided"}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="flex items-center gap-2 cursor-pointer py-2.5 rounded-lg">
+                  <User className="size-4" />
+                  <span className="font-semibold">Profile</span>
                 </Link>
-              );
-
-              if (isCollapsed) {
-                return (
-                  <Tooltip key={item.path} delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      {content}
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="font-medium">
-                      {item.label}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              }
-
-              return content;
-            })}
-
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-all w-full group shadow-md shadow-red-600/20 active:scale-[0.98]"
-                >
-                  <LogOut className="size-5 shrink-0 group-hover:scale-110 transition-transform duration-200" />
-                  {!isCollapsed && <span>Sign Out</span>}
-                </button>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right" className="font-medium">
-                  Sign Out
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-
-
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex items-center gap-2 cursor-pointer py-2.5 rounded-lg">
+                  <Settings className="size-4" />
+                  <span className="font-semibold">Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer py-2.5 rounded-lg"
+              >
+                <LogOut className="size-4" />
+                <span className="font-black uppercase tracking-wider text-[11px]">Sign Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </aside>

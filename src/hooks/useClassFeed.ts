@@ -235,31 +235,25 @@ export function useClassFeed() {
             const postIds = postsData.map((p: any) => p.id);
             const authorIds = [...new Set(postsData.map((p: any) => p.author_id))] as string[];
 
-            // 2. Fetch author profiles
-            const { data: profiles } = await supabase
-                .from('profiles')
-                .select('user_id, full_name, avatar_url')
-                .in('user_id', authorIds);
+            // 2. Fetch all related data in PARALLEL instead of 6 sequential queries
+            const [profilesResult, rolesResult, reactionsResult, seenResult, studentCountResult, classInfoResult] = await Promise.all([
+                supabase.from('profiles').select('user_id, full_name, avatar_url').in('user_id', authorIds),
+                supabase.from('user_roles').select('user_id, role').in('user_id', authorIds),
+                db.from('class_feed_reactions').select('*').in('post_id', postIds),
+                db.from('class_feed_seen').select('post_id').in('post_id', postIds),
+                supabase.from('class_students').select('*', { count: 'exact', head: true }).eq('class_id', selectedClassId),
+                supabase.from('classes').select('class_name, course_code').eq('id', selectedClassId).single(),
+            ]);
 
+            // 3. Build HashMaps for O(1) lookups during enrichment
             const profileMap = new Map<string, { full_name: string; avatar_url: string | null }>();
-            profiles?.forEach(p => profileMap.set(p.user_id, { full_name: p.full_name || 'Unknown', avatar_url: p.avatar_url }));
+            (profilesResult.data || []).forEach(p => profileMap.set(p.user_id, { full_name: p.full_name || 'Unknown', avatar_url: p.avatar_url }));
 
-            // 3. Fetch author roles
-            const { data: roles } = await supabase
-                .from('user_roles')
-                .select('user_id, role')
-                .in('user_id', authorIds);
             const roleMap = new Map<string, string>();
-            roles?.forEach(r => roleMap.set(r.user_id, r.role));
-
-            // 4. Fetch reactions
-            const { data: reactions } = await db
-                .from('class_feed_reactions')
-                .select('*')
-                .in('post_id', postIds);
+            (rolesResult.data || []).forEach(r => roleMap.set(r.user_id, r.role));
 
             const reactionsByPost = new Map<string, FeedReaction[]>();
-            (reactions || []).forEach((r: any) => {
+            (reactionsResult.data || []).forEach((r: any) => {
                 const arr = reactionsByPost.get(r.post_id) || [];
                 const authorProfile = profileMap.get(r.user_id);
                 arr.push({
@@ -272,31 +266,15 @@ export function useClassFeed() {
                 reactionsByPost.set(r.post_id, arr);
             });
 
-            // 5. Fetch seen counts
-            const { data: seenData } = await db
-                .from('class_feed_seen')
-                .select('post_id')
-                .in('post_id', postIds);
-
             const seenCountMap = new Map<string, number>();
-            (seenData || []).forEach((s: any) => {
+            (seenResult.data || []).forEach((s: any) => {
                 seenCountMap.set(s.post_id, (seenCountMap.get(s.post_id) || 0) + 1);
             });
 
-            // 6. Total students in class
-            const { count: totalStudents } = await supabase
-                .from('class_students')
-                .select('*', { count: 'exact', head: true })
-                .eq('class_id', selectedClassId);
+            const totalStudents = studentCountResult.count || 0;
+            const classInfo = classInfoResult.data;
 
-            // 7. Get class info
-            const { data: classInfo } = await supabase
-                .from('classes')
-                .select('class_name, course_code')
-                .eq('id', selectedClassId)
-                .single();
-
-            // 8. Enrich posts
+            // 4. Enrich posts using HashMap lookups
             const enrichedPosts: FeedPost[] = postsData.map((post: any) => {
                 const author = profileMap.get(post.author_id);
                 return {
@@ -317,7 +295,7 @@ export function useClassFeed() {
                     course_code: classInfo?.course_code || '',
                     reactions: reactionsByPost.get(post.id) || [],
                     seen_count: seenCountMap.get(post.id) || 0,
-                    total_students: totalStudents || 0,
+                    total_students: totalStudents,
                 };
             });
 
@@ -325,16 +303,17 @@ export function useClassFeed() {
             // Update cache
             postsCache.set(cacheKey, enrichedPosts);
 
-            // 9. Mark all posts as seen by the current user
+            // 5. Mark all posts as seen (fire-and-forget — no need to block UI)
             if (postIds.length > 0) {
                 const seenRecords = postIds.map((post_id: string) => ({
                     post_id,
                     user_id: user.id,
                 }));
 
-                await db
-                    .from('class_feed_seen')
-                    .upsert(seenRecords, { onConflict: 'post_id,user_id', ignoreDuplicates: true });
+                db.from('class_feed_seen')
+                    .upsert(seenRecords, { onConflict: 'post_id,user_id', ignoreDuplicates: true })
+                    .then(() => {})
+                    .catch((err: any) => console.error('Error marking posts as seen:', err));
             }
 
         } catch (err) {
@@ -421,7 +400,20 @@ export function useClassFeed() {
     // ── Toggle pin ───────────────────────────────────────────────────────
 
     const togglePin = useCallback(async (postId: string, currentlyPinned: boolean) => {
-        if (!user) return;
+        if (!user || !selectedClassId) return;
+        const cacheKey = getClassFeedCacheKey(user.id, selectedClassId);
+
+        // Optimistic UI update
+        setPosts(prev => {
+            const newPosts = prev.map(p => p.id === postId ? { ...p, is_pinned: !currentlyPinned } : p)
+                .sort((a, b) => {
+                    if (a.is_pinned && !b.is_pinned) return -1;
+                    if (!a.is_pinned && b.is_pinned) return 1;
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                });
+            if (cacheKey) postsCache.set(cacheKey, newPosts);
+            return newPosts;
+        });
 
         try {
             const { error } = await db
@@ -430,16 +422,24 @@ export function useClassFeed() {
                 .eq('id', postId);
 
             if (error) throw error;
-            await fetchPosts();
         } catch (err) {
             console.error('Error toggling pin:', err);
+            await fetchPosts(); // Revert on error
         }
-    }, [user, fetchPosts]);
+    }, [user, selectedClassId, fetchPosts]);
 
     // ── Delete post ──────────────────────────────────────────────────────
 
     const deletePost = useCallback(async (postId: string) => {
-        if (!user) return;
+        if (!user || !selectedClassId) return;
+        const cacheKey = getClassFeedCacheKey(user.id, selectedClassId);
+
+        // Optimistic UI update
+        setPosts(prev => {
+            const newPosts = prev.filter(p => p.id !== postId);
+            if (cacheKey) postsCache.set(cacheKey, newPosts);
+            return newPosts;
+        });
 
         try {
             const { error } = await db
@@ -448,49 +448,59 @@ export function useClassFeed() {
                 .eq('id', postId);
 
             if (error) throw error;
-            await fetchPosts();
         } catch (err) {
             console.error('Error deleting post:', err);
+            await fetchPosts(); // Revert on error
         }
-    }, [user, fetchPosts]);
+    }, [user, selectedClassId, fetchPosts]);
 
     // ── Toggle reaction ──────────────────────────────────────────────────
 
     const toggleReaction = useCallback(async (postId: string, emoji: string) => {
-        if (!user) return;
+        if (!user || !selectedClassId) return;
+        const cacheKey = getClassFeedCacheKey(user.id, selectedClassId);
 
-        try {
-            // Check if user already reacted with this emoji
-            const { data: existing } = await db
-                .from('class_feed_reactions')
-                .select('id')
-                .eq('post_id', postId)
-                .eq('user_id', user.id)
-                .eq('emoji', emoji)
-                .maybeSingle();
+        const postToReact = posts.find(p => p.id === postId);
+        if (!postToReact) return;
 
-            if (existing) {
-                // Remove reaction
-                await db
-                    .from('class_feed_reactions')
-                    .delete()
-                    .eq('id', existing.id);
-            } else {
-                // Add reaction
-                await db
-                    .from('class_feed_reactions')
-                    .insert({
+        // Determine locally
+        const existingReaction = postToReact.reactions.find(r => r.user_id === user.id && r.emoji === emoji);
+
+        // Optimistic UI Update
+        setPosts(prev => {
+            const newPosts = prev.map(p => {
+                if (p.id !== postId) return p;
+                let newReactions = [...p.reactions];
+                if (existingReaction) {
+                    newReactions = newReactions.filter(r => r.id !== existingReaction.id);
+                } else {
+                    newReactions.push({
+                        id: `temp-${Date.now()}`,
                         post_id: postId,
                         user_id: user.id,
                         emoji,
+                        user_name: user.user_metadata?.full_name || 'Me'
                     });
-            }
+                }
+                return { ...p, reactions: newReactions };
+            });
+            if (cacheKey) postsCache.set(cacheKey, newPosts);
+            return newPosts;
+        });
 
-            await fetchPosts();
+        try {
+            if (existingReaction && !existingReaction.id.startsWith('temp-')) {
+                await db.from('class_feed_reactions').delete().eq('id', existingReaction.id);
+            } else if (!existingReaction) {
+                await db.from('class_feed_reactions').insert({ post_id: postId, user_id: user.id, emoji });
+            }
+            // Silent refresh to fix IDs
+            fetchPosts();
         } catch (err) {
             console.error('Error toggling reaction:', err);
+            await fetchPosts(); // Revert
         }
-    }, [user, fetchPosts]);
+    }, [user, selectedClassId, fetchPosts, posts]);
 
     // ── Real-time subscription ───────────────────────────────────────────
 

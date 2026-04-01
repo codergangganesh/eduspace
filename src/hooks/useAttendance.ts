@@ -127,9 +127,13 @@ export function useAttendance(classId: string) {
 
     const typedRecords = records as AttendanceRecord[];
 
-    // 3. Merge (Don't filter - show all students in the class)
+    // 3. Build HashMap for O(1) record lookup instead of O(n) find per student
+    const recordMap = new Map<string, AttendanceRecord>();
+    typedRecords.forEach(r => recordMap.set(r.enrollment_id, r));
+
+    // 4. Merge (Don't filter - show all students in the class)
     return students.map((student) => {
-      const record = typedRecords.find((r) => r.enrollment_id === student.id);
+      const record = recordMap.get(student.id);
       return {
         enrollment_id: student.id,
         student_id: student.student_id || null,
@@ -215,34 +219,56 @@ export function useClassAttendanceStats(classId: string) {
 
       const typedRecords = records as AttendanceRecord[];
       const recentSessionIds = sessions.slice(0, 5).map(s => s.id);
+      const recentSessionSet = new Set(recentSessionIds);
 
-      // 4. Group by student (Show all students)
+      // 4. Pre-index records by enrollment_id using a HashMap for O(1) grouping
+      const recordsByEnrollment = new Map<string, AttendanceRecord[]>();
+      for (const r of typedRecords) {
+        const arr = recordsByEnrollment.get(r.enrollment_id);
+        if (arr) {
+          arr.push(r);
+        } else {
+          recordsByEnrollment.set(r.enrollment_id, [r]);
+        }
+      }
+
+      // 5. Process each student with single-pass counting
       return students.map(student => {
-        const studentRecords = typedRecords.filter(r => r.enrollment_id === student.id);
+        const studentRecords = recordsByEnrollment.get(student.id) || [];
+
+        // Single-pass: count statuses + recent stats + build session lookup for trends
+        let present = 0, late = 0, absent = 0, excused = 0;
+        let recentPositive = 0, recentTotal = 0;
+        const sessionStatusMap = new Map<string, AttendanceStatus>();
+
+        for (const r of studentRecords) {
+          // Count by status
+          switch (r.status) {
+            case 'present': present++; break;
+            case 'late': late++; break;
+            case 'absent': absent++; break;
+            case 'excused': excused++; break;
+          }
+          // Track recent session stats
+          if (recentSessionSet.has(r.session_id)) {
+            recentTotal++;
+            if (r.status === 'present' || r.status === 'late') recentPositive++;
+            sessionStatusMap.set(r.session_id, r.status);
+          }
+        }
+
         const total = studentRecords.length;
-        const present = studentRecords.filter(r => r.status === 'present').length;
-        const late = studentRecords.filter(r => r.status === 'late').length;
-        const absent = studentRecords.filter(r => r.status === 'absent').length;
-        const excused = studentRecords.filter(r => r.status === 'excused').length;
-        
-        const percentage = total > 0 
-          ? Math.round(((present + late) / total) * 100) 
+        const percentage = total > 0
+          ? Math.round(((present + late) / total) * 100)
           : 0;
 
-        // Calculate Trend (Statuses of last 5 sessions)
+        // Calculate Trend (Statuses of last 5 sessions) using the pre-built map
         const trend = recentSessionIds.map(sessionId => {
-          const record = studentRecords.find(r => r.session_id === sessionId);
-          if (!record) return null;
-          return record.status;
+          return sessionStatusMap.get(sessionId) || null;
         }).reverse(); // Order from oldest to newest for graph
 
-        // Predictive Risk Calculation: Drop in recent 5 sessions compared to overall
-        const recentRecords = studentRecords.filter(r => recentSessionIds.includes(r.session_id));
-        const recentTotal = recentRecords.length;
-        const recentPositive = recentRecords.filter(r => r.status === 'present' || r.status === 'late').length;
-        
-        const recentPercentage = recentTotal > 0 
-          ? Math.round((recentPositive / recentTotal) * 100) 
+        const recentPercentage = recentTotal > 0
+          ? Math.round((recentPositive / recentTotal) * 100)
           : percentage;
 
         const percentageDrop = percentage - recentPercentage;
@@ -312,9 +338,13 @@ export function useStudentAttendance(classId?: string) {
 
       if (recordError) throw recordError;
 
-      // 4. Merge sessions with records
+      // 4. Build HashMap for O(1) session record lookup
+      const recordMap = new Map<string, typeof attendanceRecords[0]>();
+      (attendanceRecords || []).forEach(r => recordMap.set(r.session_id, r));
+
+      // 5. Merge sessions with records using HashMap lookup
       return (sessions || []).map(session => {
-        const record = (attendanceRecords || []).find(r => r.session_id === session.id);
+        const record = recordMap.get(session.id);
         return {
           ...record,
           id: record?.id || `virtual-${session.id}`,
@@ -352,17 +382,32 @@ export function useStudentAttendance(classId?: string) {
     };
   }, [user?.id, refetch]);
 
-  const stats = records ? {
-    total: records.length, // Count every session created as a potential record
-    marked: records.filter(r => r.status !== 'pending').length,
-    present: records.filter(r => r.status === 'present').length,
-    absent: records.filter(r => r.status === 'absent').length,
-    late: records.filter(r => r.status === 'late').length,
-    excused: records.filter(r => r.status === 'excused').length,
-    percentage: records.filter(r => r.status !== 'pending').length > 0 
-      ? Math.round(((records.filter(r => r.status === 'present' || r.status === 'late').length) / records.filter(r => r.status !== 'pending').length) * 100)
-      : 0
-  } : null;
+  // Single-pass stats computation instead of 6× array scans
+  const stats = records ? (() => {
+    let marked = 0, present = 0, absent = 0, late = 0, excused = 0;
+    for (const r of records) {
+      if (r.status !== 'pending') {
+        marked++;
+        switch (r.status) {
+          case 'present': present++; break;
+          case 'absent': absent++; break;
+          case 'late': late++; break;
+          case 'excused': excused++; break;
+        }
+      }
+    }
+    return {
+      total: records.length,
+      marked,
+      present,
+      absent,
+      late,
+      excused,
+      percentage: marked > 0
+        ? Math.round(((present + late) / marked) * 100)
+        : 0
+    };
+  })() : null;
 
   return {
     records,

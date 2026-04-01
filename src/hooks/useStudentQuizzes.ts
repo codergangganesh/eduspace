@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Module-level cache ───────────────────────────────────────────────────────
-const studentQuizzesCache = new Map<string, any[]>();
-const enrolledClassesCache = new Map<string, { id: string, class_name: string, course_code: string }[]>();
+const studentQuizzesCache = createRegisteredMap<string, any[]>();
+const enrolledClassesCache = createRegisteredMap<string, { id: string, class_name: string, course_code: string }[]>();
 
 function getStudentQuizCacheKey(userId?: string, classId?: string) {
     if (!classId) return null;
@@ -131,59 +132,50 @@ export function useStudentQuizzes(selectedClassId?: string) {
             }
 
             // Fetch Related Data Separately to avoid RLS join issues
-            // Fetch Class Details
-            const classIds = [...new Set(quizzesData.map(q => q.class_id))];
-            const { data: classesData } = await supabase
-                .from('classes')
-                .select('id, class_name, course_code')
-                .in('id', classIds);
-
-            const classMap = new Map(classesData?.map(c => [c.id, c]) || []);
-
-            // Fetch Question Counts
+            // Parallelize all independent fetches with Promise.all
             const quizIds = quizzesData.map(q => q.id);
-            const { data: questionCounts } = await supabase
-                .from('quiz_questions')
-                .select('quiz_id')
-                .in('quiz_id', quizIds);
-
-            // Calculate counts manually since we just got IDs
-            const questionCountMap = new Map<string, number>();
-            if (questionCounts) {
-                questionCounts.forEach((q: { quiz_id: string }) => {
-                    questionCountMap.set(q.quiz_id, (questionCountMap.get(q.quiz_id) || 0) + 1);
-                });
-            }
-
-
-            // 3. Fetch Instructor Profiles separately (to avoid join failures)
+            const classIds = [...new Set(quizzesData.map(q => q.class_id))];
             const instructorIds = [...new Set(quizzesData?.map(q => q.created_by).filter(Boolean))];
-            let instructorMap: Record<string, any> = {};
 
-            if (instructorIds.length > 0) {
-                const { data: instructors } = await supabase
-                    .from('profiles')
-                    .select('user_id, full_name, avatar_url')
-                    .in('user_id', instructorIds);
-
-                if (instructors) {
-                    instructorMap = instructors.reduce((acc, curr) => ({
-                        ...acc,
-                        [curr.user_id]: curr
-                    }), {});
-                }
-            }
-
-            // For each quiz, fetch the student's submission status
-            const processedQuizzes = await Promise.all(quizzesData?.map(async (q) => {
-                // Fetch student's active submission for this quiz
-                const { data: submissionData } = await supabase
-                    .from('quiz_submissions')
-                    .select('id, status, total_obtained, is_archived, quiz_version, submitted_at, time_taken, started_at')
-                    .eq('quiz_id', q.id)
+            const [classesResult, questionCountsResult, instructorsResult, submissionsResult] = await Promise.all([
+                // Fetch Class Details
+                supabase.from('classes').select('id, class_name, course_code').in('id', classIds),
+                // Fetch Question Counts
+                supabase.from('quiz_questions').select('quiz_id').in('quiz_id', quizIds),
+                // Fetch Instructor Profiles
+                instructorIds.length > 0
+                    ? supabase.from('profiles').select('user_id, full_name, avatar_url').in('user_id', instructorIds)
+                    : Promise.resolve({ data: [] }),
+                // Batch fetch ALL submissions for this student across all quizzes (1 query instead of N)
+                supabase.from('quiz_submissions')
+                    .select('id, quiz_id, status, total_obtained, is_archived, quiz_version, submitted_at, time_taken, started_at')
+                    .in('quiz_id', quizIds)
                     .eq('student_id', user.id)
-                    .eq('is_archived', false)
-                    .maybeSingle();
+                    .eq('is_archived', false),
+            ]);
+
+            // Build HashMaps for O(1) lookups
+            const classMap = new Map((classesResult.data || []).map(c => [c.id, c]));
+
+            const questionCountMap = new Map<string, number>();
+            (questionCountsResult.data || []).forEach((q: { quiz_id: string }) => {
+                questionCountMap.set(q.quiz_id, (questionCountMap.get(q.quiz_id) || 0) + 1);
+            });
+
+            const instructorMap: Record<string, any> = {};
+            ((instructorsResult as any).data || []).forEach((curr: any) => {
+                instructorMap[curr.user_id] = curr;
+            });
+
+            // Build submission HashMap: quizId → submission (for O(1) lookup per quiz)
+            const submissionMap = new Map<string, any>();
+            ((submissionsResult.data || []) as any[]).forEach(sub => {
+                submissionMap.set(sub.quiz_id, sub);
+            });
+
+            // Enrich quizzes using HashMaps — no more per-quiz DB calls
+            const processedQuizzes = (quizzesData || []).map(q => {
+                const submissionData = submissionMap.get(q.id) || null;
 
                 // DEBUG LOGGING - Temporary
                 console.log(`[DEBUG] Quiz '${q.title}' (ID: ${q.id}):`, {
@@ -194,7 +186,6 @@ export function useStudentQuizzes(selectedClassId?: string) {
                     currentQuizVersion: q.version
                 });
 
-                // Transform the count to a number and extract instructor details
                 const instructor = instructorMap[q.created_by] || null;
                 const relatedClass = classMap.get(q.class_id);
 
@@ -211,9 +202,9 @@ export function useStudentQuizzes(selectedClassId?: string) {
                         full_name: instructor.full_name,
                         avatar_url: instructor.avatar_url
                     } : null,
-                    my_submission: submissionData || null,
+                    my_submission: submissionData,
                 };
-            }) || []);
+            });
 
             setQuizzes(processedQuizzes);
             if (targetCacheKey) {

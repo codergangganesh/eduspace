@@ -49,54 +49,83 @@ export async function sendInvitationsToClass(classId: string): Promise<Invitatio
         let failed = 0;
         const errors: string[] = [];
 
-        for (const student of students) {
-            try {
-                // Check if access request already exists
-                const { data: existing } = await supabase
-                    .from('access_requests')
-                    .select('id, status')
-                    .eq('class_id', classId)
-                    .eq('student_email', student.email)
-                    .maybeSingle();
+        // 1. Fetch all existing access requests in one batch query
+        const studentEmails = students.map(s => s.email).filter(Boolean);
+        let existingSet = new Set<string>();
 
-                if (existing) {
-                    skipped++;
-                    continue;
-                }
+        if (studentEmails.length > 0) {
+            const { data: existingRequests } = await supabase
+                .from('access_requests')
+                .select('student_email')
+                .eq('class_id', classId)
+                .in('student_email', studentEmails);
+            existingSet = new Set((existingRequests || []).map(r => r.student_email));
+        }
 
-                // Create access request
-                const { data: newRequest, error: requestError } = await supabase
-                    .from('access_requests')
-                    .insert({
-                        class_id: classId,
-                        lecturer_id: classData.lecturer_id,
-                        student_id: student.student_id, // Can be null
-                        student_email: student.email,
-                        status: 'pending',
-                        invitation_email_sent: false
-                    })
-                    .select()
-                    .single();
+        // 2. Filter students who need invitations
+        const studentsToInvite = students.filter(s => {
+            if (existingSet.has(s.email)) {
+                skipped++;
+                return false;
+            }
+            return true;
+        });
 
-                if (requestError) {
-                    console.error('Error creating access request:', requestError);
-                    failed++;
-                    errors.push(`Failed to create request for ${student.email}`);
-                    continue;
-                }
+        if (studentsToInvite.length > 0) {
+            // 2.5 Verify which student_ids actually exist in profiles
+            const studentIdsToCheck = studentsToInvite.map(s => s.student_id).filter(Boolean);
+            const validStudentIds = new Set<string>();
+            
+            if (studentIdsToCheck.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('user_id')
+                    .in('user_id', studentIdsToCheck);
+                
+                (profiles || []).forEach(p => validStudentIds.add(p.user_id));
+            }
 
-                // If student has an account, send in-app notification
-                if (student.student_id) {
-                    await notifyAccessRequest(
-                        student.student_id,
-                        classData.lecturer_name || 'A lecturer',
-                        classData.course_code,
-                        classId,
-                        newRequest.id
-                    );
-                } else {
-                    // Send SMTP email to non-registered students
-                    try {
+            // 3. Batch insert new requests
+            const newRequestsData = studentsToInvite.map(student => ({
+                class_id: classId,
+                lecturer_id: classData.lecturer_id,
+                student_id: student.student_id && validStudentIds.has(student.student_id) ? student.student_id : null,
+                student_email: student.email,
+                status: 'pending',
+                invitation_email_sent: false
+            }));
+
+            const { data: insertedRequests, error: insertError } = await supabase
+                .from('access_requests')
+                .insert(newRequestsData)
+                .select();
+
+            if (insertError) {
+                console.error('Error batch inserting access requests:', insertError);
+                throw insertError;
+            }
+
+            // 4. Queue notifications/emails with controlled concurrency (chunked processing)
+            const PROCESS_BATCH_SIZE = 10;
+            const DELAY_MS = 50;
+
+            const processStudent = async (student: any) => {
+                const request = (insertedRequests || []).find(r => r.student_email === student.email);
+                if (!request) return;
+
+                const hasValidId = student.student_id && validStudentIds.has(student.student_id);
+
+                try {
+                    if (hasValidId) {
+                        await notifyAccessRequest(
+                            student.student_id,
+                            classData.lecturer_name || 'A lecturer',
+                            classData.course_code,
+                            classId,
+                            request.id
+                        );
+                    } else {
+                        // Send SMTP email to non-registered students
                         const { error: emailError } = await supabase.functions.invoke('send-class-invitation-email', {
                             body: {
                                 studentEmail: student.email,
@@ -110,28 +139,34 @@ export async function sendInvitationsToClass(classId: string): Promise<Invitatio
                         });
 
                         if (!emailError) {
-                            // Mark email as sent
-                            await supabase
+                            // Fire-and-forget: update email sent status
+                            supabase
                                 .from('access_requests')
                                 .update({
                                     invitation_email_sent: true,
                                     invitation_email_sent_at: new Date().toISOString()
                                 })
-                                .eq('id', newRequest.id);
+                                .eq('id', request.id)
+                                .then(() => {});
                         } else {
                             console.error('Error sending invitation email:', emailError);
                         }
-                    } catch (emailErr) {
-                        console.error('Failed to send invitation email:', emailErr);
-                        // Don't fail the whole process if email fails
                     }
+                    // Since multiple promises resolve in parallel, safely increment counter
+                    sent++;
+                } catch (err) {
+                    console.error('Error processing student notification:', student.email, err);
+                    failed++;
+                    errors.push(`Failed to process ${student.email}`);
                 }
+            };
 
-                sent++;
-            } catch (err) {
-                console.error('Error processing student:', student.email, err);
-                failed++;
-                errors.push(`Failed to process ${student.email}`);
+            for (let i = 0; i < studentsToInvite.length; i += PROCESS_BATCH_SIZE) {
+                const chunk = studentsToInvite.slice(i, i + PROCESS_BATCH_SIZE);
+                await Promise.all(chunk.map(processStudent));
+                if (i + PROCESS_BATCH_SIZE < studentsToInvite.length) {
+                    await new Promise(res => setTimeout(res, DELAY_MS));
+                }
             }
         }
 
@@ -196,13 +231,27 @@ export async function sendInvitationToStudent(classId: string, studentEmail: str
             throw new Error('Invitation already sent to this student');
         }
 
+        // Verify if student_id still exists in profiles to avoid foreign key violations
+        let validStudentId = student.student_id;
+        if (validStudentId) {
+            const { data: profileCheck } = await supabase
+                .from('profiles')
+                .select('user_id')
+                .eq('user_id', validStudentId)
+                .maybeSingle();
+                
+            if (!profileCheck) {
+                validStudentId = null;
+            }
+        }
+
         // Create access request
         const { data: newRequest, error: requestError } = await supabase
             .from('access_requests')
             .insert({
                 class_id: classId,
                 lecturer_id: classData.lecturer_id,
-                student_id: student.student_id,
+                student_id: validStudentId,
                 student_email: studentEmail,
                 status: 'pending'
             })
@@ -212,9 +261,9 @@ export async function sendInvitationToStudent(classId: string, studentEmail: str
         if (requestError) throw requestError;
 
         // Send notification if student has account
-        if (student.student_id) {
+        if (validStudentId) {
             await notifyAccessRequest(
-                student.student_id,
+                validStudentId,
                 classData.lecturer_name || 'A lecturer',
                 classData.course_code,
                 classId,
@@ -450,6 +499,20 @@ export async function resendInvitationToStudent(classId: string, studentEmail: s
 
         let requestId: string;
 
+        // Verify if student_id still exists in profiles to avoid foreign key violations
+        let validStudentId = student.student_id;
+        if (validStudentId) {
+            const { data: profileCheck } = await supabase
+                .from('profiles')
+                .select('user_id')
+                .eq('user_id', validStudentId)
+                .maybeSingle();
+                
+            if (!profileCheck) {
+                validStudentId = null;
+            }
+        }
+
         if (existing) {
             // Update existing request to pending
             const { error: updateError } = await supabase
@@ -457,7 +520,8 @@ export async function resendInvitationToStudent(classId: string, studentEmail: s
                 .update({
                     status: 'pending',
                     responded_at: null,
-                    sent_at: new Date().toISOString()
+                    sent_at: new Date().toISOString(),
+                    student_id: validStudentId
                 })
                 .eq('id', existing.id);
 
@@ -470,7 +534,7 @@ export async function resendInvitationToStudent(classId: string, studentEmail: s
                 .insert({
                     class_id: classId,
                     lecturer_id: classData.lecturer_id,
-                    student_id: student.student_id,
+                    student_id: validStudentId,
                     student_email: studentEmail,
                     status: 'pending'
                 })
@@ -482,9 +546,9 @@ export async function resendInvitationToStudent(classId: string, studentEmail: s
         }
 
         // Send notification if student has account
-        if (student.student_id) {
+        if (validStudentId) {
             await notifyAccessRequest(
-                student.student_id,
+                validStudentId,
                 classData.lecturer_name || 'A lecturer',
                 classData.course_code,
                 classId,

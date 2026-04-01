@@ -4,10 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
 import { notifyGradePosted, notifyAssignmentSubmission } from '@/lib/notificationService';
 import { knowledgeService } from '@/lib/knowledgeService';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Module-level cache ───────────────────────────────────────────────────────
-const assignmentsCache = new Map<string, Assignment[]>();
-const enrolledClassesCache = new Map<string, { id: string, class_name: string, course_code: string }[]>();
+const assignmentsCache = createRegisteredMap<string, Assignment[]>();
+const enrolledClassesCache = createRegisteredMap<string, { id: string, class_name: string, course_code: string }[]>();
 
 export interface Assignment {
     id: string;

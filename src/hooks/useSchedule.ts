@@ -1,12 +1,13 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getEnrolledClassIds } from '@/lib/studentUtils';
 import { toast } from 'sonner';
 import { notifyScheduleCreated, notifyScheduleUpdated } from '@/lib/notificationService';
+import { createRegisteredMap } from '@/lib/cacheRegistry';
 
 // ── Module-level cache ───────────────────────────────────────────────────────
-const scheduleCache = new Map<string, Schedule[]>();
+const scheduleCache = createRegisteredMap<string, Schedule[]>();
 
 export interface Schedule {
     id: string;
@@ -313,8 +314,22 @@ export function useSchedule(classId?: string) {
         }
     };
 
+    // Pre-index schedules by day_of_week for O(1) lookups instead of O(n) filter per day
+    const schedulesByDay = useMemo(() => {
+        const map = new Map<number, Schedule[]>();
+        for (const s of schedules) {
+            const arr = map.get(s.day_of_week);
+            if (arr) {
+                arr.push(s);
+            } else {
+                map.set(s.day_of_week, [s]);
+            }
+        }
+        return map;
+    }, [schedules]);
+
     const getSchedulesForDay = (dayOfWeek: number) => {
-        return schedules.filter(s => s.day_of_week === dayOfWeek);
+        return schedulesByDay.get(dayOfWeek) || [];
     };
 
     const getUpcomingSchedules = () => {

@@ -294,7 +294,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-foreground">Current Assignments</h2>
               </div>
-              <DashboardAssignmentList assignments={assignments} />
+              <DashboardAssignmentList assignments={assignments.filter(a => a.studentStatus === 'pending' || a.studentStatus === 'overdue')} />
             </div>
           </div>
 

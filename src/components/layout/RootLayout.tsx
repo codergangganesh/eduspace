@@ -96,6 +96,8 @@ export function RootLayout() {
 
     const isCollapsed = sidebarMode === 'collapsed' || (sidebarMode === 'hover' && !isHovered);
 
+    const isDashboard = location.pathname === "/dashboard" || location.pathname === "/lecturer-dashboard";
+
     return (
         <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
             <CommandPalette />
@@ -111,26 +113,29 @@ export function RootLayout() {
                 "flex-1 flex flex-col min-h-0 w-full transition-all duration-300",
                 isCollapsed ? "lg:pl-20" : "lg:pl-72"
             )}>
-                {!options.hideHeaderOnMobile && (
-                    <DashboardHeader
-                        onMenuClick={() => setIsMobileMenuOpen(true)}
-                        actions={actions}
-                    />
-                )}
-                {options.hideHeaderOnMobile && (
-                    <div className="hidden lg:block">
+                {/* Header visibility logic - Always show on mobile, show only on dashboard for desktop */}
+                <div className={cn(!isDashboard && "lg:hidden")}>
+                    {!options.hideHeaderOnMobile && (
                         <DashboardHeader
                             onMenuClick={() => setIsMobileMenuOpen(true)}
                             actions={actions}
                         />
-                    </div>
-                )}
+                    )}
+                    {options.hideHeaderOnMobile && (
+                        <div className="hidden lg:block">
+                            <DashboardHeader
+                                onMenuClick={() => setIsMobileMenuOpen(true)}
+                                actions={actions}
+                            />
+                        </div>
+                    )}
+                </div>
 
                 <main
                     className={cn(
                         "flex-1 min-h-0 overflow-hidden relative",
                         !options.fullHeight && "p-4 lg:p-6 overflow-y-auto",
-                        options.hideHeaderOnMobile && "pt-[var(--safe-top)]"
+                        (options.hideHeaderOnMobile || (!isDashboard && window.innerWidth >= 1024)) && "pt-0"
                     )}
                 >
                     <PageTransition className="h-full w-full">

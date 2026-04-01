@@ -70,19 +70,32 @@ export function useNotifications() {
                     .select("*")
                     .eq("recipient_id", user.id)
                     .order("created_at", { ascending: false })
-                    .limit(50); // Fetch more to account for filtering
+                    .limit(100); // Increased limit to ensure we have enough after filtering
 
-                if (error) throw error;
+                if (error) {
+                    console.error("Supabase error fetching notifications:", error);
+                    throw error;
+                }
+
+                if (!data || data.length === 0) {
+                    setNotifications([]);
+                    setUnreadCount(0);
+                    return;
+                }
 
                 // Filter notifications based on enrollment status
-                const filteredData = (data || []).filter(n =>
+                const filteredData = data.filter(n =>
                     shouldShowNotification(n as Notification, enrolledClassIds, isStudent)
-                ).slice(0, 20); // Limit to 20 after filtering
+                );
 
-                setNotifications(filteredData);
-                setUnreadCount(filteredData.filter(n => !n.is_read).length);
+                // Set unread count based on ALL fetched notifications that passed the filter
+                const filteredUnreadCount = filteredData.filter(n => !n.is_read).length;
+                
+                // For the UI display, we might still want to slice it, or just show all
+                setNotifications(filteredData.slice(0, 50));
+                setUnreadCount(filteredUnreadCount);
             } catch (error) {
-                console.error("Error fetching notifications:", error);
+                console.error("Error in fetchNotifications:", error);
             } finally {
                 setLoading(false);
             }

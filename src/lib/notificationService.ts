@@ -260,10 +260,14 @@ export async function createBulkNotifications(
             return { success: false, error };
         }
 
-        // Trigger Rich Push Notifications for all active users
+        // Trigger Rich Push Notifications using chunked queue (controlled concurrency)
         const bulkPushUrl = params.customUrl || getNotificationUrl(type, relatedId, classId);
         const bulkTag = (params as any).pushTag || generateTag(type, relatedId, classId);
-        activeUserIds.forEach(userId => {
+        const PUSH_BATCH_SIZE = 10;
+        const BATCH_DELAY_MS = 50;
+
+        // Process push notifications in batches to prevent rate limiting
+        const sendPushForUser = (userId: string) =>
             supabase.functions.invoke('send-push', {
                 body: {
                     user_id: userId,
@@ -286,7 +290,17 @@ export async function createBulkNotifications(
                     },
                 }
             }).catch(err => console.error(`Push failed for ${userId}:`, err));
-        });
+
+        // Fire-and-forget: process chunks without blocking the return
+        (async () => {
+            for (let i = 0; i < activeUserIds.length; i += PUSH_BATCH_SIZE) {
+                const chunk = activeUserIds.slice(i, i + PUSH_BATCH_SIZE);
+                await Promise.all(chunk.map(sendPushForUser));
+                if (i + PUSH_BATCH_SIZE < activeUserIds.length) {
+                    await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+                }
+            }
+        })();
 
         return { success: true };
     } catch (err) {

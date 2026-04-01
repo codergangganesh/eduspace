@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -48,7 +48,7 @@ export function CreateClassAssignmentDialog({
     onManageSubjects,
     open: externalOpen,
     onOpenChange: setExternalOpen,
-    showTrigger = true
+    showTrigger = true,
 }: Props) {
     const { createAssignment } = useClassAssignments(classId);
     const [internalOpen, setInternalOpen] = useState(false);

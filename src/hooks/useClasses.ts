@@ -271,10 +271,10 @@ export function useClasses() {
         if (!user) throw new Error('User not authenticated');
 
         try {
-            // Soft delete by setting is_active to false
+            // Hard delete the class - database will handle cascading deletes for assignments, posts, etc.
             const { error: deleteError } = await supabase
                 .from('classes')
-                .update({ is_active: false })
+                .delete()
                 .eq('id', classId)
                 .eq('lecturer_id', user.id);
 

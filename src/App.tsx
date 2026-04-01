@@ -69,6 +69,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const AIChat = lazy(() => import("./pages/AIChat"));
+const AIAgent = lazy(() => import("./pages/AIAgent"));
 const CallHistory = lazy(() => import("./pages/CallHistory"));
 const StreakPage = lazy(() => import("./pages/StreakPage"));
 const KnowledgeMap = lazy(() => import("./pages/KnowledgeMap"));
@@ -250,6 +251,7 @@ const AnimatedRoutes = () => {
 
           <Route path="/class-feed" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><ClassFeed /></ProtectedRoute>} />
           <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
+          <Route path="/agent" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIAgent /></ProtectedRoute>} />
 
         </Route>
 
