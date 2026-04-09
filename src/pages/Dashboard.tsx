@@ -35,6 +35,7 @@ export default function Dashboard() {
   const { profile, user, role } = useAuth();
   const { recordAcademicAction } = useStreak();
 
+
   // Record daily visit streak
   useEffect(() => {
     if (user?.id && role === 'student') {

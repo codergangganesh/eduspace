@@ -14,6 +14,7 @@ import {
   Orbit,
   Flame,
   Megaphone,
+  Sparkles,
 } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -156,10 +157,10 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                       )}
                     >
                       {item.imageUrl ? (
-                        <img 
-                          src={item.imageUrl} 
-                          className={cn("size-6 shrink-0 rounded-full object-cover", !isActive && "group-hover:scale-110")} 
-                          alt={item.label} 
+                        <img
+                          src={item.imageUrl}
+                          className={cn("size-6 shrink-0 rounded-full object-cover", !isActive && "group-hover:scale-110")}
+                          alt={item.label}
                         />
                       ) : (
                         <item.icon className="size-5 shrink-0" />
@@ -182,7 +183,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                       {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   {!isMobileSidebarCollapsed && (
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-sm font-black text-foreground truncate">

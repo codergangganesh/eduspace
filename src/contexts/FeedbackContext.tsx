@@ -70,8 +70,13 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
                     message,
                 });
 
-            if (dbError) throw dbError;
+            // 23505 is the PostgreSQL error code for unique constraint violation.
+            // If they already submitted feedback, we just accept it gracefully.
+            if (dbError && dbError.code !== '23505') throw dbError;
 
+            const { data: sessionData } = await supabase.auth.getSession();
+            const token = sessionData.session?.access_token;
+            
             const { error: emailError } = await supabase.functions.invoke(
                 "send-feedback-email",
                 {
@@ -81,21 +86,23 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
                         userName: profile?.full_name || user.email || "User",
                         userEmail: user.email || "No Email",
                     },
+                    headers: token ? {
+                        Authorization: `Bearer ${token}`
+                    } : undefined
                 }
             );
 
-            if (emailError) throw emailError;
+            if (emailError) {
+                console.error("Email function failed:", emailError);
+                throw emailError; 
+            }
 
-            toast.success("Thank you for your feedback!", {
-                description: "Your rating helps us improve Eduspace.",
-            });
+            toast.success("✨ Feedback submitted successfully");
 
             setShowPrompt(false);
         } catch (error: any) {
             console.error("Error submitting feedback:", error);
-            toast.error("Failed to submit feedback", {
-                description: error.message || "Please try again later.",
-            });
+            toast.error("✕ Failed to submit feedback");
             throw error;
         }
     };
@@ -106,6 +113,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
 
     const sendTestEmail = async () => {
         try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const token = sessionData.session?.access_token;
+            
             const { error } = await supabase.functions.invoke("send-feedback-email", {
                 body: {
                     rating: 5,
@@ -113,11 +123,14 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
                     userName: profile?.full_name || user?.email || "Tester",
                     userEmail: user?.email || "test@example.com",
                 },
+                headers: token ? {
+                    Authorization: `Bearer ${token}`
+                } : undefined
             });
             if (error) throw error;
-            toast.success("Test email sent successfully!");
+            toast.success("🚀 Test email fired off successfully");
         } catch (error: any) {
-            toast.error("Failed to send test email: " + error.message);
+            toast.error("✕ Failed to send test email");
         }
     };
 

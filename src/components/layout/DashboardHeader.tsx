@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { PanelLeft, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight, MoreVertical, NotebookPen, BookOpen } from "lucide-react";
+import { PanelLeft, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight, MoreVertical, NotebookPen, BookOpen, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStreak } from "@/contexts/StreakContext";
 import { ReactNode } from "react";
 import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) {
   const { theme, setTheme } = useTheme();
   const { profile, updateProfile } = useAuth();
+  const { streak } = useStreak();
   const [toolsExpanded, setToolsExpanded] = useState<boolean>(true);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -82,7 +84,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
         variant="default"
         size="sm"
         onClick={() => window.dispatchEvent(new CustomEvent("open-invite-dialog"))}
-        className="h-10 px-4 gap-2 shadow-md shadow-primary/20 shrink-0 rounded-xl active:scale-95 transition-all"
+        className="h-8 px-3 gap-1.5 shadow-md shadow-primary/20 shrink-0 rounded-xl active:scale-95 transition-all"
         title="Invite User"
       >
         <UserPlus className="size-4" />
@@ -93,7 +95,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
         id="tour-nav-notes"
         variant="outline"
         size="icon"
-        className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group"
+        className="h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm group"
         onClick={() => window.dispatchEvent(new CustomEvent("open-student-notes"))}
         title="My Notes"
       >
@@ -103,7 +105,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
       <Button
         variant="outline"
         size="icon"
-        className="hidden lg:flex h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
+        className="hidden lg:flex h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
         onClick={() => setTheme(theme === "light" ? "dark" : "light")}
       >
         {theme === "light" ? <Sun className="size-[20px] text-amber-500" /> : <Moon className="size-[20px] text-blue-400" />}
@@ -111,9 +113,19 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
     </>
   );
 
+  const streakBadge = (
+    <div 
+      className="flex items-center gap-1.5 px-3 py-1 rounded-[14px] bg-orange-50 dark:bg-slate-950 border border-orange-200/60 dark:border-slate-800 shadow-sm transition-all"
+      title="Current Daily Streak"
+    >
+      <Flame className="size-3.5 text-orange-500 fill-orange-500/20 dark:drop-shadow-[0_0_2px_rgba(249,115,22,0.6)]" />
+      <span className="text-[13px] font-bold text-orange-600 dark:text-orange-400 tracking-wide">{streak?.current_streak || 0}</span>
+    </div>
+  );
+
   return (
     <header className={cn(
-      "sticky top-0 z-[50] flex min-h-16 items-center px-4 lg:px-6 pt-[var(--safe-top)] transition-all duration-300",
+      "sticky top-0 z-[50] flex min-h-14 items-center px-3 lg:px-5 pt-[var(--safe-top)] transition-all duration-300",
       scrolled
         ? "bg-surface/80 backdrop-blur-xl border-b border-border/40 shadow-lg shadow-black/5"
         : "bg-surface/0 border-b border-transparent"
@@ -123,7 +135,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
         <Button
           variant="outline"
           size="icon"
-          className="lg:hidden mr-3 h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
+          className="lg:hidden mr-3 h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
           onClick={onMenuClick}
         >
           <PanelLeft className="size-[22px] text-primary stroke-[2.5px]" />
@@ -133,7 +145,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
         <Button
           variant="outline"
-          className="hidden lg:flex h-10 w-64 justify-start text-muted-foreground font-normal bg-muted/40 border-border/40 hover:bg-muted/60 transition-all rounded-xl active:scale-[0.98] shadow-sm"
+          className="hidden lg:flex h-8 w-56 justify-start text-muted-foreground font-normal bg-muted/40 border-border/40 hover:bg-muted/60 transition-all rounded-xl active:scale-[0.98] shadow-sm text-xs"
           onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
         >
           <Search className="mr-2 h-4 w-4" />
@@ -149,7 +161,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
             type="button"
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm"
+            className="h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all shadow-sm"
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(new CustomEvent("open-command-palette"));
@@ -158,6 +170,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
             <Search className="size-5" />
           </Button>
 
+          {streakBadge}
           <NotificationsPopover />
 
           <DropdownMenu modal={false}>
@@ -165,7 +178,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
               <Button
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 transition-all shadow-sm group active:bg-muted/50"
+                className="h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 transition-all shadow-sm group active:bg-muted/50"
               >
                 <MoreVertical className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </Button>
@@ -219,7 +232,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
+            className="h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
             onClick={handleToggleTools}
             disabled={isSavingPreference}
             title={toolsExpanded ? "Hide header tools" : "Show header tools"}
@@ -231,6 +244,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
               {toolButtons}
             </div>
           )}
+          {streakBadge}
           <NotificationsPopover />
           <UserDropdown />
         </div>

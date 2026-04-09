@@ -18,6 +18,7 @@ import {
   Brain,
   Flame,
   Megaphone,
+  Sparkles,
 } from "lucide-react";
 import {
   Tooltip,
@@ -52,6 +53,7 @@ const studentNavItems = [
   { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/student/attendance" },
   { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
 
+
 ];
 
 
@@ -67,6 +69,7 @@ const lecturerNavItems = [
   { id: "tour-nav-ai-gen", icon: Brain, imageUrl: "/ai-quiz-gen-icon.png", label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
   { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/lecturer/attendance" },
   { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
+
 
 ];
 
@@ -278,7 +281,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                     {profile?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
-                
+
                 {!isCollapsed && (
                   <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-black tracking-tight text-foreground/90 truncate group-hover:text-foreground transition-colors">
@@ -289,15 +292,15 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                     </p>
                   </div>
                 )}
-                
+
                 {!isCollapsed && (
                   <ChevronDown className="size-4 text-muted-foreground group-hover:text-foreground transition-colors opacity-40 group-hover:opacity-100" />
                 )}
               </button>
             </DropdownMenuTrigger>
-            
-            <DropdownMenuContent 
-              side={isCollapsed ? "right" : "bottom"} 
+
+            <DropdownMenuContent
+              side={isCollapsed ? "right" : "bottom"}
               align={isCollapsed ? "end" : "center"}
               sideOffset={12}
               className="w-64 p-1.5 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95 z-[10001]"
