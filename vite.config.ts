@@ -83,6 +83,11 @@ export default defineConfig(() => ({
     chunkSizeWarningLimit: 1000,
     minify: 'esbuild',
     cssCodeSplit: true,
+    // 🔐 Security: Strip all console.* and debugger statements in production
+    // Prevents leaking user IDs, auth events, and internal info via DevTools
+    esbuildOptions: {
+      drop: ['console', 'debugger'],
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

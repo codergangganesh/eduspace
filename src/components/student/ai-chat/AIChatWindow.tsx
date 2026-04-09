@@ -92,7 +92,7 @@ export default function AIChatWindow() {
     }, [displayText, isDeleting, currentSloganIndex, slogans.length, typingSpeed, messages.length]);
 
     useEffect(() => {
-        loadConversations();
+        loadConversations(true);
         loadUserProfile();
     }, []);
 
@@ -146,8 +146,8 @@ export default function AIChatWindow() {
         }
     };
 
-    const loadConversations = async () => {
-        setIsInitialLoading(true);
+    const loadConversations = async (isFirstLoad = false) => {
+        if (isFirstLoad) setIsInitialLoading(true);
         try {
             const data = await aiChatService.getConversations();
             setConversations(data);
@@ -160,7 +160,7 @@ export default function AIChatWindow() {
         } catch (error) {
             console.error("Failed to load conversations:", error);
         } finally {
-            setIsInitialLoading(false);
+            if (isFirstLoad) setIsInitialLoading(false);
         }
     };
 
@@ -623,7 +623,7 @@ export default function AIChatWindow() {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                         >
-                                            <AIMessage role="assistant" content={streamingMessage} />
+                                            <AIMessage role="assistant" content={streamingMessage} isStreaming={true} />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>

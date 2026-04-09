@@ -15,7 +15,7 @@ import {
   Dialog,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck, Sun, Moon, Monitor } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck, Sun, Moon, Monitor, MessageSquare } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
 
@@ -44,18 +44,13 @@ export function UserDropdown() {
     <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
       <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 pl-2 pr-1 h-10 rounded-xl border border-transparent hover:bg-muted/30 transition-all duration-300 group">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-black tracking-tight text-foreground/90 group-hover:text-foreground">{displayName}</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{displayRole}</p>
-            </div>
-            <Avatar className="size-8 border border-border/50 shadow-sm">
+          <button className="flex items-center justify-center size-9 rounded-full border border-transparent hover:bg-muted/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <Avatar className="size-9 shadow-sm">
               <AvatarImage src={profile?.avatar_url || ""} />
               <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <ChevronDown className="size-4 text-muted-foreground hidden sm:block group-hover:text-foreground transition-colors" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64 p-1.5 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-popover/95">
@@ -131,6 +126,13 @@ export function UserDropdown() {
             <DropdownMenuSeparator />
           </div>
 
+          <DropdownMenuItem 
+            className="flex items-center gap-2 cursor-pointer lg:hidden"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-feedback"))}
+          >
+            <MessageSquare className="size-4" />
+            Give Feedback
+          </DropdownMenuItem>
           <DialogTrigger asChild>
             <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
               <Mail className="size-4" />

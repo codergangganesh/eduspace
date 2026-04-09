@@ -170,16 +170,26 @@ const executeAction = async (
   switch (action) {
     // ── Create Assignment ─────────────────────────────────────────────────
     case "create_assignment": {
+      // 🔐 Fix MED-03: Validate AI-returned params before any DB write
+      const title = String(params.title ?? "").trim();
+      if (!title) throw new Error("Assignment title is required.");
+      if (title.length > 200) throw new Error("Assignment title is too long (max 200 chars).");
+      if (!params.class_id) throw new Error("Class ID is required.");
+
+      const maxPoints = Number(params.max_points ?? 100);
+      if (isNaN(maxPoints) || maxPoints < 0 || maxPoints > 1000)
+        throw new Error("Max points must be between 0 and 1000.");
+
       const { data: assignment, error } = await supabase
         .from("assignments")
         .insert({
-          title: params.title as string,
+          title,
           class_id: params.class_id as string,
           topic: (params.topic as string) ?? null,
           description: (params.description as string) ?? null,
           instructions: (params.instructions as string) ?? null,
           due_date: (params.due_date as string) ?? null,
-          max_points: (params.max_points as number) ?? 100,
+          max_points: maxPoints,
           lecturer_id: userId,
           status: "active",
         })
@@ -199,8 +209,8 @@ const executeAction = async (
         const notifications = students.map((s) => ({
           recipient_id: s.student_id as string,
           sender_id: userId,
-          title: `New Assignment: ${params.title}`,
-          message: `A new assignment "${params.title}" has been posted. Due: ${params.due_date ?? "TBD"}.`,
+          title: `New Assignment: ${title}`,
+          message: `A new assignment "${title}" has been posted. Due: ${params.due_date ?? "TBD"}.`,
           type: "announcement",
           class_id: params.class_id as string,
           link: "/student/assignments",
@@ -210,27 +220,50 @@ const executeAction = async (
 
       await logAction(userId, action, params, assignment?.id);
       const count = students?.length ?? 0;
-      return `✅ Assignment **"${params.title}"** created successfully!\n${count} student${count !== 1 ? "s" : ""} in the class have been notified.\nDue: ${params.due_date ?? "No deadline set"} | Points: ${params.max_points ?? 100}`;
+      return `✅ Assignment **"${title}"** created successfully!\n${count} student${count !== 1 ? "s" : ""} in the class have been notified.\nDue: ${params.due_date ?? "No deadline set"} | Points: ${maxPoints}`;
     }
 
     // ── Create Quiz ───────────────────────────────────────────────────────
     case "create_quiz": {
-      const questions = params.questions as {
+      // 🔐 Fix MED-03: Validate quiz params
+      const quizTitle = String(params.title ?? "").trim();
+      if (!quizTitle) throw new Error("Quiz title is required.");
+      if (quizTitle.length > 200) throw new Error("Quiz title is too long (max 200 chars).");
+      if (!params.class_id) throw new Error("Class ID is required.");
+
+      const passPercentage = Number(params.pass_percentage ?? 40);
+      if (isNaN(passPercentage) || passPercentage < 0 || passPercentage > 100)
+        throw new Error("Pass percentage must be between 0 and 100.");
+
+      const questions = (params.questions as {
         question_text: string;
         options: Record<string, string>;
         correct_answer: string;
         marks: number;
-      }[];
+      }[]);
+
+      if (!Array.isArray(questions) || questions.length === 0)
+        throw new Error("Quiz must have at least one question.");
+      if (questions.length > 100)
+        throw new Error("Quiz cannot have more than 100 questions.");
+
+      // Validate each question's marks
+      for (const q of questions) {
+        const marks = Number(q.marks);
+        if (isNaN(marks) || marks < 0 || marks > 100)
+          throw new Error(`Invalid marks value (${q.marks}) in a question. Must be 0–100.`);
+        q.marks = marks; // normalize
+      }
 
       const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
 
       const { data: quiz, error: quizErr } = await supabase
         .from("quizzes")
         .insert({
-          title: params.title as string,
+          title: quizTitle,
           class_id: params.class_id as string,
           description: (params.description as string) ?? null,
-          pass_percentage: (params.pass_percentage as number) ?? 40,
+          pass_percentage: passPercentage,
           due_date: (params.due_date as string) ?? null,
           created_by: userId,
           status: "active",
@@ -397,6 +430,14 @@ const executeAction = async (
 
     // ── Grade Submission ───────────────────────────────────────────────────
     case "grade_submission": {
+      // 🔐 Fix MED-03: Validate grade before writing to DB
+      const grade = Number(params.grade);
+      if (isNaN(grade) || grade < 0 || grade > 100)
+        throw new Error(`Invalid grade "${params.grade}". Grade must be between 0 and 100.`);
+
+      if (!params.assignment_title || !params.student_name)
+        throw new Error("Assignment title and student name are required.");
+
       // Find assignment by title + class
       const { data: assignment } = await supabase
         .from("assignments")
@@ -422,7 +463,7 @@ const executeAction = async (
       const { error } = await supabase
         .from("assignment_submissions")
         .update({
-          grade: params.grade as number,
+          grade,
           feedback: (params.feedback as string) ?? null,
           status: "graded",
           graded_at: new Date().toISOString(),
@@ -437,13 +478,13 @@ const executeAction = async (
         recipient_id: studentRecord.student_id,
         sender_id: userId,
         title: `Grade Posted: ${assignment.title}`,
-        message: `Your grade for "${assignment.title}" is ${params.grade}. ${params.feedback ? `Feedback: ${params.feedback}` : ""}`,
+        message: `Your grade for "${assignment.title}" is ${grade}. ${params.feedback ? `Feedback: ${params.feedback}` : ""}`,
         type: "announcement",
         link: "/student/assignments",
       });
 
       await logAction(userId, action, params);
-      return `✅ Grade **${params.grade}** saved for **${params.student_name}**!\nAssignment: "${assignment.title}"${params.feedback ? `\nFeedback sent.` : ""}`;
+      return `✅ Grade **${grade}** saved for **${params.student_name}**!\nAssignment: "${assignment.title}"${params.feedback ? `\nFeedback sent.` : ""}`;
     }
 
     default:

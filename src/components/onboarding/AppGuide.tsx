@@ -159,6 +159,16 @@ export function AppGuide() {
     const [hasInitialized, setHasInitialized] = useState(false);
 
     useEffect(() => {
+        const handleOpenTour = () => {
+            setCurrentStep(0);
+            setIsVisible(true);
+            document.body.setAttribute('data-tour-active', 'true');
+        };
+        window.addEventListener('open-app-guide', handleOpenTour);
+        return () => window.removeEventListener('open-app-guide', handleOpenTour);
+    }, [setCurrentStep, setIsVisible]);
+
+    useEffect(() => {
         // Reset state if user logs out
         if (!profile) {
             setHasInitialized(false);

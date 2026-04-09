@@ -14,7 +14,21 @@ let appState = {
   activeChatId: null,
 };
 
+// 🔐 Security: Only accept postMessage from trusted origins.
+// Prevents a malicious iframe from manipulating push notification suppression.
+const TRUSTED_ORIGINS = [
+  'https://eduspaceacademy.online',
+  'http://localhost:8080',
+  'http://localhost:3000',
+];
+
 self.addEventListener('message', (event) => {
+  // Verify the message comes from a trusted origin
+  if (event.origin && !TRUSTED_ORIGINS.includes(event.origin)) {
+    // Silently reject messages from unknown origins
+    return;
+  }
+
   if (event.data && event.data.type === 'APP_STATE') {
     appState = {
       isFocused: event.data.isFocused ?? appState.isFocused,
@@ -185,8 +199,6 @@ self.addEventListener('notificationclick', (event) => {
   const notificationData = event.notification.data || {};
   const urlToOpen = notificationData.url || '/';
 
-  console.log('[SW] Notification clicked:', event.action, 'URL:', urlToOpen);
-
   // Handle specific action button clicks
   if (event.action === 'dismiss' || event.action === 'decline') {
     return; // Just close the notification
@@ -195,7 +207,6 @@ self.addEventListener('notificationclick', (event) => {
   // Handle call acceptance
   if (event.action === 'accept') {
     const clickUrl = urlToOpen + (urlToOpen.includes('?') ? '&' : '?') + 'action=accept';
-    console.log('[SW] Accept action, opening:', clickUrl);
     event.waitUntil(openOrFocusWindow(clickUrl));
     return;
   }
@@ -213,14 +224,11 @@ self.addEventListener('notificationclose', () => {
 
 // ─── Helper: Open or focus existing window ──────────────────────────────────
 async function openOrFocusWindow(urlToOpen) {
-  console.log('[SW] Attempting to open/focus:', urlToOpen);
-  
   // Create a proper target URL object
   let targetUrl;
   try {
     targetUrl = new URL(urlToOpen, self.location.origin);
   } catch {
-    console.error('[SW] Invalid URL format:', urlToOpen);
     targetUrl = new URL('/', self.location.origin);
   }
 
@@ -231,11 +239,10 @@ async function openOrFocusWindow(urlToOpen) {
     try {
       const clientUrl = new URL(client.url);
       if (clientUrl.href === targetUrl.href && 'focus' in client) {
-        console.log('[SW] Found exact URL match, focusing...');
         return client.focus();
       }
     } catch (e) {
-      console.warn('[SW] Failed to parse existing client URL:', e);
+      // ignore parse errors
     }
   }
 
@@ -244,7 +251,6 @@ async function openOrFocusWindow(urlToOpen) {
     try {
       const clientUrl = new URL(client.url);
       if (clientUrl.origin === targetUrl.origin && 'focus' in client) {
-        console.log('[SW] Found same-origin client, focusing and navigating...');
         const focused = await client.focus();
         if (focused && focused.navigate) {
           return focused.navigate(targetUrl.href);
@@ -252,13 +258,12 @@ async function openOrFocusWindow(urlToOpen) {
         return focused;
       }
     } catch (e) {
-      console.error('[SW] URL parsing/focus failed for client:', e);
+      // ignore
     }
   }
 
   // 3. No existing window — open a new one
   if (self.clients.openWindow) {
-    console.log('[SW] No existing client found, opening new window...');
     return self.clients.openWindow(targetUrl.href);
   }
 }

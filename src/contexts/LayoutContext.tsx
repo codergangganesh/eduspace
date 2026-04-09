@@ -21,6 +21,8 @@ interface LayoutContextType {
     setTourActiveStepId: (id: string | null) => void;
     isAICoachOpen: boolean;
     setIsAICoachOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    globalHideDashboardHeader: boolean;
+    setGlobalHideDashboardHeader: (hide: boolean) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -43,6 +45,18 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(false);
     const [tourActiveStepId, setTourActiveStepId] = useState<string | null>(null);
     const [isAICoachOpen, setIsAICoachOpen] = useState(false);
+
+    const [globalHideDashboardHeader, setGlobalHideDashboardHeaderState] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('hideDashboardHeader') === 'true';
+        }
+        return false;
+    });
+
+    const setGlobalHideDashboardHeader = (hide: boolean) => {
+        setGlobalHideDashboardHeaderState(hide);
+        localStorage.setItem('hideDashboardHeader', String(hide));
+    };
 
     // Sync with profile on load (if not set in localstorage, or just to keep in sync)
     useEffect(() => {
@@ -79,7 +93,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
             tourActiveStepId,
             setTourActiveStepId,
             isAICoachOpen,
-            setIsAICoachOpen
+            setIsAICoachOpen,
+            globalHideDashboardHeader,
+            setGlobalHideDashboardHeader
         }}>
             {children}
         </LayoutContext.Provider>

@@ -1,4 +1,3 @@
-
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -19,15 +18,9 @@ window.addEventListener("unhandledrejection", (event) => {
             reason.message?.includes("Load failed") ||
             (reason.constructor && reason.constructor.name === "TypeError" && reason.message?.includes("Failed to fetch")))
     ) {
-        console.warn("Caught suppressed network error (likely background refresh or DNS issue):", reason);
-
-        // Show a non-intrusive log but prevent the crash overlay in development
-        if (window.confirm && reason.message?.includes("Failed to fetch") && !localStorage.getItem('net_error_shown')) {
-            console.log("Network request failed. This is often due to unstable mobile DNS or Supabase being unreachable.");
-            localStorage.setItem('net_error_shown', 'true');
-            setTimeout(() => localStorage.removeItem('net_error_shown'), 60000);
-        }
-
+        // 🔐 Silently suppress network errors to prevent freezing the UI.
+        // window.confirm() was causing AI streams to hang/refresh.
+        console.warn("Caught suppressed network error:", reason);
         event.preventDefault();
         return;
     }

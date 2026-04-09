@@ -134,12 +134,20 @@ const LoadingFallback = () => {
 };
 
 // Global polyfill for chunk errors
+// 🔐 Security: Reload counter prevents infinite-loop DoS if a malicious/stale chunk
+// keeps triggering errors. Max 2 reloads per session, then gives up gracefully.
 window.addEventListener('error', (e: ErrorEvent) => {
-  // Defensive check for message to prevent "cannot read properties of undefined (reading 'includes')"
   const message = (e && typeof e.message === 'string') ? e.message : "";
   if (message && (message.includes('Loading chunk') || message.includes('CSS chunk'))) {
-    console.warn("Chunk error detected, reloading...");
-    window.location.reload();
+    const reloadCount = parseInt(sessionStorage.getItem('chunkReloadCount') || '0', 10);
+    if (reloadCount < 2) {
+      sessionStorage.setItem('chunkReloadCount', String(reloadCount + 1));
+      console.warn(`Chunk error detected, reloading... (attempt ${reloadCount + 1}/2)`);
+      window.location.reload();
+    } else {
+      console.error("Chunk error persists after 2 reloads. Stopping to prevent infinite loop.");
+      sessionStorage.removeItem('chunkReloadCount');
+    }
   }
 }, true);
 
@@ -163,7 +171,11 @@ const FeedbackManager = () => {
     }
   }, [user, profile]);
 
-
+  useEffect(() => {
+    const handleOpenFeedback = () => setShowPrompt(true);
+    window.addEventListener("open-feedback", handleOpenFeedback);
+    return () => window.removeEventListener("open-feedback", handleOpenFeedback);
+  }, [setShowPrompt]);
   return (
     <FeedbackPrompt
       isOpen={showPrompt}

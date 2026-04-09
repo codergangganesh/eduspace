@@ -192,7 +192,7 @@ export function StudentNotesDrawer({ showTrigger = true }: { showTrigger?: boole
                         Manage your personal study notes, including creating, editing, and deleting notes.
                     </SheetDescription>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         {/* New Note Button (Desktop Title Row) */}
                         {!newNoteMode && !isEditing && !isMobile && (
                             <button
@@ -211,6 +211,14 @@ export function StudentNotesDrawer({ showTrigger = true }: { showTrigger?: boole
                                 Cancel
                             </button>
                         )}
+
+                        <button
+                            onClick={() => setOpen(false)}
+                            className="size-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground/60 hover:text-foreground active:scale-90"
+                            title="Close"
+                        >
+                            <X className="size-5" />
+                        </button>
                     </div>
                 </div>
 
@@ -429,7 +437,7 @@ export function StudentNotesDrawer({ showTrigger = true }: { showTrigger?: boole
             )}
             <SheetContent
                 side="right"
-                className="flex flex-col p-0 border-none bg-background shadow-2xl transition-all duration-500 ease-in-out h-full w-full sm:max-w-md pt-[var(--safe-top)] z-[10001]"
+                className="flex flex-col p-0 border-none bg-background shadow-2xl transition-all duration-500 ease-in-out h-full w-full sm:max-w-md pt-[var(--safe-top)] z-[10001] [&>button]:hidden"
             >
                 {renderContent()}
             </SheetContent>

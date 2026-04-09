@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth, Profile as ProfileType } from "@/contexts/AuthContext";
+import { useLayout } from "@/contexts/LayoutContext";
 import { useTheme } from "@/contexts/ThemeContext"; // Added for theme management
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
 import { LanguageSelector } from "@/components/language/LanguageSelector";
@@ -80,6 +81,7 @@ const profileTabs = [
 
 export default function Profile() {
   const { user, profile, isAuthenticated, isLoading: authLoading, updateProfile, role } = useAuth();
+  const { globalHideDashboardHeader, setGlobalHideDashboardHeader } = useLayout();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("personal");
   const [isEditing, setIsEditing] = useState(false);
@@ -1250,6 +1252,22 @@ export default function Profile() {
                   <p className="text-xs text-muted-foreground">
                     Choose your preferred theme. System will follow your device settings.
                   </p>
+                </div>
+
+                {/* Hide Dashboard Header */}
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                       Hide Dashboard Header
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Remove the top navigation bar from your dashboard interface.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={globalHideDashboardHeader}
+                    onCheckedChange={(checked) => setGlobalHideDashboardHeader(checked)}
+                  />
                 </div>
               </div>
             </div>

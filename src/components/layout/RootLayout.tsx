@@ -23,7 +23,8 @@ export function RootLayout() {
         isMobileMenuOpen,
         setIsMobileMenuOpen,
         isAICoachOpen,
-        setIsAICoachOpen
+        setIsAICoachOpen,
+        globalHideDashboardHeader
     } = useLayout();
 
     const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -114,28 +115,30 @@ export function RootLayout() {
                 isCollapsed ? "lg:pl-20" : "lg:pl-72"
             )}>
                 {/* Header visibility logic - Always show on mobile, show only on dashboard for desktop */}
-                <div className={cn(!isDashboard && "lg:hidden")}>
-                    {!options.hideHeaderOnMobile && (
-                        <DashboardHeader
-                            onMenuClick={() => setIsMobileMenuOpen(true)}
-                            actions={actions}
-                        />
-                    )}
-                    {options.hideHeaderOnMobile && (
-                        <div className="hidden lg:block">
+                {!globalHideDashboardHeader && (
+                    <div className={cn(!isDashboard && "lg:hidden")}>
+                        {!options.hideHeaderOnMobile && (
                             <DashboardHeader
                                 onMenuClick={() => setIsMobileMenuOpen(true)}
                                 actions={actions}
                             />
-                        </div>
-                    )}
-                </div>
+                        )}
+                        {options.hideHeaderOnMobile && (
+                            <div className="hidden lg:block">
+                                <DashboardHeader
+                                    onMenuClick={() => setIsMobileMenuOpen(true)}
+                                    actions={actions}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <main
                     className={cn(
                         "flex-1 min-h-0 overflow-hidden relative",
                         !options.fullHeight && "p-4 lg:p-6 overflow-y-auto",
-                        (options.hideHeaderOnMobile || (!isDashboard && window.innerWidth >= 1024)) && "pt-0"
+                        (globalHideDashboardHeader || options.hideHeaderOnMobile || (!isDashboard && window.innerWidth >= 1024)) && "pt-0"
                     )}
                 >
                     <PageTransition className="h-full w-full">

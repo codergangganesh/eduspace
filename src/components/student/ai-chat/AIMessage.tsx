@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface AIMessageProps {
     messageId?: string;
@@ -20,9 +21,23 @@ interface AIMessageProps {
     };
     onUpdateMessage?: (id: string, newContent: string) => void;
     isReadOnly?: boolean;
+    isStreaming?: boolean;
 }
 
-export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly }: AIMessageProps) {
+const TypingCursor = () => (
+    <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 0] }}
+        transition={{
+            duration: 0.8,
+            repeat: Infinity,
+            ease: "linear"
+        }}
+        className="inline-block w-1.5 h-4 ml-0.5 bg-primary/50 rounded-full align-middle mb-0.5"
+    />
+);
+
+export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming }: AIMessageProps) {
     const [copied, setCopied] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(typeof content === 'string' ? content : '');
@@ -222,42 +237,63 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                     "prose-p:mb-4 last:prose-p:mb-0",
                                     "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl"
                                 )}>
-                                    <ReactMarkdown
-                                        components={{
-                                            code({ node, inline, className, children, ...props }: any) {
-                                                const match = /language-(\w+)/.exec(className || '');
-                                                return !inline && match ? (
-                                                    <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
-                                                        <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
-                                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                                {match[1]}
-                                                            </span>
-                                                            <div className="flex gap-1.5">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
+                                    {processedText === "" && isStreaming ? (
+                                        <div className="flex items-center gap-2 text-muted-foreground/40 py-2">
+                                            <motion.div
+                                                animate={{ scale: [1, 1.2, 1] }}
+                                                transition={{ repeat: Infinity, duration: 1.5 }}
+                                                className="w-2 h-2 rounded-full bg-primary/40"
+                                            />
+                                            <motion.div
+                                                animate={{ scale: [1, 1.2, 1] }}
+                                                transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }}
+                                                className="w-2 h-2 rounded-full bg-primary/40"
+                                            />
+                                            <motion.div
+                                                animate={{ scale: [1, 1.2, 1] }}
+                                                transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }}
+                                                className="w-2 h-2 rounded-full bg-primary/40"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <ReactMarkdown
+                                            components={{
+                                                code({ node, inline, className, children, ...props }: any) {
+                                                    const match = /language-(\w+)/.exec(className || '');
+                                                    return !inline && match ? (
+                                                        <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+                                                            <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                                                    {match[1]}
+                                                                </span>
+                                                                <div className="flex gap-1.5">
+                                                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
+                                                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
+                                                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
+                                                                </div>
                                                             </div>
+                                                            <SyntaxHighlighter
+                                                                style={vscDarkPlus as any}
+                                                                language={match[1]}
+                                                                PreTag="div"
+                                                                className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
+                                                                {...props}
+                                                            >
+                                                                {String(children).replace(/\n$/, '')}
+                                                            </SyntaxHighlighter>
                                                         </div>
-                                                        <SyntaxHighlighter
-                                                            style={vscDarkPlus as any}
-                                                            language={match[1]}
-                                                            PreTag="div"
-                                                            className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
-                                                            {...props}
-                                                        >
-                                                            {String(children).replace(/\n$/, '')}
-                                                        </SyntaxHighlighter>
-                                                    </div>
-                                                ) : (
-                                                    <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
-                                                        {children}
-                                                    </code>
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        {processedText}
-                                    </ReactMarkdown>
+                                                    ) : (
+                                                        <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
+                                                            {children}
+                                                        </code>
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            {processedText}
+                                        </ReactMarkdown>
+                                    )}
+                                    {isStreaming && processedText !== "" && <TypingCursor />}
                                 </div>
                             )}
                         </div>

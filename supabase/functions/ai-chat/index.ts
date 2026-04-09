@@ -1,185 +1,215 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// 🔐 Fix MED-02: Restrict to production domain only (no more wildcard *)
+const ALLOWED_ORIGINS = [
+  'https://eduspaceacademy.online',
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+  };
+}
 
+// ─── Groq Models ──────────────────────────────────────────────────────────────
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// Groq supported models
 const MODELS = [
-    'llama-3.3-70b-versatile',
-    'mixtral-8x7b-32768',
-    'llama-3.1-8b-instant',
-    'gemma2-9b-it',
+  'llama-3.3-70b-versatile',
+  'mixtral-8x7b-32768',
+  'llama-3.1-8b-instant',
+  'gemma2-9b-it',
 ];
 
 const VISION_MODELS = [
-    'llama-3.2-11b-vision-preview',
-    'llama-3.2-90b-vision-preview',
+  'llama-3.2-11b-vision-preview',
+  'llama-3.2-90b-vision-preview',
 ];
 
 function delay(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function hasImageContent(messages: any[]) {
-    return messages.some(m =>
-        Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
-    );
+  return messages.some(m =>
+    Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
+  );
 }
 
+// ─── Main Handler ─────────────────────────────────────────────────────────────
 serve(async (req: Request) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
+  const corsHeaders = getCorsHeaders(req);
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  // 🔐 Fix MED-01: Verify the user is authenticated before calling Groq.
+  // supabase.functions.invoke() sends the auth token automatically — 
+  // so this will NEVER block a logged-in user. It only blocks anonymous abuse.
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized. Please log in to use AI features.' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    // Verify the JWT with Supabase
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized. Invalid or expired session.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    try {
-        const payload = await req.json();
-        const { messages, stream = true } = payload;
+    // ─── Authenticated — proceed with AI request ───────────────────────────
+    const payload = await req.json();
+    const { messages, stream = true } = payload;
 
-        // Get API key from environment variables
-        const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    // Get API key from environment variables (server-side secret — never exposed)
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
 
-        if (!GROQ_API_KEY) {
-            console.error('GROQ_API_KEY is missing from environment variables');
-            return new Response(JSON.stringify({
-                error: 'AI service configuration error.',
-                details: 'Server misconfiguration: Missing GROQ_API_KEY.'
-            }), {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+    if (!GROQ_API_KEY) {
+      return new Response(JSON.stringify({
+        error: 'AI service configuration error.',
+        details: 'Server misconfiguration: Missing GROQ_API_KEY.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Determine which models to try
+    const isVisionNeeded = hasImageContent(messages);
+    const modelsToTry = isVisionNeeded ? VISION_MODELS : MODELS;
+
+    // Try models in order until one works
+    let lastError = null;
+    let successResponse = null;
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await fetch(GROQ_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            stream,
+            temperature: 0.7,
+            max_tokens: 4096,
+          }),
+        });
+
+        if (response.ok) {
+          successResponse = response;
+          break;
         }
 
-        // Determine which models to try
-        const isVisionNeeded = hasImageContent(messages);
-        const modelsToTry = isVisionNeeded ? VISION_MODELS : MODELS;
+        // Handle 429 Rate Limit with Backoff
+        if (response.status === 429) {
+          let retryDelay = 2000;
+          let retryAttempts = 0;
+          const maxRetries = 2;
 
-        console.log(`AI Request: Vision Needed = ${isVisionNeeded}`);
+          while (retryAttempts < maxRetries) {
+            await delay(retryDelay);
 
-        // We will try models in order until one works
-        let lastError = null;
-        let successResponse = null;
+            const retryResponse = await fetch(GROQ_API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model,
+                messages,
+                stream,
+                temperature: 0.7,
+                max_tokens: 4096,
+              }),
+            });
 
-        for (const model of modelsToTry) {
-            console.log(`Attempting AI chat with Groq model: ${model}`);
-
-                try {
-            const response = await fetch(GROQ_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${GROQ_API_KEY}`,
-                    },
-                    body: JSON.stringify({
-                        model,
-                        messages,
-                        stream,
-                        temperature: 0.7,
-                        max_tokens: 4096,
-                    }),
-                });
-
-                if (response.ok) {
-                    successResponse = response;
-                    console.log(`Successfully connected to model: ${model}`);
-                    break;
-                }
-
-                // Handle 429 Rate Limit with Backoff
-                if (response.status === 429) {
-                    console.warn(`Rate limited for Groq model ${model}, implementing backoff...`);
-
-                    let retryDelay = 2000; // Start with 2 seconds
-                    let retryAttempts = 0;
-                    const maxRetries = 2; // Groq rate limits can be tight, fewer retries per model
-
-                    while (retryAttempts < maxRetries) {
-                        console.log(`Retry attempt ${retryAttempts + 1}/${maxRetries} for ${model}`);
-                        await delay(retryDelay);
-
-                        const retryResponse = await fetch(GROQ_API_URL, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${GROQ_API_KEY}`,
-                            },
-                            body: JSON.stringify({
-                                model,
-                                messages,
-                                stream,
-                                temperature: 0.7,
-                                max_tokens: 4096,
-                            }),
-                        });
-
-                        if (retryResponse.ok) {
-                            successResponse = retryResponse;
-                            console.log(`Successfully connected to model: ${model} after retry.`);
-                            break;
-                        }
-
-                        retryAttempts++;
-                        retryDelay *= 2; // Exponential backoff: 2s -> 4s -> 8s
-
-                        if (retryAttempts >= maxRetries) {
-                            const errorText = await retryResponse.text();
-                            console.warn(`Model ${model} failed after retries: ${errorText}`);
-                            lastError = errorText;
-                        }
-                    }
-
-                    if (successResponse) break; // If retry succeeded, exit main loop
-                    continue; // If retries failed, move to next model
-
-                } else {
-                    // Other errors (4xx, 5xx)
-                    const errorText = await response.text();
-                    console.warn(`Model ${model} failed: ${errorText}`);
-                    lastError = errorText;
-                    // Proceed to next model immediately
-                }
-
-            } catch (err: any) {
-                console.warn(`Network error with model ${model}:`, err);
-                lastError = err.message || String(err);
-                // Proceed to next model
+            if (retryResponse.ok) {
+              successResponse = retryResponse;
+              break;
             }
+
+            retryAttempts++;
+            retryDelay *= 2; // Exponential backoff: 2s → 4s → 8s
+
+            if (retryAttempts >= maxRetries) {
+              const errorText = await retryResponse.text();
+              lastError = errorText;
+            }
+          }
+
+          if (successResponse) break;
+          continue;
+
+        } else {
+          const errorText = await response.text();
+          lastError = errorText;
         }
 
-        if (!successResponse) {
-            return new Response(JSON.stringify({
-                error: 'AI service is currently unavailable.',
-                details: lastError || 'All Groq models failed.'
-            }), {
-                status: 503,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
-
-        // Return the successful response (stream or json)
-        return new Response(successResponse.body, {
-            headers: {
-                ...corsHeaders,
-                'Content-Type': stream ? 'text/event-stream' : 'application/json',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            },
-        });
-
-    } catch (error: any) {
-        console.error('Edge Function Request Error:', error);
-        return new Response(JSON.stringify({
-            error: 'Internal Server Error',
-            details: error.message
-        }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      } catch (err: any) {
+        lastError = err.message || String(err);
+      }
     }
+
+    if (!successResponse) {
+      return new Response(JSON.stringify({
+        error: 'AI service is currently unavailable.',
+        details: lastError || 'All Groq models failed.'
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Return the successful response (stream or json)
+    return new Response(successResponse.body, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': stream ? 'text/event-stream' : 'application/json',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+
+  } catch (error: any) {
+    return new Response(JSON.stringify({
+      error: 'Internal Server Error',
+      details: error.message
+    }), {
+      status: 500,
+      headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+    });
+  }
 });
