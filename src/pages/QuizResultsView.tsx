@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { useAuth } from '@/contexts/AuthContext';
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -193,19 +193,35 @@ export default function QuizResultsView() {
 
     const totalPages = Math.ceil(filtereddata.length / itemsPerPage);
 
-    const handleExport = () => {
-        const data = submissions.map(s => ({
-            Rank: s.rank,
-            Student: s.profiles?.full_name || 'Unknown',
-            Score: s.total_obtained,
-            Max: quiz?.total_marks,
-            Status: s.status,
-            Time: s.completionTime,
-            Date: new Date(s.submitted_at).toLocaleString()
+    const handleExport = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Results');
+        sheet.columns = [
+            { header: 'Rank',    key: 'rank',    width: 8  },
+            { header: 'Student', key: 'student', width: 28 },
+            { header: 'Score',   key: 'score',   width: 10 },
+            { header: 'Max',     key: 'max',     width: 10 },
+            { header: 'Status',  key: 'status',  width: 12 },
+            { header: 'Time',    key: 'time',    width: 14 },
+            { header: 'Date',    key: 'date',    width: 24 },
+        ];
+        submissions.forEach(s => sheet.addRow({
+            rank:    s.rank,
+            student: s.profiles?.full_name || 'Unknown',
+            score:   s.total_obtained,
+            max:     quiz?.total_marks,
+            status:  s.status,
+            time:    s.completionTime,
+            date:    new Date(s.submitted_at).toLocaleString(),
         }));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Results");
-        XLSX.writeFile(wb, `Results_${quiz?.title}.xlsx`);
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Results_${quiz?.title}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     // Top performers podium logic (Only real submissions)

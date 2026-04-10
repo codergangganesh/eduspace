@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export interface StudentData {
     registerNumber: string;
@@ -19,89 +19,70 @@ export interface ValidationError {
 
 export function useExcelImport() {
     const parseExcelFile = async (file: File): Promise<{ data: StudentData[]; errors: ValidationError[] }> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+        try {
+            const buffer = await file.arrayBuffer();
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(buffer);
 
-            reader.onload = (e) => {
-                try {
-                    const data = e.target?.result;
-                    const workbook = XLSX.read(data, { type: 'binary' });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            const worksheet = workbook.worksheets[0];
+            const students: StudentData[] = [];
+            const errors: ValidationError[] = [];
 
-                    const students: StudentData[] = [];
-                    const errors: ValidationError[] = [];
+            // Build header map from first row
+            const headerRow = worksheet.getRow(1);
+            const headers: Record<number, string> = {};
+            headerRow.eachCell((cell, colNumber) => {
+                headers[colNumber] = String(cell.value ?? '');
+            });
 
-                    jsonData.forEach((row: any, index: number) => {
-                        const rowNumber = index + 2; // +2 because Excel is 1-indexed and has header row
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber === 1) return; // skip header
 
-                        // Validate required fields
-                        if (!row['Register Number'] && !row['registerNumber']) {
-                            errors.push({
-                                row: rowNumber,
-                                field: 'Register Number',
-                                message: 'Register Number is required',
-                            });
-                        }
+                const rowData: Record<string, any> = {};
+                row.eachCell((cell, colNumber) => {
+                    rowData[headers[colNumber]] = cell.value;
+                });
 
-                        if (!row['Student Name'] && !row['studentName']) {
-                            errors.push({
-                                row: rowNumber,
-                                field: 'Student Name',
-                                message: 'Student Name is required',
-                            });
-                        }
-
-                        if (!row['Email'] && !row['email']) {
-                            errors.push({
-                                row: rowNumber,
-                                field: 'Email',
-                                message: 'Email is required',
-                            });
-                        } else {
-                            const email = row['Email'] || row['email'];
-                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                            if (!emailRegex.test(email)) {
-                                errors.push({
-                                    row: rowNumber,
-                                    field: 'Email',
-                                    message: 'Invalid email format',
-                                });
-                            }
-                        }
-
-                        // If no critical errors, add student
-                        if (
-                            (row['Register Number'] || row['registerNumber']) &&
-                            (row['Student Name'] || row['studentName']) &&
-                            (row['Email'] || row['email'])
-                        ) {
-                            students.push({
-                                registerNumber: row['Register Number'] || row['registerNumber'],
-                                studentName: row['Student Name'] || row['studentName'],
-                                email: row['Email'] || row['email'],
-                                department: row['Department'] || row['department'] || '',
-                                course: row['Course'] || row['course'] || '',
-                                year: row['Year'] || row['year'] || '',
-                                section: row['Section'] || row['section'] || '',
-                                phone: row['Phone'] || row['phone'] || '',
-                            });
-                        }
-                    });
-
-                    resolve({ data: students, errors });
-                } catch (error) {
-                    reject(error);
+                // Validate required fields
+                if (!rowData['Register Number'] && !rowData['registerNumber']) {
+                    errors.push({ row: rowNumber, field: 'Register Number', message: 'Register Number is required' });
                 }
-            };
+                if (!rowData['Student Name'] && !rowData['studentName']) {
+                    errors.push({ row: rowNumber, field: 'Student Name', message: 'Student Name is required' });
+                }
 
-            reader.onerror = () => {
-                reject(new Error('Failed to read file'));
-            };
+                const email = rowData['Email'] || rowData['email'];
+                if (!email) {
+                    errors.push({ row: rowNumber, field: 'Email', message: 'Email is required' });
+                } else {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        errors.push({ row: rowNumber, field: 'Email', message: 'Invalid email format' });
+                    }
+                }
 
-            reader.readAsBinaryString(file);
-        });
+                if (
+                    (rowData['Register Number'] || rowData['registerNumber']) &&
+                    (rowData['Student Name'] || rowData['studentName']) &&
+                    email
+                ) {
+                    students.push({
+                        registerNumber: String(rowData['Register Number'] || rowData['registerNumber']),
+                        studentName: String(rowData['Student Name'] || rowData['studentName']),
+                        email: String(email),
+                        department: String(rowData['Department'] || rowData['department'] || ''),
+                        course: String(rowData['Course'] || rowData['course'] || ''),
+                        year: String(rowData['Year'] || rowData['year'] || ''),
+                        section: String(rowData['Section'] || rowData['section'] || ''),
+                        phone: String(rowData['Phone'] || rowData['phone'] || ''),
+                    });
+                }
+            });
+
+            return { data: students, errors };
+        } catch (error) {
+            throw error;
+        }
     };
 
     const validateStudentData = (students: StudentData[]): ValidationError[] => {
@@ -138,38 +119,52 @@ export function useExcelImport() {
         return errors;
     };
 
-    const generateTemplate = () => {
-        const template = [
-            {
-                'Register Number': '2024001',
-                'Student Name': 'John Doe',
-                'Email': 'john.doe@example.com',
-                'Department': 'Computer Science',
-                'Course': 'B.Tech',
-                'Year': '2024',
-                'Section': 'A',
-                'Phone': '+1234567890',
-            },
+    const generateTemplate = async () => {
+        const workbook = new ExcelJS.Workbook();
+
+        // Students sheet
+        const studentSheet = workbook.addWorksheet('Students');
+        studentSheet.columns = [
+            { header: 'Register Number', key: 'registerNumber', width: 18 },
+            { header: 'Student Name',    key: 'studentName',    width: 22 },
+            { header: 'Email',           key: 'email',          width: 28 },
+            { header: 'Department',      key: 'department',     width: 20 },
+            { header: 'Course',          key: 'course',         width: 15 },
+            { header: 'Year',            key: 'year',           width: 10 },
+            { header: 'Section',         key: 'section',        width: 10 },
+            { header: 'Phone',           key: 'phone',          width: 16 },
         ];
+        studentSheet.addRow({
+            registerNumber: '2024001',
+            studentName: 'John Doe',
+            email: 'john.doe@example.com',
+            department: 'Computer Science',
+            course: 'B.Tech',
+            year: '2024',
+            section: 'A',
+            phone: '+1234567890',
+        });
 
-        const worksheet = XLSX.utils.json_to_sheet(template);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+        // Instructions sheet
+        const instructionsSheet = workbook.addWorksheet('Instructions');
+        instructionsSheet.columns = [{ header: 'Instruction', key: 'instruction', width: 60 }];
+        [
+            'Fill in student details in the Students sheet',
+            'Register Number, Student Name, and Email are required fields',
+            'Other fields are optional',
+            'Do not modify the column headers',
+            'Save the file and upload it to import students',
+        ].forEach(text => instructionsSheet.addRow({ instruction: text }));
 
-        // Add instructions sheet
-        const instructions = [
-            { Instruction: 'Fill in student details in the Students sheet' },
-            { Instruction: 'Register Number, Student Name, and Email are required fields' },
-            { Instruction: 'Other fields are optional' },
-            { Instruction: 'Do not modify the column headers' },
-            { Instruction: 'Save the file and upload it to import students' },
-        ];
-
-        const instructionsSheet = XLSX.utils.json_to_sheet(instructions);
-        XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instructions');
-
-        // Download file
-        XLSX.writeFile(workbook, 'student_import_template.xlsx');
+        // Trigger download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'student_import_template.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     return {
