@@ -15,6 +15,7 @@ import {
   Flame,
   Megaphone,
   Sparkles,
+  Mic,
 } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +31,7 @@ const studentNavItems = [
   { id: "tour-nav-quizzes", icon: FileCheck, imageUrl: "/quiz-icon.png", label: "Quizzes", path: "/student/quizzes" },
   { id: "tour-nav-matrix", icon: Orbit, imageUrl: "/edumatrix-icon.png", label: "EduMatrix", path: "/student/knowledge-map" },
   { id: "tour-nav-ai", icon: Bot, imageUrl: "/ai-icon.png", label: "Eduspace AI", path: "/ai-chat" },
+  { id: "tour-nav-voice", icon: Mic, imageUrl: "/ai-tutor.png", label: "AI Voice Tutor", path: "/student/voice-tutor" },
   { id: "tour-nav-streak", icon: Flame, imageUrl: "/streak-icon.png", label: "Academic Streak", path: "/streak" },
   { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
   { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/student/attendance" },
@@ -121,7 +123,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               </div>
 
               {/* Navigation */}
-              <nav className="flex flex-col gap-1 flex-1">
+              <nav className="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar pr-1">
                 {navItems.map((item) => {
                   let isActive = false;
 

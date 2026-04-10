@@ -10,12 +10,21 @@ const ALLOWED_ORIGINS = [
   'http://localhost:8080',
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:4174',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:4173',
   'https://apprehensible-freddy-nonconcordantly.ngrok-free.dev'
 ];
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin)
+  const isLocalDevOrigin =
+    /^https?:\/\/localhost:\d+$/i.test(origin) ||
+    /^https?:\/\/127\.0\.0\.1:\d+$/i.test(origin);
+
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) || isLocalDevOrigin
     ? origin
     : ALLOWED_ORIGINS[0];
   return {

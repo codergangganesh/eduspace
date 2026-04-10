@@ -26,6 +26,7 @@ export interface AIConversation {
     updated_at: string;
     is_pinned?: boolean;
     share_token?: string;
+    type?: 'chat' | 'voice';
 }
 
 export const aiChatService = {

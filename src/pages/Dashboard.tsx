@@ -1,7 +1,7 @@
 import { FileText, CheckCircle, AlertCircle, Calendar, Clock, Flame, PieChart } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
-import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { DashboardSlidingHero } from "@/components/dashboard/DashboardSlidingHero";
 import { UpcomingTask } from "@/components/dashboard/UpcomingTask";
 import { useAssignments } from "@/hooks/useAssignments";
 import { DashboardAssignmentList } from "@/components/dashboard/DashboardAssignmentList";
@@ -22,7 +22,6 @@ import { useStreak } from "@/contexts/StreakContext";
 import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAttendance } from "@/hooks/useAttendance";
-
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -212,8 +211,8 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-8">
-        {/* Hero Section */}
-        <DashboardHero />
+        {/* Sliding Hero Section (Welcome + AI Tutor + Streak) */}
+        <DashboardSlidingHero streak={displayStreak} />
 
 
 
@@ -290,6 +289,8 @@ export default function Dashboard() {
               </div>
               <DashboardStreakWeekly streak={displayStreak} />
             </div>
+
+
 
             <div>
               <div className="flex items-center justify-between mb-4">

@@ -57,8 +57,8 @@ export const AgentMessageBubble = ({ message }: AgentMessageBubbleProps) => {
               isSuccess
                 ? "bg-emerald-100 dark:bg-emerald-900/30"
                 : isError
-                ? "bg-red-100 dark:bg-red-900/30"
-                : "bg-background"
+                  ? "bg-red-100 dark:bg-red-900/30"
+                  : "bg-background"
             )}
           >
             {isSuccess ? (
@@ -79,12 +79,12 @@ export const AgentMessageBubble = ({ message }: AgentMessageBubbleProps) => {
           isUser
             ? "rounded-tr-sm bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/10"
             : isSuccess
-            ? "rounded-tl-sm border border-emerald-500/10 bg-emerald-500/5 text-emerald-900 dark:text-emerald-100"
-            : isError
-            ? "rounded-tl-sm border border-red-500/10 bg-red-500/5 text-red-900 dark:text-red-100"
-            : isConfirmation
-            ? "rounded-tl-sm border border-amber-500/10 bg-amber-500/5 text-foreground"
-            : "rounded-tl-sm border border-border/40 bg-card/60 backdrop-blur-md text-foreground"
+              ? "rounded-tl-sm border border-emerald-500/10 bg-emerald-500/5 text-emerald-900 dark:text-emerald-100"
+              : isError
+                ? "rounded-tl-sm border border-red-500/10 bg-red-500/5 text-red-900 dark:text-red-100"
+                : isConfirmation
+                  ? "rounded-tl-sm border border-amber-500/10 bg-amber-500/5 text-foreground"
+                  : "rounded-tl-sm border border-border/40 bg-card/60 backdrop-blur-md text-foreground"
         )}
       >
         {/* Content */}

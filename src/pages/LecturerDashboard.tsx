@@ -14,6 +14,7 @@ import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { PerformanceTrendChart } from "@/components/dashboard/PerformanceTrendChart";
 import { TypewriterName } from "@/components/common/TypewriterName";
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
+import { LecturerSlidingHero } from "@/components/dashboard/LecturerSlidingHero";
 
 
 export default function LecturerDashboard() {
@@ -43,39 +44,8 @@ export default function LecturerDashboard() {
       />
       <div className="flex flex-col gap-8 pb-8">
 
-        {/* Modern Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md border border-slate-100 dark:border-slate-800">
-          {/* Abstract Background Shapes */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 size-[500px] rounded-full bg-emerald-500/5 dark:bg-indigo-500/30 blur-3xl opacity-50 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-[400px] rounded-full bg-blue-500/5 dark:bg-emerald-500/20 blur-3xl opacity-50 pointer-events-none" />
-
-          <div className="relative z-10 p-5 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-
-            <div id="tour-welcome" className="space-y-3 max-w-2xl text-center sm:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-white/10 backdrop-blur-md border border-emerald-100 dark:border-white/10 text-xs font-medium text-emerald-600 dark:text-emerald-300">
-                <span className="relative flex size-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-                </span>
-                Academic Dashboard
-              </div>
-              <h1 className="text-xl sm:text-4xl font-bold tracking-tight">
-                <span className="sm:hidden">Hi, </span>
-                <span className="hidden sm:inline">Welcome back, </span>
-                <TypewriterName name={title} className="text-indigo-600 dark:text-indigo-400" />
-              </h1>
-
-              <p className="text-slate-500 dark:text-slate-300 text-sm sm:text-base max-w-lg truncate">
-                <span className="sm:hidden">Check your daily updates here.</span>
-                <span className="hidden sm:inline">Your daily overview of student progress and upcoming classes.</span>
-              </p>
-
-
-
-            </div>
-
-          </div>
-        </div>
+        {/* Sliding Hero Section */}
+        <LecturerSlidingHero title={title} />
 
         {/* Stats Grid - Premium Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
@@ -108,7 +78,7 @@ export default function LecturerDashboard() {
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Performance Trend - Left Column (2/3) */}
-          <div className="xl:col-span-2 space-y-6">
+          <div id="performance-chart" className="xl:col-span-2 space-y-6">
             <PerformanceTrendChart />
           </div>
 

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { knowledgeService } from "@/lib/knowledgeService";
 import { useStreak } from "@/contexts/StreakContext";
+import { InfiniteMarquee } from "@/components/common/InfiniteMarquee";
 
 export default function AIChatWindow() {
     const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -446,7 +447,7 @@ export default function AIChatWindow() {
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-card z-50 md:hidden border-r border-border/40 shadow-2xl"
+                            className="absolute inset-y-0 left-0 w-[320px] max-w-[85vw] bg-card z-50 md:hidden border-r border-border/40 shadow-2xl"
                         >
                             <AIChatSidebar
                                 conversations={conversations}
@@ -473,7 +474,7 @@ export default function AIChatWindow() {
             </AnimatePresence>
 
             {/* Sidebar - Desktop */}
-            <div className="hidden md:block w-72 shrink-0 h-full border-r border-border/40 bg-card/10">
+            <div className="hidden md:block w-100 shrink-0 h-full border-r border-border/40 bg-card/10">
                 <AIChatSidebar
                     conversations={conversations}
                     currentConversationId={currentConversation?.id}
@@ -490,6 +491,8 @@ export default function AIChatWindow() {
 
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
+                {/* Background Marquee for Fresh Session removed as requested */}
+
                 {/* Chat Header */}
                 <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30 pt-[var(--safe-top)]">
                     <div className="flex items-center gap-2 md:gap-3">
@@ -540,7 +543,7 @@ export default function AIChatWindow() {
                     </div>
                 </div>
 
-                <ScrollArea className="flex-1" viewportRef={scrollAreaRef as any}>
+                <ScrollArea className="flex-1 z-10" viewportRef={scrollAreaRef as any}>
                     <div className="max-w-4xl mx-auto w-full min-h-full">
                         {isLoading && messages.length === 0 ? (
                             <MessagesSkeleton />

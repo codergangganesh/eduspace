@@ -194,25 +194,25 @@ export function AgentSidebar({
                 </div>
 
                 <div className="absolute right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform scale-100 md:scale-90 md:group-hover:scale-100">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted rounded-lg">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-xl border-border/40">
-                            <DropdownMenuItem
-                                className="text-destructive focus:text-destructive focus:bg-destructive/10 rounded-lg cursor-pointer py-2.5"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteConversation?.(item.id);
-                                }}
-                            >
-                                <Trash2 className="mr-3 h-4 w-4" />
-                                <span className="font-semibold">Delete Chat</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted rounded-lg">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-xl border-border/40">
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10 rounded-lg cursor-pointer py-2.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteConversation?.(item.id);
+                        }}
+                      >
+                        <Trash2 className="mr-3 h-4 w-4" />
+                        <span className="font-semibold">Delete Chat</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {currentConversationId === item.id && (
