@@ -91,7 +91,7 @@ export const aiChatService = {
             .insert({
                 conversation_id: conversationId,
                 role,
-                content,
+                content: content as any,
             })
             .select()
             .single();
@@ -208,16 +208,24 @@ export const aiChatService = {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Authentication required for AI chat.');
 
-            const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+            
+            // Clean the URL to avoid double slashes which can cause fetch failures on some mobile browsers
+            const baseUrl = supabaseUrl.replace(/\/$/, "");
+            const functionUrl = `${baseUrl}/functions/v1/ai-chat`;
 
             const response = await fetch(functionUrl, {
                 method: 'POST',
+                mode: 'cors',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': supabaseKey,
                 },
                 body: JSON.stringify({ messages, stream: true }),
             });
+            
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -227,12 +235,21 @@ export const aiChatService = {
                 } catch {
                     errorData = { error: errorText };
                 }
-                console.error('AI Chat Error Details:', errorData);
-                throw new Error(errorData.details || errorData.error || 'AI Service Error');
+                console.error('AI Chat Error Diagnostics:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    url: functionUrl,
+                    error: errorData
+                });
+                throw new Error(errorData.details || errorData.error || `AI Service Error (${response.status})`);
             }
 
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error('Response body is null');
+            if (!response.body) {
+                console.error('AI Chat Error: Response body is null', { url: functionUrl });
+                throw new Error('AI Service returned an empty response. Please check your connection.');
+            }
+
+            const reader = response.body.getReader();
 
             const decoder = new TextDecoder();
             let fullContent = "";

@@ -6,9 +6,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // 🔐 Fix MED-02: Restrict to production domain only (no more wildcard *)
 const ALLOWED_ORIGINS = [
   'https://eduspaceacademy.online',
+  'https://www.eduspaceacademy.online',
   'http://localhost:8080',
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://apprehensible-freddy-nonconcordantly.ngrok-free.dev'
 ];
 
 function getCorsHeaders(req: Request): Record<string, string> {
