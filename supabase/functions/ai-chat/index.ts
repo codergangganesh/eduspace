@@ -89,7 +89,7 @@ serve(async (req: Request) => {
 
     // ─── Authenticated — proceed with AI request ───────────────────────────
     const payload = await req.json();
-    const { messages, stream = true } = payload;
+    const { messages, stream = true, response_format, temperature } = payload;
 
     // Get API key from environment variables (server-side secret — never exposed)
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
@@ -124,8 +124,9 @@ serve(async (req: Request) => {
             model,
             messages,
             stream,
-            temperature: 0.7,
+            temperature: temperature ?? 0.7,
             max_tokens: 4096,
+            ...(response_format ? { response_format } : {})
           }),
         });
 
@@ -153,8 +154,9 @@ serve(async (req: Request) => {
                 model,
                 messages,
                 stream,
-                temperature: 0.7,
+                temperature: temperature ?? 0.7,
                 max_tokens: 4096,
+                ...(response_format ? { response_format } : {})
               }),
             });
 

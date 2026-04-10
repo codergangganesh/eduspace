@@ -36,28 +36,30 @@ const nameMatches = (dbName: string, queryName: string): boolean => {
 
 // ─── Groq API ─────────────────────────────────────────────────────────────────
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.3-70b-versatile";
-
 const callGemini = async (
   history: ConversationTurn[],
   systemPrompt: string
 ): Promise<GeminiAgentResponse> => {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY as string;
-  if (!apiKey) throw new Error("VITE_GROQ_API_KEY is not set in .env");
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Authentication required for AI chat.");
 
-  const response = await fetch(GROQ_URL, {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const baseUrl = supabaseUrl.replace(/\/$/, "");
+  const functionUrl = `${baseUrl}/functions/v1/ai-chat`;
+
+  const response = await fetch(functionUrl, {
     method: "POST",
+    mode: "cors",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({
-      model: MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         ...history,
       ],
+      stream: false,
       temperature: 0.3,
       response_format: { type: "json_object" }
     }),
