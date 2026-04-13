@@ -409,3 +409,20 @@
    opacity: 1;
    transform: rotate(3deg) translate(0px, -4px);
  }
+
+/* Premium Voice Animations */
+@keyframes speak-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.6;
+  }
+}
+
+.animate-speak-pulse {
+  animation: speak-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+

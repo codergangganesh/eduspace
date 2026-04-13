@@ -12,13 +12,15 @@ import {
   Languages,
   Presentation,
   Target,
-  BookOpen,
   ShieldCheck,
   Sparkles,
   Clock,
   BarChart2,
   CheckCircle2,
   Settings,
+  Database,
+  Code2,
+  Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,19 +33,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { AIChatSidebar } from "@/components/student/ai-chat/AIChatSidebar";
 import { InfiniteMarquee } from "@/components/common/InfiniteMarquee";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { aiChatService } from "@/lib/aiChatService";
 import { PracticeMode, VoiceSession, voiceService } from "@/lib/voiceService";
+import { vapi, isVapiConfigured, interviewerConfig } from "@/lib/vapi";
+import { aiChatService } from "@/lib/aiChatService";
 
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
 
 type Difficulty = "beginner" | "intermediate" | "advanced";
 type SessionState = "idle" | "listening" | "thinking" | "speaking" | "summary";
@@ -53,6 +57,7 @@ type SessionProfile = {
   focusArea: string;
   difficulty: Difficulty;
   targetDurationMinutes: number;
+  voiceId: string;
 };
 
 type SessionStats = {
@@ -70,14 +75,15 @@ const DEFAULT_PROFILE: SessionProfile = {
   focusArea: "",
   difficulty: "intermediate",
   targetDurationMinutes: 10,
+  voiceId: "sarah",
 };
 
 const MODES: Array<{ id: PracticeMode; label: string; desc: string; icon: any; opening: string }> = [
   { id: "interview", label: "Interview", desc: "Behavioral and technical mock rounds.", icon: Briefcase, opening: "Tell me about yourself and why you want this role." },
   { id: "language", label: "Language", desc: "Grammar, fluency, and pronunciation.", icon: Languages, opening: "What did you do today?" },
   { id: "presentation", label: "Presentation", desc: "Delivery, pacing, and structure.", icon: Presentation, opening: "Give me the opening of your presentation." },
-  { id: "sales", label: "Sales", desc: "Discovery, objections, persuasion.", icon: Target, opening: "Start by discovering the customer's needs." },
-  { id: "academic", label: "Academic", desc: "Viva and subject explanation.", icon: BookOpen, opening: "Explain the topic as if this is a viva question." },
+  { id: "sales", label: "SQL Practice", desc: "Queries, joins, filters, and database thinking.", icon: Database, opening: "Write a SQL query and explain why it works." },
+  { id: "academic", label: "DSA", desc: "Algorithms, data structures, and complexity.", icon: Code2, opening: "Explain the data structure or algorithm step by step." },
   { id: "confidence", label: "Confidence", desc: "Low-pressure speaking practice.", icon: ShieldCheck, opening: "Start with a short self-introduction." },
 ];
 
@@ -85,6 +91,15 @@ const DIFFICULTIES: Array<{ id: Difficulty; label: string }> = [
   { id: "beginner", label: "Beginner" },
   { id: "intermediate", label: "Intermediate" },
   { id: "advanced", label: "Advanced" },
+];
+
+const TUTOR_VOICES = [
+  { id: "sarah", name: "Sarah", tone: "Warm and clear" },
+  { id: "burt", name: "Burt", tone: "Deep and steady" },
+  { id: "marissa", name: "Marissa", tone: "Friendly coach" },
+  { id: "andrea", name: "Andrea", tone: "Calm and professional" },
+  { id: "phillip", name: "Phillip", tone: "Confident mentor" },
+  { id: "steve", name: "Steve", tone: "Direct and crisp" },
 ];
 
 function modeLabel(mode: PracticeMode) {
@@ -97,6 +112,17 @@ function buildTitle(profile: SessionProfile) {
 
 function buildPrompt(profile: SessionProfile) {
   const focus = profile.focusArea ? `Focus area: ${profile.focusArea}.` : "Focus area: general improvement.";
+  const modeGuidance = profile.practiceMode === "sales"
+    ? "SQL Practice = write, explain, and improve SQL queries, joins, filters, aggregations, and database reasoning."
+    : profile.practiceMode === "academic"
+      ? "DSA = solve algorithm and data structure problems, explain complexity, and talk through your approach clearly."
+      : profile.practiceMode === "interview"
+        ? "Interview = behavioral and technical mock rounds using STAR and crisp follow-ups."
+        : profile.practiceMode === "language"
+          ? "Language = grammar, pronunciation, fluency, and natural speaking correction."
+          : profile.practiceMode === "presentation"
+            ? "Presentation = structure, delivery, pacing, and audience clarity."
+            : "Confidence = calm encouragement, short answers, and steady speaking practice.";
   return `You are Eduspace Voice Tutor, an adaptive speaking coach.
 Mode: ${modeLabel(profile.practiceMode)}.
 Difficulty: ${profile.difficulty}.
@@ -105,12 +131,13 @@ Target duration: ${profile.targetDurationMinutes} minutes.
 
 Rules:
 - Stay strictly inside the selected mode and focus area.
-- Do not answer general-knowledge, news, sports, coding, shopping, or personal questions that are outside the selected practice content.
+- Do not show or speak any extra topic information outside the selected practice content.
+- Do not answer general-knowledge, news, sports, shopping, or personal questions that are outside the selected practice content.
 - If the user goes outside scope, reply with: "That is out of content for this session. Let's stay on ${modeLabel(profile.practiceMode)}${profile.focusArea ? ` and ${profile.focusArea}` : ""}."
 - Keep replies concise, usually 2 to 4 short sentences.
 - Always end with one follow-up question unless you are refusing an out-of-content request.
 - Correct mistakes gently and show a better version when useful.
-- Adapt to the mode: interview = STAR and follow-ups, language = grammar and pronunciation, presentation = structure and delivery, sales = discovery and objections, academic = definitions and examples, confidence = calm encouragement.
+- Adapt to the mode: ${modeGuidance}
 - If the learner struggles, simplify the prompt and give a scaffold.`;
 }
 
@@ -119,7 +146,8 @@ function buildOutOfContentReply(profile: SessionProfile) {
 }
 
 function extractKeywords(value: string) {
-  return (value.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((word) => word.length > 3);
+  const matches: string[] = value.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  return matches.filter((word) => word.length > 3);
 }
 
 function getModeKeywords(mode: PracticeMode) {
@@ -131,9 +159,9 @@ function getModeKeywords(mode: PracticeMode) {
     case "presentation":
       return ["presentation", "slide", "structure", "opening", "closing", "audience", "delivery", "transition", "story", "pitch"];
     case "sales":
-      return ["sales", "customer", "discovery", "objection", "value", "pitch", "close", "demo", "pricing", "need"];
+      return ["sql", "query", "table", "join", "select", "where", "group", "aggregate", "database", "index"];
     case "academic":
-      return ["academic", "viva", "definition", "example", "explain", "theory", "concept", "subject", "exam", "study"];
+      return ["dsa", "algorithm", "data", "structure", "array", "linked", "tree", "graph", "recursion", "complexity"];
     case "confidence":
       return ["confidence", "calm", "short", "self", "introduction", "nervous", "speech", "practice", "intro", "steady"];
     default:
@@ -151,7 +179,6 @@ function isDefinitelyOutOfContent(speech: string) {
   const patterns = [
     /\b(weather|forecast|joke|recipe|movie|song|sports|cricket|football|stock market|crypto|bitcoin|news|latest)\b/i,
     /\b(who is|what is the capital|capital of|current president|prime minister|tell me a fact)\b/i,
-    /\b(write code|fix code|debug|programming help|build an app)\b/i,
     /\b(translate this|translate it|meaning of)\b/i,
   ];
 
@@ -196,7 +223,7 @@ function buildSummary(history: { role: string; text: string }[], profile: Sessio
   const durationSeconds = Math.max(1, Math.round((Date.now() - stats.startTime.getTime()) / 1000));
   const avgWords = turns ? totalWords / turns : 0;
   const fillerRate = totalWords ? fillers / totalWords : 0;
-  const targetWords = profile.practiceMode === "presentation" ? 80 : profile.practiceMode === "sales" ? 55 : profile.practiceMode === "academic" ? 65 : profile.practiceMode === "language" ? 35 : profile.practiceMode === "confidence" ? 28 : 50;
+  const targetWords = profile.practiceMode === "presentation" ? 80 : profile.practiceMode === "sales" ? 60 : profile.practiceMode === "academic" ? 58 : profile.practiceMode === "language" ? 35 : profile.practiceMode === "confidence" ? 28 : 50;
   const targetTurns = clamp(Math.round(profile.targetDurationMinutes / 1.5), 4, 16);
   const communication = clamp(Math.round(100 - Math.abs(avgWords - targetWords) * 1.2 - fillerRate * 220), 35, 100);
   const fluency = clamp(Math.round(100 - fillerRate * 280), 35, 100);
@@ -213,8 +240,8 @@ function buildSummary(history: { role: string; text: string }[], profile: Sessio
     profile.practiceMode === "interview" ? "Use STAR: situation, task, action, result." : "",
     profile.practiceMode === "language" ? "Repeat the corrected sentence once after the coach." : "",
     profile.practiceMode === "presentation" ? "Use cleaner transitions between points." : "",
-    profile.practiceMode === "sales" ? "Ask one discovery question before pitching." : "",
-    profile.practiceMode === "academic" ? "Define the concept, then give an example." : "",
+    profile.practiceMode === "sales" ? "Write the query clearly, then explain the result set." : "",
+    profile.practiceMode === "academic" ? "State the approach, then explain the complexity." : "",
     profile.practiceMode === "confidence" ? "Keep the answer short and steady, then expand later." : "",
   ].filter(Boolean) as string[];
 
@@ -275,6 +302,45 @@ function getVoiceTutorErrorMessage(error: unknown) {
   return "Connection failed. Try again.";
 }
 
+function extractJsonObject(value: string) {
+  const start = value.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < value.length; index += 1) {
+    const char = value[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return value.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
 export function VoicePracticeSession() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<SessionProfile>(DEFAULT_PROFILE);
@@ -288,6 +354,8 @@ export function VoicePracticeSession() {
   const [isLoading, setIsLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
   const [stats, setStats] = useState<SessionStats>({
     startTime: new Date(),
     words: 0,
@@ -299,17 +367,151 @@ export function VoicePracticeSession() {
   });
   const [messages, setMessages] = useState([{ role: "system", content: buildPrompt(DEFAULT_PROFILE) }]);
 
-  const recognitionRef = useRef<any>(null);
-  const interimRef = useRef("");
-  const stateRef = useRef(state);
+  const vapiActiveRef = useRef(false);
+  const previewActiveRef = useRef(false);
+  const previewTimeoutRef = useRef<number | null>(null);
+  const previewSettleTimeoutRef = useRef<number | null>(null);
+  const previewStopPendingRef = useRef(false);
+  const callTransitionRef = useRef<"idle" | "preview-starting" | "session-starting" | "stopping">("idle");
   const endRef = useRef<HTMLDivElement>(null);
+
   const mode = useMemo(() => MODES.find((m) => m.id === profile.practiceMode) ?? MODES[0], [profile.practiceMode]);
+  const selectedVoice = useMemo(() => TUTOR_VOICES.find((item) => item.id === profile.voiceId) ?? TUTOR_VOICES[0], [profile.voiceId]);
   const prompt = useMemo(() => buildPrompt(profile), [profile]);
 
   const cleanup = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    recognitionRef.current?.abort();
+    if (previewTimeoutRef.current) {
+      window.clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+    if (previewSettleTimeoutRef.current) {
+      window.clearTimeout(previewSettleTimeoutRef.current);
+      previewSettleTimeoutRef.current = null;
+    }
+    vapi.stop();
+    vapiActiveRef.current = false;
+    previewActiveRef.current = false;
+    previewStopPendingRef.current = false;
+    setPreviewingVoiceId(null);
   };
+
+  const previewVoice = async (voice = selectedVoice) => {
+    if (!isVapiConfigured()) {
+      toast.error("Voice preview is not configured. Please add VITE_VAPI_PUBLIC_KEY.");
+      return;
+    }
+
+    if (callTransitionRef.current !== "idle") {
+      return;
+    }
+
+    if (vapiActiveRef.current && !previewActiveRef.current) {
+      toast.info("End the current tutor session before previewing another voice.");
+      return;
+    }
+
+    try {
+      callTransitionRef.current = "preview-starting";
+
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+        previewTimeoutRef.current = null;
+      }
+      if (previewSettleTimeoutRef.current) {
+        window.clearTimeout(previewSettleTimeoutRef.current);
+        previewSettleTimeoutRef.current = null;
+      }
+
+      if (previewActiveRef.current) {
+        await vapi.stop();
+        previewActiveRef.current = false;
+        previewStopPendingRef.current = false;
+      }
+
+      previewActiveRef.current = true;
+      previewStopPendingRef.current = false;
+      setPreviewingVoiceId(voice.id);
+      setErrorMsg(null);
+
+      await vapi.start({
+        name: "Eduspace Voice Preview",
+        firstMessage: `Hello, I am ${voice.name}, your AI tutor. This voice is ${voice.tone.toLowerCase()}, and I will guide you clearly through your practice sessions.`,
+        transcriber: {
+          provider: "deepgram",
+          model: "nova-2",
+          language: "en",
+        },
+        voice: {
+          provider: "11labs",
+          voiceId: voice.id,
+        },
+        model: {
+          provider: "openai",
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are only previewing a voice. Say the first message exactly once, then stay silent.",
+            },
+          ],
+        },
+      });
+
+      callTransitionRef.current = "idle";
+
+      previewTimeoutRef.current = window.setTimeout(() => {
+        previewTimeoutRef.current = null;
+        if (previewActiveRef.current) {
+          previewStopPendingRef.current = true;
+          callTransitionRef.current = "stopping";
+          vapi.stop();
+          window.setTimeout(() => {
+            if (previewActiveRef.current) {
+              previewActiveRef.current = false;
+              setPreviewingVoiceId(null);
+            }
+            previewStopPendingRef.current = false;
+            if (callTransitionRef.current === "stopping") {
+              callTransitionRef.current = "idle";
+            }
+          }, 500);
+        }
+      }, 16000);
+    } catch (error) {
+      console.error("Voice preview failed", error);
+      callTransitionRef.current = "idle";
+      previewActiveRef.current = false;
+      previewStopPendingRef.current = false;
+      setPreviewingVoiceId(null);
+      toast.error("Could not play the Vapi voice preview.");
+    }
+  };
+
+  const handleVoiceSettingsOpenChange = (open: boolean) => {
+    setVoiceSettingsOpen(open);
+
+    if (!open && previewActiveRef.current) {
+      callTransitionRef.current = "stopping";
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+        previewTimeoutRef.current = null;
+      }
+      if (previewSettleTimeoutRef.current) {
+        window.clearTimeout(previewSettleTimeoutRef.current);
+        previewSettleTimeoutRef.current = null;
+      }
+      vapi.stop();
+      previewActiveRef.current = false;
+      previewStopPendingRef.current = false;
+      setPreviewingVoiceId(null);
+      window.setTimeout(() => {
+        if (callTransitionRef.current === "stopping") {
+          callTransitionRef.current = "idle";
+        }
+      }, 300);
+    }
+  };
+
 
   const loadSessions = async () => {
     setIsLoading(true);
@@ -326,68 +528,193 @@ export function VoicePracticeSession() {
     try {
       const raw = localStorage.getItem("eduspace.voiceTutor.profile");
       if (raw) setProfile((prev) => ({ ...prev, ...JSON.parse(raw) }));
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to load voice tutor profile", error);
+    }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem("eduspace.voiceTutor.profile", JSON.stringify(profile));
-    } catch {}
+    } catch (error) {
+      console.warn("Failed to save voice tutor profile", error);
+    }
   }, [profile]);
 
   useEffect(() => {
     loadSessions();
+  }, []);
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setErrorMsg("Voice recognition not supported.");
-      return;
-    }
+  useEffect(() => {
+    if (!isVapiConfigured()) return;
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+    const onCallStart = () => {
+      console.log("[VAPI] Call started");
+      if (previewActiveRef.current) return;
 
-    recognition.onstart = () => {
       setState("listening");
-      setCurrentText("");
-      interimRef.current = "";
+      vapiActiveRef.current = true;
       setErrorMsg(null);
     };
 
-    recognition.onresult = (event: any) => {
-      let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+    const onCallEnd = () => {
+      console.log("[VAPI] Call ended");
+      if (previewActiveRef.current) {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+          previewTimeoutRef.current = null;
+        }
+        previewActiveRef.current = false;
+        previewStopPendingRef.current = false;
+        setPreviewingVoiceId(null);
+        callTransitionRef.current = "idle";
+        return;
       }
-      interimRef.current = transcript;
-      setCurrentText(transcript || "...");
+
+      setState("idle");
+      vapiActiveRef.current = false;
+      previewActiveRef.current = false;
+      callTransitionRef.current = "idle";
     };
 
-    recognition.onerror = (event: any) => {
-      if (event.error !== "aborted") {
-        setErrorMsg(`Mic error: ${event.error}`);
-        setState("idle");
-      }
+    const onSpeechStart = () => {
+      if (previewActiveRef.current) return;
+      setState("speaking");
     };
 
-    recognition.onend = () => {
-      if (stateRef.current === "listening") {
-        const speech = interimRef.current.trim();
-        if (speech) {
-          setHistory((prev) => [...prev, { role: "user", text: speech }]);
-          processSpeech(speech);
-        } else {
-          setState("idle");
+    const onSpeechEnd = () => {
+      if (previewActiveRef.current) {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+          previewTimeoutRef.current = null;
+        }
+        if (previewSettleTimeoutRef.current) {
+          window.clearTimeout(previewSettleTimeoutRef.current);
+        }
+        previewStopPendingRef.current = true;
+        previewSettleTimeoutRef.current = window.setTimeout(() => {
+          previewSettleTimeoutRef.current = null;
+          if (!previewActiveRef.current) {
+            previewStopPendingRef.current = false;
+            return;
+          }
+          callTransitionRef.current = "stopping";
+          vapi.stop();
+        }, 1800);
+        return;
+      }
+      if (previewActiveRef.current) return;
+      setState("listening");
+    };
+
+    const onMessage = async (message: any) => {
+      if (previewActiveRef.current) return;
+
+      if (message.type === "transcript") {
+        const text = message.transcript.trim();
+        if (!text) return;
+
+        if (message.transcriptType === "partial") {
+          setCurrentText(text);
+        } else if (message.transcriptType === "final") {
+          const role = message.role;
+          setCurrentText("");
+          setHistory(prev => [...prev, { role, text }]);
+          
+          if (role === "user") {
+            const analysis = analyzeText(text, profile);
+            setStats(prev => ({
+              ...prev,
+              words: prev.words + analysis.words,
+              turns: prev.turns + 1,
+              fillers: prev.fillers + analysis.fillers,
+              scopeViolations: prev.scopeViolations + (analysis.offContent ? 1 : 0),
+            }));
+          } else {
+            setStats(prev => ({
+              ...prev,
+              assistantWords: prev.assistantWords + text.split(" ").length,
+              assistantQuestions: prev.assistantQuestions + (text.includes("?") ? 1 : 0),
+            }));
+          }
+
+          // Save to Supabase
+          try {
+            const sessId = await createOrLoadSession();
+            await voiceService.saveMessage(sessId, role, text);
+          } catch (e) {
+            console.error("Failed to save message to session", e);
+          }
         }
       }
     };
 
-    recognitionRef.current = recognition;
-    return () => cleanup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const onError = (error: any) => {
+      const errorMessage = typeof error === 'string' ? error : (error.message || "Voice connection error");
+      
+      // Suppress normal call-end signals that might be reported as errors
+      const ignoredMessages = [
+        "Meeting ended",
+        "ejection",
+        "disconnect",
+        "Signaling connection",
+        "meeting state",
+        "room was deleted",
+        "Exiting meeting",
+        "daily-call-join-error",
+        "daily-error",
+      ];
+
+      const shouldIgnore = ignoredMessages.some(msg => 
+        errorMessage.toLowerCase().includes(msg.toLowerCase())
+      );
+
+      if (previewActiveRef.current) {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+          previewTimeoutRef.current = null;
+        }
+        previewActiveRef.current = false;
+        previewStopPendingRef.current = false;
+        setPreviewingVoiceId(null);
+        callTransitionRef.current = "idle";
+        if (!shouldIgnore) {
+          console.error("[VAPI] Voice preview error:", errorMessage);
+          toast.error("Could not play the selected voice preview.");
+        } else {
+          console.debug("[VAPI] Ignored preview event:", errorMessage);
+        }
+        return;
+      }
+
+      if (!shouldIgnore) {
+        console.error("[VAPI] Real error:", errorMessage);
+        setErrorMsg(errorMessage);
+        setState("idle");
+        vapiActiveRef.current = false;
+        callTransitionRef.current = "idle";
+      } else {
+        console.debug("[VAPI] Ignored event:", errorMessage);
+      }
+    };
+
+    vapi.on("call-start", onCallStart);
+    vapi.on("call-end", onCallEnd);
+    vapi.on("speech-start", onSpeechStart);
+    vapi.on("speech-end", onSpeechEnd);
+    vapi.on("message", onMessage);
+    vapi.on("error", onError);
+
+    return () => {
+      vapi.off("call-start", onCallStart);
+      vapi.off("call-end", onCallEnd);
+      vapi.off("speech-start", onSpeechStart);
+      vapi.off("speech-end", onSpeechEnd);
+      vapi.off("message", onMessage);
+      vapi.off("error", onError);
+    };
+  }, [profile, prompt, currentSessionId]);
+
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -397,9 +724,6 @@ export function VoicePracticeSession() {
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -429,86 +753,113 @@ export function VoicePracticeSession() {
     return sessionId;
   };
 
-  const processSpeech = async (speech: string) => {
-    setState("thinking");
-    setCurrentText("");
-    const analysis = analyzeText(speech, profile);
-    setStats((prev) => ({
-      ...prev,
-      words: prev.words + analysis.words,
-      turns: prev.turns + 1,
-      fillers: prev.fillers + analysis.fillers,
-      scopeViolations: prev.scopeViolations + (analysis.offContent ? 1 : 0),
-    }));
-
-    try {
-      const sessionId = await createOrLoadSession();
-      await voiceService.saveMessage(sessionId, "user", speech);
-
-      const convo = [...messages, { role: "user", content: speech }];
-      if (analysis.offContent) {
-        const refusal = buildOutOfContentReply(profile);
-        await voiceService.saveMessage(sessionId, "assistant", refusal);
-        setStats((prev) => ({
-          ...prev,
-          assistantWords: prev.assistantWords + refusal.trim().split(/\s+/).filter(Boolean).length,
-          assistantQuestions: prev.assistantQuestions + (refusal.includes("?") ? 1 : 0),
-        }));
-        setHistory((prev) => [...prev, { role: "assistant", text: refusal }]);
-        setMessages([...convo, { role: "assistant", content: refusal }]);
-        setCurrentText("");
-        setState("speaking");
-        speak(refusal);
+  const startStop = async (profileOverride?: SessionProfile) => {
+    if (state === "thinking") return;
+    if (callTransitionRef.current !== "idle") return;
+    if (previewActiveRef.current) {
+      callTransitionRef.current = "stopping";
+      await vapi.stop();
+      previewActiveRef.current = false;
+      vapiActiveRef.current = false;
+      previewStopPendingRef.current = false;
+      setPreviewingVoiceId(null);
+      setState("idle");
+      callTransitionRef.current = "idle";
+      return;
+    }
+    const sessionProfile = profileOverride ?? profile;
+    const sessionMode = MODES.find((m) => m.id === sessionProfile.practiceMode) ?? MODES[0];
+    const sessionPrompt = buildPrompt(sessionProfile);
+    
+    if (vapiActiveRef.current) {
+      callTransitionRef.current = "stopping";
+      vapi.stop();
+      vapiActiveRef.current = false;
+      setState("idle");
+      callTransitionRef.current = "idle";
+    } else {
+      if (!isVapiConfigured()) {
+        setErrorMsg("Voice Tutor is not configured. Please add VITE_VAPI_PUBLIC_KEY to environment.");
         return;
       }
 
-      let assistant = "";
-      await aiChatService.streamChat(convo, (token) => {
-        assistant += token;
-        setCurrentText(assistant);
-      });
+      callTransitionRef.current = "session-starting";
+      setState("thinking");
+      setErrorMsg(null);
+      vapiActiveRef.current = true;
 
-      if (!assistant.trim()) throw new Error("Empty response");
+      try {
+        let assistantConfig: any = {
+            name: "Eduspace Voice Tutor",
+            firstMessage: sessionMode.opening,
+            backgroundSpeechDenoisingPlan: {
+              smartDenoisingPlan: {
+                enabled: false,
+              },
+              fourierDenoisingPlan: {
+                enabled: false,
+              },
+            },
+            transcriber: {
+              provider: "deepgram",
+              model: "nova-2",
+              language: "en",
+            },
+          voice: {
+            provider: "11labs",
+            voiceId: sessionProfile.voiceId,
+          },
+          model: {
+            provider: "openai",
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: sessionPrompt,
+              },
+            ],
+          },
+        };
 
-      await voiceService.saveMessage(sessionId, "assistant", assistant);
-      const assistantAnalysis = analyzeText(assistant, profile);
-      setStats((prev) => ({
-        ...prev,
-        assistantWords: prev.assistantWords + assistantAnalysis.words,
-        assistantQuestions: prev.assistantQuestions + (assistant.includes("?") ? 1 : 0),
-      }));
-      setHistory((prev) => [...prev, { role: "assistant", text: assistant }]);
-      setMessages([...convo, { role: "assistant", content: assistant }]);
-      setCurrentText("");
-      setState("speaking");
-      speak(assistant);
-    } catch (e: any) {
-      console.error(e);
-      setState("idle");
-      setCurrentText("");
-      setErrorMsg(e?.message?.includes("does not exist") ? "Database tables missing. Run the SQL migration." : getVoiceTutorErrorMessage(e));
+        // Use the specific interviewer config from the reference project if in interview mode
+          if (sessionProfile.practiceMode === "interview") {
+            const baseConfig = JSON.parse(JSON.stringify(interviewerConfig));
+            baseConfig.model.messages[0].content = baseConfig.model.messages[0].content.replace("{{questions}}", sessionProfile.focusArea || "General behavioral and technical questions.");
+            baseConfig.voice.voiceId = sessionProfile.voiceId;
+            baseConfig.backgroundSpeechDenoisingPlan = {
+              smartDenoisingPlan: {
+                enabled: false,
+              },
+              fourierDenoisingPlan: {
+                enabled: false,
+              },
+            };
+            assistantConfig = baseConfig;
+          }
+
+        await vapi.start(assistantConfig);
+        callTransitionRef.current = "idle";
+      } catch (e) {
+        console.error(e);
+        setErrorMsg("Failed to start voice session.");
+        vapiActiveRef.current = false;
+        setState("idle");
+        callTransitionRef.current = "idle";
+      }
     }
   };
 
-  const speak = (text: string) => {
-    if (!window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.onend = () => setState("idle");
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+  const startPracticeWithMode = (practiceMode: PracticeMode) => {
+    const nextProfile = { ...profile, practiceMode };
+    setProfile(nextProfile);
+    setMessages([{ role: "system", content: buildPrompt(nextProfile) }]);
+    void startStop(nextProfile);
   };
 
-  const startStop = () => {
-    if (state === "thinking") return;
-    if (state === "speaking") {
-      cleanup();
-      setState("idle");
-      return;
-    }
-    if (state === "listening") recognitionRef.current?.stop();
-    else recognitionRef.current?.start();
+  const handleSessionToggle = () => {
+    void startStop();
   };
+
 
   const newSession = () => {
     cleanup();
@@ -543,6 +894,7 @@ export function VoicePracticeSession() {
           focusArea: session.focus_area ?? "",
           difficulty: session.difficulty ?? "intermediate",
           targetDurationMinutes: session.target_duration_minutes ?? 10,
+          voiceId: profile.voiceId ?? DEFAULT_PROFILE.voiceId,
         });
       }
       const loaded = await voiceService.getMessages(id);
@@ -551,6 +903,7 @@ export function VoicePracticeSession() {
         focusArea: session?.focus_area ?? "",
         difficulty: session?.difficulty ?? "intermediate",
         targetDurationMinutes: session?.target_duration_minutes ?? 10,
+        voiceId: profile.voiceId ?? DEFAULT_PROFILE.voiceId,
       });
       const normalized = loaded.length && loaded[0].role === "system" ? loaded : [{ role: "system", content: system }, ...loaded];
       const loadedUsers = normalized.filter((m) => m.role === "user");
@@ -564,6 +917,7 @@ export function VoicePracticeSession() {
           focusArea: session?.focus_area ?? "",
           difficulty: session?.difficulty ?? "intermediate",
           targetDurationMinutes: session?.target_duration_minutes ?? 10,
+          voiceId: profile.voiceId ?? DEFAULT_PROFILE.voiceId,
         }).words, 0),
         turns: loadedUsers.length,
         fillers: loadedUsers.reduce((sum, m) => sum + analyzeText(m.content, {
@@ -571,14 +925,16 @@ export function VoicePracticeSession() {
           focusArea: session?.focus_area ?? "",
           difficulty: session?.difficulty ?? "intermediate",
           targetDurationMinutes: session?.target_duration_minutes ?? 10,
+          voiceId: profile.voiceId ?? DEFAULT_PROFILE.voiceId,
         }).fillers, 0),
         assistantWords: loadedAssistants.reduce((sum, m) => sum + analyzeText(m.content, {
           practiceMode: session?.practice_mode ?? "interview",
           focusArea: session?.focus_area ?? "",
           difficulty: session?.difficulty ?? "intermediate",
           targetDurationMinutes: session?.target_duration_minutes ?? 10,
+          voiceId: profile.voiceId ?? DEFAULT_PROFILE.voiceId,
         }).words, 0),
-        scopeViolations: loadedAssistants.filter((m) => m.content.toLowerCase().includes("out of content")).length,
+        scopeViolations: loadedAssistants.filter((m) => /out of content|not related content/i.test(m.content)).length,
         assistantQuestions: loadedAssistants.filter((m) => m.content.includes("?")).length,
       });
       setState("idle");
@@ -610,8 +966,65 @@ export function VoicePracticeSession() {
 
   const endSession = async () => {
     if (state === "thinking") return;
+    
+    // Stop Vapi if active
+    if (vapiActiveRef.current) {
+      vapi.stop();
+      vapiActiveRef.current = false;
+    }
+
+    setState("thinking");
     const computed = buildSummary(history, profile, stats);
-    setSummary(computed);
+    
+    // Attempt to get AI-powered structured feedback similar to the interviewer folder
+    let finalSummary = computed;
+    try {
+      const transcriptText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join("\n");
+      const evalPrompt = `You are an expert ${modeLabel(profile.practiceMode)} coach. Analyze this practice transcript and provide comprehensive feedback.
+
+Transcript:
+${transcriptText}
+
+Return exactly in JSON format:
+{
+  "totalScore": number,
+  "categoryScores": {
+    "communication": number,
+    "clarity": number,
+    "relevance": number,
+    "fluency": number
+  },
+  "strengths": string[],
+  "improvements": string[],
+  "finalAssessment": string
+}
+
+Be specific and constructive.`;
+
+      const aiResponse = await aiChatService.streamChat([{ role: "user", content: evalPrompt }], () => {});
+      if (aiResponse) {
+        const extractedJson = extractJsonObject(aiResponse);
+        if (extractedJson) {
+          const aiData = JSON.parse(extractedJson);
+          finalSummary = {
+            ...computed,
+            score: aiData.totalScore || computed.score,
+            metrics: {
+              ...computed.metrics,
+              communication: aiData.categoryScores?.communication || computed.metrics.communication,
+              fluency: aiData.categoryScores?.fluency || computed.metrics.fluency,
+            },
+            highlights: aiData.strengths || computed.highlights,
+            recommendations: aiData.improvements || computed.recommendations,
+            note: aiData.finalAssessment || computed.note
+          };
+        }
+      }
+    } catch (e) {
+      console.error("AI Evaluation failed, using local summary", e);
+    }
+
+    setSummary(finalSummary);
     setState("summary");
     if (currentSessionId) {
       try {
@@ -620,11 +1033,11 @@ export function VoicePracticeSession() {
           focus_area: profile.focusArea || null,
           difficulty: profile.difficulty,
           target_duration_minutes: profile.targetDurationMinutes,
-          summary: computed.note,
-          rubric_score: computed.score,
-          recommendations: computed.recommendations,
+          summary: finalSummary.note,
+          rubric_score: finalSummary.score,
+          recommendations: finalSummary.recommendations,
           session_metrics: {
-            ...computed.metrics,
+            ...finalSummary.metrics,
             start_time: stats.startTime.toISOString(),
             duration_seconds: Math.max(1, Math.round((Date.now() - stats.startTime.getTime()) / 1000)),
             user_words: stats.words,
@@ -650,58 +1063,65 @@ export function VoicePracticeSession() {
   const totalTurns = history.filter((m) => m.role === "user").length;
   const isFreshState = history.length === 0 && state === "idle";
   const showMobileFreshShell = isFreshState && isMobileViewport;
+  const showDesktopFreshStudio = isFreshState && !isMobileViewport;
+  const scopeReply = buildOutOfContentReply(profile);
+  const focusTopic = profile.focusArea.trim() ? profile.focusArea.trim() : mode.label;
 
   if (state === "summary") {
     const finalSummary = summary ?? buildSummary(history, profile, stats);
     return (
-      <div className="flex-1 flex items-center justify-center p-4 md:p-8 h-full bg-background">
-        <div className="max-w-4xl w-full space-y-6">
-          <div className="text-center space-y-3">
-            <div className="size-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
-              <Sparkles className="size-8 text-primary" />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-black">Practice Review</h2>
-            <p className="text-muted-foreground">Saved with coaching notes, rubric scores, and next-step recommendations.</p>
-          </div>
+      <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
+        <ScrollArea className="flex-1">
+          <div className="min-h-full flex flex-col items-center p-4 md:p-8">
+            <div className="max-w-4xl w-full space-y-6 pb-20">
+              <div className="text-center space-y-3">
+                <div className="size-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
+                  <Sparkles className="size-8 text-primary" />
+                </div>
+                <h2 className="text-3xl md:text-4xl font-black">Practice Review</h2>
+                <p className="text-muted-foreground">Saved with coaching notes, rubric scores, and next-step recommendations.</p>
+              </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border bg-card p-5"><Clock className="size-5 text-primary" /><div className="mt-2 text-2xl font-black">{Math.round((Date.now() - stats.startTime.getTime()) / 1000)}s</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Duration</div></div>
-            <div className="rounded-2xl border bg-card p-5"><BarChart2 className="size-5 text-fuchsia-500" /><div className="mt-2 text-2xl font-black">{finalSummary.score}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Coach score</div></div>
-            <div className="rounded-2xl border bg-card p-5"><CheckCircle2 className="size-5 text-emerald-500" /><div className="mt-2 text-2xl font-black">{totalTurns}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Turns</div></div>
-            <div className="rounded-2xl border bg-card p-5"><Mic className="size-5 text-cyan-500" /><div className="mt-2 text-2xl font-black">{totalWords}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Words</div></div>
-          </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border bg-card p-5"><Clock className="size-5 text-primary" /><div className="mt-2 text-2xl font-black">{Math.round((Date.now() - stats.startTime.getTime()) / 1000)}s</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Duration</div></div>
+                <div className="rounded-2xl border bg-card p-5"><BarChart2 className="size-5 text-fuchsia-500" /><div className="mt-2 text-2xl font-black">{finalSummary.score}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Coach score</div></div>
+                <div className="rounded-2xl border bg-card p-5"><CheckCircle2 className="size-5 text-emerald-500" /><div className="mt-2 text-2xl font-black">{totalTurns}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Turns</div></div>
+                <div className="rounded-2xl border bg-card p-5"><Mic className="size-5 text-cyan-500" /><div className="mt-2 text-2xl font-black">{totalWords}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Words</div></div>
+              </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-3xl border bg-card p-5 md:p-6 space-y-4">
-              <div className="font-black text-lg">Rubric breakdown</div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {Object.entries(finalSummary.metrics).map(([label, value]) => (
-                  <div key={label} className="space-y-1">
-                    <div className="flex justify-between text-sm"><span className="font-bold capitalize">{label}</span><span className="font-black">{value}</span></div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${value}%` }} /></div>
+              <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                <div className="rounded-3xl border bg-card p-5 md:p-6 space-y-4">
+                  <div className="font-black text-lg">Rubric breakdown</div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {Object.entries(finalSummary.metrics).map(([label, value]) => (
+                      <div key={label} className="space-y-1">
+                        <div className="flex justify-between text-sm"><span className="font-bold capitalize">{label}</span><span className="font-black">{value}</span></div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${value}%` }} /></div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="rounded-2xl border bg-muted/30 p-4 text-sm font-medium">{finalSummary.note}</div>
-            </div>
+                  <div className="rounded-2xl border bg-muted/30 p-4 text-sm font-medium">{finalSummary.note}</div>
+                </div>
 
-            <div className="space-y-4">
-              <div className="rounded-3xl border bg-card p-5 space-y-3">
-                <div className="font-black text-lg">What went well</div>
-                {finalSummary.highlights.map((item) => <div key={item} className="flex gap-2 text-sm"><CheckCircle2 className="size-4 text-emerald-500 mt-0.5" /><span>{item}</span></div>)}
+                <div className="space-y-4">
+                  <div className="rounded-3xl border bg-card p-5 space-y-3">
+                    <div className="font-black text-lg">What went well</div>
+                    {finalSummary.highlights.map((item) => <div key={item} className="flex gap-2 text-sm"><CheckCircle2 className="size-4 text-emerald-500 mt-0.5" /><span>{item}</span></div>)}
+                  </div>
+                  <div className="rounded-3xl border bg-card p-5 space-y-3">
+                    <div className="font-black text-lg">Next steps</div>
+                    {finalSummary.recommendations.map((item) => <div key={item} className="flex gap-2 text-sm"><Sparkles className="size-4 text-primary mt-0.5" /><span>{item}</span></div>)}
+                  </div>
+                </div>
               </div>
-              <div className="rounded-3xl border bg-card p-5 space-y-3">
-                <div className="font-black text-lg">Next steps</div>
-                {finalSummary.recommendations.map((item) => <div key={item} className="flex gap-2 text-sm"><Sparkles className="size-4 text-primary mt-0.5" /><span>{item}</span></div>)}
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pb-8">
+                <Button size="lg" className="rounded-2xl px-6 py-6 font-bold" onClick={newSession}>Start New Practice</Button>
+                <Button variant="outline" size="lg" className="rounded-2xl px-6 py-6 font-bold" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" className="rounded-2xl px-6 py-6 font-bold" onClick={newSession}>Start New Practice</Button>
-            <Button variant="outline" size="lg" className="rounded-2xl px-6 py-6 font-bold" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
-          </div>
-        </div>
+        </ScrollArea>
       </div>
     );
   }
@@ -869,7 +1289,7 @@ export function VoicePracticeSession() {
             <div className="flex justify-center pb-6 pointer-events-auto">
               <button
                 className="w-20 h-20 rounded-full bg-primary shadow-2xl shadow-primary/35 flex items-center justify-center active:scale-90 transition-transform duration-300 border border-white/20"
-                onClick={startStop}
+                onClick={handleSessionToggle}
               >
                 <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                   mic
@@ -897,8 +1317,15 @@ export function VoicePracticeSession() {
         <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden -ml-2 h-9 w-9" onClick={() => setMobileOpen(true)}><Menu className="h-5 w-5" /></Button>
-            <div className="size-9 rounded-full overflow-hidden border border-border/40 bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-1.5 shadow-lg shrink-0">
-                <Sparkles className="size-full text-white" />
+            <div className="size-9 rounded-full overflow-hidden border border-border/40 bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-1 shadow-lg shrink-0 relative">
+              <img
+                src="/ai-tutor.png"
+                alt="AI Voice Tutor"
+                className="size-full object-cover rounded-full"
+              />
+              {state === "speaking" && (
+                <span className="absolute inset-0 rounded-full bg-white/40 animate-ping" />
+              )}
             </div>
             <div className="flex flex-col">
               <h2 className="text-sm md:text-base font-black tracking-tight text-foreground/90 leading-none">Fluid Mentor</h2>
@@ -906,29 +1333,283 @@ export function VoicePracticeSession() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => setVoiceSettingsOpen(true)}>
               <Settings className="size-5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={endSession} className="text-muted-foreground hover:text-foreground h-9 rounded-xl border border-transparent hover:border-border font-bold hidden sm:flex"><X className="size-4 mr-2" /> End Session</Button>
+            {!showDesktopFreshStudio && (
+              <Button variant="ghost" size="sm" onClick={endSession} className="text-muted-foreground hover:text-foreground h-9 rounded-xl border border-transparent hover:border-border font-bold hidden sm:flex"><X className="size-4 mr-2" /> End Session</Button>
+            )}
           </div>
         </div>
 
+        <Sheet open={voiceSettingsOpen} onOpenChange={handleVoiceSettingsOpenChange}>
+          <SheetContent side="right" className="w-full sm:max-w-xl border-l-[#c6c5d4]/70 bg-[#fbf8ff] p-0 text-[#1b1b21] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-br from-[#000b60] via-[#142283] to-[#dfe0ff] px-6 py-6 text-white">
+              <SheetHeader>
+                <SheetTitle className="text-2xl font-extrabold tracking-tight text-white">Voice Settings</SheetTitle>
+                <SheetDescription className="text-white/75">
+                  Choose the Vapi/11Labs tutor voice used for new AI Voice Tutor sessions. Preview starts a short Vapi sample.
+                </SheetDescription>
+              </SheetHeader>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-5 px-6 pb-6 pt-6">
+              <div className="rounded-2xl bg-white p-4 shadow-[0_16px_32px_-18px_rgba(0,11,96,0.35)] ring-1 ring-[#c6c5d4]/60">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#454652]">Selected Voice</p>
+                    <h3 className="mt-1 text-xl font-extrabold text-[#000b60]">{selectedVoice.name}</h3>
+                    <p className="mt-1 text-sm font-medium text-[#454652]">{selectedVoice.tone}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => previewVoice(selectedVoice)}
+                    className="rounded-full bg-[#000b60] px-5 font-extrabold text-white hover:bg-[#142283]"
+                  >
+                    <Volume2 className="mr-2 size-4" />
+                    {previewingVoiceId === selectedVoice.id ? "Playing..." : "Preview"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {TUTOR_VOICES.map((voice) => {
+                  const active = selectedVoice.id === voice.id;
+                  return (
+                    <div
+                      key={voice.id}
+                      className={cn(
+                        "rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5",
+                        active ? "border-[#000b60] ring-2 ring-[#000b60]" : "border-[#c6c5d4]/70 hover:border-[#000b60]/50"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-extrabold text-[#000b60]">{voice.name}</p>
+                          <p className="mt-1 text-xs font-semibold text-[#454652]">{voice.tone}</p>
+                        </div>
+                        <span className={cn(
+                          "rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em]",
+                          active ? "bg-[#000b60] text-white" : "bg-[#eae7ef] text-[#000b60]"
+                        )}>
+                          {active ? "Active" : "Select"}
+                        </span>
+                      </div>
+                      <div className="mt-4 flex items-center gap-2 whitespace-nowrap">
+                        <button
+                          type="button"
+                          className={cn(
+                            "inline-flex h-8 items-center rounded-full px-3 py-1 text-[11px] font-extrabold leading-none transition",
+                            active
+                              ? "bg-[#000b60] text-white hover:bg-[#142283]"
+                              : "bg-[#eae7ef] text-[#000b60] hover:bg-[#d6d1df]"
+                          )}
+                          onClick={() => {
+                            setProfile((prev) => ({ ...prev, voiceId: voice.id }));
+                            if (vapiActiveRef.current) {
+                              toast.info("Voice updated. It will apply from the next voice session.");
+                            }
+                          }}
+                        >
+                          {active ? "Selected" : "Select voice"}
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 items-center rounded-full bg-[#eae7ef] px-3 py-1 text-[11px] font-extrabold leading-none text-[#000b60] transition hover:bg-[#000b60] hover:text-white"
+                          onClick={() => previewVoice(voice)}
+                        >
+                          <Volume2 className="mr-1.5 size-3.5" />
+                          {previewingVoiceId === voice.id ? "Playing..." : "Hear sample"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs font-medium leading-relaxed text-[#454652]">
+                Note: preview starts a short Vapi voice call using the same 11Labs voice that will be used in the live tutor session.
+              </p>
+            </div>
+          </SheetContent>
+        </Sheet>
+
         <ScrollArea className="flex-1 z-10">
-          <div className={cn("max-w-6xl mx-auto w-full min-h-full pt-4 md:pt-5 px-3 sm:px-4 md:px-6 flex flex-col pb-40 md:pb-56")}>
+          <div className={cn(
+            "w-full min-h-full flex flex-col",
+            showDesktopFreshStudio
+              ? "max-w-none p-0 pb-0"
+              : "max-w-6xl mx-auto pt-4 md:pt-5 px-3 sm:px-4 md:px-6 pb-40 md:pb-56"
+          )}>
             {history.length === 0 && state === "idle" && (
               <div className="mb-3" />
             )}
 
-            <AnimatePresence>
+            {showDesktopFreshStudio ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] text-[#1b1b21]"
+              >
+                <section className="relative flex min-h-[520px] flex-1 overflow-hidden px-8 py-12 xl:px-14 xl:py-16 2xl:px-20">
+                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb]" />
+                  <div className="relative z-10 grid w-full items-center gap-10 lg:grid-cols-12">
+                    <div className="lg:col-span-7">
+                      <span className="inline-flex rounded-full bg-[#142283] px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2]">
+                        Premium Intelligence
+                      </span>
+                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] xl:text-7xl">
+                        Master Your <br /> Next Interview
+                      </h1>
+                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] xl:text-lg">
+                        Practice DSA, SQL, interviews, presentations, and communication in a calm coaching space built for focused voice sessions.
+                      </p>
+
+                      <div className="mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-[minmax(260px,1fr)_minmax(150px,180px)_minmax(150px,180px)]">
+                        <Textarea
+                          value={profile.focusArea}
+                          onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
+                          placeholder="Focus area, e.g. Binary trees, SQL joins, HR interview..."
+                          className="min-h-[58px] rounded-full border-[#c6c5d4] bg-white/90 px-6 py-4 text-sm font-semibold text-[#1b1b21] shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] placeholder:text-[#767683] focus:border-[#000b60] focus:ring-[#000b60]/20 sm:col-span-3 xl:col-span-1"
+                        />
+                        <Select
+                          value={profile.difficulty}
+                          onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
+                        >
+                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
+                            <SelectValue placeholder="Difficulty" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
+                            <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
+                            <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
+                            <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={String(profile.targetDurationMinutes)}
+                          onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
+                        >
+                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
+                            <SelectValue placeholder="Duration" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
+                            <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
+                            <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
+                            <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
+                            <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="mt-8 flex flex-wrap gap-4">
+                        <Button
+                          onClick={handleSessionToggle}
+                          className="h-14 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60]"
+                        >
+                          Begin Your Journey
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-14 rounded-full bg-[#eae7ef] px-8 text-sm font-extrabold text-[#000b60] hover:bg-[#e4e1ea] hover:text-[#000b60]"
+                          onClick={() => setProfile((prev) => ({ ...prev, focusArea: prev.focusArea || mode.label }))}
+                        >
+                          Use Current Focus
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="relative hidden lg:col-span-5 lg:block">
+                      <div className="aspect-square rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
+                        <div className="flex h-full items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] p-10">
+                          <img src="/ai-tutor.png" alt="AI Voice Tutor" className="h-full max-h-[360px] w-full object-contain drop-shadow-2xl" />
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-8 -left-8 max-w-[250px] rounded-2xl border border-white/40 bg-white/75 p-6 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.18)] backdrop-blur-2xl">
+                        <div className="mb-3 flex items-center gap-3">
+                          <BarChart2 className="size-5 text-[#5c1800]" />
+                          <span className="text-sm font-extrabold text-[#1b1b21]">Confidence Score</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ffdbd0]">
+                          <div className="h-full w-[78%] rounded-full bg-[#380b00]" />
+                        </div>
+                        <p className="mt-2 text-xs font-semibold text-[#454652]">Focused on {focusTopic}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-[#efecf5] px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
+                  <div className="mb-8 flex items-end justify-between gap-6">
+                    <div>
+                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60]">Focus Your Preparation</h2>
+                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652]">
+                        Choose the coaching area first, then start your voice practice with the selected setup.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-6">
+                    {MODES.slice(0, 6).map((item) => {
+                      const Icon = item.icon;
+                      const active = profile.practiceMode === item.id;
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setProfile((prev) => ({ ...prev, practiceMode: item.id }));
+                            }
+                          }}
+                          className={cn(
+                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] transition-all duration-300 hover:-translate-y-1",
+                            active && "ring-2 ring-[#000b60]"
+                          )}
+                        >
+                          <div>
+                            <div className={cn(
+                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 text-[#000b60] transition-transform group-hover:scale-110",
+                              active && "bg-[#000b60] text-white"
+                            )}>
+                              <Icon className="size-7" />
+                            </div>
+                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60]">{item.label}</h3>
+                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652]">{item.desc}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startPracticeWithMode(item.id);
+                            }}
+                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] px-5 py-3 text-sm font-extrabold text-[#000b60] transition-all group-hover:bg-[#000b60] group-hover:text-white"
+                          >
+                            Start Practice
+                            <ChevronDown className="-rotate-90 size-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              </motion.div>
+            ) : (
+              <>
+              <AnimatePresence>
               {history.length === 0 && state === "idle" && (
-                  <motion.div
-                    key="session-cards"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.3 }}
-                    className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 w-full relative z-20 mb-4"
-                  >
+                <motion.div
+                  key="session-cards"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 w-full relative z-20 mb-4"
+                >
                   <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -984,10 +1665,15 @@ export function VoicePracticeSession() {
                 </motion.div>
               )}
             </AnimatePresence>
+            </>
+          )
+        }
 
-            {history.length === 0 && state === "idle" && (
-              <div className="grid gap-4 mt-3 w-full 2xl:grid-cols-[1.12fr_0.88fr] min-w-0 px-0.5">
-                <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
+            {!showDesktopFreshStudio && (
+            <div className={cn("w-full", state === "idle" && "lg:grid lg:grid-cols-[1fr_380px] lg:gap-8")}>
+              <div className="space-y-6 min-w-0">
+                {history.length === 0 && state === "idle" && (
+                  <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.18em] text-primary">
                       <Sparkles className="size-3" /> MULTI-MODE COACH
                     </div>
@@ -995,130 +1681,190 @@ export function VoicePracticeSession() {
                     <p className="text-muted-foreground max-w-sm font-medium text-[12px] sm:text-[14px] leading-relaxed opacity-70 mt-2">
                       Refine your communication skills with real-time AI feedback tailored to your goals.
                     </p>
-                  <div className="flex items-center justify-between mt-6 mb-3 px-1">
-                    <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Select Mode</h2>
-                    <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">View All</button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                    {MODES.map((item) => {
-                      const Icon = item.icon;
-                      const active = profile.practiceMode === item.id;
-                      return (
-                        <button 
-                          key={item.id} 
-                          onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))} 
-                          className={cn(
-                            "group rounded-2xl border p-4 text-left min-w-0 transition-all active:scale-95 shadow-sm relative overflow-hidden flex flex-col items-start gap-4", 
-                            active 
-                              ? "border-primary bg-card dark:bg-card/90 ring-1 ring-primary/20" 
-                              : "border-border/60 bg-card/40 hover:bg-muted/30"
-                          )}
-                        >
-                          <div className={cn(
-                            "size-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
-                            active ? "bg-primary text-white shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                          )}>
-                            <Icon className="size-6" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="font-black text-sm block leading-none mb-1">{item.label}</span>
-                            <p className="text-[10px] text-muted-foreground leading-tight opacity-70 font-medium">{item.desc}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
-                  <div className="mt-8 mb-4 px-1">
-                    <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Session Setup</h2>
-                  </div>
-                  <div className="rounded-2xl border border-border/40 bg-card/60 p-5 space-y-4 text-left shadow-lg">
-                    <div className="space-y-2.5">
-                        <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Focus Area</label>
-                        <Textarea 
-                          value={profile.focusArea} 
-                          onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))} 
-                          placeholder="e.g. Technical Leadership Interview..." 
-                          className="min-h-[120px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium"
-                        />
+                    <div className="flex items-center justify-between mt-6 mb-3 px-1">
+                      <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Select Mode</h2>
+                      <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">View All</button>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                      {MODES.map((item) => {
+                        const Icon = item.icon;
+                        const active = profile.practiceMode === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
+                            className={cn(
+                              "group rounded-2xl border p-4 text-left min-w-0 transition-all active:scale-95 shadow-sm relative overflow-hidden flex flex-col items-start gap-4",
+                              active
+                                ? "border-primary bg-card dark:bg-card/90 ring-1 ring-primary/20"
+                                : "border-border/60 bg-card/40 hover:bg-muted/30"
+                            )}
+                          >
+                            <div className={cn(
+                              "size-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
+                              active ? "bg-primary text-white shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                            )}>
+                              <Icon className="size-6" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-black text-sm block leading-none mb-1">{item.label}</span>
+                              <p className="text-[10px] text-muted-foreground leading-tight opacity-70 font-medium">{item.desc}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {state !== "idle" && history.length === 0 && (
+                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-10 space-y-4">
+                    <div className="relative">
+                      <div className={cn("size-24 rounded-full bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-2 shadow-2xl relative z-10 overflow-hidden", state === "speaking" && "animate-speak-pulse")}>
+                        <img
+                          src="/ai-tutor.png"
+                          alt="AI Voice Tutor"
+                          className="size-full object-cover rounded-full"
+                        />
+                      </div>
+                      {state === "speaking" && (
+                        <motion.div 
+                          className="absolute inset-0 rounded-full bg-primary/20 -z-0"
+                          animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-lg font-black uppercase tracking-tighter">Fluid Tutor</h3>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mt-1">{state === "speaking" ? "Speaking..." : state === "listening" ? "Listening..." : "Connecting..."}</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {history.map((msg, idx) => (
+                  <motion.div key={idx} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className={cn("flex flex-col mb-4", msg.role === "user" ? "items-end" : "items-start")}>
+                    <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] font-semibold md:text-[16px] leading-relaxed shadow-sm", msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border/40 text-foreground rounded-bl-sm")}>{msg.text}</div>
+                  </motion.div>
+                ))}
+
+                <AnimatePresence>
+                  {(state === "listening" || state === "thinking" || state === "speaking") && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn("flex flex-col", state === "listening" ? "items-end" : "items-start")}>
+                      {state === "speaking" && (
+                        <div className="mb-2 ml-4 flex items-center gap-2">
+                          <div className="size-2 rounded-full bg-primary animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Tutor is speaking</span>
+                        </div>
+                      )}
+                      <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] md:text-[16px] leading-relaxed flex items-center gap-3", state === "listening" ? "bg-primary/10 text-primary border border-primary/20 rounded-br-sm italic font-bold" : "bg-card border border-border text-foreground rounded-bl-sm font-semibold")}>
+                        {state === "thinking" && <Loader2 className="size-4 animate-spin text-primary shrink-0" />}
+                        <p>{currentText || (state === "listening" ? "Listening..." : state === "speaking" ? "..." : "Thinking...")}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                  {errorMsg && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-2"><p className="text-destructive font-black text-[10px] uppercase tracking-widest bg-destructive/10 border border-destructive/20 px-6 py-2 rounded-full shadow-sm">{errorMsg}</p></motion.div>}
+                </AnimatePresence>
+              </div>
+
+              {state === "idle" && (
+                <div className={cn("space-y-4", history.length > 0 && "hidden lg:block")}>
+                  <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm h-fit sticky top-4">
+                    <div className="mt-2 mb-4 px-1">
+                      <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">
+                        {history.length === 0 ? "Session Setup" : "Session Details"}
+                      </h2>
+                    </div>
+                    <div className="rounded-2xl border border-border/40 bg-card/60 p-5 space-y-4 text-left shadow-lg">
+                      <div className="space-y-2.5">
+                        <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Focus Area</label>
+                        <Textarea
+                          value={profile.focusArea}
+                          onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
+                          placeholder="e.g. Technical Leadership Interview..."
+                          className="min-h-[100px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2.5">
                           <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Difficulty</label>
-                          <Select 
-                            value={profile.difficulty} 
+                          <Select
+                            value={profile.difficulty}
                             onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
                           >
                             <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
                               <SelectValue placeholder="Select Difficulty" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
-                                <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
-                                <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
-                                <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
+                              <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
+                              <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
+                              <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2.5">
                           <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Duration</label>
-                          <Select 
-                            value={String(profile.targetDurationMinutes)} 
+                          <Select
+                            value={String(profile.targetDurationMinutes)}
                             onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
                           >
                             <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
                               <SelectValue placeholder="Select Duration" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
-                                <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
-                                <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
-                                <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
-                                <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
+                              <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
+                              <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
+                              <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
+                              <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                    </div>
+                      </div>
 
-                    <div className="space-y-2.5 pt-2">
+                      <div className="space-y-2.5 pt-2">
                         <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Initial Prompt</label>
-                        <div className="rounded-2xl bg-primary/5 border border-primary/20 p-5 text-left italic">
-                            <p className="text-[13px] sm:text-sm text-foreground/80 leading-relaxed font-medium">"{mode.opening}"</p>
+                        <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-left italic">
+                          <p className="text-[12px] sm:text-sm text-foreground/80 leading-relaxed font-medium">"{mode.opening}"</p>
                         </div>
+                      </div>
+
+                      <Button 
+                        onClick={handleSessionToggle} 
+                        className="w-full h-14 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        {history.length === 0 ? "Start Voice Session" : "Resume Practice"}
+                      </Button>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {history.map((msg, idx) => (
-              <motion.div key={idx} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className={cn("flex flex-col", msg.role === "user" ? "items-end" : "items-start")}>
-                <div className={cn("max-w-[84%] md:max-w-[68%] rounded-3xl px-5 py-4 text-[15px] font-semibold md:text-[16px] leading-relaxed shadow-sm", msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border/40 text-foreground rounded-bl-sm")}>{msg.text}</div>
-              </motion.div>
-            ))}
-
-            <AnimatePresence>
-              {(state === "listening" || state === "thinking" || state === "speaking") && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn("flex flex-col", state === "listening" ? "items-end" : "items-start")}>
-                  <div className={cn("max-w-[84%] md:max-w-[68%] rounded-3xl px-5 py-4 text-[15px] md:text-[16px] leading-relaxed flex items-center gap-3", state === "listening" ? "bg-primary/20 text-primary border border-primary/30 rounded-br-sm italic font-bold" : "bg-card border border-border text-foreground rounded-bl-sm font-semibold")}>{state === "thinking" && <Loader2 className="size-4 animate-spin text-primary shrink-0" />}<p>{currentText || (state === "listening" ? "I am listening..." : "Thinking...")}</p></div>
-                </motion.div>
               )}
-              {errorMsg && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-2"><p className="text-destructive font-black text-[10px] uppercase tracking-widest bg-destructive/10 border border-destructive/20 px-6 py-2 rounded-full shadow-sm">{errorMsg}</p></motion.div>}
-            </AnimatePresence>
+            </div>
+            )}
             <div ref={endRef} className="h-4" />
           </div>
         </ScrollArea>
 
-        <div className="absolute left-0 right-0 bottom-0 z-40 flex flex-col items-center pointer-events-none pb-5 md:pb-10">
+        <div className={cn("absolute left-0 right-0 bottom-0 z-40 flex flex-col items-center pointer-events-none pb-5 md:pb-10", showDesktopFreshStudio && "hidden")}>
           <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 md:h-48 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
-            <div className="relative flex flex-col items-center justify-center pointer-events-auto">
-              <div className="relative cursor-pointer group" onClick={startStop}>
-                <motion.div className="size-20 sm:size-[5.5rem] md:size-24 rounded-full shadow-2xl flex items-center justify-center transition-all duration-500 border border-white/20 z-10 relative overflow-hidden backdrop-blur-3xl bg-primary" whileTap={{ scale: 0.94 }}>
+          <div className="relative flex flex-col items-center justify-center pointer-events-auto">
+            <div className="relative cursor-pointer group" onClick={handleSessionToggle}>
+              {state !== "idle" && (
+                <motion.div 
+                  className="absolute -inset-4 rounded-full bg-primary/20 -z-10 animate-speak-pulse"
+                  layoutId="mic-pulse"
+                />
+              )}
+              <motion.div className={cn("size-20 sm:size-[5.5rem] md:size-24 rounded-full shadow-2xl flex items-center justify-center transition-all duration-500 border border-white/20 z-10 relative overflow-hidden backdrop-blur-3xl", state === "idle" ? "bg-primary" : "bg-fuchsia-600")} whileTap={{ scale: 0.94 }}>
+                {state === "thinking" ? (
+                  <Loader2 className="size-8 text-white animate-spin" />
+                ) : (
                   <Mic className="size-6 sm:size-7 md:size-8 text-primary-foreground" />
-                </motion.div>
-              </div>
+                )}
+              </motion.div>
+            </div>
             <motion.div className="mt-4 md:mt-6 flex flex-col items-center gap-1.5" animate={{ opacity: state === "idle" ? 0.7 : 0, y: state === "idle" ? 0 : 15 }}><p className="text-muted-foreground text-[10px] sm:text-[11px] font-black uppercase tracking-[0.35em] sm:tracking-[0.5em] text-center">Tap to talk</p></motion.div>
           </div>
         </div>
