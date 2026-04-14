@@ -4,6 +4,8 @@ import {
   Calendar,
   MessageSquare,
   LogOut,
+  Settings,
+  User,
   X,
   Users,
   Table,
@@ -16,12 +18,21 @@ import {
   Megaphone,
   Sparkles,
   Mic,
+  ChevronDown,
 } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const studentNavItems = [
   { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/dashboard" },
@@ -71,6 +82,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { isMobileSidebarCollapsed, tourActiveStepId } = useLayout();
 
   const navItems: NavItem[] = role === "lecturer" ? lecturerNavItems : studentNavItems;
+  const roleLabel = role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student";
+
+  const handleSignOut = async () => {
+    await signOut();
+    onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -173,43 +190,76 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                 })}
               </nav>
 
-              {/* Footer Section with Integrated Sign Out */}
+              {/* Footer Section with Profile Actions */}
               <div className="mt-auto pt-6 border-t border-border">
-                <div className={cn(
-                  "flex items-center mt-2 bg-secondary/30 rounded-2xl border border-border/50 p-2",
-                  isMobileSidebarCollapsed ? "justify-center" : "gap-3"
-                )}>
-                  <Avatar className={cn("border border-border/50 shadow-sm", isMobileSidebarCollapsed ? "size-10" : "size-10")}>
-                    <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {!isMobileSidebarCollapsed && (
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-sm font-black text-foreground truncate">
-                        {profile?.full_name || 'User'}
-                      </span>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
-                        {role}
-                      </span>
-                    </div>
-                  )}
-
-                  {!isMobileSidebarCollapsed && (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
                     <button
-                      onClick={() => {
-                        signOut();
-                        onClose();
-                      }}
-                      className="size-8 rounded-lg bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white transition-all active:scale-[0.98] flex items-center justify-center"
-                      title="Sign Out"
+                      className={cn(
+                        "flex w-full items-center mt-2 rounded-2xl border border-border/50 bg-secondary/30 p-2 text-left transition-all outline-none hover:bg-secondary/60",
+                        isMobileSidebarCollapsed ? "justify-center" : "gap-3"
+                      )}
+                    >
+                      <Avatar className="size-10 border border-border/50 shadow-sm">
+                        <AvatarImage src={profile?.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                          {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      {!isMobileSidebarCollapsed && (
+                        <>
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate text-sm font-black text-foreground">
+                              {profile?.full_name || 'User'}
+                            </span>
+                            <span className="truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              {roleLabel}
+                            </span>
+                          </div>
+                          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                        </>
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent
+                    side="top"
+                    align={isMobileSidebarCollapsed ? "start" : "end"}
+                    sideOffset={12}
+                    className="z-[10001] w-64 rounded-2xl border-border/50 bg-popover/95 p-1.5 shadow-2xl backdrop-blur-xl"
+                  >
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1 py-1">
+                        <p className="text-sm font-semibold leading-none tracking-tight">{profile?.full_name || "User"}</p>
+                        <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">
+                          {profile?.email || "No email provided"}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" onClick={onClose} className="flex cursor-pointer items-center gap-2 rounded-lg py-2.5">
+                        <User className="size-4" />
+                        <span className="font-semibold">Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/settings" onClick={onClose} className="flex cursor-pointer items-center gap-2 rounded-lg py-2.5">
+                        <Settings className="size-4" />
+                        <span className="font-semibold">Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive"
                     >
                       <LogOut className="size-4" />
-                    </button>
-                  )}
-                </div>
+                      <span className="font-black uppercase tracking-wider text-[11px]">Sign Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </motion.aside>
