@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, Calendar, Play, Mic, Flame, Diamond, Award } from "lucide-react";
@@ -17,6 +17,10 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
     const navigate = useNavigate();
     const [[page, direction], setPage] = useState([0, 0]);
     const fullName = profile?.full_name || "Student";
+    const containerRef = useRef<HTMLDivElement>(null);
+    const touchStartX = useRef(0);
+    const touchEndX = useRef(0);
+    const isSwiping = useRef(false);
 
     const today = new Date();
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -32,11 +36,40 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
 
     useEffect(() => {
         const timer = setInterval(() => {
-            paginate(1);
+            if (!isSwiping.current) {
+                paginate(1);
+            }
         }, SLIDE_DURATION);
 
         return () => clearInterval(timer);
     }, [paginate]);
+
+    // Touch handlers for mobile swipe
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        isSwiping.current = true;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        touchEndX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+        const swipeThreshold = 50; // Minimum swipe distance in pixels
+        const swipeDistance = touchStartX.current - touchEndX.current;
+        
+        if (Math.abs(swipeDistance) > swipeThreshold) {
+            if (swipeDistance > 0) {
+                // Swipe left - next slide
+                paginate(1);
+            } else {
+                // Swipe right - previous slide
+                paginate(-1);
+            }
+        }
+        
+        isSwiping.current = false;
+    };
 
     const variants = {
         enter: (direction: number) => ({
@@ -102,14 +135,14 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                     <div className="flex items-center gap-1.5 shrink-0">
                         <button
                             onClick={() => window.dispatchEvent(new CustomEvent("open-app-guide"))}
-                            className="size-8 sm:size-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all shadow-sm active:scale-95 group"
+                            className="size-8 sm:size-10 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/50 dark:to-indigo-800/50 border border-indigo-200/50 dark:border-indigo-700/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/60 dark:hover:to-indigo-800/60 transition-all shadow-[3px_3px_6px_rgba(0,0,0,0.08),-3px_-3px_6px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)] active:scale-95 group"
                             title="Start Welcome Tour"
                         >
                             <Play className="size-4 sm:size-5 fill-indigo-600 dark:fill-indigo-400 ml-0.5 group-hover:drop-shadow-[0_0_8px_rgba(79,70,229,0.3)] transition-all" />
                         </button>
                         <button
                             onClick={() => navigate("/schedule")}
-                            className="size-8 sm:size-10 rounded-lg bg-violet-50 dark:bg-slate-800 border border-violet-100 dark:border-slate-700 flex items-center justify-center text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95 group"
+                            className="size-8 sm:size-10 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 dark:from-slate-800/80 dark:to-slate-700/80 border border-violet-200/50 dark:border-slate-600/50 flex items-center justify-center text-violet-600 dark:text-violet-400 hover:from-violet-100 hover:to-violet-200 dark:hover:from-slate-700/90 dark:hover:to-slate-600/90 transition-all shadow-[3px_3px_6px_rgba(0,0,0,0.08),-3px_-3px_6px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)] active:scale-95 group"
                             title="View Schedule"
                         >
                             <Calendar className="size-4 sm:size-5 group-hover:drop-shadow-[0_0_8px_rgba(124,58,237,0.3)] transition-all" />
@@ -120,7 +153,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
         ),
         // Slide 2: AI Voice Tutor
         (
-            <div key="voice-tutor" className="relative h-full w-full p-6 sm:p-8 flex items-center bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-900 text-white overflow-hidden">
+            <div key="voice-tutor" className="relative h-full w-full p-6 sm:p-8 flex items-center bg-gradient-to-br from-indigo-500 via-indigo-600 to-blue-600 text-white overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.1),8px_8px_16px_rgba(0,0,0,0.15),-8px_-8px_16px_rgba(255,255,255,0.8)] dark:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.05),8px_8px_16px_rgba(0,0,0,0.4)]">
                 {/* Background Marquee */}
                 <div className="absolute inset-0 opacity-5 pointer-events-none flex flex-col justify-center -rotate-12 scale-150">
                     <InfiniteMarquee text="AI EDUSPACE AI" speed={20} className="text-4xl" />
@@ -144,7 +177,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                         
                         <Button 
                             onClick={() => navigate("/student/voice-tutor")}
-                            className="bg-white text-indigo-900 hover:bg-white hover:scale-105 active:scale-95 font-black shadow-lg rounded-full px-4 py-2.5 sm:px-8 sm:py-4.5 h-auto text-[10px] sm:text-sm md:text-base whitespace-nowrap transition-all border-none shrink-0"
+                            className="bg-white/90 backdrop-blur-sm text-indigo-700 hover:bg-white hover:scale-105 active:scale-95 font-black shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.8)] rounded-full px-4 py-2.5 sm:px-8 sm:py-4.5 h-auto text-[10px] sm:text-sm md:text-base whitespace-nowrap transition-all border-none shrink-0"
                         >
                             Start
                         </Button>
@@ -153,7 +186,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
         ),
         // Slide 3: Streak System
         (
-            <div key="streak" className="relative h-full w-full p-6 sm:p-8 flex items-center bg-gradient-to-br from-orange-500 via-red-600 to-amber-600 text-white overflow-hidden">
+            <div key="streak" className="relative h-full w-full p-6 sm:p-8 flex items-center bg-gradient-to-br from-orange-400 via-orange-500 to-red-500 text-white overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-[inset_4px_4px_8px_rgba(0,0,0,0.15),inset_-4px_-4px_8px_rgba(255,255,255,0.2),8px_8px_16px_rgba(0,0,0,0.12),-8px_-8px_16px_rgba(255,255,255,0.7)] dark:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.25),inset_-4px_-4px_8px_rgba(255,255,255,0.1),8px_8px_16px_rgba(0,0,0,0.35)]">
                     <div className="flex flex-row items-center justify-between w-full gap-3">
                         <div className="flex flex-col items-start text-left space-y-0.5 min-w-0">
                             <motion.div 
@@ -179,7 +212,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                         
                         <Button 
                             onClick={() => navigate("/streak")}
-                            className="bg-white text-orange-600 hover:bg-orange-50 hover:scale-105 active:scale-95 font-black shadow-lg rounded-full px-4 py-2.5 sm:px-8 sm:py-4.5 h-auto text-[10px] sm:text-sm md:text-base whitespace-nowrap transition-all flex items-center gap-1 border-none shrink-0"
+                            className="bg-white/90 backdrop-blur-sm text-orange-600 hover:bg-white hover:scale-105 active:scale-95 font-black shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.8)] rounded-full px-4 py-2.5 sm:px-8 sm:py-4.5 h-auto text-[10px] sm:text-sm md:text-base whitespace-nowrap transition-all flex items-center gap-1 border-none shrink-0"
                         >
                             View
                         </Button>
@@ -189,7 +222,13 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
     ];
 
     return (
-        <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 min-h-[110px] sm:min-h-[140px] md:min-h-[180px]">
+        <div 
+            ref={containerRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className="relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-[8px_8px_16px_rgba(0,0,0,0.08),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[8px_8px_16px_rgba(0,0,0,0.4),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] border border-slate-200/50 dark:border-slate-700/50 min-h-[110px] sm:min-h-[140px] md:min-h-[180px] touch-pan-y transition-all duration-300"
+        >
             <AnimatePresence initial={false} custom={direction} mode="wait">
                 <motion.div
                     key={page}

@@ -85,11 +85,11 @@ export function FeaturesSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                             viewport={{ once: true }}
-                            className="relative h-full rounded-3xl p-[1px] bg-gradient-to-b from-white/10 to-transparent group"
+                            className="relative h-full rounded-[2rem] p-[1px] bg-gradient-to-b from-white/10 to-transparent group"
                         >
-                            <div className="relative h-full flex flex-col justify-start rounded-[23px] bg-slate-900/90 backdrop-blur-xl p-8 border border-white/5 shadow-2xl overflow-hidden z-20 transition-all duration-300 group-hover:border-blue-500/50">
-                                <div className="p-4 rounded-2xl bg-blue-600/10 w-fit mb-6 group-hover:bg-blue-600 transition-all duration-300">
-                                    <feature.icon className="size-6 text-blue-500 group-hover:text-white" />
+                            <div className="relative h-full flex flex-col justify-start rounded-[23px] bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-xl p-8 border border-white/10 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] overflow-hidden z-20 transition-all duration-300 group-hover:shadow-[10px_10px_20px_rgba(0,0,0,0.4),-10px_-10px_20px_rgba(255,255,255,0.08),inset_2px_2px_4px_rgba(255,255,255,0.08),inset_-2px_-2px_4px_rgba(0,0,0,0.25)] group-hover:border-blue-500/50">
+                                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600/20 to-blue-600/10 w-fit mb-6 group-hover:from-blue-600 group-hover:to-blue-700 transition-all duration-300 shadow-[3px_3px_6px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
+                                    <feature.icon className="size-6 text-blue-400 group-hover:text-white" />
                                 </div>
                                 <h3 className="text-2xl font-black text-white mb-3 tracking-tight">
                                     {feature.title}

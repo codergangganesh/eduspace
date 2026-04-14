@@ -14,7 +14,7 @@ export function BenefitsSection() {
                 <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
                     {/* Left - Visual (Matched to Hero Style) */}
                     <div className="w-full lg:w-1/2 relative order-last lg:order-first">
-                        <div className="relative z-10 bg-slate-900/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white/10 dark:border-slate-700 p-8">
+                        <div className="relative z-10 bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-md rounded-[2rem] border border-white/10 dark:border-slate-700/50 p-8 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]">
                             {/* Stats Header */}
                             <div className="flex items-center justify-between mb-8">
                                 <div className="space-y-1">
@@ -92,23 +92,23 @@ export function BenefitsSection() {
 
                             {/* Floating Stat Cards */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/5 dark:bg-slate-900/50 rounded-2xl p-4 border border-white/10 dark:border-slate-700 backdrop-blur-sm">
+                                <div className="bg-gradient-to-br from-white/10 to-white/5 dark:from-slate-900/60 dark:to-slate-900/50 rounded-2xl p-4 border border-white/10 backdrop-blur-sm shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="p-2 bg-blue-500/10 dark:bg-blue-900/30 rounded-lg">
-                                            <Users className="size-4 text-blue-400 dark:text-blue-400" />
+                                        <div className="p-2 bg-gradient-to-br from-blue-500/20 to-blue-500/10 rounded-lg shadow-[2px_2px_4px_rgba(0,0,0,0.15),inset_1px_1px_2px_rgba(255,255,255,0.1)]">
+                                            <Users className="size-4 text-blue-400" />
                                         </div>
-                                        <span className="text-sm font-medium text-slate-300 dark:text-slate-400">Users</span>
+                                        <span className="text-sm font-medium text-slate-300">Users</span>
                                     </div>
-                                    <div className="text-2xl font-bold text-white dark:text-white">50k+</div>
+                                    <div className="text-2xl font-bold text-white">50k+</div>
                                 </div>
-                                <div className="bg-white/5 dark:bg-slate-900/50 rounded-2xl p-4 border border-white/10 dark:border-slate-700 backdrop-blur-sm">
+                                <div className="bg-gradient-to-br from-white/10 to-white/5 dark:from-slate-900/60 dark:to-slate-900/50 rounded-2xl p-4 border border-white/10 backdrop-blur-sm shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="p-2 bg-purple-500/10 dark:bg-purple-900/30 rounded-lg">
-                                            <Shield className="size-4 text-purple-400 dark:text-purple-400" />
+                                        <div className="p-2 bg-gradient-to-br from-purple-500/20 to-purple-500/10 rounded-lg shadow-[2px_2px_4px_rgba(0,0,0,0.15),inset_1px_1px_2px_rgba(255,255,255,0.1)]">
+                                            <Shield className="size-4 text-purple-400" />
                                         </div>
-                                        <span className="text-sm font-medium text-slate-300 dark:text-slate-400">Security</span>
+                                        <span className="text-sm font-medium text-slate-300">Security</span>
                                     </div>
-                                    <div className="text-2xl font-bold text-white dark:text-white">100%</div>
+                                    <div className="text-2xl font-bold text-white">100%</div>
                                 </div>
                             </div>
                         </div>
@@ -135,7 +135,7 @@ export function BenefitsSection() {
                         <div className="space-y-8">
                             <div className="flex gap-4">
                                 <div className="flex-shrink-0 mt-1">
-                                    <div className="flex items-center justify-center size-12 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+                                    <div className="flex items-center justify-center size-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/30 shadow-[3px_3px_6px_rgba(0,0,0,0.1),-3px_-3px_6px_rgba(255,255,255,0.8),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)]">
                                         <Clock className="size-6 text-blue-600 dark:text-blue-400" />
                                     </div>
                                 </div>
@@ -149,7 +149,7 @@ export function BenefitsSection() {
 
                             <div className="flex gap-4">
                                 <div className="flex-shrink-0 mt-1">
-                                    <div className="flex items-center justify-center size-12 rounded-xl bg-purple-100 dark:bg-purple-900/30">
+                                    <div className="flex items-center justify-center size-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/40 dark:to-purple-900/30 shadow-[3px_3px_6px_rgba(0,0,0,0.1),-3px_-3px_6px_rgba(255,255,255,0.8),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)]">
                                         <TrendingUp className="size-6 text-purple-600 dark:text-purple-400" />
                                     </div>
                                 </div>
@@ -163,7 +163,7 @@ export function BenefitsSection() {
 
                             <div className="flex gap-4">
                                 <div className="flex-shrink-0 mt-1">
-                                    <div className="flex items-center justify-center size-12 rounded-xl bg-green-100 dark:bg-green-900/30">
+                                    <div className="flex items-center justify-center size-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/40 dark:to-green-900/30 shadow-[3px_3px_6px_rgba(0,0,0,0.1),-3px_-3px_6px_rgba(255,255,255,0.8),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)]">
                                         <Zap className="size-6 text-green-600 dark:text-green-400" />
                                     </div>
                                 </div>

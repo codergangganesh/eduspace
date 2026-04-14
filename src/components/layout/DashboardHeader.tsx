@@ -85,7 +85,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
         id="tour-btn-invite"
         variant="outline"
         size="icon"
-        className="size-9 rounded-full border-border bg-background hover:bg-muted active:scale-95 transition-all shadow-sm shrink-0 group"
+        className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 shrink-0 group"
         onClick={() => window.dispatchEvent(new CustomEvent("open-invite-dialog"))}
         title="Invite User"
       >
@@ -96,7 +96,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
         id="tour-nav-notes"
         variant="outline"
         size="icon"
-        className="size-9 rounded-full border-border bg-background hover:bg-muted active:scale-95 transition-all shadow-sm group"
+        className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 group"
         onClick={() => window.dispatchEvent(new CustomEvent("open-student-notes"))}
         title="My Notes"
       >
@@ -106,7 +106,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
       <Button
         variant="outline"
         size="icon"
-        className="hidden lg:flex size-9 rounded-full border-border bg-background hover:bg-muted active:scale-90 transition-all shadow-sm"
+        className="hidden lg:flex size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-90 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10"
         onClick={() => setTheme(theme === "light" ? "dark" : "light")}
       >
         {theme === "light" ? <Sun className="h-[18px] w-[18px] text-amber-500" /> : <Moon className="h-[18px] w-[18px] text-blue-400" />}
@@ -116,7 +116,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
 
   const streakBadge = (
     <div 
-      className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-orange-50 dark:bg-slate-950 border border-orange-200/60 dark:border-slate-800 shadow-sm transition-all"
+      className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-gradient-to-br from-orange-500/10 to-amber-500/10 dark:from-orange-500/20 dark:to-amber-500/20 backdrop-blur-xl shadow-lg shadow-black/5 border border-orange-200/40 dark:border-orange-500/20 transition-all"
       title="Current Daily Streak"
     >
       <Flame className="size-4 text-orange-500 fill-orange-500/20 dark:drop-shadow-[0_0_2px_rgba(249,115,22,0.6)]" />
@@ -128,7 +128,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
     <Button
       variant="outline"
       size="icon"
-      className="size-9 rounded-full border-border bg-background hover:bg-muted active:scale-95 transition-all shadow-sm group"
+      className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 group"
       onClick={() => window.dispatchEvent(new CustomEvent("open-app-guide"))}
       title="Start Application Tour"
     >
@@ -140,15 +140,15 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
     <header className={cn(
       "sticky top-0 z-[50] flex min-h-14 items-center px-3 lg:px-5 pt-[var(--safe-top)] transition-all duration-300",
       scrolled
-        ? "bg-surface/80 backdrop-blur-xl border-b border-border/40 shadow-lg shadow-black/5"
-        : "bg-surface/0 border-b border-transparent"
+        ? "bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-b border-white/20 dark:border-slate-700/30 shadow-lg shadow-black/5"
+        : "bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-b border-white/20 dark:border-slate-700/20 shadow-md shadow-black/5"
     )}>
       <StudentNotesDrawer showTrigger={false} />
       <div className="flex items-center transition-all duration-300">
         <Button
           variant="outline"
           size="icon"
-          className="lg:hidden mr-3 h-8 w-8 rounded-xl border-border/40 bg-muted/30 hover:bg-muted/60 active:scale-90 transition-all shadow-sm"
+          className="lg:hidden mr-3 h-8 w-8 rounded-xl border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-90 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10"
           onClick={onMenuClick}
         >
           <PanelLeft className="size-[22px] text-primary stroke-[2.5px]" />
@@ -165,7 +165,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
 
         <Button
           variant="outline"
-          className="hidden lg:flex h-8 w-[170px] justify-start text-muted-foreground font-normal bg-background border-border hover:bg-muted/50 transition-all rounded-full active:scale-[0.98] shadow-sm text-[12px] px-3 mr-2"
+          className="hidden lg:flex h-8 w-[170px] justify-start text-muted-foreground font-normal bg-white/40 dark:bg-slate-800/40 border border-white/20 dark:border-slate-600/30 hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all rounded-full active:scale-[0.98] backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 text-[12px] px-3 mr-2"
           onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
         >
           <Search className="mr-1.5 h-3.5 w-3.5 text-muted-foreground/60" />
@@ -181,7 +181,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
             type="button"
             variant="outline"
             size="icon"
-            className="size-9 rounded-full border-border bg-background hover:bg-muted active:scale-95 transition-all shadow-sm group"
+            className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 group"
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(new CustomEvent("open-command-palette"));
@@ -198,7 +198,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
               <Button
                 variant="outline"
                 size="icon"
-                className="size-9 rounded-full border-border bg-background hover:bg-muted active:scale-95 transition-all shadow-sm group"
+                className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 group"
               >
                 <MoreVertical className="h-[18px] w-[18px] text-muted-foreground group-hover:text-primary transition-colors" />
               </Button>
@@ -252,7 +252,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
           <Button
             variant="outline"
             size="icon"
-            className="size-9 rounded-full border-border bg-background hover:bg-muted active:scale-95 transition-all shadow-sm group text-muted-foreground hover:text-primary"
+            className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 group text-muted-foreground hover:text-primary"
             onClick={handleToggleTools}
             disabled={isSavingPreference}
             title={toolsExpanded ? "Hide header tools" : "Show header tools"}

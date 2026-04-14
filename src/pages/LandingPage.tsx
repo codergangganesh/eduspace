@@ -278,7 +278,7 @@ export default function LandingPage() {
 
                             <Button
                                 onClick={() => setShowRoleDialog(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg shadow-blue-600/20 font-black uppercase tracking-widest text-[11px] h-10"
+                                className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 font-black uppercase tracking-widest text-[11px] h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.2)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.3)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
                             >
                                 Get Started
                             </Button>

@@ -67,7 +67,7 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
                         <Link to="/student/login">
                             <Button
                                 size="lg"
-                                className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-8 w-full"
+                                className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-8 w-full rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.2)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.3)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
                             >
                                 <GraduationCap className="size-5" />
                                 I'm a Student
@@ -77,7 +77,7 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
                             <Button
                                 size="lg"
                                 variant="outline"
-                                className="gap-2 px-8 border-slate-300 dark:border-slate-700 w-full"
+                                className="gap-2 px-8 border-slate-300 dark:border-slate-700 w-full rounded-xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.15)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2)] active:scale-95 transition-all"
                             >
                                 <BookOpen className="size-5" />
                                 I'm a Lecturer
@@ -105,7 +105,7 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
                         initial={{ rotate: -10, scale: 0.8 }}
                         animate={{ rotate: 10, scale: 1 }}
                         transition={{ repeat: Infinity, repeatType: "reverse", duration: 2 }}
-                        className="absolute -top-4 -right-4 z-10 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700"
+                        className="absolute -top-4 -right-4 z-10 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[6px_6px_12px_rgba(0,0,0,0.15),-6px_-6px_12px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[6px_6px_12px_rgba(0,0,0,0.35),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.15)]"
                     >
                         <Award className="size-8 text-yellow-500" />
                     </motion.div>
@@ -116,7 +116,7 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ duration: 1, delay: 0.2 }}
                         whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                        className="bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 dark:border-slate-700 p-8 space-y-6 cursor-default"
+                        className="bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-xl rounded-[2rem] border border-white/10 dark:border-slate-700/50 p-8 space-y-6 cursor-default shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between">
@@ -154,19 +154,19 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
 
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 dark:bg-blue-900/20 p-4 rounded-xl border border-white/5">
+                            <div className="bg-gradient-to-br from-white/10 to-white/5 dark:from-blue-900/30 dark:to-blue-900/20 p-4 rounded-xl border border-white/10 shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <BarChart3 className="size-4 text-blue-600 dark:text-blue-400" />
+                                    <BarChart3 className="size-4 text-blue-400" />
                                 </div>
-                                <div className="text-3xl font-bold text-white dark:text-white group-hover:text-blue-400 transition-colors">3.8</div>
-                                <div className="text-xs text-slate-300 dark:text-slate-400 uppercase tracking-tight">Current GPA</div>
+                                <div className="text-3xl font-bold text-white">3.8</div>
+                                <div className="text-xs text-slate-300 uppercase tracking-tight">Current GPA</div>
                             </div>
-                            <div className="bg-white/5 dark:bg-purple-900/20 p-4 rounded-xl border border-white/5">
+                            <div className="bg-gradient-to-br from-white/10 to-white/5 dark:from-purple-900/30 dark:to-purple-900/20 p-4 rounded-xl border border-white/10 shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <TrendingUp className="size-4 text-purple-600 dark:text-purple-400" />
+                                    <TrendingUp className="size-4 text-purple-400" />
                                 </div>
-                                <div className="text-3xl font-bold text-white dark:text-white group-hover:text-purple-400 transition-colors">92%</div>
-                                <div className="text-xs text-slate-300 dark:text-slate-400 uppercase tracking-tight">Assignment Rate</div>
+                                <div className="text-3xl font-bold text-white">92%</div>
+                                <div className="text-xs text-slate-300 uppercase tracking-tight">Assignment Rate</div>
                             </div>
                         </div>
 
@@ -174,27 +174,27 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
                         <div className="space-y-3">
                             <h4 className="text-xs text-slate-400 uppercase tracking-wider">Recent Grades</h4>
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between p-3 bg-white/5 dark:bg-slate-700/50 rounded-lg group hover:bg-white/10 transition-all">
+                                <div className="flex items-center justify-between p-3 bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 shadow-[3px_3px_6px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.1)] hover:from-white/15 hover:to-white/10 transition-all">
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <div className="size-2 rounded-full bg-green-500" />
-                                            <span className="text-sm font-medium text-white dark:text-white">Computer Science 101</span>
+                                            <span className="text-sm font-medium text-white">Computer Science 101</span>
                                         </div>
-                                        <span className="text-xs text-slate-300 dark:text-slate-400">Midterm Exam</span>
+                                        <span className="text-xs text-slate-300">Midterm Exam</span>
                                     </div>
-                                    <div className="px-3 py-1 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold shadow-inner">
+                                    <div className="px-3 py-1 rounded-lg bg-gradient-to-br from-green-400 to-green-500 text-white font-semibold shadow-[2px_2px_4px_rgba(0,0,0,0.2),inset_1px_1px_2px_rgba(255,255,255,0.3)]">
                                         A
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between p-3 bg-white/5 dark:bg-slate-700/50 rounded-lg group hover:bg-white/10 transition-all">
+                                <div className="flex items-center justify-between p-3 bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 shadow-[3px_3px_6px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.1)] hover:from-white/15 hover:to-white/10 transition-all">
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <div className="size-2 rounded-full bg-white/50" />
-                                            <span className="text-sm font-medium text-white dark:text-white">Calculus II</span>
+                                            <span className="text-sm font-medium text-white">Calculus II</span>
                                         </div>
-                                        <span className="text-xs text-slate-300 dark:text-slate-400">Problem Set 4</span>
+                                        <span className="text-xs text-slate-300">Problem Set 4</span>
                                     </div>
-                                    <div className="px-3 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold shadow-inner">
+                                    <div className="px-3 py-1 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 text-white font-semibold shadow-[2px_2px_4px_rgba(0,0,0,0.2),inset_1px_1px_2px_rgba(255,255,255,0.3)]">
                                         B+
                                     </div>
                                 </div>

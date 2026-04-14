@@ -69,14 +69,16 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
         <AnimatePresence>
             {open && (
                 <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4 md:p-6 pointer-events-none">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => onOpenChange(false)}
-                        className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
-                    />
+                    {/* Backdrop for Desktop Only */}
+                    {!isMobile && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => onOpenChange(false)}
+                            className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
+                        />
+                    )}
 
                     {/* Modal / Bottom Sheet */}
                     <motion.div
@@ -85,13 +87,17 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                         exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className={cn(
-                            "bg-surface border border-border shadow-2xl pointer-events-auto overflow-hidden",
+                            "border pointer-events-auto overflow-hidden",
+                            "bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800",
+                            "border-slate-200/50 dark:border-slate-700/50",
+                            "shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)]",
+                            "dark:shadow-[8px_8px_16px_rgba(0,0,0,0.35),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]",
                             isMobile
                                 ? "fixed bottom-0 left-0 right-0 rounded-t-[2.5rem] p-6 pb-12 pt-8"
-                                : "relative w-full max-w-md rounded-2xl p-8"
+                                : "relative w-full max-w-md rounded-[2rem] p-8"
                         )}
                     >
-                        {/* Drag Handle for Mobile */}
+                        {/* Drag Handle for Mobile */}  
                         {isMobile && (
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-muted-foreground/20 rounded-full" />
                         )}
@@ -99,14 +105,14 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                         {/* Close Button */}
                         <button
                             onClick={() => onOpenChange(false)}
-                            className="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary transition-colors text-muted-foreground"
+                            className="absolute top-4 right-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-muted-foreground shadow-[2px_2px_4px_rgba(0,0,0,0.08),-2px_-2px_4px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[2px_2px_4px_rgba(0,0,0,0.3),-2px_-2px_4px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] active:scale-95"
                         >
                             <X className="size-5" />
                         </button>
 
                         <div className="space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                <div className="size-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border border-primary/20 shrink-0 shadow-[4px_4px_8px_rgba(0,0,0,0.08),-4px_-4px_8px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[4px_4px_8px_rgba(0,0,0,0.3),-4px_-4px_8px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.15)]">
                                     <Headset className="size-6 text-primary" />
                                 </div>
                                 <div className="space-y-1">
@@ -128,7 +134,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                         value={subject}
                                         onChange={(e) => setSubject(e.target.value)}
                                         disabled={isLoading}
-                                        className="h-12 bg-secondary/30 border-border focus:ring-primary/20 focus:border-primary rounded-xl"
+                                        className="h-12 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-slate-200/50 dark:border-slate-700/50 focus:ring-primary/20 focus:border-primary rounded-xl shadow-[inset_2px_2px_4px_rgba(0,0,0,0.06),inset_-2px_-2px_4px_rgba(255,255,255,0.9)] dark:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2),inset_-2px_-2px_4px_rgba(255,255,255,0.05)]"
                                         required
                                     />
                                 </div>
@@ -138,7 +144,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                     <Textarea
                                         id="message"
                                         placeholder="Describe your issue or question..."
-                                        className="min-h-[120px] bg-secondary/30 border-border focus:ring-primary/20 focus:border-primary resize-none p-4 rounded-xl"
+                                        className="min-h-[120px] bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-slate-200/50 dark:border-slate-700/50 focus:ring-primary/20 focus:border-primary resize-none p-4 rounded-xl shadow-[inset_3px_3px_6px_rgba(0,0,0,0.06),inset_-3px_-3px_6px_rgba(255,255,255,0.9)] dark:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2),inset_-3px_-3px_6px_rgba(255,255,255,0.05)]"
                                         value={message}
                                         onChange={(e) => setMessage(e.target.value)}
                                         disabled={isLoading}
@@ -152,14 +158,14 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                         variant="outline"
                                         onClick={() => onOpenChange(false)}
                                         disabled={isLoading}
-                                        className="h-12 rounded-xl text-sm font-semibold flex-1 sm:flex-none"
+                                        className="h-12 rounded-xl text-sm font-semibold flex-1 sm:flex-none shadow-[3px_3px_6px_rgba(0,0,0,0.08),-3px_-3px_6px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] active:scale-95"
                                     >
                                         Cancel
                                     </Button>
                                     <Button 
                                         type="submit" 
                                         disabled={isLoading}
-                                        className="h-12 rounded-xl text-sm font-semibold flex-1 shadow-lg shadow-primary/20 transition-all hover:shadow-xl active:scale-95 gap-2"
+                                        className="h-12 rounded-xl text-sm font-semibold flex-1 gap-2 bg-gradient-to-br from-primary to-primary/90 shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.3)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.4)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.25)] active:scale-95"
                                     >
                                         {isLoading ? (
                                             <>

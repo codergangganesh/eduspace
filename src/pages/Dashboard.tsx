@@ -314,7 +314,7 @@ export default function Dashboard() {
             </div>
 
             {/* Upcoming Classes Widget */}
-            <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
+            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/50 p-5 shadow-[6px_6px_12px_rgba(0,0,0,0.08),-6px_-6px_12px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[6px_6px_12px_rgba(0,0,0,0.3),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.15)] transition-all duration-300">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Clock className="size-4 text-purple-500" />
                 Upcoming Classes
@@ -342,7 +342,7 @@ export default function Dashboard() {
             </div>
 
             {/* Upcoming Assignments Widget */}
-            <div className="bg-surface rounded-xl border border-border p-5 shadow-sm">
+            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/50 p-5 shadow-[6px_6px_12px_rgba(0,0,0,0.08),-6px_-6px_12px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[6px_6px_12px_rgba(0,0,0,0.3),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.15)] transition-all duration-300">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Calendar className="size-4 text-primary" />
                 Assignments Due

@@ -27,7 +27,13 @@ export function PremiumStatsCard({
     <div
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-2xl p-4 sm:p-5 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer",
+        "relative overflow-hidden rounded-[1.5rem] p-4 sm:p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer",
+        "shadow-[6px_6px_12px_rgba(0,0,0,0.12),-6px_-6px_12px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,0,0,0.05)]",
+        "dark:shadow-[6px_6px_12px_rgba(0,0,0,0.3),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.15)]",
+        "hover:shadow-[8px_8px_16px_rgba(0,0,0,0.15),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.08)]",
+        "dark:hover:shadow-[8px_8px_16px_rgba(0,0,0,0.35),-8px_-8px_16px_rgba(255,255,255,0.08),inset_2px_2px_4px_rgba(255,255,255,0.12),inset_-2px_-2px_4px_rgba(0,0,0,0.18)]",
+        "active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.15),inset_-3px_-3px_6px_rgba(255,255,255,0.2)]",
+        "dark:active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3),inset_-3px_-3px_6px_rgba(255,255,255,0.05)]",
         backgroundColor,
         className
       )}
@@ -40,7 +46,10 @@ export function PremiumStatsCard({
       {/* Main content */}
       <div className="relative z-10 flex items-center gap-3 sm:gap-4">
         <div className={cn(
-          "p-2 sm:p-3.5 rounded-xl border border-white/20 backdrop-blur-sm flex-shrink-0 shadow-lg",
+          "p-2 sm:p-3.5 rounded-xl border border-white/20 backdrop-blur-sm flex-shrink-0",
+          "shadow-[3px_3px_6px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.4)]",
+          "dark:shadow-[3px_3px_6px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.1)]",
+          "active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]",
           iconBackgroundColor
         )}>
           <Icon className="size-6 sm:size-8 text-white" />
