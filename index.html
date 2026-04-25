@@ -205,15 +205,24 @@
   <script>
     // Hide the loading screen once React has mounted
     (function () {
+      function hideAppLoading() {
+        var el = document.getElementById('app-loading');
+        if (!el || el.getAttribute('data-hidden') === 'true') {
+          return;
+        }
+
+        el.setAttribute('data-hidden', 'true');
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity = '0';
+        setTimeout(function () { el.style.display = 'none'; }, 420);
+      }
+
+      window.__hideAppLoading = hideAppLoading;
+
       var observer = new MutationObserver(function () {
         var root = document.getElementById('root');
         if (root && root.children.length > 0) {
-          var el = document.getElementById('app-loading');
-          if (el) {
-            el.style.transition = 'opacity 0.4s ease';
-            el.style.opacity = '0';
-            setTimeout(function () { el.style.display = 'none'; }, 420);
-          }
+          hideAppLoading();
           observer.disconnect();
         }
       });

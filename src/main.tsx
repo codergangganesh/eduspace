@@ -4,6 +4,12 @@ import "./index.css";
 import { HelmetProvider } from 'react-helmet-async';
 import { initializeCapacitor } from "./lib/capacitor";
 
+declare global {
+    interface Window {
+        __hideAppLoading?: () => void;
+    }
+}
+
 // Initialize native features
 initializeCapacitor();
 
@@ -72,3 +78,7 @@ createRoot(document.getElementById("root")!).render(
         <App />
     </HelmetProvider>
 );
+
+requestAnimationFrame(() => {
+    window.__hideAppLoading?.();
+});
