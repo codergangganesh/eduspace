@@ -49,6 +49,34 @@ interface CreateNotificationParams {
     pushImage?: string;
 }
 
+type SendPushBody = {
+    user_id: string;
+    url: string;
+    title: string;
+    body: string;
+    type: string;
+    icon: string;
+    badge: string;
+    tag: string;
+    image?: string;
+    timestamp: number;
+    vibrate: number[];
+    actions: Array<{ action: string; title: string }>;
+    renotify: boolean;
+    data: Record<string, unknown>;
+    notification: {
+        title: string;
+        message: string;
+        type: string;
+        related_id: string | null;
+        class_id: string | null;
+        sender_id: string | null;
+        action_type: string | null;
+        link: string;
+        metadata: Record<string, unknown> | null;
+    };
+};
+
 type NotificationPreferenceField =
     | "assignment_reminders"
     | "message_notifications"
@@ -108,6 +136,17 @@ function getActions(type: string): Array<{ action: string; title: string }> {
     }
 }
 
+async function dispatchSecureNotification(body: SendPushBody) {
+    const { data, error } = await supabase.functions.invoke("send-push", { body });
+
+    if (error) {
+        console.error("send-push failed:", error);
+        return { success: false, error };
+    }
+
+    return { success: true, data };
+}
+
 /**
  * Create a notification for a specific user
  * Respects the master notification toggle (notifications_enabled)
@@ -135,67 +174,45 @@ export async function createNotification(params: CreateNotificationParams) {
             return { success: true, message: `${preferenceField} disabled by user` };
         }
 
-        const { error } = await supabase.from("notifications").insert({
-            recipient_id: userId,
+        const pushUrl = params.customUrl || getNotificationUrl(type, relatedId, params.classId);
+        const result = await dispatchSecureNotification({
+            user_id: userId,
             title,
-            message,
+            body: message,
+            url: pushUrl,
             type,
-            related_id: relatedId || null,
-            class_id: params.classId || null,
-            sender_id: senderId || null,
-            action_type: actionType || null,
-            is_read: false,
+            icon: params.icon || '/pwa-192x192.png',
+            badge: '/pwa-192x192.png',
+            tag: params.pushTag || generateTag(type, relatedId, params.classId),
+            image: params.pushImage,
+            timestamp: Date.now(),
+            vibrate: getVibrationPattern(type),
+            actions: getActions(type),
+            renotify: true,
+            data: {
+                conversationId: type === 'message' ? relatedId : undefined,
+                classId: params.classId,
+                relatedId,
+                url: pushUrl,
+            },
+            notification: {
+                title,
+                message,
+                type,
+                related_id: relatedId || null,
+                class_id: params.classId || null,
+                sender_id: senderId || null,
+                action_type: actionType || null,
+                link: pushUrl,
+                metadata: null,
+            },
         });
 
-        if (error && error.code !== '23505') {
-            console.error("Error creating notification:", error);
-            return { success: false, error };
+        if (!result.success) {
+            return { success: false, error: result.error };
         }
 
-        // Trigger Rich Push Notification
-        let pushUrl = params.customUrl || getNotificationUrl(type, relatedId, params.classId);
-
-        // Get the ID of the newly created notification to pass to the push
-        const { data: insertedNotif } = await supabase
-            .from("notifications")
-            .select("id")
-            .eq("recipient_id", userId)
-            .eq("title", title)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        // Append notifId to URL for auto-mark-as-read on click
-        if (insertedNotif?.id) {
-            const separator = pushUrl.includes('?') ? '&' : '?';
-            pushUrl = `${pushUrl}${separator}notifId=${insertedNotif.id}`;
-        }
-
-        supabase.functions.invoke('send-push', {
-            body: {
-                user_id: userId,
-                title,
-                body: message,
-                url: pushUrl,
-                type,
-                icon: params.icon || '/pwa-192x192.png',
-                badge: '/pwa-192x192.png',
-                tag: params.pushTag || generateTag(type, relatedId, params.classId),
-                image: params.pushImage,
-                timestamp: Date.now(),
-                vibrate: getVibrationPattern(type),
-                actions: getActions(type),
-                renotify: true,
-                data: {
-                    notificationId: insertedNotif?.id,
-                    conversationId: type === 'message' ? relatedId : undefined,
-                    classId: params.classId,
-                    relatedId,
-                },
-            }
-        }).catch(err => console.error("Push failed:", err));
-
-        return { success: true };
+        return { success: true, notificationId: result.data?.notificationId ?? null };
     } catch (err) {
         console.error("Error creating notification:", err);
         return { success: false, error: err };
@@ -241,66 +258,59 @@ export async function createBulkNotifications(
             return { success: true, message: "All target users have notifications disabled" };
         }
 
-        const notifications = activeUserIds.map((userId) => ({
-            recipient_id: userId,
-            title,
-            message,
-            type,
-            related_id: relatedId || null,
-            class_id: classId || null,
-            sender_id: senderId || null,
-            action_type: actionType || null,
-            is_read: false,
-        }));
-
-        const { error } = await supabase.from("notifications").insert(notifications);
-
-        if (error && error.code !== '23505') {
-            console.error("Error creating bulk notifications:", error);
-            return { success: false, error };
-        }
-
-        // Trigger Rich Push Notifications using chunked queue (controlled concurrency)
         const bulkPushUrl = params.customUrl || getNotificationUrl(type, relatedId, classId);
         const bulkTag = (params as any).pushTag || generateTag(type, relatedId, classId);
         const PUSH_BATCH_SIZE = 10;
         const BATCH_DELAY_MS = 50;
 
-        // Process push notifications in batches to prevent rate limiting
-        const sendPushForUser = (userId: string) =>
-            supabase.functions.invoke('send-push', {
-                body: {
-                    user_id: userId,
-                    title,
-                    body: message,
-                    url: bulkPushUrl,
-                    type,
-                    icon: (params as any).icon || '/pwa-192x192.png',
-                    badge: '/pwa-192x192.png',
-                    tag: bulkTag,
-                    image: (params as any).pushImage,
-                    timestamp: Date.now(),
-                    vibrate: getVibrationPattern(type),
-                    actions: getActions(type),
-                    renotify: true,
-                    data: {
-                        conversationId: type === 'message' ? relatedId : undefined,
-                        classId: classId,
-                        relatedId,
-                    },
-                }
-            }).catch(err => console.error(`Push failed for ${userId}:`, err));
+        for (let i = 0; i < activeUserIds.length; i += PUSH_BATCH_SIZE) {
+            const chunk = activeUserIds.slice(i, i + PUSH_BATCH_SIZE);
+            const results = await Promise.all(
+                chunk.map((userId) =>
+                    dispatchSecureNotification({
+                        user_id: userId,
+                        title,
+                        body: message,
+                        url: bulkPushUrl,
+                        type,
+                        icon: (params as any).icon || '/pwa-192x192.png',
+                        badge: '/pwa-192x192.png',
+                        tag: bulkTag,
+                        image: (params as any).pushImage,
+                        timestamp: Date.now(),
+                        vibrate: getVibrationPattern(type),
+                        actions: getActions(type),
+                        renotify: true,
+                        data: {
+                            conversationId: type === 'message' ? relatedId : undefined,
+                            classId: classId,
+                            relatedId,
+                            url: bulkPushUrl,
+                        },
+                        notification: {
+                            title,
+                            message,
+                            type,
+                            related_id: relatedId || null,
+                            class_id: classId || null,
+                            sender_id: senderId || null,
+                            action_type: actionType || null,
+                            link: bulkPushUrl,
+                            metadata: null,
+                        },
+                    }),
+                ),
+            );
 
-        // Fire-and-forget: process chunks without blocking the return
-        (async () => {
-            for (let i = 0; i < activeUserIds.length; i += PUSH_BATCH_SIZE) {
-                const chunk = activeUserIds.slice(i, i + PUSH_BATCH_SIZE);
-                await Promise.all(chunk.map(sendPushForUser));
-                if (i + PUSH_BATCH_SIZE < activeUserIds.length) {
-                    await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
-                }
+            const failedResult = results.find((result) => !result.success);
+            if (failedResult && !failedResult.success) {
+                return { success: false, error: failedResult.error };
             }
-        })();
+
+            if (i + PUSH_BATCH_SIZE < activeUserIds.length) {
+                await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+            }
+        }
 
         return { success: true };
     } catch (err) {

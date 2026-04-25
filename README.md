@@ -155,7 +155,7 @@ Follow these steps to set up the project locally.
       SMTP_PASS=your_app_password_here
       
       # AI Quiz Generator (OpenRouter)
-      VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
+      OPENROUTER_API_KEY=your_openrouter_api_key_here
       
       # Jitsi / 8x8 JaaS Configuration
       JITSI_APP_ID=your_jitsi_app_id_here

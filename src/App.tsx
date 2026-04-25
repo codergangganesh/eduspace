@@ -19,6 +19,7 @@ import { useEffect } from "react";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppGuide } from "@/components/onboarding/AppGuide";
 import { ProgressBar } from "@/components/common/ProgressBar";
+import { ForceUpdateGuard } from "@/components/system/ForceUpdateGuard";
 
 // ── Eager imports: Core pages users navigate between frequently ──────────────
 // These load with the main bundle so page transitions are INSTANT.
@@ -279,6 +280,7 @@ const AnimatedRoutes = () => {
 
 const App = () => (
   <AppProviders queryClient={queryClient}>
+    <ForceUpdateGuard />
     <FeedbackManager />
     <GlobalCallManager />
     <Toaster />

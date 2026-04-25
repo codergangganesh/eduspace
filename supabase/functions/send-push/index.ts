@@ -17,6 +17,18 @@ type ServiceAccount = {
 
 type IncomingPayload = {
     user_id: string;
+    url?: string;
+    notification?: {
+        title?: string;
+        message?: string;
+        type?: string;
+        related_id?: string | null;
+        class_id?: string | null;
+        sender_id?: string | null;
+        action_type?: string | null;
+        link?: string | null;
+        metadata?: Record<string, unknown> | null;
+    };
     title?: string;
     body?: string;
     type?: string;
@@ -35,6 +47,19 @@ type RoleRow = { role: string };
 type ConversationRow = { participant_1: string; participant_2: string };
 type CallSessionRow = { caller_id: string; receiver_id: string };
 type PushSubscriptionRow = { endpoint: string; notification_enabled: boolean };
+type NotificationInsertRow = {
+    recipient_id: string;
+    title: string;
+    message: string;
+    type: string;
+    related_id: string | null;
+    class_id: string | null;
+    sender_id: string | null;
+    action_type: string | null;
+    link: string | null;
+    metadata: Record<string, unknown> | null;
+    is_read: boolean;
+};
 
 function json(status: number, body: unknown) {
     return new Response(JSON.stringify(body), {
@@ -285,6 +310,44 @@ serve(async (req) => {
             }
         }
 
+        const notificationRecord: NotificationInsertRow = {
+            recipient_id: targetUserId,
+            title: body.notification?.title ?? notification.title ?? "EduSpace",
+            message: body.notification?.message ?? notification.body ?? "",
+            type: body.notification?.type ?? notification.type ?? "general",
+            related_id: body.notification?.related_id ?? null,
+            class_id: body.notification?.class_id ?? null,
+            sender_id: body.notification?.sender_id ?? null,
+            action_type: body.notification?.action_type ?? null,
+            link: body.notification?.link ?? body.url ?? null,
+            metadata: body.notification?.metadata ?? null,
+            is_read: false,
+        };
+
+        const { data: insertedNotification, error: insertNotificationError } = await serviceClient
+            .from("notifications")
+            .insert(notificationRecord)
+            .select("id")
+            .single();
+
+        if (insertNotificationError) {
+            return json(500, { error: `Notification insert failed: ${insertNotificationError.message}` });
+        }
+
+        if (insertedNotification?.id) {
+            notification.data = {
+                ...notification.data,
+                notificationId: insertedNotification.id,
+            };
+        }
+
+        if (body.url) {
+            notification.data = {
+                ...notification.data,
+                url: body.url,
+            };
+        }
+
         const { data: profile, error: profileError } = await serviceClient
             .from("profiles")
             .select("fcm_token, notifications_enabled")
@@ -340,7 +403,11 @@ serve(async (req) => {
 
         const targetTokens = Array.from(tokens);
         if (targetTokens.length === 0) {
-            return json(200, { success: true, skipped: "missing_fcm_token" });
+            return json(200, {
+                success: true,
+                skipped: "missing_fcm_token",
+                notificationId: insertedNotification?.id ?? null,
+            });
         }
 
         const sendResults = await Promise.allSettled(
@@ -365,6 +432,7 @@ serve(async (req) => {
         return json(200, {
             success: true,
             channel: "fcm",
+            notificationId: insertedNotification?.id ?? null,
             sent: successes.length,
             failed: failures.length,
             failures,

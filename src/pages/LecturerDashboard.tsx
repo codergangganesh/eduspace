@@ -37,11 +37,16 @@ export default function LecturerDashboard() {
   }
 
   return (
-    <DashboardLayout>
-      <SEO
-        title="Lecturer Dashboard"
-        description="Manage your students, track assignment submissions, and view upcoming classes on the EduSpace lecturer dashboard."
-      />
+    <DashboardLayout
+      actions={
+        <div className="flex items-center gap-2">
+          <SEO
+            title="Lecturer Dashboard"
+            description="Manage your students, track assignment submissions, and view upcoming classes on the EduSpace lecturer dashboard."
+          />
+        </div>
+      }
+    >
       <div className="flex flex-col gap-8 pb-8">
 
         {/* Sliding Hero Section */}

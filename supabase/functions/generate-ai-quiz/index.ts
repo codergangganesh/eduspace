@@ -36,7 +36,7 @@ serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const openRouterKey = Deno.env.get("OPENROUTER_API_KEY") ?? Deno.env.get("VITE_OPENROUTER_API_KEY") ?? "";
+    const openRouterKey = Deno.env.get("OPENROUTER_API_KEY") ?? "";
 
     if (!supabaseUrl || !serviceRoleKey) {
       return ok({ error: "Server misconfiguration: missing Supabase environment variables." });

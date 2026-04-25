@@ -2,6 +2,12 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  notifyClassStudents,
+  notifyGradePosted,
+  notifyNewAssignment,
+  notifyQuizPublished,
+} from "@/lib/notificationService";
+import {
   AgentMessage,
   AgentActionType,
   ClassContext,
@@ -208,16 +214,14 @@ const executeAction = async (
         .not("student_id", "is", null);
 
       if (students && students.length > 0) {
-        const notifications = students.map((s) => ({
-          recipient_id: s.student_id as string,
-          sender_id: userId,
-          title: `New Assignment: ${title}`,
-          message: `A new assignment "${title}" has been posted. Due: ${params.due_date ?? "TBD"}.`,
-          type: "announcement",
-          class_id: params.class_id as string,
-          link: "/student/assignments",
-        }));
-        await supabase.from("notifications").insert(notifications);
+        await notifyNewAssignment(
+          students.map((s) => s.student_id as string),
+          title,
+          assignment!.id,
+          userId,
+          params.class_id as string,
+          (params.due_date as string) ?? undefined,
+        );
       }
 
       await logAction(userId, action, params, assignment?.id);
@@ -296,16 +300,12 @@ const executeAction = async (
         .not("student_id", "is", null);
 
       if (students && students.length > 0) {
-        const notifications = students.map((s) => ({
-          recipient_id: s.student_id as string,
-          sender_id: userId,
-          title: `New Quiz: ${params.title}`,
-          message: `A new quiz "${params.title}" is available with ${questions.length} questions.`,
-          type: "announcement",
-          class_id: params.class_id as string,
-          link: "/student/quizzes",
-        }));
-        await supabase.from("notifications").insert(notifications);
+        await notifyQuizPublished(
+          quiz!.id,
+          params.class_id as string,
+          quizTitle,
+          userId,
+        );
       }
 
       await logAction(userId, action, { ...params, quiz_id: quiz?.id });
@@ -414,17 +414,16 @@ const executeAction = async (
         return "⚠️ No linked students found in this class. Notification not sent.";
       }
 
-      const notifications = students.map((s) => ({
-        recipient_id: s.student_id as string,
-        sender_id: userId,
-        title: params.title as string,
-        message: params.message as string,
-        type: params.type as string,
-        class_id: params.class_id as string,
-      }));
-
-      const { error } = await supabase.from("notifications").insert(notifications);
-      if (error) throw new Error(error.message);
+      const notifyResult = await notifyClassStudents(
+        params.class_id as string,
+        params.type as "assignment" | "grade" | "announcement" | "message" | "schedule",
+        params.title as string,
+        params.message as string,
+        userId,
+      );
+      if (!notifyResult.success) {
+        throw new Error(String((notifyResult as { error?: { message?: string } }).error?.message ?? "Notification dispatch failed."));
+      }
 
       await logAction(userId, action, params);
       return `✅ Notification sent to ${students.length} student${students.length !== 1 ? "s" : ""}!\n**"${params.title}"**`;
@@ -475,15 +474,17 @@ const executeAction = async (
 
       if (error) throw new Error(error.message);
 
-      // Notify student
-      await supabase.from("notifications").insert({
-        recipient_id: studentRecord.student_id,
-        sender_id: userId,
-        title: `Grade Posted: ${assignment.title}`,
-        message: `Your grade for "${assignment.title}" is ${grade}. ${params.feedback ? `Feedback: ${params.feedback}` : ""}`,
-        type: "announcement",
-        link: "/student/assignments",
-      });
+      const notifyResult = await notifyGradePosted(
+        studentRecord.student_id,
+        assignment.title,
+        String(grade),
+        assignment.id,
+        userId,
+        params.class_id as string,
+      );
+      if (!notifyResult.success) {
+        throw new Error(String((notifyResult as { error?: { message?: string } }).error?.message ?? "Grade notification failed."));
+      }
 
       await logAction(userId, action, params);
       return `✅ Grade **${grade}** saved for **${params.student_name}**!\nAssignment: "${assignment.title}"${params.feedback ? `\nFeedback sent.` : ""}`;
