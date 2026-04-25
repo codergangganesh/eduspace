@@ -187,6 +187,22 @@
         animation: loading-pulse 1.4s ease-in-out infinite;
         transform-origin: left;
       }
+
+      #app-loading-action {
+        display: none;
+        margin-top: 8px;
+        height: 48px;
+        min-width: 180px;
+        border: 0;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+        box-shadow: 0 12px 30px rgba(37, 99, 235, 0.3);
+      }
     </style>
     <div id="app-loading-logo-ring">
       <div id="app-loading-logo-inner">
@@ -197,6 +213,7 @@
     <div id="app-loading-bar-track">
       <div id="app-loading-bar"></div>
     </div>
+    <button id="app-loading-action" type="button">Update Now</button>
   </div>
 
   <div id="root"></div>
@@ -204,6 +221,60 @@
   <script>
     // Hide the loading screen once React has mounted
     (function () {
+      var params = new URLSearchParams(window.location.search);
+      var loader = document.getElementById('app-loading');
+      var loaderText = document.getElementById('app-loading-text');
+      var loaderTrack = document.getElementById('app-loading-bar-track');
+      var loaderAction = document.getElementById('app-loading-action');
+
+      function showUpdateRecovery() {
+        if (!loader || !loaderText || !loaderTrack || !loaderAction) return;
+        loaderText.textContent = 'New update available';
+        loaderTrack.style.display = 'none';
+        loaderAction.style.display = 'inline-flex';
+        loaderAction.style.alignItems = 'center';
+        loaderAction.style.justifyContent = 'center';
+      }
+
+      if (sessionStorage.getItem('force-update-required') === 'true') {
+        showUpdateRecovery();
+      }
+
+      if (loaderAction) {
+        loaderAction.addEventListener('click', async function () {
+          sessionStorage.setItem('force-update-pending', 'true');
+          try {
+            if ('serviceWorker' in navigator) {
+              var registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(registrations.map(function (registration) {
+                return registration.unregister();
+              }));
+            }
+            if ('caches' in window) {
+              var keys = await caches.keys();
+              await Promise.all(keys.map(function (key) {
+                return caches.delete(key);
+              }));
+            }
+          } catch (error) {
+            console.warn('Inline update recovery failed:', error);
+          }
+
+          var refreshUrl = new URL(window.location.href);
+          refreshUrl.searchParams.set('forceUpdate', Date.now().toString());
+          window.location.replace(refreshUrl.toString());
+        });
+      }
+
+      if (params.has('forceUpdate')) {
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (!root || root.children.length === 0) {
+            showUpdateRecovery();
+          }
+        }, 5000);
+      }
+
       var observer = new MutationObserver(function () {
         var root = document.getElementById('root');
         if (root && root.children.length > 0) {

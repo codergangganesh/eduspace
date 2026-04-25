@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 const UPDATE_CHECK_INTERVAL_MS = 45_000;
 const FORCE_UPDATE_STORAGE_KEY = "force-update-required";
 const FORCE_UPDATE_EVENT = "eduspace-force-update-required";
+const FORCE_UPDATE_PENDING_KEY = "force-update-pending";
 
 type VersionResponse = {
     version?: string;
@@ -27,6 +28,8 @@ async function getServerVersion(signal?: AbortSignal) {
 }
 
 async function forceRefreshApp() {
+    sessionStorage.setItem(FORCE_UPDATE_PENDING_KEY, "true");
+
     if ("serviceWorker" in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
         await Promise.all(registrations.map((registration) => registration.unregister()));
@@ -39,6 +42,19 @@ async function forceRefreshApp() {
 
     const url = new URL(window.location.href);
     url.searchParams.set("forceUpdate", Date.now().toString());
+
+    try {
+        await fetch(url.toString(), {
+            cache: "reload",
+            headers: {
+                "cache-control": "no-cache",
+                pragma: "no-cache",
+            },
+        });
+    } catch (error) {
+        console.warn("Force refresh preflight failed:", error);
+    }
+
     window.location.replace(url.toString());
 }
 
@@ -76,8 +92,19 @@ export function ForceUpdateGuard() {
 
             try {
                 const data = await getServerVersion(controller.signal);
-                if (isMounted && data.version && data.version !== APP_VERSION) {
+                if (!isMounted || !data.version) {
+                    return;
+                }
+
+                if (data.version !== APP_VERSION) {
                     activateForceUpdate();
+                    return;
+                }
+
+                if (sessionStorage.getItem(FORCE_UPDATE_STORAGE_KEY) === "true" || sessionStorage.getItem(FORCE_UPDATE_PENDING_KEY) === "true") {
+                    sessionStorage.removeItem(FORCE_UPDATE_STORAGE_KEY);
+                    sessionStorage.removeItem(FORCE_UPDATE_PENDING_KEY);
+                    setUpdateRequired(false);
                 }
             } catch (error) {
                 console.warn("Version check skipped:", error);
