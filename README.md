@@ -1,117 +1,106 @@
-﻿#  EduSpace - Advanced Learning Management System (LMS)
+# EduSpace - Advanced Learning Management System (LMS)
 
 EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
+---
+
 <img width="1918" height="866" alt="image" src="https://github.com/user-attachments/assets/d7780a60-71c1-44de-9d55-28745701ac57" />
 
-[Watch Demo Video](https://www.youtube.com/watch?v=TMe3jbI36OY&t=10s)
+### Demonstration
+[Watch Demo Video on YouTube](https://www.youtube.com/watch?v=TMe3jbI36OY&t=10s)
 
-> **Note:** The demo is available on YouTube at the link above.
-
-![Project Status](https://img.shields.io/badge/Status-Active-success)
+> **Note:** A full video demonstration is available via the link above.
 
 [![EduSpace Demo](https://img.youtube.com/vi/TMe3jbI36OY/maxresdefault.jpg)](https://www.youtube.com/watch?v=TMe3jbI36OY&t=10s)
 
+---
 
+## Key Features
+
+### Authentication and Security
+*   **Role-Based Access Control (RBAC):** Specialized environments for Students, Lecturers, and Administrators.
+    *   **Administrators:** System-wide oversight and management.
+    *   **Lecturers:** Course creation, curriculum management, and grading.
+    *   **Students:** Content consumption, assignment submissions, and progress tracking.
+*   **Secure Authentication:** Managed by Supabase Auth with support for Email/Password and Google OAuth.
+*   **Row Level Security (RLS):** Strict database-level policies ensuring users only access data they are explicitly permitted to view.
+
+### Lecturer Hub
+*   **Class Management:** Create and manage multiple courses and academic subjects.
+*   **Student Administration:**
+    *   **Bulk Import:** Efficiently upload student lists using Excel or CSV files.
+    *   **Email Linking System:** Pre-register students by email to automatically link their accounts upon sign-up.
+    *   **Access Requests:** Review and manage student requests to join specific classes.
+*   **Curriculum Planning:** Built-in calendar for scheduling lectures, labs, and examinations.
+*   **Assignments and Grading:** Create tasks, distribute materials, and provide feedback-driven grading for student work.
+
+### Student Portal
+*   **Interactive Dashboard:** A centralized view of upcoming classes, pending tasks, and recent system alerts.
+*   **Course Enrollment:** Browse the active course catalog and submit enrollment requests.
+*   **Digital Submissions:** Submit assignments directly through the portal via text or file attachments.
+*   **Academic Progress:** Real-time tracking of grades, attendance records, and credit completion.
+*   **Profile Management:** Personalized academic profiles with optimized avatar management and history.
+
+### Communication and Collaboration
+*   **Real-time Messaging:** Direct communication channel between students and faculty.
+*   **System Notifications:** Instant alerts for assignment postings, grade releases, and class updates.
+*   **Class Feeds:** Course-specific newsfeeds for announcements and discussion.
 
 ---
 
-
-## ðŸŒŸ Key Features
-
-### ðŸ” Authentication & Security
-*   **Role-Based Access Control (RBAC):** Distinct environments for **Students**, **Lecturers**, and **Admins**.
-    *   *Admins*: System oversight.
-    *   *Lecturers*: Course creation, grading, student management.
-    *   *Students*: Learning, submissions, progress tracking.
-*   **Secure Authentication:** Powered by Supabase Auth (Email/Password & Google OAuth).
-*   **Row Level Security (RLS):** Database-level security policies ensuring users can only access data they are permitted to see.
-
-### ðŸ‘¨â€ðŸ« Lecturer Hub
-*   **Class Management:** Create, update, and manage multiple sub-courses/subjects.
-*   **Student Management:**
-    *   **Bulk Import:** Upload student lists via Excel/CSV.
-    *   **Email Linking System:** Pre-register students by email before they sign up. The system automatically links their account upon registration.
-    *   **Access Requests:** Manage requests from students to join classes.
-*   **Curriculum Planning:** Schedule classes, labs, and exams with a built-in calendar.
-*   **Assignments & Grading:** Create assignments, upload resource materials, view submissions, and grade student work with feedback.
-
-### ðŸ‘¨â€ðŸŽ“ Student Portal
-*   **Interactive Dashboard:** A centralized hub for upcoming classes, pending assignments, and recent notifications.
-*   **Course Enrollment:** Browse active courses and request access.
-*   **Assignment Submission:** Submit work directly through the portal (text or file attachments).
-*   **Academic Progress:** Track grades, attendance, and credits completed.
-*   **Profile Management:** Customizable profile with avatar upload (Base64 optimized) and academic history.
-
-### ðŸ’¬ Communication & Collaboration
-*   **Real-time Messaging:** Direct messaging system between students and lecturers.
-*   **Notifications:** Real-time system alerts for new assignments, grades, and class updates.
-*   **Class Feeds:** Stay updated with course-specific announcements.
-
----
-
-## ðŸ› ï¸ Technology Stack
+## Technology Stack
 
 ### Frontend
-*   **Framework:** [React](https://reactjs.org/) (v18) with [Vite](https://vitejs.dev/) for lightning-fast build tooling.
-*   **Language:** [TypeScript](https://www.typescriptlang.org/) for robust type safety.
-*   **Styling:** [Tailwind CSS](https://tailwindcss.com/) for utility-first styling.
-*   **UI Library:** [shadcn/ui](https://ui.shadcn.com/) for accessible, reusable components.
-*   **State Management:** React Context API & [TanStack Query](https://tanstack.com/query/latest) for server state caching.
-*   **Forms:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) validation.
-*   **Routing:** [React Router](https://reactrouter.com/) for client-side routing.
+*   **Framework:** React 18 with Vite for high-performance development and bundling.
+*   **Language:** TypeScript for robust type safety and maintainability.
+*   **Styling:** Tailwind CSS for utility-first responsive design.
+*   **UI Library:** shadcn/ui for accessible and modular components.
+*   **State Management:** React Context API and TanStack Query for efficient server-state caching.
+*   **Forms:** React Hook Form with Zod for strict schema validation.
 
-### Backend & Database (Serverless)
-*   **Platform:** [Supabase](https://supabase.com/).
-*   **Database:** PostgreSQL (Relation Database).
-*   **Authentication:** Supabase Auth (JWT).
-*   **Realtime:** Supabase Realtime (WebSockets) for instant updates.
-*   **Edge Functions:** (Optional) For server-side logic like sending emails.
+### Backend and Database
+*   **Platform:** Supabase (Serverless infrastructure).
+*   **Database:** PostgreSQL for relational data management.
+*   **Authentication:** JWT-based Supabase Auth.
+*   **Real-time:** WebSockets via Supabase Realtime for instant UI updates.
+*   **Edge Functions:** Deno-based serverless logic for complex backend operations.
 
 ---
 
-## ðŸ“‚ Project Structure
+## Project Structure
 
 ```text
 eduspace/
-â”œâ”€â”€ .env                    # Environment variables configuration
-â”œâ”€â”€ public/                 # Static assets (images, icons)
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ components/
-â”‚   â”‚   â”œâ”€â”€ admin/          # Admin-specific components
-â”‚   â”‚   â”œâ”€â”€ common/         # Shared components (loaders, errors)
-â”‚   â”‚   â”œâ”€â”€ layout/         # Layout wrappers (Sidebar, Topbar)
-â”‚   â”‚   â”œâ”€â”€ lecturer/       # Lecturer-specific components
-â”‚   â”‚   â”œâ”€â”€ student/        # Student-specific components
-â”‚   â”‚   â””â”€â”€ ui/             # shadcn/ui primitive components
-â”‚   â”œâ”€â”€ contexts/           # Global State (AuthContext, ThemeContext)
-â”‚   â”œâ”€â”€ hooks/              # Custom React Hooks
-â”‚   â”œâ”€â”€ i18n/               # i18n configuration
-â”‚   â”œâ”€â”€ integrations/       # Supabase client & DB types
-â”‚   â”œâ”€â”€ lib/                # Utility functions & libraries
-â”‚   â”œâ”€â”€ locales/            # Translation files
-â”‚   â”œâ”€â”€ pages/              # Application Routes/Screens
-â”‚   â”œâ”€â”€ types/              # TypeScript type definitions
-â”‚   â”œâ”€â”€ utils/              # General utility functions
-â”‚   â”œâ”€â”€ App.tsx             # Main App Component
-â”‚   â””â”€â”€ main.tsx            # Entry Point
-â”œâ”€â”€ supabase/
-â”‚   â”œâ”€â”€ functions/          # Supabase Edge Functions
-â”‚   â””â”€â”€ migrations/         # SQL migration files
-â””â”€â”€ vite.config.ts          # Vite configuration
+├── .env                    # Environment variables configuration
+├── public/                 # Static assets (images, icons)
+├── src/
+│   ├── components/
+│   │   ├── admin/          # Admin-specific modules
+│   │   ├── common/         # Shared UI components
+│   │   ├── layout/         # Shell and navigation
+│   │   ├── lecturer/       # Lecturer-specific modules
+│   │   ├── student/        # Student-specific modules
+│   │   └── ui/             # shadcn/ui primitives
+│   ├── contexts/           # Global state (Auth, Theme)
+│   ├── hooks/              # Custom React hooks
+│   ├── integrations/       # Backend client and types
+│   ├── pages/              # Application routes and screens
+│   └── types/              # TypeScript definitions
+├── supabase/
+│   ├── functions/          # Serverless Edge Functions
+│   └── migrations/         # SQL schema migrations
+└── vite.config.ts          # Vite build configuration
 ```
 
 ---
 
-## ðŸš€ Getting Started
-
-Follow these steps to set up the project locally.
+## Getting Started
 
 ### Prerequisites
-*   **Node.js** (v18 or higher)
-*   **npm** or **yarn**
-*   A **Supabase** account (Free tier is sufficient)
-*   A **Google Cloud Console** account (for OAuth - optional)
+*   Node.js (v18 or higher)
+*   npm or yarn
+*   Supabase Account
+*   Google Cloud Console Account (Optional for OAuth)
 
 ### Installation
 
@@ -124,124 +113,67 @@ Follow these steps to set up the project locally.
 2.  **Install Dependencies**
     ```bash
     npm install
-    # or
-    yarn install
     ```
 
 3.  **Environment Configuration**
-    Create a `.env` file in the root directory by copying the example:
-    ```bash
-    cp .env.example .env
-    ```
-    Populate the variables:
+    Create a `.env` file in the root directory and populate it with your credentials:
     ```env
-    # Supabase Configuration
-      VITE_SUPABASE_URL=your_supabase_project_url_here
-      VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-      SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
-      
-      # Cloudinary Configuration (for image uploads)
-      VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name_here
-      VITE_CLOUDINARY_UPLOAD_PRESET=your_cloudinary_upload_preset_here
-      
-      # Application URL
-      APP_URL=http://localhost:8082
-      
-      # Email Configuration (SMTP/Resend)
-      RESEND_API_KEY=your_resend_api_key_here
-      SMTP_HOST=smtp.gmail.com
-      SMTP_PORT=587
-      SMTP_USER=your_email@gmail.com
-      SMTP_PASS=your_app_password_here
-      
-      # AI Quiz Generator (OpenRouter)
-      OPENROUTER_API_KEY=your_openrouter_api_key_here
-      
-      # Jitsi / 8x8 JaaS Configuration
-      JITSI_APP_ID=your_jitsi_app_id_here
-      JITSI_KID=your_jitsi_key_id_here
-      JITSI_PRIVATE_KEY="your_jitsi_private_key_pem_content_here"
-      
-      # Web Push Notifications (Standard VAPID)
-      VITE_VAPID_PUBLIC_KEY=your_public_vapid_key_here
-      VAPID_PRIVATE_KEY=your_private_vapid_key_here
-
+    # Supabase
+    VITE_SUPABASE_URL=your_url
+    VITE_SUPABASE_ANON_KEY=your_key
+    SUPABASE_SERVICE_ROLE_KEY=your_service_key
+    
+    # Cloudinary
+    VITE_CLOUDINARY_CLOUD_NAME=your_name
+    VITE_CLOUDINARY_UPLOAD_PRESET=your_preset
+    
+    # Application
+    APP_URL=http://localhost:8080
+    
+    # Email
+    RESEND_API_KEY=your_api_key
+    SMTP_USER=your_email
+    SMTP_PASS=your_password
     ```
 
 4.  **Database Setup**
-    Navigate to the `supabase/migrations` folder and apply the SQL files to your Supabase project's **SQL Editor** in this specific order:
-    1.  `20251227_create_profiles_and_roles_system.sql`
-    2.  `20251230_create_lms_core_system.sql`
-    3.  `20250101_create_email_linking_system.sql`
-    4.  `20250101_fix_access_requests_nullable.sql`
-    5.  `20250101_fix_class_students_nullable.sql`
-    *(Tip: You can copy-paste the content of these files directly into the Supabase SQL editor)*
+    Apply the migrations in your Supabase SQL Editor in the following order:
+    1. `20251227_create_profiles_and_roles_system.sql`
+    2. `20251230_create_lms_core_system.sql`
+    3. `20250101_create_email_linking_system.sql`
 
 5.  **Run the Application**
     ```bash
     npm run dev
     ```
-    Open the local URL printed by Vite in the terminal. By default this is [http://localhost:8080](http://localhost:8080), but if that port is already in use Vite will automatically use the next available port.
 
 ---
 
-## ðŸ”§ Advanced Configuration
+## Advanced Configuration
 
-### Setting up Email Linking System
-The system allows lecturers to add student emails before they register.
-1.  **Lecturer Side:** In the class management view, click "Import Students". Upload an Excel file or add manually.
-2.  **Backend Logic:** A trigger (`trigger_auto_link_student`) automatically runs when a new user signs up. It checks the `student_emails` table and links the new account to the class if a match is found.
+### Email Linking System
+Lecturers can pre-register students by adding their emails to the system. A database trigger (`trigger_auto_link_student`) automatically runs when a new user signs up. It checks the `student_emails` table and links the new account to their assigned classes upon registration.
 
 ### Google OAuth Setup
-To enable "Continue with Google":
-1.  **Google Cloud Console:** Create credentials for a Web Application.
-    *   Authorized Origin: `http://localhost:8080` (and your production URL)
-    *   If Vite falls back to a different local port during development, update `APP_URL` and your OAuth authorized origin to match that port.
-    *   Redirect URI: `https://<your-project-id>.supabase.co/auth/v1/callback`
-2.  **Supabase:** Go to Authentication -> Providers -> Google.
-    *   Enable it.
-    *   Enter Client ID and Client Secret.
+Enable "Continue with Google" by configuring a Web Application in the Google Cloud Console. Set the Authorized Redirect URI to `https://<your-project-id>.supabase.co/auth/v1/callback` and enter the credentials into the Supabase Authentication dashboard.
 
 ---
 
-## ðŸ› Troubleshooting
+## Troubleshooting
 
-### Common Issues
-
-**1. "Bucket not found" error**
-*   **Cause:** The application tries to upload images to Supabase Storage but buckets aren't configured.
-*   **Fix:** We have migrated to base64 encoding for profile images. Ensure you are using the latest version of the code which handles image strings directly in the database.
-
-**2. Auth Loop / Blank Page**
-*   **Cause:** Invalid environment variables or stale local storage.
-*   **Fix:** Check `.env` values. Clear Application Storage (Local Storage) in DevTools.
-
-**3. Row Level Security Policy Violation**
-*   **Cause:** Trying to access data belonging to another user.
-*   **Fix:** Ensure you are logged in with the correct role. Check the SQL migration files to understand the RLS policies in place.
+*   **File Uploads:** The system uses Base64 encoding for profile images stored directly in the database to avoid bucket configuration issues.
+*   **Authentication Loops:** Ensure your `.env` variables are correct and clear your browser's local storage if you encounter redirection issues.
+*   **RLS Violations:** If access is denied, verify that your account has been assigned the correct role (Student, Lecturer, or Admin).
 
 ---
 
-## ðŸ—ºï¸ Roadmap
+## Project Roadmap
 
-*   [ ] **Mobile App:** React Native version for iOS/Android.
-*   [ ] **Video Conferencing:** Integration with Zoom or WebRTC for live classes.
-*   [ ] **AI Tutor:** Integration with OpenAI for student assistance.
-*   [ ] **Analytics Dashboard:** Advanced reporting for Admin/Lectures.
-
----
-
-## ðŸ¤ Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1.  Fork the repository.
-2.  Create a new branch (`git checkout -b feature/AmazingFeature`).
-3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4.  Push to the branch (`git push origin feature/AmazingFeature`).
-5.  Open a Pull Request.
-
+*   Development of native mobile applications for iOS and Android.
+*   Direct integration with video conferencing tools for virtual classrooms.
+*   Expansion of AI-driven student assistance and tutoring.
+*   Advanced academic analytics for institutional reporting.
 
 ---
 
-**Developed by the Mannam Ganesh Babu**
+**Developed by Mannam Ganesh Babu**
