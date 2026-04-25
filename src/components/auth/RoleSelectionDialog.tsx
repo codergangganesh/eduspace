@@ -46,23 +46,27 @@ export function RoleSelectionDialog({ open, onOpenChange, mode = "login" }: Role
                         />
                     )}
 
-                    {/* Modal - Opens from center of screen */}
+                    {/* Modal / Bottom Sheet */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
+                        animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                        exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className={cn(
-                            "border pointer-events-auto overflow-hidden max-h-[85vh] overflow-y-auto",
+                            "border pointer-events-auto overflow-hidden",
                             "bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800",
                             "border-slate-200/50 dark:border-slate-700/50",
                             "shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)]",
                             "dark:shadow-[8px_8px_16px_rgba(0,0,0,0.35),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]",
                             isMobile
-                                ? "fixed inset-4 rounded-[2rem]"
-                                : "relative w-full max-w-xl rounded-[2rem] p-0"
+                                ? "fixed bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-[2rem] p-6 pb-[calc(2.5rem+var(--safe-bottom))] pt-8"
+                                : "relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-[2rem] p-0"
                         )}
                     >
+                        {isMobile && (
+                            <div className="absolute top-3 left-1/2 h-1.5 w-12 -translate-x-1/2 rounded-full bg-muted-foreground/20" />
+                        )}
+
                         {/* Close Button */}
                         <button
                             onClick={() => onOpenChange(false)}
@@ -75,13 +79,13 @@ export function RoleSelectionDialog({ open, onOpenChange, mode = "login" }: Role
                             /* Mobile Layout - Stacked Cards */
                             <>
                                 {/* Header */}
-                                <div className="p-6 pb-4 text-center pt-12">
+                                <div className="pb-4 pt-6 text-center">
                                     <h2 className="text-2xl font-black text-slate-900 dark:text-white">Select your role</h2>
                                     <p className="text-slate-500 dark:text-slate-400 mt-1">To personalize your experience</p>
                                 </div>
 
                                 {/* Role Selection Cards */}
-                                <div className="p-6 pt-2 space-y-4">
+                                <div className="space-y-4 pt-2">
                                     {/* Student Section */}
                                     <div
                                         className="group relative p-6 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/50 flex items-center gap-5 cursor-pointer transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.08),-4px_-4px_8px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[4px_4px_8px_rgba(0,0,0,0.3),-4px_-4px_8px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.15)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.12),-6px_-6px_12px_rgba(255,255,255,0.95),inset_2px_2px_4px_rgba(255,255,255,0.9),inset_-2px_-2px_4px_rgba(0,0,0,0.08)] dark:hover:shadow-[6px_6px_12px_rgba(0,0,0,0.35),-6px_-6px_12px_rgba(255,255,255,0.08),inset_2px_2px_4px_rgba(255,255,255,0.12),inset_-2px_-2px_4px_rgba(0,0,0,0.18)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.15)] active:scale-[0.98]"
