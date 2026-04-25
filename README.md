@@ -2,7 +2,7 @@
 
 EduSpace is a modern, comprehensive, and scalable Learning Management System designed to bridge the gap between students, lecturers, and administrators. Built with performance and user experience in mind, it leverages cutting-edge web technologies to provide a seamless educational environment.
 
----
+----
 
 <img width="1918" height="866" alt="image" src="https://github.com/user-attachments/assets/d7780a60-71c1-44de-9d55-28745701ac57" />
 
