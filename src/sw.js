@@ -44,7 +44,7 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: 'EduSpace', body: event.data?.text() || 'New update available' };
+    data = { title: 'EduSpace', body: event.data?.text() || 'You have a new notification' };
   }
 
   event.waitUntil(handlePushEvent(data));
@@ -83,7 +83,7 @@ async function handlePushEvent(data) {
   
   // Requirement: App name + Branded icon + Title + Message preview
   const options = {
-    body: data.body || 'New update available',
+    body: data.body || 'You have a new notification',
     icon: data.icon || '/pwa-192x192.png', // Corrected Branded Icon
     badge: data.badge || '/pwa-192x192.png',  // Corrected Monochrome badge
     image: data.image || data.icon || null, // Native-style large image preview
