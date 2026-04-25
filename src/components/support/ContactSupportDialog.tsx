@@ -70,23 +70,22 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4 md:p-6 pointer-events-none">
-                    {/* Backdrop for Desktop Only */}
-                    {!isMobile && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => onOpenChange(false)}
-                            className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
-                        />
-                    )}
-
-                    {/* Modal - Opens from center of screen */}
+                <div className={cn(
+                    "fixed inset-0 z-[10005] flex justify-center pointer-events-none",
+                    isMobile ? "items-end" : "items-center p-4 md:p-6"
+                )}>
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => onOpenChange(false)}
+                        className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
+                    />
+
+                    <motion.div
+                        initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
+                        animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                        exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className={cn(
                             "border pointer-events-auto overflow-hidden max-h-[85vh] overflow-y-auto",
@@ -95,10 +94,14 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                             "shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)]",
                             "dark:shadow-[8px_8px_16px_rgba(0,0,0,0.35),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]",
                             isMobile
-                                ? "fixed inset-4 rounded-[2rem]"
+                                ? "fixed bottom-0 left-0 right-0 max-h-[92vh] rounded-t-[2rem] border-b-0"
                                 : "relative w-full max-w-[900px] rounded-[2rem]"
                         )}
                     >
+                        {isMobile && (
+                            <div className="absolute top-3 left-1/2 z-50 h-1.5 w-12 -translate-x-1/2 rounded-full bg-muted-foreground/20" />
+                        )}
+
                         {/* Close Button */}
                         <button
                             onClick={() => onOpenChange(false)}
@@ -173,7 +176,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                             </div>
 
                             {/* Right Panel - Form */}
-                            <div className="w-full md:w-3/5 p-8 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 pt-12 md:pt-8">
+                            <div className="w-full md:w-3/5 bg-gradient-to-br from-white to-slate-50 p-6 pt-12 dark:from-slate-900 dark:to-slate-800 md:p-8 md:pt-8">
                                 <div className="mb-6 text-left">
                                     <h2 className="text-2xl font-bold text-foreground">Get in Touch</h2>
                                     <p className="text-muted-foreground text-sm mt-1">

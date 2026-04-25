@@ -11,20 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck, Sun, Moon, Monitor, MessageSquare } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
 
 export function UserDropdown() {
   const { profile, role, signOut } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
-  const [isContactOpen, setIsContactOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,8 +35,7 @@ export function UserDropdown() {
   const displayRole = role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student";
 
   return (
-    <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
-      <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center justify-center size-9 rounded-full border border-transparent hover:bg-muted/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-primary/20">
             <Avatar className="size-9 shadow-sm">
@@ -133,12 +126,16 @@ export function UserDropdown() {
             <MessageSquare className="size-4" />
             Give Feedback
           </DropdownMenuItem>
-          <DialogTrigger asChild>
-            <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
-              <Mail className="size-4" />
-              Contact Support
-            </DropdownMenuItem>
-          </DialogTrigger>
+          <DropdownMenuItem
+            className="flex items-center gap-2 cursor-pointer"
+            onSelect={() => {
+              setOpen(false);
+              window.dispatchEvent(new CustomEvent("open-contact-support"));
+            }}
+          >
+            <Mail className="size-4" />
+            Contact Support
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleSignOut}
@@ -149,7 +146,5 @@ export function UserDropdown() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ContactSupportDialog open={isContactOpen} onOpenChange={setIsContactOpen} />
-    </Dialog>
   );
 }

@@ -13,9 +13,10 @@ import { PushNotificationManager } from "@/components/PushNotificationManager";
 import { FCMManager } from "@/components/chat/FCMManager";
 import { GlobalCallManager } from "@/components/chat/GlobalCallManager";
 import { FeedbackPrompt } from "@/components/feedback/FeedbackPrompt";
+import { ContactSupportDialog } from "@/components/common/ContactSupportDialog";
 import { useFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppGuide } from "@/components/onboarding/AppGuide";
 import { ProgressBar } from "@/components/common/ProgressBar";
@@ -171,6 +172,23 @@ const FeedbackManager = () => {
   );
 };
 
+const ContactSupportManager = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenSupport = () => setIsOpen(true);
+    window.addEventListener("open-contact-support", handleOpenSupport);
+    return () => window.removeEventListener("open-contact-support", handleOpenSupport);
+  }, []);
+
+  return (
+    <ContactSupportDialog
+      open={isOpen}
+      onOpenChange={setIsOpen}
+    />
+  );
+};
+
 // Guarded wrapper to ensure AppGuide only mounts on protected internal pages
 const AuthAppGuide = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -265,6 +283,7 @@ const AnimatedRoutes = () => {
 const App = () => (
   <AppProviders queryClient={queryClient}>
     <FeedbackManager />
+    <ContactSupportManager />
     <GlobalCallManager />
     <Toaster />
     <Sonner />

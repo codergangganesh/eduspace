@@ -68,19 +68,18 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4 md:p-6 pointer-events-none">
-                    {/* Backdrop for Desktop Only */}
-                    {!isMobile && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => onOpenChange(false)}
-                            className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
-                        />
-                    )}
+                <div className={cn(
+                    "fixed inset-0 z-[10005] flex justify-center pointer-events-none",
+                    isMobile ? "items-end" : "items-center p-4 md:p-6"
+                )}>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => onOpenChange(false)}
+                        className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
+                    />
 
-                    {/* Modal / Bottom Sheet */}
                     <motion.div
                         initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
                         animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
@@ -93,16 +92,14 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                             "shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)]",
                             "dark:shadow-[8px_8px_16px_rgba(0,0,0,0.35),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]",
                             isMobile
-                                ? "fixed bottom-0 left-0 right-0 rounded-t-[2.5rem] p-6 pb-12 pt-8"
+                                ? "fixed bottom-0 left-0 right-0 max-h-[88vh] overflow-y-auto rounded-t-[2rem] border-b-0 p-5 pb-[calc(1.75rem+var(--safe-bottom,0px))] pt-8"
                                 : "relative w-full max-w-md rounded-[2rem] p-8"
                         )}
                     >
-                        {/* Drag Handle for Mobile */}  
                         {isMobile && (
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-muted-foreground/20 rounded-full" />
                         )}
 
-                        {/* Close Button */}
                         <button
                             onClick={() => onOpenChange(false)}
                             className="absolute top-4 right-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-muted-foreground shadow-[2px_2px_4px_rgba(0,0,0,0.08),-2px_-2px_4px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[2px_2px_4px_rgba(0,0,0,0.3),-2px_-2px_4px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] active:scale-95"
