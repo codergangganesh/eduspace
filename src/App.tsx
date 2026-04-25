@@ -19,7 +19,6 @@ import { useEffect } from "react";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppGuide } from "@/components/onboarding/AppGuide";
 import { ProgressBar } from "@/components/common/ProgressBar";
-import { ForceUpdateGuard, markForceUpdateRequired } from "@/components/system/ForceUpdateGuard";
 
 // ── Eager imports: Core pages users navigate between frequently ──────────────
 // These load with the main bundle so page transitions are INSTANT.
@@ -138,14 +137,6 @@ const LoadingFallback = () => {
 // Global polyfill for chunk errors
 // 🔐 Security: Reload counter prevents infinite-loop DoS if a malicious/stale chunk
 // keeps triggering errors. Max 2 reloads per session, then gives up gracefully.
-window.addEventListener('error', (e: ErrorEvent) => {
-  const message = (e && typeof e.message === 'string') ? e.message : "";
-  if (message && (message.includes('Loading chunk') || message.includes('CSS chunk'))) {
-    console.warn("Chunk error detected. Requiring app update.");
-    markForceUpdateRequired();
-  }
-}, true);
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -273,7 +264,6 @@ const AnimatedRoutes = () => {
 
 const App = () => (
   <AppProviders queryClient={queryClient}>
-    <ForceUpdateGuard />
     <FeedbackManager />
     <GlobalCallManager />
     <Toaster />

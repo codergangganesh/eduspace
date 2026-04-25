@@ -3,7 +3,6 @@ import App from "./App.tsx";
 import "./index.css";
 import { HelmetProvider } from 'react-helmet-async';
 import { initializeCapacitor } from "./lib/capacitor";
-import { markForceUpdateRequired } from "./components/system/ForceUpdateGuard";
 
 // Initialize native features
 initializeCapacitor();
@@ -12,18 +11,6 @@ initializeCapacitor();
 window.addEventListener("unhandledrejection", (event) => {
     const reason = event.reason;
     const message = typeof reason?.message === "string" ? reason.message : "";
-
-    if (
-        message.includes("Loading chunk") ||
-        message.includes("Failed to fetch dynamically imported module") ||
-        message.includes("Importing a module script failed") ||
-        message.includes("Unable to preload CSS")
-    ) {
-        console.warn("Stale deployment asset detected. Requiring app update.");
-        markForceUpdateRequired();
-        event.preventDefault();
-        return;
-    }
 
     if (
         reason &&
