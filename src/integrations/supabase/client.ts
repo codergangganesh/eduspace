@@ -12,7 +12,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // // Disable lock manager to prevent NavigatorLockAcquireTimeoutError
+    // storageKey: 'eduspace-auth-token',
   }
 });
-
-

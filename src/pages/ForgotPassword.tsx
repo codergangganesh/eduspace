@@ -15,6 +15,7 @@ export default function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>();
+  const isCaptchaVerified = Boolean(captchaToken);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,10 +99,11 @@ export default function ForgotPassword() {
                   siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
                   onSuccess={(token) => setCaptchaToken(token)}
                   onExpire={() => setCaptchaToken(undefined)}
+                  onError={() => setCaptchaToken(undefined)}
                 />
               </div>
 
-              <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1" disabled={isLoading}>
+              <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1" disabled={!isCaptchaVerified || isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="size-5 mr-2 animate-spin" />
@@ -115,7 +117,9 @@ export default function ForgotPassword() {
               <div className="flex justify-center pt-2">
                 <Link
                   to="/"
-                  className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className={`flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`}
+                  aria-disabled={!isCaptchaVerified}
+                  tabIndex={!isCaptchaVerified ? -1 : undefined}
                 >
                   <ArrowLeft className="size-4 mr-2" />
                   Back to Sign In

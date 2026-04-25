@@ -28,6 +28,7 @@ export default function LecturerRegister() {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
     const [hasNavigated, setHasNavigated] = useState(false); // Prevent multiple navigations
+    const isCaptchaVerified = Boolean(captchaToken);
     const { register, handleSubmit: hookFormSubmit, formState: { errors }, watch } = useForm<RegisterFormValues>({
         resolver: zodResolver(registerSchema),
         mode: "onChange",
@@ -244,11 +245,12 @@ export default function LecturerRegister() {
                             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
                             onSuccess={(token) => setCaptchaToken(token)}
                             onExpire={() => setCaptchaToken(undefined)}
+                            onError={() => setCaptchaToken(undefined)}
                         />
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-12 lg:h-10 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1 lg:mt-0" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-12 lg:h-10 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1 lg:mt-0" disabled={!isCaptchaVerified || isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -263,7 +265,7 @@ export default function LecturerRegister() {
                 {/* Footer */}
                 <div className="mt-3 lg:mt-2 text-center">
                     <p className="text-muted-foreground text-sm lg:text-xs">
-                        Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
+                        Already have an account? <Link to="/lecturer/login" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Sign In</Link>
                     </p>
                 </div>
 
@@ -271,7 +273,7 @@ export default function LecturerRegister() {
                 <div className="hidden lg:block mt-4 pt-2 border-t border-border">
                     <div className="text-center">
                         <p className="text-muted-foreground text-[11px]">
-                            Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
+                            Already have an account? <Link to="/lecturer/login" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Sign In</Link>
                         </p>
                     </div>
                 </div>

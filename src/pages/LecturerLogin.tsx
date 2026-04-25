@@ -19,6 +19,7 @@ export default function LecturerLogin() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
+    const isCaptchaVerified = Boolean(captchaToken);
 
     const { register, handleSubmit: hookFormSubmit, formState: { errors } } = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -131,7 +132,9 @@ export default function LecturerLogin() {
                     <div className="flex justify-end pt-1">
                         <Link
                             to="/forgot-password"
-                            className="text-sm font-medium text-blue-600 hover:underline"
+                            className={`text-sm font-medium text-blue-600 hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`}
+                            aria-disabled={!isCaptchaVerified}
+                            tabIndex={!isCaptchaVerified ? -1 : undefined}
                         >
                             Forgot Password?
                         </Link>
@@ -143,11 +146,12 @@ export default function LecturerLogin() {
                             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
                             onSuccess={(token) => setCaptchaToken(token)}
                             onExpire={() => setCaptchaToken(undefined)}
+                            onError={() => setCaptchaToken(undefined)}
                         />
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={!isCaptchaVerified || isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -162,7 +166,7 @@ export default function LecturerLogin() {
                 {/* Footer - Only on mobile */}
                 <div className="mt-8 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
-                        Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
+                        Don't have an account? <Link to="/lecturer/register" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Create Account</Link>
                     </p>
                 </div>
 
@@ -170,7 +174,7 @@ export default function LecturerLogin() {
                 <div className="hidden lg:block mt-6 pt-2 border-t border-border">
                     <div className="text-center">
                         <p className="text-muted-foreground text-[11px]">
-                            Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
+                            Don't have an account? <Link to="/lecturer/register" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Create Account</Link>
                         </p>
                     </div>
                 </div>
