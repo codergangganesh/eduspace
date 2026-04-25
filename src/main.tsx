@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { HelmetProvider } from 'react-helmet-async';
 import { initializeCapacitor } from "./lib/capacitor";
+import { markForceUpdateRequired } from "./components/system/ForceUpdateGuard";
 
 // Initialize native features
 initializeCapacitor();
@@ -10,13 +11,27 @@ initializeCapacitor();
 // Prevent Vite dev overlay and blank screens from crashing on background network fetch failures
 window.addEventListener("unhandledrejection", (event) => {
     const reason = event.reason;
+    const message = typeof reason?.message === "string" ? reason.message : "";
+
+    if (
+        message.includes("Loading chunk") ||
+        message.includes("Failed to fetch dynamically imported module") ||
+        message.includes("Importing a module script failed") ||
+        message.includes("Unable to preload CSS")
+    ) {
+        console.warn("Stale deployment asset detected. Requiring app update.");
+        markForceUpdateRequired();
+        event.preventDefault();
+        return;
+    }
+
     if (
         reason &&
         (reason.name === "AuthRetryableFetchError" ||
-            reason.message?.includes("Failed to fetch") ||
-            reason.message?.includes("NetworkError") ||
-            reason.message?.includes("Load failed") ||
-            (reason.constructor && reason.constructor.name === "TypeError" && reason.message?.includes("Failed to fetch")))
+            message.includes("Failed to fetch") ||
+            message.includes("NetworkError") ||
+            message.includes("Load failed") ||
+            (reason.constructor && reason.constructor.name === "TypeError" && message.includes("Failed to fetch")))
     ) {
         // 🔐 Silently suppress network errors to prevent freezing the UI.
         // window.confirm() was causing AI streams to hang/refresh.

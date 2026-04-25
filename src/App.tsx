@@ -19,7 +19,7 @@ import { useEffect } from "react";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppGuide } from "@/components/onboarding/AppGuide";
 import { ProgressBar } from "@/components/common/ProgressBar";
-import { ForceUpdateGuard } from "@/components/system/ForceUpdateGuard";
+import { ForceUpdateGuard, markForceUpdateRequired } from "@/components/system/ForceUpdateGuard";
 
 // ── Eager imports: Core pages users navigate between frequently ──────────────
 // These load with the main bundle so page transitions are INSTANT.
@@ -141,15 +141,8 @@ const LoadingFallback = () => {
 window.addEventListener('error', (e: ErrorEvent) => {
   const message = (e && typeof e.message === 'string') ? e.message : "";
   if (message && (message.includes('Loading chunk') || message.includes('CSS chunk'))) {
-    const reloadCount = parseInt(sessionStorage.getItem('chunkReloadCount') || '0', 10);
-    if (reloadCount < 2) {
-      sessionStorage.setItem('chunkReloadCount', String(reloadCount + 1));
-      console.warn(`Chunk error detected, reloading... (attempt ${reloadCount + 1}/2)`);
-      window.location.reload();
-    } else {
-      console.error("Chunk error persists after 2 reloads. Stopping to prevent infinite loop.");
-      sessionStorage.removeItem('chunkReloadCount');
-    }
+    console.warn("Chunk error detected. Requiring app update.");
+    markForceUpdateRequired();
   }
 }, true);
 

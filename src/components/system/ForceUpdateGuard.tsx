@@ -2,6 +2,8 @@ import { APP_VERSION } from "@/lib/appVersion";
 import { useEffect, useState } from "react";
 
 const UPDATE_CHECK_INTERVAL_MS = 45_000;
+const FORCE_UPDATE_STORAGE_KEY = "force-update-required";
+const FORCE_UPDATE_EVENT = "eduspace-force-update-required";
 
 type VersionResponse = {
     version?: string;
@@ -40,13 +42,30 @@ async function forceRefreshApp() {
     window.location.replace(url.toString());
 }
 
+function activateForceUpdate() {
+    sessionStorage.setItem(FORCE_UPDATE_STORAGE_KEY, "true");
+    window.dispatchEvent(new Event(FORCE_UPDATE_EVENT));
+}
+
+export function markForceUpdateRequired() {
+    activateForceUpdate();
+}
+
 export function ForceUpdateGuard() {
-    const [updateRequired, setUpdateRequired] = useState(false);
+    const [updateRequired, setUpdateRequired] = useState(() => sessionStorage.getItem(FORCE_UPDATE_STORAGE_KEY) === "true");
     const [isReloading, setIsReloading] = useState(false);
 
     useEffect(() => {
+        const handleForceUpdateRequired = () => {
+            setUpdateRequired(true);
+        };
+
+        window.addEventListener(FORCE_UPDATE_EVENT, handleForceUpdateRequired);
+
         if (import.meta.env.DEV) {
-            return;
+            return () => {
+                window.removeEventListener(FORCE_UPDATE_EVENT, handleForceUpdateRequired);
+            };
         }
 
         let isMounted = true;
@@ -58,7 +77,7 @@ export function ForceUpdateGuard() {
             try {
                 const data = await getServerVersion(controller.signal);
                 if (isMounted && data.version && data.version !== APP_VERSION) {
-                    setUpdateRequired(true);
+                    activateForceUpdate();
                 }
             } catch (error) {
                 console.warn("Version check skipped:", error);
@@ -77,8 +96,16 @@ export function ForceUpdateGuard() {
             if (intervalId) {
                 window.clearInterval(intervalId);
             }
+            window.removeEventListener(FORCE_UPDATE_EVENT, handleForceUpdateRequired);
         };
     }, []);
+
+    useEffect(() => {
+        document.body.style.overflow = updateRequired ? "hidden" : "";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [updateRequired]);
 
     if (!updateRequired) {
         return null;
