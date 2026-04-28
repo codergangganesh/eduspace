@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
   Mic,
   X,
@@ -373,7 +373,57 @@ export function VoicePracticeSession() {
   const previewSettleTimeoutRef = useRef<number | null>(null);
   const previewStopPendingRef = useRef(false);
   const callTransitionRef = useRef<"idle" | "preview-starting" | "session-starting" | "stopping">("idle");
+  const mobileAudioContextRef = useRef<AudioContext | null>(null);
+  const micVisualizerContextRef = useRef<AudioContext | null>(null);
+  const micVisualizerStreamRef = useRef<MediaStream | null>(null);
+  const micVisualizerAnalyserRef = useRef<AnalyserNode | null>(null);
+  const micVisualizerSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const micVisualizerFrameRef = useRef<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const micLevel = useMotionValue(0);
+  const lowBandLevel = useMotionValue(0);
+  const midBandLevel = useMotionValue(0);
+  const highBandLevel = useMotionValue(0);
+  const smoothedMicLevel = useSpring(micLevel, {
+    stiffness: 180,
+    damping: 26,
+    mass: 0.8,
+  });
+  const smoothedLowBand = useSpring(lowBandLevel, {
+    stiffness: 160,
+    damping: 24,
+    mass: 0.9,
+  });
+  const smoothedMidBand = useSpring(midBandLevel, {
+    stiffness: 170,
+    damping: 24,
+    mass: 0.88,
+  });
+  const smoothedHighBand = useSpring(highBandLevel, {
+    stiffness: 180,
+    damping: 22,
+    mass: 0.82,
+  });
+  const activeMicScale = useTransform(smoothedMicLevel, [0, 1], [1, 1.16]);
+  const activeGlowOpacity = useTransform(smoothedMicLevel, [0, 1], [0.18, 0.6]);
+  const activeWaveScale = useTransform(smoothedMicLevel, [0, 1], [1.04, 1.5]);
+  const activeWaveOpacity = useTransform(smoothedMicLevel, [0, 1], [0.12, 0.36]);
+  const liquidCoreScale = useTransform(() => 0.98 + smoothedMicLevel.get() * 0.09 + smoothedMidBand.get() * 0.05);
+  const liquidHaloScale = useTransform(() => 1.02 + smoothedMicLevel.get() * 0.18 + smoothedLowBand.get() * 0.06);
+  const cyanBlobScale = useTransform(() => 0.94 + smoothedLowBand.get() * 0.24 + smoothedMicLevel.get() * 0.08);
+  const violetBlobScale = useTransform(() => 0.94 + smoothedMidBand.get() * 0.22 + smoothedMicLevel.get() * 0.07);
+  const pinkBlobScale = useTransform(() => 0.94 + smoothedHighBand.get() * 0.2 + smoothedMicLevel.get() * 0.08);
+  const shimmerOpacity = useTransform(() => 0.42 + smoothedHighBand.get() * 0.22 + smoothedMicLevel.get() * 0.12);
+  const flowTilt = useTransform(() => -8 + smoothedLowBand.get() * 10 - smoothedHighBand.get() * 6);
+  const waveBar1 = useTransform(() => 0.28 + smoothedLowBand.get() * 0.95);
+  const waveBar2 = useTransform(() => 0.36 + smoothedMidBand.get() * 1.1);
+  const waveBar3 = useTransform(() => 0.3 + smoothedHighBand.get() * 1.05);
+  const waveBar4 = useTransform(() => 0.34 + (smoothedLowBand.get() * 0.45 + smoothedMidBand.get() * 0.8));
+  const waveBar5 = useTransform(() => 0.26 + smoothedMicLevel.get() * 1.2);
+  const waveBar6 = useTransform(() => 0.34 + (smoothedMidBand.get() * 0.5 + smoothedHighBand.get() * 0.82));
+  const waveBar7 = useTransform(() => 0.3 + smoothedLowBand.get() * 1.02);
+  const waveBar8 = useTransform(() => 0.36 + smoothedHighBand.get() * 1.08);
+  const waveBar9 = useTransform(() => 0.28 + smoothedMidBand.get() * 0.95);
 
   const mode = useMemo(() => MODES.find((m) => m.id === profile.practiceMode) ?? MODES[0], [profile.practiceMode]);
   const selectedVoice = useMemo(() => TUTOR_VOICES.find((item) => item.id === profile.voiceId) ?? TUTOR_VOICES[0], [profile.voiceId]);
@@ -393,6 +443,173 @@ export function VoicePracticeSession() {
     previewActiveRef.current = false;
     previewStopPendingRef.current = false;
     setPreviewingVoiceId(null);
+  };
+
+  const stopMicLevelMonitoring = () => {
+    if (micVisualizerFrameRef.current) {
+      window.cancelAnimationFrame(micVisualizerFrameRef.current);
+      micVisualizerFrameRef.current = null;
+    }
+
+    micVisualizerSourceRef.current?.disconnect();
+    micVisualizerSourceRef.current = null;
+    micVisualizerAnalyserRef.current?.disconnect();
+    micVisualizerAnalyserRef.current = null;
+
+    micVisualizerStreamRef.current?.getTracks().forEach((track) => track.stop());
+    micVisualizerStreamRef.current = null;
+
+    if (micVisualizerContextRef.current) {
+      void micVisualizerContextRef.current.close().catch(() => undefined);
+      micVisualizerContextRef.current = null;
+    }
+
+    micLevel.set(0);
+    lowBandLevel.set(0);
+    midBandLevel.set(0);
+    highBandLevel.set(0);
+  };
+
+  const startMicLevelMonitoring = async () => {
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) return;
+    if (micVisualizerAnalyserRef.current || micVisualizerStreamRef.current) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      const WindowWithWebkitAudio = window as typeof window & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const AudioContextCtor = window.AudioContext ?? WindowWithWebkitAudio.webkitAudioContext;
+
+      if (!AudioContextCtor) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      const context = new AudioContextCtor();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.82;
+
+      const source = context.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const buffer = new Uint8Array(analyser.frequencyBinCount);
+
+      micVisualizerContextRef.current = context;
+      micVisualizerStreamRef.current = stream;
+      micVisualizerAnalyserRef.current = analyser;
+      micVisualizerSourceRef.current = source;
+
+      const tick = () => {
+        const currentAnalyser = micVisualizerAnalyserRef.current;
+        if (!currentAnalyser) return;
+
+        currentAnalyser.getByteFrequencyData(buffer);
+        const average = buffer.reduce((sum, value) => sum + value, 0) / (buffer.length * 255);
+        const normalized = clamp((average - 0.02) * 3.1, 0, 1);
+        const third = Math.floor(buffer.length / 3);
+        const averageBand = (start: number, end: number) => {
+          const sliceLength = Math.max(end - start, 1);
+          let sum = 0;
+          for (let index = start; index < end; index += 1) {
+            sum += buffer[index];
+          }
+          return sum / (sliceLength * 255);
+        };
+        const low = clamp((averageBand(0, third) - 0.015) * 3.2, 0, 1);
+        const mid = clamp((averageBand(third, third * 2) - 0.015) * 3.4, 0, 1);
+        const high = clamp((averageBand(third * 2, buffer.length) - 0.01) * 3.8, 0, 1);
+
+        micLevel.set(normalized);
+        lowBandLevel.set(low);
+        midBandLevel.set(mid);
+        highBandLevel.set(high);
+        micVisualizerFrameRef.current = window.requestAnimationFrame(tick);
+      };
+
+      tick();
+    } catch (error) {
+      console.warn("Mic visualizer unavailable", error);
+      stopMicLevelMonitoring();
+    }
+  };
+
+  const buildAssistantConfig = (sessionProfile: SessionProfile, sessionPrompt: string, sessionMode: typeof MODES[number]) => {
+    let assistantConfig: any = {
+      name: "Eduspace Voice Tutor",
+      firstMessage: sessionMode.opening,
+      backgroundSpeechDenoisingPlan: {
+        smartDenoisingPlan: {
+          enabled: false,
+        },
+        fourierDenoisingPlan: {
+          enabled: false,
+        },
+      },
+      transcriber: {
+        provider: "deepgram",
+        model: "nova-2",
+        language: "en",
+      },
+      voice: {
+        provider: "11labs",
+        voiceId: sessionProfile.voiceId,
+      },
+      model: {
+        provider: "openai",
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: sessionPrompt,
+          },
+        ],
+      },
+    };
+
+    if (sessionProfile.practiceMode === "interview") {
+      const baseConfig = JSON.parse(JSON.stringify(interviewerConfig));
+      baseConfig.model.messages[0].content = baseConfig.model.messages[0].content.replace("{{questions}}", sessionProfile.focusArea || "General behavioral and technical questions.");
+      baseConfig.voice.voiceId = sessionProfile.voiceId;
+      baseConfig.backgroundSpeechDenoisingPlan = {
+        smartDenoisingPlan: {
+          enabled: false,
+        },
+        fourierDenoisingPlan: {
+          enabled: false,
+        },
+      };
+      assistantConfig = baseConfig;
+    }
+
+    return assistantConfig;
+  };
+
+  const resumeMobileAudioContext = () => {
+    if (!isMobileViewport || typeof window === "undefined") return;
+
+    const WindowWithWebkitAudio = window as typeof window & {
+      webkitAudioContext?: typeof AudioContext;
+    };
+    const AudioContextCtor = window.AudioContext ?? WindowWithWebkitAudio.webkitAudioContext;
+
+    if (!AudioContextCtor) return;
+
+    if (!mobileAudioContextRef.current) {
+      mobileAudioContextRef.current = new AudioContextCtor();
+    }
+
+    if (mobileAudioContextRef.current.state === "suspended") {
+      void mobileAudioContextRef.current.resume();
+    }
   };
 
   const previewVoice = async (voice = selectedVoice) => {
@@ -555,6 +772,7 @@ export function VoicePracticeSession() {
       setState("listening");
       vapiActiveRef.current = true;
       setErrorMsg(null);
+      void startMicLevelMonitoring();
     };
 
     const onCallEnd = () => {
@@ -575,6 +793,7 @@ export function VoicePracticeSession() {
       vapiActiveRef.current = false;
       previewActiveRef.current = false;
       callTransitionRef.current = "idle";
+      stopMicLevelMonitoring();
     };
 
     const onSpeechStart = () => {
@@ -735,6 +954,12 @@ export function VoicePracticeSession() {
     }
   }, [currentSessionId, history.length, prompt, state]);
 
+  useEffect(() => {
+    return () => {
+      stopMicLevelMonitoring();
+    };
+  }, []);
+
   const createOrLoadSession = async () => {
     let sessionId = currentSessionId;
     if (!sessionId) {
@@ -753,7 +978,7 @@ export function VoicePracticeSession() {
     return sessionId;
   };
 
-  const startStop = async (profileOverride?: SessionProfile) => {
+  const startStop = async (profileOverride?: SessionProfile, options?: { mobileImmediateStart?: boolean }) => {
     if (state === "thinking") return;
     if (callTransitionRef.current !== "idle") return;
     if (previewActiveRef.current) {
@@ -783,61 +1008,22 @@ export function VoicePracticeSession() {
         return;
       }
 
-      callTransitionRef.current = "session-starting";
-      setState("thinking");
-      setErrorMsg(null);
-      vapiActiveRef.current = true;
-
       try {
-        let assistantConfig: any = {
-            name: "Eduspace Voice Tutor",
-            firstMessage: sessionMode.opening,
-            backgroundSpeechDenoisingPlan: {
-              smartDenoisingPlan: {
-                enabled: false,
-              },
-              fourierDenoisingPlan: {
-                enabled: false,
-              },
-            },
-            transcriber: {
-              provider: "deepgram",
-              model: "nova-2",
-              language: "en",
-            },
-          voice: {
-            provider: "11labs",
-            voiceId: sessionProfile.voiceId,
-          },
-          model: {
-            provider: "openai",
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "system",
-                content: sessionPrompt,
-              },
-            ],
-          },
-        };
+        const assistantConfig = buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode);
+        callTransitionRef.current = "session-starting";
+        vapiActiveRef.current = true;
 
-        // Use the specific interviewer config from the reference project if in interview mode
-          if (sessionProfile.practiceMode === "interview") {
-            const baseConfig = JSON.parse(JSON.stringify(interviewerConfig));
-            baseConfig.model.messages[0].content = baseConfig.model.messages[0].content.replace("{{questions}}", sessionProfile.focusArea || "General behavioral and technical questions.");
-            baseConfig.voice.voiceId = sessionProfile.voiceId;
-            baseConfig.backgroundSpeechDenoisingPlan = {
-              smartDenoisingPlan: {
-                enabled: false,
-              },
-              fourierDenoisingPlan: {
-                enabled: false,
-              },
-            };
-            assistantConfig = baseConfig;
-          }
+        const startPromise = vapi.start(assistantConfig);
 
-        await vapi.start(assistantConfig);
+        if (options?.mobileImmediateStart) {
+          setErrorMsg(null);
+          setState("thinking");
+        } else {
+          setState("thinking");
+          setErrorMsg(null);
+        }
+
+        await startPromise;
         callTransitionRef.current = "idle";
       } catch (e) {
         console.error(e);
@@ -860,9 +1046,142 @@ export function VoicePracticeSession() {
     void startStop();
   };
 
+  const handleMicButtonClick = () => {
+    if (isMobileViewport && !vapiActiveRef.current && !previewActiveRef.current && callTransitionRef.current === "idle") {
+      resumeMobileAudioContext();
+      void startStop(undefined, { mobileImmediateStart: true });
+      return;
+    }
+
+    void startStop();
+  };
+
+  const isMicListening = state === "listening";
+  const isAiResponding = state === "speaking" || state === "thinking";
+  const isMicActive = state !== "idle";
+
+  const renderVoiceReactiveMic = (options?: {
+    buttonClassName?: string;
+    activeButtonClassName?: string;
+    iconClassName?: string;
+    useMaterialIcon?: boolean;
+  }) => (
+    <motion.button
+      type="button"
+      onClick={handleMicButtonClick}
+      whileTap={{ scale: 0.94 }}
+      className={cn(
+        "relative isolate overflow-visible outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+        "flex items-center justify-center transition-all duration-300",
+        isMicActive
+          ? "h-16 w-[15.5rem] rounded-[2rem] px-1"
+          : "rounded-full border border-white/20 backdrop-blur-3xl shadow-2xl",
+        isMicActive ? options?.activeButtonClassName : options?.buttonClassName
+      )}
+      animate={
+        isAiResponding
+          ? {
+              boxShadow: isMicActive
+                ? [
+                    "0 0 0 rgba(0,0,0,0)",
+                    "0 0 0 rgba(0,0,0,0)",
+                    "0 0 0 rgba(0,0,0,0)",
+                  ]
+                : [
+                    "0 18px 40px rgba(168,85,247,0.22)",
+                    "0 22px 52px rgba(56,189,248,0.3)",
+                    "0 18px 40px rgba(168,85,247,0.22)",
+                  ],
+            }
+          : {
+              boxShadow: isMicActive
+                ? "0 0 0 rgba(0,0,0,0)"
+                : "0 18px 42px rgba(79,70,229,0.2)",
+            }
+      }
+      transition={isAiResponding ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.28 }}
+    >
+      {isMicActive ? (
+        <div className="relative z-10 flex h-full w-full items-center justify-center">
+          <div className="relative flex h-12 w-full max-w-[15rem] items-center justify-center gap-1.5">
+            <motion.div
+              className="pointer-events-none absolute inset-x-2 inset-y-2 rounded-full blur-xl"
+              style={{
+                opacity: shimmerOpacity,
+                background: "linear-gradient(90deg, rgba(45,212,191,0.24), rgba(96,165,250,0.3), rgba(168,85,247,0.28), rgba(244,114,182,0.24))",
+                scaleX: activeWaveScale,
+              }}
+              animate={
+                isMicListening
+                  ? { x: [-18, 18, -12] }
+                  : isAiResponding
+                    ? { x: [-10, 10, -6] }
+                    : { x: [-6, 6, -4] }
+              }
+              transition={{ duration: isMicListening ? 1.5 : isAiResponding ? 1.9 : 3.4, repeat: Infinity, ease: "easeInOut" }}
+            />
+            {[
+              waveBar1,
+              waveBar2,
+              waveBar3,
+              waveBar4,
+              waveBar5,
+              waveBar6,
+              waveBar7,
+              waveBar8,
+              waveBar9,
+            ].map((bar, index) => (
+              <motion.span
+                key={index}
+                className="relative z-10 block w-1.5 sm:w-2 rounded-full"
+                style={{
+                  height: "78%",
+                  scaleY: isMicListening ? bar : isAiResponding ? activeMicScale : 0.32,
+                  opacity: isMicListening ? 1 : isAiResponding ? 0.88 : 0.58,
+                  background: index % 3 === 0
+                    ? "linear-gradient(180deg, rgba(45,212,191,1), rgba(59,130,246,0.86))"
+                    : index % 3 === 1
+                      ? "linear-gradient(180deg, rgba(96,165,250,1), rgba(168,85,247,0.9))"
+                      : "linear-gradient(180deg, rgba(244,114,182,1), rgba(99,102,241,0.88))",
+                  boxShadow: "0 0 10px rgba(125,211,252,0.24)",
+                }}
+                animate={
+                  isAiResponding
+                    ? { y: [0, -1.5, 0] }
+                    : { y: [0, 0.5, 0] }
+                }
+                transition={{ duration: 1.35 + index * 0.08, repeat: Infinity, ease: "easeInOut" }}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <motion.div
+          className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-primary"
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          {options?.useMaterialIcon ? (
+            <motion.span
+              className={cn("material-symbols-outlined text-white", options?.iconClassName)}
+              style={{ fontVariationSettings: "'FILL' 1" }}
+              animate={{ y: 0, scale: 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              mic
+            </motion.span>
+          ) : (
+            <Mic className={cn("text-primary-foreground", options?.iconClassName)} />
+          )}
+        </motion.div>
+      )}
+    </motion.button>
+  );
+
 
   const newSession = () => {
     cleanup();
+    stopMicLevelMonitoring();
     setCurrentSessionId(null);
     setHistory([]);
     setMessages([{ role: "system", content: buildPrompt(profile) }]);
@@ -1287,14 +1606,12 @@ Be specific and constructive.`;
 
           <div className="fixed bottom-0 left-0 w-full z-50 pointer-events-none">
             <div className="flex justify-center pb-6 pointer-events-auto">
-              <button
-                className="w-20 h-20 rounded-full bg-primary shadow-2xl shadow-primary/35 flex items-center justify-center active:scale-90 transition-transform duration-300 border border-white/20"
-                onClick={handleSessionToggle}
-              >
-                <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  mic
-                </span>
-              </button>
+              {renderVoiceReactiveMic({
+                buttonClassName: "h-20 w-20",
+                activeButtonClassName: "h-16 w-[13.5rem]",
+                iconClassName: "text-4xl",
+                useMaterialIcon: true,
+              })}
             </div>
           </div>
         </div>
@@ -1850,21 +2167,11 @@ Be specific and constructive.`;
         <div className={cn("absolute left-0 right-0 bottom-0 z-40 flex flex-col items-center pointer-events-none pb-5 md:pb-10", showDesktopFreshStudio && "hidden")}>
           <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 md:h-48 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
           <div className="relative flex flex-col items-center justify-center pointer-events-auto">
-            <div className="relative cursor-pointer group" onClick={handleSessionToggle}>
-              {state !== "idle" && (
-                <motion.div 
-                  className="absolute -inset-4 rounded-full bg-primary/20 -z-10 animate-speak-pulse"
-                  layoutId="mic-pulse"
-                />
-              )}
-              <motion.div className={cn("size-20 sm:size-[5.5rem] md:size-24 rounded-full shadow-2xl flex items-center justify-center transition-all duration-500 border border-white/20 z-10 relative overflow-hidden backdrop-blur-3xl", state === "idle" ? "bg-primary" : "bg-fuchsia-600")} whileTap={{ scale: 0.94 }}>
-                {state === "thinking" ? (
-                  <Loader2 className="size-8 text-white animate-spin" />
-                ) : (
-                  <Mic className="size-6 sm:size-7 md:size-8 text-primary-foreground" />
-                )}
-              </motion.div>
-            </div>
+            {renderVoiceReactiveMic({
+              buttonClassName: "size-20 sm:size-[5.5rem] md:size-24",
+              activeButtonClassName: "h-16 w-[14rem] sm:w-[15rem] md:w-[16rem]",
+              iconClassName: "size-6 sm:size-7 md:size-8",
+            })}
             <motion.div className="mt-4 md:mt-6 flex flex-col items-center gap-1.5" animate={{ opacity: state === "idle" ? 0.7 : 0, y: state === "idle" ? 0 : 15 }}><p className="text-muted-foreground text-[10px] sm:text-[11px] font-black uppercase tracking-[0.35em] sm:tracking-[0.5em] text-center">Tap to talk</p></motion.div>
           </div>
         </div>
