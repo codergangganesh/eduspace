@@ -405,6 +405,95 @@ export type Database = {
           },
         ]
       }
+      help_request_replies: {
+        Row: {
+          author_id: string
+          created_at: string
+          help_request_id: string
+          id: string
+          message: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          help_request_id: string
+          id?: string
+          message: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          help_request_id?: string
+          id?: string
+          message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_request_replies_help_request_id_fkey"
+            columns: ["help_request_id"]
+            isOneToOne: false
+            referencedRelation: "help_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      help_requests: {
+        Row: {
+          assignment_id: string
+          class_id: string
+          created_at: string
+          id: string
+          message: string
+          requester_id: string
+          requester_role: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          class_id: string
+          created_at?: string
+          id?: string
+          message: string
+          requester_id: string
+          requester_role?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          requester_id?: string
+          requester_role?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_requests_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "help_requests_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           attachment_name: string | null

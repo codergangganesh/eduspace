@@ -318,7 +318,7 @@ export default function StudentAssignments() {
                                             }}
                                             role="student"
                                             viewMode={viewMode}
-                                            onView={(id) => navigate(`/student/assignments/${id}`)}
+                                            onHelp={(id) => navigate(`/student/assignments/${id}?help=1`)}
                                             onSubmit={handleSubmitClick}
                                             onDelete={assignment.studentStatus === 'submitted' ? async (id) => {
                                                 const submission = assignment.submission;

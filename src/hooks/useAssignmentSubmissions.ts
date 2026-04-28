@@ -26,73 +26,76 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
     const { user } = useAuth();
     const [submissions, setSubmissions] = useState<AssignmentSubmissionDetail[]>([]);
     const [loading, setLoading] = useState(true);
+    const cacheKey = user && assignmentId && classId
+        ? `assignment-submissions:${user.id}:${classId}:${assignmentId}`
+        : null;
 
-    const fetchData = async () => {
+    const fetchData = async (background = false) => {
         if (!user || !assignmentId || !classId) return;
 
         try {
-            setLoading(true);
+            if (!background) {
+                setLoading(true);
+            }
 
-            // 1. Fetch all students in the class
-            const { data: students, error: studentsError } = await supabase
-                .from('class_students')
-                .select('*')
-                .eq('class_id', classId);
-
-            if (studentsError) throw studentsError;
-
-            // 2. Fetch all submissions for this assignment directly
-            const { data: submitted, error: submissionsError } = await supabase
-                .from('assignment_submissions')
-                .select('*')
-                .eq('assignment_id', assignmentId);
+            const [
+                { data: students, error: studentsError },
+                { data: submitted, error: submissionsError }
+            ] = await Promise.all([
+                supabase
+                    .from('class_students')
+                    .select('*')
+                    .eq('class_id', classId),
+                supabase
+                    .from('assignment_submissions')
+                    .select('*')
+                    .eq('assignment_id', assignmentId)
+            ]);
 
             if (submissionsError) {
                 console.error('Error fetching submissions directly:', submissionsError);
                 throw submissionsError;
             }
+            if (studentsError) throw studentsError;
 
             // 2.5 Fetch student emails and profiles
             const allSubmissionUserIds = [...new Set((submitted || []).map(s => s.student_id).filter(Boolean))] as string[];
             const submittedEmailsMap: Record<string, string> = {}; // user_id -> email
-
-            if (allSubmissionUserIds.length > 0) {
-                const { data: profileEmails } = await supabase
-                    .from('profiles')
-                    .select('user_id, email')
-                    .in('user_id', allSubmissionUserIds);
-
-                if (profileEmails) {
-                    profileEmails.forEach(p => {
-                        if (p.email) submittedEmailsMap[p.user_id] = p.email;
-                    });
-                }
-            }
-
-            // 2.6 Fetch profile images
             const studentIds = (students || []).map(s => s.student_id);
-            const profileMap: Record<string, string> = {};
 
-            if (studentIds.length > 0) {
-                const { data: profiles } = await supabase
-                    .from('student_profiles')
-                    .select('user_id, profile_image')
-                    .in('user_id', studentIds);
-
-                if (profiles) {
-                    profiles.forEach(p => {
-                        if (p.profile_image) {
-                            profileMap[p.user_id] = p.profile_image;
-                        }
-                    });
-                }
-            }
-
-            // 3. Resolve Storage URLs properly using the robust resolver
-            const resolvedSubmissions = await Promise.all((submitted || []).map(async (s) => {
+            const [profileEmailsResponse, studentProfilesResponse, resolvedSubmissions] = await Promise.all([
+                allSubmissionUserIds.length > 0
+                    ? supabase
+                        .from('profiles')
+                        .select('user_id, email')
+                        .in('user_id', allSubmissionUserIds)
+                    : Promise.resolve({ data: [], error: null }),
+                studentIds.length > 0
+                    ? supabase
+                        .from('student_profiles')
+                        .select('user_id, profile_image')
+                        .in('user_id', studentIds)
+                    : Promise.resolve({ data: [], error: null }),
+                Promise.all((submitted || []).map(async (s) => {
                 const finalUrl = await resolveAnyStorageUrl(s.attachment_url);
                 return { ...s, resolved_url: finalUrl };
-            }));
+                }))
+            ]);
+
+            if (profileEmailsResponse.data) {
+                profileEmailsResponse.data.forEach(p => {
+                    if (p.email) submittedEmailsMap[p.user_id] = p.email;
+                });
+            }
+
+            const profileMap: Record<string, string> = {};
+            if (studentProfilesResponse.data) {
+                studentProfilesResponse.data.forEach(p => {
+                    if (p.profile_image) {
+                        profileMap[p.user_id] = p.profile_image;
+                    }
+                });
+            }
 
             // 4. Merge data
             const combinedData: AssignmentSubmissionDetail[] = (students || []).map(student => {
@@ -133,6 +136,9 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
             });
 
             setSubmissions(combinedData);
+            if (cacheKey) {
+                sessionStorage.setItem(cacheKey, JSON.stringify(combinedData));
+            }
 
         } catch (error) {
             console.error('Error fetching assignment details:', error);
@@ -147,7 +153,19 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
             return;
         }
 
-        fetchData();
+        if (cacheKey) {
+            const cachedSubmissions = sessionStorage.getItem(cacheKey);
+            if (cachedSubmissions) {
+                try {
+                    setSubmissions(JSON.parse(cachedSubmissions) as AssignmentSubmissionDetail[]);
+                    setLoading(false);
+                } catch (error) {
+                    console.warn('[useAssignmentSubmissions] Failed to read cached submissions:', error);
+                }
+            }
+        }
+
+        fetchData(Boolean(cacheKey && sessionStorage.getItem(cacheKey)));
 
         const subscription = supabase
             .channel(`assignment_subs_${assignmentId}`)
@@ -160,7 +178,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                     filter: `assignment_id=eq.${assignmentId}`
                 },
                 () => {
-                    fetchData();
+                    fetchData(true);
                 }
             )
             .subscribe();
@@ -168,7 +186,7 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
         return () => {
             subscription.unsubscribe();
         };
-    }, [user, assignmentId, classId]);
+    }, [user, assignmentId, classId, cacheKey]);
 
     return {
         submissions,

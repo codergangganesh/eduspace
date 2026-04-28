@@ -43,11 +43,13 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AssignmentHelpPanel } from "@/components/help/AssignmentHelpPanel";
 
 export default function AssignmentSubmissionsPage() {
     const { classId, assignmentId } = useParams<{ classId: string; assignmentId: string }>();
     const navigate = useNavigate();
     const { submissions, loading: submissionsLoading } = useAssignmentSubmissions(assignmentId!, classId!);
+    const assignmentCacheKey = assignmentId ? `lecturer-assignment-header:${assignmentId}` : null;
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState<'all' | 'submitted' | 'not_submitted'>('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -72,9 +74,20 @@ export default function AssignmentSubmissionsPage() {
                 .eq('id', assignmentId)
                 .single();
             if (error) throw error;
+            if (assignmentCacheKey) {
+                sessionStorage.setItem(assignmentCacheKey, JSON.stringify(data));
+            }
             return data;
         },
-        enabled: !!assignmentId
+        enabled: !!assignmentId,
+        initialData: assignmentCacheKey
+            ? (() => {
+                const cached = sessionStorage.getItem(assignmentCacheKey);
+                return cached ? JSON.parse(cached) : undefined;
+            })()
+            : undefined,
+        staleTime: 30_000,
+        refetchOnMount: true,
     });
 
     // Stats Calculation
@@ -197,10 +210,10 @@ export default function AssignmentSubmissionsPage() {
 
     return (
         <DashboardLayout>
-            <div className="max-w-[1600px] mx-auto flex flex-col gap-6 md:gap-8 w-full pb-10 px-0 md:px-4">
+            <div className="w-full flex flex-col gap-6 md:gap-8 pb-10">
 
                 {/* Breadcrumbs / Back button */}
-                <div className="flex items-center gap-4 text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground/60 px-4 md:px-0">
+                <div className="flex items-center gap-4 text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
                     <button 
                         onClick={() => navigate(`/lecturer/assignments`)}
                         className="hover:text-primary transition-colors flex items-center gap-1"
@@ -219,7 +232,7 @@ export default function AssignmentSubmissionsPage() {
                 </div>
 
                 {/* Header Section */}
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 md:gap-8 px-4 md:px-0">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 md:gap-8">
                     <div className="space-y-3">
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 md:p-3 bg-primary/10 rounded-xl md:rounded-2xl border border-primary/20">
@@ -308,7 +321,19 @@ export default function AssignmentSubmissionsPage() {
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex flex-col gap-4 md:gap-6 px-4 md:px-0">
+                <div className="grid grid-cols-1 lg:grid-cols-[420px,1fr] gap-4 md:gap-6 items-start">
+                    <div className="lg:sticky lg:top-6 self-start">
+                        <AssignmentHelpPanel
+                            assignmentId={assignmentId}
+                            classId={classId}
+                            lecturerId={assignment?.lecturer_id || null}
+                            assignmentTitle={assignment?.title || null}
+                            useContainerHeight
+                        />
+                    </div>
+
+                    <div className="flex flex-col gap-4 min-w-0">
+
                     {/* Control Bar */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 p-2 bg-slate-500/5 dark:bg-white/5 backdrop-blur-md rounded-2xl md:rounded-[2rem] border border-slate-200 dark:border-white/5">
                         <div className="relative w-full md:w-[400px] group pl-2">
@@ -340,7 +365,7 @@ export default function AssignmentSubmissionsPage() {
                     </div>
 
                     {/* Submissions Container */}
-                    <div className="bg-white/30 dark:bg-[#1a1625]/30 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-xl md:shadow-2xl overflow-hidden flex flex-col">
+                    <div className="bg-white/30 dark:bg-[#1a1625]/30 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-xl md:shadow-2xl overflow-hidden flex flex-col min-h-0">
                         {/* List Headers - Desktop Only */}
                         <div className="hidden md:grid md:grid-cols-[1.2fr,350px,100px,120px,160px] gap-6 px-8 py-4 border-b border-slate-200 dark:border-white/5 bg-slate-500/5 items-center">
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Student Profile</span>
@@ -350,7 +375,7 @@ export default function AssignmentSubmissionsPage() {
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right pr-4">Actions</span>
                         </div>
 
-                        <div className="divide-y divide-slate-200 dark:divide-white/5">
+                        <div className="divide-y divide-slate-200 dark:divide-white/5 lg:max-h-[calc(100vh-260px)] overflow-y-auto">
                             {isLoading ? (
                                 [1, 2, 3, 4, 5].map((i) => (
                                     <div key={i}>
@@ -696,7 +721,8 @@ export default function AssignmentSubmissionsPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+                    </div>
+                </div>
 
             {/* Review Modal - The "Proper" UI for reviewing individual submission */}
             <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>

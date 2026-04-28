@@ -14,6 +14,7 @@ import {
     Clock,
     Edit,
     Eye,
+    LifeBuoy,
     MoreVertical,
     Trophy,
     Trash2,
@@ -54,6 +55,7 @@ interface Assignment {
 interface AssignmentCardProps {
     assignment: Assignment;
     onView?: (id: string) => void;
+    onHelp?: (id: string) => void;
     onEdit?: (assignment: Assignment) => void;
     onDelete?: (id: string) => void;
     role?: 'lecturer' | 'student';
@@ -67,6 +69,7 @@ interface AssignmentCardProps {
 export function AssignmentCard({
     assignment,
     onView,
+    onHelp,
     onSubmit,
     onEdit,
     onDelete,
@@ -150,26 +153,56 @@ export function AssignmentCard({
                     </div>
 
                     {/* Action Button */}
-                    <div className="shrink-0 w-full md:w-auto flex items-center gap-2">
+                    <div className="shrink-0 w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         {role === 'student' ? (
-                            <Button
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSubmit?.(assignment);
-                                }}
-                                className={cn(
-                                    "w-full md:w-auto font-bold shadow-sm",
-                                    isOverdue
-                                        ? "bg-red-500 hover:bg-red-600 text-white"
-                                        : isSubmitted
-                                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                            <>
+                                {onView && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onView(assignment.id);
+                                        }}
+                                        className="w-full md:w-auto font-semibold"
+                                    >
+                                        <Eye className="size-4 mr-2" />
+                                        Details
+                                    </Button>
                                 )}
-                            >
-                                {isSubmitted ? <Eye className="size-4 mr-2" /> : <UploadCloud className="size-4 mr-2" />}
-                                {isSubmitted ? 'View Assignment' : (isOverdue ? 'Late Submit' : 'Submit')}
-                            </Button>
+                                {onHelp && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onHelp(assignment.id);
+                                        }}
+                                        className="w-full md:w-auto font-semibold"
+                                    >
+                                        <LifeBuoy className="size-4 mr-2" />
+                                        Help
+                                    </Button>
+                                )}
+                                <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSubmit?.(assignment);
+                                    }}
+                                    className={cn(
+                                        "w-full md:w-auto font-bold shadow-sm",
+                                        isOverdue
+                                            ? "bg-red-500 hover:bg-red-600 text-white"
+                                            : isSubmitted
+                                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    )}
+                                >
+                                    {isSubmitted ? <Eye className="size-4 mr-2" /> : <UploadCloud className="size-4 mr-2" />}
+                                    {isSubmitted ? 'View Assignment' : (isOverdue ? 'Late Submit' : 'Submit')}
+                                </Button>
+                            </>
                         ) : (
                             <Button
                                 size="sm"
@@ -330,24 +363,59 @@ export function AssignmentCard({
                 {/* Action Button - Compact */}
                 <div className="mt-auto">
                     {role === 'student' ? (
-                        <Button
-                            size="sm"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSubmit?.(assignment);
-                            }}
-                            className={cn(
-                                "w-full rounded-xl font-bold text-xs h-8 shadow border-none transition-all hover:scale-[1.02] active:scale-95",
-                                isOverdue && !isSubmitted
-                                    ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
-                                    : isSubmitted
-                                        ? "bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white"
-                                        : "bg-gradient-to-r from-blue-600 to-blue-800 text-white"
+                        <div className="space-y-2">
+                            <Button
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSubmit?.(assignment);
+                                }}
+                                className={cn(
+                                    "w-full rounded-xl font-bold text-xs h-8 shadow border-none transition-all hover:scale-[1.02] active:scale-95",
+                                    isOverdue && !isSubmitted
+                                        ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
+                                        : isSubmitted
+                                            ? "bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white"
+                                            : "bg-gradient-to-r from-blue-600 to-blue-800 text-white"
+                                )}
+                            >
+                                {isSubmitted ? <Eye className="size-3 mr-1" /> : <UploadCloud className="size-3 mr-1" />}
+                                {isSubmitted ? 'View' : (isOverdue ? 'Late Submit' : 'Submit')}
+                            </Button>
+
+                            {(onView || onHelp) && (
+                                <div className={cn("grid gap-2", onView && onHelp ? "grid-cols-2" : "grid-cols-1")}>
+                                    {onView && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onView(assignment.id);
+                                            }}
+                                            className="h-8 rounded-xl font-bold text-[11px]"
+                                        >
+                                            <Eye className="size-3 mr-1" />
+                                            Details
+                                        </Button>
+                                    )}
+                                    {onHelp && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onHelp(assignment.id);
+                                            }}
+                                            className="h-8 rounded-xl font-bold text-[11px]"
+                                        >
+                                            <LifeBuoy className="size-3 mr-1" />
+                                            Help
+                                        </Button>
+                                    )}
+                                </div>
                             )}
-                        >
-                            {isSubmitted ? <Eye className="size-3 mr-1" /> : <UploadCloud className="size-3 mr-1" />}
-                            {isSubmitted ? 'View' : (isOverdue ? 'Late Submit' : 'Submit')}
-                        </Button>
+                        </div>
                     ) : (
                         <Button
                             size="sm"
