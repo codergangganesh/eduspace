@@ -1,15 +1,15 @@
 import { MessageRole, MessageContent } from "@/lib/aiChatService";
 import { cn } from "@/lib/utils";
-import { User, Bot, Sparkles, Copy, Check, Pencil, X } from "lucide-react";
+import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef, useEffect } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { aiChatService } from "@/lib/aiChatService";
 
 interface AIMessageProps {
     messageId?: string;
@@ -22,6 +22,8 @@ interface AIMessageProps {
     onUpdateMessage?: (id: string, newContent: string) => void;
     isReadOnly?: boolean;
     isStreaming?: boolean;
+    feedbackState?: 'like' | 'dislike' | null;
+    onFeedbackChange?: (messageId: string, feedback: 'like' | 'dislike' | null) => void;
 }
 
 const TypingCursor = () => (
@@ -37,10 +39,11 @@ const TypingCursor = () => (
     />
 );
 
-export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming }: AIMessageProps) {
+export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming, feedbackState, onFeedbackChange }: AIMessageProps) {
     const [copied, setCopied] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(typeof content === 'string' ? content : '');
+    const [localFeedback, setLocalFeedback] = useState<'like' | 'dislike' | null>(feedbackState || null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isAssistant = role === 'assistant';
 
@@ -58,7 +61,6 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
     const handleCopy = () => {
         navigator.clipboard.writeText(processedText);
         setCopied(true);
-        toast.success("Copied to clipboard");
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -73,6 +75,22 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
         setIsEditing(false);
     };
 
+    const handleFeedback = async (type: 'like' | 'dislike') => {
+        const newFeedback = localFeedback === type ? null : type;
+        setLocalFeedback(newFeedback);
+
+        if (messageId && onFeedbackChange) {
+            try {
+                await aiChatService.upsertFeedback(messageId, type);
+                onFeedbackChange(messageId, newFeedback);
+            } catch (error) {
+                console.error("Failed to save feedback:", error);
+                // Revert on error silently — no toast to avoid confusion
+                setLocalFeedback(localFeedback);
+            }
+        }
+    };
+
     useEffect(() => {
         if (isEditing && textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -80,6 +98,10 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
             textareaRef.current.focus();
         }
     }, [isEditing]);
+
+    useEffect(() => {
+        setLocalFeedback(feedbackState || null);
+    }, [feedbackState]);
 
     return (
         <div className={cn(
@@ -122,7 +144,7 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
                             )}
-                            {!isEditing && (
+                            {!isEditing && !isAssistant && (
                                 <Button
                                     size="icon"
                                     variant="ghost"
@@ -296,6 +318,60 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                     {isStreaming && processedText !== "" && <TypingCursor />}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Action row: Copy + Like + Dislike — only for completed AI responses */}
+                    {isAssistant && !isStreaming && !isReadOnly && (
+                        <div className="mt-3 flex items-center gap-1">
+                            {/* Copy */}
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={handleCopy}
+                                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-200"
+                                aria-label="Copy message"
+                            >
+                                {copied ? (
+                                    <Check className="h-4 w-4 text-emerald-500" />
+                                ) : (
+                                    <Copy className="h-4 w-4" />
+                                )}
+                            </Button>
+
+                            {/* Like */}
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleFeedback('like')}
+                                className={cn(
+                                    "h-8 w-8 rounded-lg transition-all duration-200",
+                                    localFeedback === 'like'
+                                        ? "text-blue-500 hover:bg-muted/60"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                )}
+                                aria-label="Like this response"
+                                aria-pressed={localFeedback === 'like'}
+                            >
+                                <ThumbsUp className={cn("h-4 w-4", localFeedback === 'like' && "fill-blue-500")} />
+                            </Button>
+
+                            {/* Dislike */}
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleFeedback('dislike')}
+                                className={cn(
+                                    "h-8 w-8 rounded-lg transition-all duration-200",
+                                    localFeedback === 'dislike'
+                                        ? "text-rose-500 hover:bg-muted/60"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                )}
+                                aria-label="Dislike this response"
+                                aria-pressed={localFeedback === 'dislike'}
+                            >
+                                <ThumbsDown className={cn("h-4 w-4", localFeedback === 'dislike' && "fill-rose-500")} />
+                            </Button>
                         </div>
                     )}
                 </div>

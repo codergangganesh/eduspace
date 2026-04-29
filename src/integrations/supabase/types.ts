@@ -148,6 +148,45 @@ export type Database = {
           },
         ]
       }
+      ai_message_feedback: {
+        Row: {
+          id: string
+          user_id: string
+          message_id: string
+          feedback_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          message_id: string
+          feedback_type: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          message_id?: string
+          feedback_type?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_message_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ai_message_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ai_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           class_id: string

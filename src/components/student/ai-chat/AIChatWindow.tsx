@@ -4,7 +4,7 @@ import { AIChatSidebar } from "./AIChatSidebar";
 import { AIChatInput } from "./AIChatInput";
 import { AIMessage } from "./AIMessage";
 import { AIChatSkeleton, MessagesSkeleton } from "./AIChatSkeleton";
-import { aiChatService, AIConversation, AIChatMessage, MessageContent } from "@/lib/aiChatService";
+import { aiChatService, AIConversation, AIChatMessage, MessageContent, AIMessageFeedback } from "@/lib/aiChatService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle, Link } from "lucide-react";
@@ -28,6 +28,7 @@ export default function AIChatWindow() {
     const [userProfile, setUserProfile] = useState<{ full_name?: string; avatar_url?: string; role?: string } | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isTemporaryMode, setIsTemporaryMode] = useState(false);
+    const [feedbackState, setFeedbackState] = useState<Record<string, 'like' | 'dislike' | null>>({});
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
     const [searchParams, setSearchParams] = useSearchParams();
@@ -116,6 +117,26 @@ export default function AIChatWindow() {
             setMessages([]);
         }
     }, [currentConversation]);
+
+    // Load feedback state when messages change
+    useEffect(() => {
+        const loadFeedback = async () => {
+            if (messages.length > 0) {
+                try {
+                    const messageIds = messages.map(m => m.id);
+                    const feedback = await aiChatService.getFeedbackForMessages(messageIds);
+                    const feedbackMap: Record<string, 'like' | 'dislike' | null> = {};
+                    feedback.forEach(f => {
+                        feedbackMap[f.message_id] = f.feedback_type;
+                    });
+                    setFeedbackState(feedbackMap);
+                } catch (error) {
+                    console.error("Failed to load feedback:", error);
+                }
+            }
+        };
+        loadFeedback();
+    }, [messages]);
 
     useEffect(() => {
         scrollToBottom();
@@ -272,6 +293,13 @@ export default function AIChatWindow() {
             console.error("Failed to update message:", error);
             toast.error("Failed to update message");
         }
+    };
+
+    const handleFeedbackChange = (messageId: string, feedback: 'like' | 'dislike' | null) => {
+        setFeedbackState(prev => ({
+            ...prev,
+            [messageId]: feedback
+        }));
     };
 
     const regenerateAIResponse = async (historyMessages: AIChatMessage[]) => {
@@ -617,6 +645,8 @@ export default function AIChatWindow() {
                                                 content={msg.content}
                                                 profile={userProfile || undefined}
                                                 onUpdateMessage={handleUpdateMessage}
+                                                feedbackState={msg.role === 'assistant' ? feedbackState[msg.id] || null : null}
+                                                onFeedbackChange={handleFeedbackChange}
                                             />
                                         </motion.div>
                                     ))}

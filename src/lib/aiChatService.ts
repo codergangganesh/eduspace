@@ -29,6 +29,14 @@ export interface AIConversation {
     type?: 'chat' | 'voice';
 }
 
+export interface AIMessageFeedback {
+    id: string;
+    user_id: string;
+    message_id: string;
+    feedback_type: 'like' | 'dislike';
+    created_at: string;
+}
+
 export const aiChatService = {
     async getConversations() {
         const { data: { user } } = await supabase.auth.getUser();
@@ -186,6 +194,71 @@ export const aiChatService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    async getFeedbackForMessages(messageIds: string[]) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('ai_message_feedback')
+            .select('*')
+            .in('message_id', messageIds)
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+        return data as AIMessageFeedback[];
+    },
+
+    async upsertFeedback(messageId: string, feedbackType: 'like' | 'dislike') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // First, check if there's an existing feedback
+        const { data: existing, error: fetchError } = await supabase
+            .from('ai_message_feedback')
+            .select('id, feedback_type')
+            .eq('message_id', messageId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        if (existing) {
+            // If same feedback, delete it (toggle off)
+            if (existing.feedback_type === feedbackType) {
+                const { error: deleteError } = await supabase
+                    .from('ai_message_feedback')
+                    .delete()
+                    .eq('id', existing.id);
+
+                if (deleteError) throw deleteError;
+                return null;
+            } else {
+                // Switch to new feedback
+                const { error: updateError } = await supabase
+                    .from('ai_message_feedback')
+                    .update({ feedback_type: feedbackType, updated_at: new Date().toISOString() })
+                    .eq('id', existing.id);
+
+                if (updateError) throw updateError;
+                return { message_id: messageId, feedback_type: feedbackType };
+            }
+        } else {
+            // Create new feedback
+            const { error: insertError } = await supabase
+                .from('ai_message_feedback')
+                .insert({
+                    message_id: messageId,
+                    user_id: user.id,
+                    feedback_type: feedbackType
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+            return { message_id: messageId, feedback_type: feedbackType };
+        }
     },
 
     async transcribeAudio(audioBlob: Blob) {

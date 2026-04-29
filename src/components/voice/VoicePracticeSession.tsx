@@ -1,3 +1,5 @@
+
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
@@ -50,7 +52,7 @@ import { aiChatService } from "@/lib/aiChatService";
 
 
 type Difficulty = "beginner" | "intermediate" | "advanced";
-type SessionState = "idle" | "listening" | "thinking" | "speaking" | "summary";
+type SessionState = "idle" | "listening" | "thinking" | "speaking" | "ending" | "summary";
 
 type SessionProfile = {
   practiceMode: PracticeMode;
@@ -349,6 +351,7 @@ export function VoicePracticeSession() {
   const [history, setHistory] = useState<{ role: string; text: string }[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [summary, setSummary] = useState<ReturnType<typeof buildSummary> | null>(null);
+  const [sessionDurationSeconds, setSessionDurationSeconds] = useState<number>(0);
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1284,7 +1287,7 @@ export function VoicePracticeSession() {
   };
 
   const endSession = async () => {
-    if (state === "thinking") return;
+    if (state === "thinking" || state === "ending") return;
     
     // Stop Vapi if active
     if (vapiActiveRef.current) {
@@ -1292,10 +1295,18 @@ export function VoicePracticeSession() {
       vapiActiveRef.current = false;
     }
 
-    setState("thinking");
+    // Show ending loading screen immediately
+    setState("ending");
+
+    // Capture exact duration now before any async work
+    const capturedDurationSeconds = Math.max(1, Math.round((Date.now() - stats.startTime.getTime()) / 1000));
+    setSessionDurationSeconds(capturedDurationSeconds);
+
+    // Build local summary right away so the screen can show instantly
     const computed = buildSummary(history, profile, stats);
-    
-    // Attempt to get AI-powered structured feedback similar to the interviewer folder
+    setSummary(computed);
+
+    // Run AI-powered evaluation in the background and update summary when ready
     let finalSummary = computed;
     try {
       const transcriptText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join("\n");
@@ -1337,14 +1348,16 @@ Be specific and constructive.`;
             recommendations: aiData.improvements || computed.recommendations,
             note: aiData.finalAssessment || computed.note
           };
+          setSummary(finalSummary);
         }
       }
     } catch (e) {
       console.error("AI Evaluation failed, using local summary", e);
     }
 
-    setSummary(finalSummary);
+    // Transition to summary — either with AI-enhanced or local data
     setState("summary");
+
     if (currentSessionId) {
       try {
         await voiceService.updateSessionMeta(currentSessionId, {
@@ -1386,23 +1399,51 @@ Be specific and constructive.`;
   const scopeReply = buildOutOfContentReply(profile);
   const focusTopic = profile.focusArea.trim() ? profile.focusArea.trim() : mode.label;
 
+  if (state === "ending") {
+    return (
+      <div className="flex-1 flex flex-col h-full bg-background items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-6 text-center px-6"
+        >
+          <div className="relative">
+            <div className="size-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Loader2 className="size-9 text-primary animate-spin" />
+            </div>
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/10"
+              animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-black tracking-tight">Ending Session</h3>
+            <p className="text-sm text-muted-foreground font-medium">Analyzing your performance and generating feedback…</p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (state === "summary") {
     const finalSummary = summary ?? buildSummary(history, profile, stats);
+    const durationSeconds = Math.max(1, Math.round((Date.now() - stats.startTime.getTime()) / 1000));
+    const durationDisplay = durationSeconds < 60
+      ? `${durationSeconds}s`
+      : `${(durationSeconds / 60).toFixed(1)} min`;
     return (
       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
         <ScrollArea className="flex-1">
           <div className="min-h-full flex flex-col items-center p-4 md:p-8">
-            <div className="max-w-4xl w-full space-y-6 pb-20">
+            <div className="max-w-5xl w-full space-y-6 pb-20">
               <div className="text-center space-y-3">
-                <div className="size-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
-                  <Sparkles className="size-8 text-primary" />
-                </div>
                 <h2 className="text-3xl md:text-4xl font-black">Practice Review</h2>
                 <p className="text-muted-foreground">Saved with coaching notes, rubric scores, and next-step recommendations.</p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border bg-card p-5"><Clock className="size-5 text-primary" /><div className="mt-2 text-2xl font-black">{Math.round((Date.now() - stats.startTime.getTime()) / 1000)}s</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Duration</div></div>
+              <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border bg-card p-5"><Clock className="size-5 text-primary" /><div className="mt-2 text-2xl font-black">{durationDisplay}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Duration</div></div>
                 <div className="rounded-2xl border bg-card p-5"><BarChart2 className="size-5 text-fuchsia-500" /><div className="mt-2 text-2xl font-black">{finalSummary.score}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Coach score</div></div>
                 <div className="rounded-2xl border bg-card p-5"><CheckCircle2 className="size-5 text-emerald-500" /><div className="mt-2 text-2xl font-black">{totalTurns}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Turns</div></div>
                 <div className="rounded-2xl border bg-card p-5"><Mic className="size-5 text-cyan-500" /><div className="mt-2 text-2xl font-black">{totalWords}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Words</div></div>
@@ -1469,23 +1510,23 @@ Be specific and constructive.`;
       </AnimatePresence>
 
       {showMobileFreshShell && (
-        <div className="md:hidden absolute inset-0 z-20 flex flex-col bg-surface text-on-surface overflow-hidden">
-          <header className="w-full shrink-0 px-4 py-2.5 bg-surface/95 backdrop-blur-xl z-30 sticky top-0 border-b border-outline/10">
+        <div className="md:hidden absolute inset-0 z-20 flex flex-col bg-background text-foreground overflow-hidden">
+          <header className="w-full shrink-0 px-4 py-2.5 bg-background/95 backdrop-blur-xl z-30 sticky top-0 border-b border-border/20">
             <div className="flex justify-between items-center w-full max-w-md mx-auto">
               <div className="flex items-center gap-3 min-w-0">
-                <button className="p-2 rounded-full hover:bg-[#f2f4f6] active:scale-95 duration-200" onClick={() => setMobileOpen(true)}>
-                  <Menu className="size-5 text-[#424655]" />
+                <button className="p-2 rounded-full hover:bg-muted active:scale-95 duration-200" onClick={() => setMobileOpen(true)}>
+                  <Menu className="size-5 text-muted-foreground" />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-primary-fixed overflow-hidden ring-2 ring-white shrink-0">
+                <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden ring-2 ring-primary/20 shrink-0">
                   <img alt="User profile" className="w-full h-full object-cover" src="/favicon.png" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-sm font-bold tracking-tighter text-[#0051d4] truncate">Fluid Mentor</h1>
-                  <p className="text-[11px] text-[#424655] truncate">AI Voice Tutor</p>
+                  <h1 className="text-sm font-bold tracking-tighter text-primary truncate">Fluid Mentor</h1>
+                  <p className="text-[11px] text-muted-foreground truncate">AI Voice Tutor</p>
                 </div>
               </div>
-              <button className="p-2 rounded-full hover:bg-[#f2f4f6] active:scale-95 duration-200" type="button">
-                <Settings className="size-5 text-[#424655]" />
+              <button className="p-2 rounded-full hover:bg-muted active:scale-95 duration-200" type="button">
+                <Settings className="size-5 text-muted-foreground" />
               </button>
             </div>
           </header>
@@ -1493,19 +1534,18 @@ Be specific and constructive.`;
           <ScrollArea className="flex-1">
             <main className="px-4 py-4 flex flex-col gap-6 max-w-md mx-auto pb-28">
               <section className="flex flex-col gap-2">
-                <div className="inline-flex items-center self-start px-3 py-1 bg-secondary-container text-[#2e4687] rounded-full text-[11px] font-semibold tracking-wide uppercase">
+                <div className="inline-flex items-center self-start px-3 py-1 bg-primary/10 text-primary rounded-full text-[11px] font-semibold tracking-wide uppercase">
                   Multi-mode Coach
                 </div>
-                <h2 className="text-4xl font-extrabold tracking-tight text-on-surface whitespace-nowrap">Voice Tutor</h2>
-                <p className="text-on-surface-variant text-sm leading-relaxed">
+                <h2 className="text-4xl font-extrabold tracking-tight text-foreground whitespace-nowrap">Voice Tutor</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   Refine your communication skills with real-time AI feedback tailored to your goals.
                 </p>
               </section>
 
               <section className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <h3 className="text-lg font-bold tracking-tight">Select Mode</h3>
-                  <span className="text-xs font-medium text-primary cursor-pointer">View All</span>
+                  <h3 className="text-lg font-bold tracking-tight text-foreground">Select Mode</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {MODES.slice(0, 4).map((item) => {
@@ -1518,16 +1558,16 @@ Be specific and constructive.`;
                         className={cn(
                           "p-4 rounded-xl flex flex-col gap-3 text-left transition-all active:scale-[0.98]",
                           active
-                            ? "bg-surface-container-lowest shadow-sm border-2 border-primary/10"
-                            : "bg-surface-container-low border border-transparent hover:bg-surface-container-high"
+                            ? "bg-card shadow-sm border-2 border-primary/30"
+                            : "bg-muted/40 border border-transparent hover:bg-muted/60"
                         )}
                       >
-                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", active ? "bg-primary/10" : "bg-on-surface-variant/10")}>
-                          <Icon className={cn("size-5", active ? "text-primary" : "text-on-surface-variant")} />
+                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", active ? "bg-primary/15 dark:bg-primary/20 dark:ring-1 dark:ring-primary/40" : "bg-muted")}>
+                          <Icon className={cn("size-5", active ? "text-primary" : "text-muted-foreground")} />
                         </div>
                         <div>
-                          <p className="font-bold text-sm">{item.label}</p>
-                          <p className="text-[11px] text-on-surface-variant">{item.desc}</p>
+                          <p className="font-bold text-sm text-foreground">{item.label}</p>
+                          <p className="text-[11px] text-muted-foreground">{item.desc}</p>
                         </div>
                       </button>
                     );
@@ -1536,12 +1576,12 @@ Be specific and constructive.`;
               </section>
 
               <section className="flex flex-col gap-4">
-                <h3 className="text-lg font-bold tracking-tight">Session Setup</h3>
-                <div className="bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-sm flex flex-col gap-6">
+                <h3 className="text-lg font-bold tracking-tight text-foreground">Session Setup</h3>
+                <div className="bg-card rounded-[1.5rem] p-6 shadow-sm border border-border/40 flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Focus Area</label>
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Focus Area</label>
                     <input
-                      className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/40 placeholder:text-on-surface-variant/60"
+                      className="w-full bg-muted/50 border border-border/60 rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       placeholder="e.g. Technical Leadership"
                       type="text"
                       value={profile.focusArea}
@@ -1550,15 +1590,15 @@ Be specific and constructive.`;
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="min-w-0 rounded-2xl border border-border/60 bg-gradient-to-br from-white to-surface-container-low shadow-sm p-4 flex flex-col gap-3">
+                    <div className="min-w-0 rounded-2xl border border-border/60 bg-card shadow-sm p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Difficulty</label>
-                        <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-600">Mode</span>
+                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.18em]">Difficulty</label>
+                        <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-500">Mode</span>
                       </div>
-                      <p className="text-[12px] font-semibold text-on-surface">Beginner</p>
+                      <p className="text-[12px] font-semibold text-foreground capitalize">{profile.difficulty}</p>
                       <div className="relative">
                         <select
-                          className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                          className="w-full appearance-none rounded-xl border border-border/60 bg-muted/50 px-3 py-3 pr-9 text-sm font-semibold text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                           value={profile.difficulty}
                           onChange={(e) => setProfile((prev) => ({ ...prev, difficulty: e.target.value as Difficulty }))}
                         >
@@ -1566,19 +1606,19 @@ Be specific and constructive.`;
                           <option value="intermediate">Intermediate</option>
                           <option value="advanced">Advanced</option>
                         </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       </div>
                     </div>
 
-                    <div className="min-w-0 rounded-2xl border border-border/60 bg-gradient-to-br from-white to-surface-container-low shadow-sm p-4 flex flex-col gap-3">
+                    <div className="min-w-0 rounded-2xl border border-border/60 bg-card shadow-sm p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Duration</label>
-                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600">Goal</span>
+                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.18em]">Duration</label>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-500">Goal</span>
                       </div>
-                      <p className="text-[12px] font-semibold text-on-surface">{profile.targetDurationMinutes} mins</p>
+                      <p className="text-[12px] font-semibold text-foreground">{profile.targetDurationMinutes} mins</p>
                       <div className="relative">
                         <select
-                          className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                          className="w-full appearance-none rounded-xl border border-border/60 bg-muted/50 px-3 py-3 pr-9 text-sm font-semibold text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                           value={String(profile.targetDurationMinutes)}
                           onChange={(e) => setProfile((prev) => ({ ...prev, targetDurationMinutes: Number(e.target.value) }))}
                         >
@@ -1587,14 +1627,14 @@ Be specific and constructive.`;
                           <option value="15">15 mins</option>
                           <option value="20">20 mins</option>
                         </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       </div>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2 pt-1">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Initial Prompt</label>
-                    <div className="bg-surface-container-low/50 rounded-xl p-4 italic text-sm text-on-surface-variant leading-relaxed">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Initial Prompt</label>
+                    <div className="bg-muted/40 border border-border/40 rounded-xl p-4 italic text-sm text-muted-foreground leading-relaxed">
                       "{mode.opening}"
                     </div>
                   </div>
@@ -1660,8 +1700,8 @@ Be specific and constructive.`;
         </div>
 
         <Sheet open={voiceSettingsOpen} onOpenChange={handleVoiceSettingsOpenChange}>
-          <SheetContent side="right" className="w-full sm:max-w-xl border-l-[#c6c5d4]/70 bg-[#fbf8ff] p-0 text-[#1b1b21] overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-br from-[#000b60] via-[#142283] to-[#dfe0ff] px-6 py-6 text-white">
+          <SheetContent side="right" className="w-full sm:max-w-xl border-l border-border bg-background p-0 text-foreground overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-br from-[#000b60] via-[#142283] to-[#dfe0ff] dark:from-primary/80 dark:via-primary/60 dark:to-primary/20 px-6 py-6 text-white">
               <SheetHeader>
                 <SheetTitle className="text-2xl font-extrabold tracking-tight text-white">Voice Settings</SheetTitle>
                 <SheetDescription className="text-white/75">
@@ -1671,17 +1711,17 @@ Be specific and constructive.`;
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-5 px-6 pb-6 pt-6">
-              <div className="rounded-2xl bg-white p-4 shadow-[0_16px_32px_-18px_rgba(0,11,96,0.35)] ring-1 ring-[#c6c5d4]/60">
+              <div className="rounded-2xl bg-card p-4 shadow-sm ring-1 ring-border/60">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#454652]">Selected Voice</p>
-                    <h3 className="mt-1 text-xl font-extrabold text-[#000b60]">{selectedVoice.name}</h3>
-                    <p className="mt-1 text-sm font-medium text-[#454652]">{selectedVoice.tone}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Selected Voice</p>
+                    <h3 className="mt-1 text-xl font-extrabold text-foreground">{selectedVoice.name}</h3>
+                    <p className="mt-1 text-sm font-medium text-muted-foreground">{selectedVoice.tone}</p>
                   </div>
                   <Button
                     type="button"
                     onClick={() => previewVoice(selectedVoice)}
-                    className="rounded-full bg-[#000b60] px-5 font-extrabold text-white hover:bg-[#142283]"
+                    className="rounded-full bg-primary px-5 font-extrabold text-white hover:bg-primary/90"
                   >
                     <Volume2 className="mr-2 size-4" />
                     {previewingVoiceId === selectedVoice.id ? "Playing..." : "Preview"}
@@ -1696,18 +1736,18 @@ Be specific and constructive.`;
                     <div
                       key={voice.id}
                       className={cn(
-                        "rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5",
-                        active ? "border-[#000b60] ring-2 ring-[#000b60]" : "border-[#c6c5d4]/70 hover:border-[#000b60]/50"
+                        "rounded-2xl border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5",
+                        active ? "border-primary ring-2 ring-primary" : "border-border/60 hover:border-primary/50"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-base font-extrabold text-[#000b60]">{voice.name}</p>
-                          <p className="mt-1 text-xs font-semibold text-[#454652]">{voice.tone}</p>
+                          <p className="text-base font-extrabold text-foreground">{voice.name}</p>
+                          <p className="mt-1 text-xs font-semibold text-muted-foreground">{voice.tone}</p>
                         </div>
                         <span className={cn(
                           "rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em]",
-                          active ? "bg-[#000b60] text-white" : "bg-[#eae7ef] text-[#000b60]"
+                          active ? "bg-primary text-white" : "bg-muted text-foreground"
                         )}>
                           {active ? "Active" : "Select"}
                         </span>
@@ -1718,8 +1758,8 @@ Be specific and constructive.`;
                           className={cn(
                             "inline-flex h-8 items-center rounded-full px-3 py-1 text-[11px] font-extrabold leading-none transition",
                             active
-                              ? "bg-[#000b60] text-white hover:bg-[#142283]"
-                              : "bg-[#eae7ef] text-[#000b60] hover:bg-[#d6d1df]"
+                              ? "bg-primary text-white hover:bg-primary/90"
+                              : "bg-muted text-foreground hover:bg-muted/80"
                           )}
                           onClick={() => {
                             setProfile((prev) => ({ ...prev, voiceId: voice.id }));
@@ -1732,7 +1772,7 @@ Be specific and constructive.`;
                         </button>
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center rounded-full bg-[#eae7ef] px-3 py-1 text-[11px] font-extrabold leading-none text-[#000b60] transition hover:bg-[#000b60] hover:text-white"
+                          className="inline-flex h-8 items-center rounded-full bg-muted px-3 py-1 text-[11px] font-extrabold leading-none text-foreground transition hover:bg-primary hover:text-white"
                           onClick={() => previewVoice(voice)}
                         >
                           <Volume2 className="mr-1.5 size-3.5" />
@@ -1744,7 +1784,7 @@ Be specific and constructive.`;
                 })}
               </div>
 
-              <p className="text-xs font-medium leading-relaxed text-[#454652]">
+              <p className="text-xs font-medium leading-relaxed text-muted-foreground">
                 Note: preview starts a short Vapi voice call using the same 11Labs voice that will be used in the live tutor session.
               </p>
             </div>
@@ -1767,37 +1807,37 @@ Be specific and constructive.`;
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] text-[#1b1b21]"
+                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] dark:bg-background text-[#1b1b21] dark:text-foreground"
               >
-                <section className="relative flex min-h-[520px] flex-1 overflow-hidden px-8 py-12 xl:px-14 xl:py-16 2xl:px-20">
-                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb]" />
-                  <div className="relative z-10 grid w-full items-center gap-10 lg:grid-cols-12">
+                <section className="relative flex flex-1 px-8 py-12 xl:px-14 xl:py-16 2xl:px-20">
+                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb] dark:bg-muted/20" />
+                  <div className="relative z-10 grid w-full items-start gap-10 lg:grid-cols-12">
                     <div className="lg:col-span-7">
-                      <span className="inline-flex rounded-full bg-[#142283] px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2]">
+                      <span className="inline-flex rounded-full bg-[#142283] dark:bg-primary/20 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2] dark:text-primary">
                         Premium Intelligence
                       </span>
-                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] xl:text-7xl">
+                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] dark:text-foreground xl:text-7xl">
                         Master Your <br /> Next Interview
                       </h1>
-                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] xl:text-lg">
+                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] dark:text-muted-foreground xl:text-lg">
                         Practice DSA, SQL, interviews, presentations, and communication in a calm coaching space built for focused voice sessions.
                       </p>
 
-                      <div className="mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-[minmax(260px,1fr)_minmax(150px,180px)_minmax(150px,180px)]">
-                        <Textarea
+                      <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
+                        <Input
                           value={profile.focusArea}
                           onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
                           placeholder="Focus area, e.g. Binary trees, SQL joins, HR interview..."
-                          className="min-h-[58px] rounded-full border-[#c6c5d4] bg-white/90 px-6 py-4 text-sm font-semibold text-[#1b1b21] shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] placeholder:text-[#767683] focus:border-[#000b60] focus:ring-[#000b60]/20 sm:col-span-3 xl:col-span-1"
+                          className="h-[52px] rounded-full border-[#c6c5d4] dark:border-border bg-white/90 dark:bg-muted/50 px-6 text-sm font-semibold text-[#1b1b21] dark:text-foreground shadow-[0_8px_24px_-6px_rgba(0,11,96,0.08)] placeholder:text-[#767683] dark:placeholder:text-muted-foreground focus:border-[#000b60] dark:focus:border-primary focus-visible:ring-[#000b60]/20 dark:focus-visible:ring-primary/20"
                         />
                         <Select
                           value={profile.difficulty}
                           onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
                         >
-                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
+                          <SelectTrigger className="h-[52px] rounded-full border-[#c6c5d4] dark:border-border bg-[#f5f2fb] dark:bg-muted/50 px-5 text-xs font-extrabold text-[#000b60] dark:text-foreground shadow-sm focus:ring-[#000b60]/20 dark:focus:ring-primary/20">
                             <SelectValue placeholder="Difficulty" />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
+                          <SelectContent className="rounded-2xl border-[#c6c5d4] dark:border-border bg-white/95 dark:bg-card backdrop-blur-3xl z-[60]">
                             <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
                             <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
                             <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
@@ -1807,10 +1847,10 @@ Be specific and constructive.`;
                           value={String(profile.targetDurationMinutes)}
                           onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
                         >
-                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
+                          <SelectTrigger className="h-[52px] rounded-full border-[#c6c5d4] dark:border-border bg-[#f5f2fb] dark:bg-muted/50 px-5 text-xs font-extrabold text-[#000b60] dark:text-foreground shadow-sm focus:ring-[#000b60]/20 dark:focus:ring-primary/20">
                             <SelectValue placeholder="Duration" />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
+                          <SelectContent className="rounded-2xl border-[#c6c5d4] dark:border-border bg-white/95 dark:bg-card backdrop-blur-3xl z-[60]">
                             <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
                             <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
                             <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
@@ -1822,46 +1862,36 @@ Be specific and constructive.`;
                       <div className="mt-8 flex flex-wrap gap-4">
                         <Button
                           onClick={handleSessionToggle}
-                          className="h-14 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60]"
+                          className="h-12 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] dark:from-primary dark:to-primary/80 px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60]"
                         >
                           Begin Your Journey
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
-                          className="h-14 rounded-full bg-[#eae7ef] px-8 text-sm font-extrabold text-[#000b60] hover:bg-[#e4e1ea] hover:text-[#000b60]"
-                          onClick={() => setProfile((prev) => ({ ...prev, focusArea: prev.focusArea || mode.label }))}
+                          className="h-12 rounded-full bg-[#eae7ef] dark:bg-muted px-8 text-sm font-extrabold text-[#000b60] dark:text-foreground hover:bg-[#e4e1ea] dark:hover:bg-muted/80"
+                          onClick={() => setProfile((prev) => ({ ...prev, focusArea: mode.label }))}
                         >
                           Use Current Focus
                         </Button>
                       </div>
                     </div>
 
-                    <div className="relative hidden lg:col-span-5 lg:block">
-                      <div className="aspect-square rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
-                        <div className="flex h-full items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] p-10">
-                          <img src="/ai-tutor.png" alt="AI Voice Tutor" className="h-full max-h-[360px] w-full object-contain drop-shadow-2xl" />
+                    <div className="hidden lg:col-span-5 lg:flex lg:items-center lg:justify-center">
+                      <div className="w-full max-w-[420px] rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] dark:bg-muted/30 p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
+                        <div className="flex items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] dark:from-muted/40 dark:via-muted/20 dark:to-primary/10 p-10">
+                          <img src="/ai-tutor.png" alt="AI Voice Tutor" className="h-auto max-h-[320px] w-full object-contain drop-shadow-2xl" />
                         </div>
-                      </div>
-                      <div className="absolute -bottom-8 -left-8 max-w-[250px] rounded-2xl border border-white/40 bg-white/75 p-6 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.18)] backdrop-blur-2xl">
-                        <div className="mb-3 flex items-center gap-3">
-                          <BarChart2 className="size-5 text-[#5c1800]" />
-                          <span className="text-sm font-extrabold text-[#1b1b21]">Confidence Score</span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ffdbd0]">
-                          <div className="h-full w-[78%] rounded-full bg-[#380b00]" />
-                        </div>
-                        <p className="mt-2 text-xs font-semibold text-[#454652]">Focused on {focusTopic}</p>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                <section className="bg-[#efecf5] px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
+                <section className="bg-[#efecf5] dark:bg-muted/10 px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
                   <div className="mb-8 flex items-end justify-between gap-6">
                     <div>
-                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60]">Focus Your Preparation</h2>
-                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652]">
+                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60] dark:text-foreground">Focus Your Preparation</h2>
+                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652] dark:text-muted-foreground">
                         Choose the coaching area first, then start your voice practice with the selected setup.
                       </p>
                     </div>
@@ -1884,19 +1914,19 @@ Be specific and constructive.`;
                             }
                           }}
                           className={cn(
-                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] transition-all duration-300 hover:-translate-y-1",
-                            active && "ring-2 ring-[#000b60]"
+                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white dark:bg-card p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] dark:shadow-none dark:border dark:border-border/40 transition-all duration-300 hover:-translate-y-1",
+                            active && "ring-2 ring-[#000b60] dark:ring-primary"
                           )}
                         >
                           <div>
                             <div className={cn(
-                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 text-[#000b60] transition-transform group-hover:scale-110",
-                              active && "bg-[#000b60] text-white"
+                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 dark:bg-primary/15 text-[#000b60] dark:text-primary transition-transform group-hover:scale-110",
+                              active && "bg-[#000b60] dark:bg-primary/20 dark:ring-2 dark:ring-primary/40 text-white dark:text-primary"
                             )}>
                               <Icon className="size-7" />
                             </div>
-                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60]">{item.label}</h3>
-                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652]">{item.desc}</p>
+                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60] dark:text-foreground">{item.label}</h3>
+                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652] dark:text-muted-foreground">{item.desc}</p>
                           </div>
                           <button
                             type="button"
@@ -1904,7 +1934,7 @@ Be specific and constructive.`;
                               event.stopPropagation();
                               startPracticeWithMode(item.id);
                             }}
-                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] px-5 py-3 text-sm font-extrabold text-[#000b60] transition-all group-hover:bg-[#000b60] group-hover:text-white"
+                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] dark:bg-muted px-5 py-3 text-sm font-extrabold text-[#000b60] dark:text-foreground transition-all group-hover:bg-[#000b60] dark:group-hover:bg-primary group-hover:text-white"
                           >
                             Start Practice
                             <ChevronDown className="-rotate-90 size-4" />
@@ -2100,7 +2130,7 @@ Be specific and constructive.`;
                           value={profile.focusArea}
                           onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
                           placeholder="e.g. Technical Leadership Interview..."
-                          className="min-h-[100px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium"
+                          className="h-[88px] max-h-[88px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                         />
                       </div>
 
