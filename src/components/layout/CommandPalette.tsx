@@ -52,6 +52,13 @@ export function CommandPalette() {
     const { setTheme, theme } = useTheme();
     const { signOut, user, role } = useAuth();
 
+    const isDesktopViewport = () => window.innerWidth >= 1024;
+    const isTypingTarget = (target: EventTarget | null) => {
+        if (!(target instanceof HTMLElement)) return false;
+        const tag = target.tagName;
+        return target.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    };
+
     // Find the currently selected entity for the preview panel
     const selectedItem = [...results.assignments, ...results.quizzes, ...results.chats].find(item => item.id === selectedId) || 
                          [
@@ -135,16 +142,28 @@ export function CommandPalette() {
     // Toggle the menu when pressing Alt+K or receiving custom event
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
-            // Main trigger: Alt + K (Safer on Windows than Ctrl+K which can be Search)
-            if (e.key === "k" && e.altKey) {
+            if (isTypingTarget(e.target)) return;
+
+            const key = e.key.toLowerCase();
+            const isCtrlOrMetaK = key === "k" && (e.ctrlKey || e.metaKey);
+            const isAltK = key === "k" && e.altKey;
+
+            // Desktop quick search: Ctrl/Cmd + K
+            if (isDesktopViewport() && isCtrlOrMetaK) {
                 e.preventDefault();
                 setOpen((open) => !open);
+                return;
+            }
+
+            // Keep existing Alt+K fallback
+            if (isAltK) {
+                e.preventDefault();
+                setOpen((open) => !open);
+                return;
             }
 
             // Global navigation shortcuts (Alt + Key)
             if (e.altKey) {
-                const key = e.key.toLowerCase();
-
                 const shortcuts: Record<string, string | (() => void)> = {
                     d: () => navigate(role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'),
                     p: '/profile',
