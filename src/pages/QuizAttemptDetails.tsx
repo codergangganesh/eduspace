@@ -306,7 +306,6 @@ export default function QuizAttemptDetails() {
                         </div>
                     </div>
                 </div>
-
                 <Button
                     variant="outline"
                     onClick={() => navigate('/dashboard')}
