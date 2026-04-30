@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,8 @@ import { knowledgeService } from '@/lib/knowledgeService';
 export default function TakeQuiz() {
     const { quizId } = useParams();
     const navigate = useNavigate();
-    const { user, profile } = useAuth();
+    const { user, profile, isLoading: authLoading } = useAuth();
+    const userId = user?.id;
 
     const [quiz, setQuiz] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
@@ -34,24 +35,55 @@ export default function TakeQuiz() {
     const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(Date.now());
+    const submissionIdRef = useRef<string | null>(null);
+    const hasAttemptRecordedRef = useRef(false);
+    const hasWarnedResumeRef = useRef(false);
 
     // LocalStorage keys for persistence
-    const getStorageKey = (key: string) => `quiz_${user?.id || 'anonymous'}_${quizId}_${key}`;
+    const getStorageKey = useCallback(
+        (key: string) => `quiz_${userId || 'anonymous'}_${quizId}_${key}`,
+        [quizId, userId]
+    );
+
+    const handleBackNavigation = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+
+        navigate('/student/quizzes');
+    };
 
     // Load saved quiz state from localStorage on mount
     useEffect(() => {
-        if (!quizId) return;
+        if (!quizId || authLoading) return;
 
         const savedIndex = localStorage.getItem(getStorageKey('currentIndex'));
+        const savedAnswers = localStorage.getItem(getStorageKey('answers'));
         const savedStartTime = localStorage.getItem(getStorageKey('startTime'));
+        const savedSubmissionId = localStorage.getItem(getStorageKey('submissionId'));
 
         if (savedIndex !== null) {
             setCurrentIndex(parseInt(savedIndex, 10));
         }
 
+        if (savedAnswers) {
+            try {
+                setAnswers(JSON.parse(savedAnswers));
+            } catch (error) {
+                console.error('Failed to parse saved quiz answers', error);
+            }
+        }
+
+        if (savedSubmissionId) {
+            setSubmissionId(savedSubmissionId);
+            submissionIdRef.current = savedSubmissionId;
+        }
+
         // Initialize start time if not exists
         const startTimestamp = savedStartTime ? parseInt(savedStartTime, 10) : Date.now();
         startTimeRef.current = startTimestamp;
+        setElapsedTime(Math.floor((Date.now() - startTimestamp) / 1000));
         if (!savedStartTime) {
             localStorage.setItem(getStorageKey('startTime'), startTimestamp.toString());
         }
@@ -65,22 +97,117 @@ export default function TakeQuiz() {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [quizId, user?.id]);
+    }, [authLoading, getStorageKey, quizId]);
 
-    // Save currentIndex to localStorage when it changes
+    // Save in-progress state locally so refresh can resume smoothly
     useEffect(() => {
+        if (authLoading) return;
         if (quizId && !result) {
             localStorage.setItem(getStorageKey('currentIndex'), currentIndex.toString());
+            localStorage.setItem(getStorageKey('answers'), JSON.stringify(answers));
+            if (submissionId) {
+                localStorage.setItem(getStorageKey('submissionId'), submissionId);
+            }
         }
-    }, [currentIndex, quizId, result, user?.id]);
+    }, [answers, authLoading, currentIndex, getStorageKey, quizId, result, submissionId]);
 
     // Clear localStorage when quiz is submitted
     const clearQuizStorage = () => {
         if (quizId) {
             localStorage.removeItem(getStorageKey('currentIndex'));
             localStorage.removeItem(getStorageKey('startTime'));
+            localStorage.removeItem(getStorageKey('answers'));
+            localStorage.removeItem(getStorageKey('submissionId'));
         }
     };
+
+    const saveAttemptSnapshot = useCallback((nextAnswers?: Record<string, string>, nextIndex?: number) => {
+        if (!quizId) return;
+
+        localStorage.setItem(getStorageKey('currentIndex'), (nextIndex ?? currentIndex).toString());
+        localStorage.setItem(getStorageKey('answers'), JSON.stringify(nextAnswers ?? answers));
+
+        if (submissionIdRef.current) {
+            localStorage.setItem(getStorageKey('submissionId'), submissionIdRef.current);
+        }
+    }, [answers, currentIndex, getStorageKey, quizId]);
+
+    const ensureActiveSubmission = useCallback(async () => {
+        if (!quizId || !userId) {
+            throw new Error('Quiz session is not ready yet.');
+        }
+
+        if (submissionIdRef.current) {
+            return submissionIdRef.current;
+        }
+
+        const { data: existingSubmission, error: existingSubmissionError } = await supabase
+            .from('quiz_submissions')
+            .select('id, status')
+            .eq('quiz_id', quizId)
+            .eq('student_id', userId)
+            .eq('is_archived', false)
+            .maybeSingle();
+
+        if (existingSubmissionError) {
+            throw existingSubmissionError;
+        }
+
+        if (existingSubmission) {
+            if (existingSubmission.status !== 'pending') {
+                throw new Error('Quiz already submitted');
+            }
+
+            submissionIdRef.current = existingSubmission.id;
+            setSubmissionId(existingSubmission.id);
+            localStorage.setItem(getStorageKey('submissionId'), existingSubmission.id);
+            return existingSubmission.id;
+        }
+
+        const { data: createdSubmission, error: createError } = await supabase
+            .from('quiz_submissions')
+            .insert({
+                quiz_id: quizId,
+                student_id: userId,
+                total_obtained: 0,
+                status: 'pending',
+                quiz_version: quiz?.version || 1,
+                started_at: new Date(startTimeRef.current).toISOString()
+            })
+            .select('id')
+            .single();
+
+        if (createError) {
+            if (createError.code === '23505' || createError.message?.includes('duplicate key')) {
+                const { data: recoveredSubmission, error: recoveredError } = await supabase
+                    .rpc('get_active_student_submission', {
+                        p_quiz_id: quizId,
+                        p_student_id: userId
+                    });
+
+                if (recoveredError) {
+                    throw recoveredError;
+                }
+
+                const recovered = recoveredSubmission as any;
+                if (!recovered?.id || recovered.status !== 'pending') {
+                    throw new Error('Unable to recover active quiz submission.');
+                }
+
+                submissionIdRef.current = recovered.id;
+                setSubmissionId(recovered.id);
+                localStorage.setItem(getStorageKey('submissionId'), recovered.id);
+                return recovered.id as string;
+            }
+
+            throw createError;
+        }
+
+        submissionIdRef.current = createdSubmission.id;
+        setSubmissionId(createdSubmission.id);
+        localStorage.setItem(getStorageKey('submissionId'), createdSubmission.id);
+        return createdSubmission.id;
+    }, [getStorageKey, quiz?.version, quizId, userId]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -90,7 +217,7 @@ export default function TakeQuiz() {
 
     useEffect(() => {
         const fetchQuizData = async () => {
-            if (!quizId || !user) return;
+            if (authLoading || !quizId || !userId) return;
             try {
                 setLoading(true);
                 const { data: quizData, error: quizError } = await supabase
@@ -103,7 +230,10 @@ export default function TakeQuiz() {
                 setQuiz(quizData);
 
                 // Record academic action (Attempting a quiz)
-                recordAcademicAction();
+                if (!hasAttemptRecordedRef.current) {
+                    hasAttemptRecordedRef.current = true;
+                    recordAcademicAction();
+                }
 
                 // Check for existing ACTIVE submission (pending or completed, but not archived)
                 // This is the SINGLE SOURCE OF TRUTH for preventing reattempts
@@ -111,11 +241,20 @@ export default function TakeQuiz() {
                     .from('quiz_submissions')
                     .select('*')
                     .eq('quiz_id', quizId)
-                    .eq('student_id', user.id)
+                    .eq('student_id', userId)
                     .eq('is_archived', false) // Use active submissions only
                     .order('submitted_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
+
+                if (submission?.started_at) {
+                    const startedAt = new Date(submission.started_at).getTime();
+                    if (!Number.isNaN(startedAt)) {
+                        startTimeRef.current = startedAt;
+                        setElapsedTime(Math.floor((Date.now() - startedAt) / 1000));
+                        localStorage.setItem(getStorageKey('startTime'), startedAt.toString());
+                    }
+                }
 
                 // If submission exists and is completed, load answers and show result view
                 if (submission && submission.status !== 'pending') {
@@ -130,7 +269,9 @@ export default function TakeQuiz() {
                     if (savedAnswers) {
                         const loadedAnswers: Record<string, string> = {};
                         savedAnswers.forEach((a: any) => {
-                            loadedAnswers[a.question_id] = a.selected_option;
+                            if (a.selected_option && a.selected_option !== 'skipped') {
+                                loadedAnswers[a.question_id] = a.selected_option;
+                            }
                         });
                         setAnswers(loadedAnswers);
                     }
@@ -171,6 +312,7 @@ export default function TakeQuiz() {
 
                 if (submission) {
                     setSubmissionId(submission.id);
+                    submissionIdRef.current = submission.id;
                     if (submission.status === 'pending') {
                         setResult(null);
                         const { data: existingAnswers } = await supabase
@@ -181,10 +323,15 @@ export default function TakeQuiz() {
                         if (existingAnswers) {
                             const loadedAnswers: Record<string, string> = {};
                             existingAnswers.forEach((a: any) => {
-                                loadedAnswers[a.question_id] = a.selected_option;
+                                if (a.selected_option && a.selected_option !== 'skipped') {
+                                    loadedAnswers[a.question_id] = a.selected_option;
+                                }
                             });
                             setAnswers(loadedAnswers);
-                            toast.info('Resuming your quiz attempt');
+                            if (!hasWarnedResumeRef.current) {
+                                toast.info('Resuming your quiz attempt');
+                                hasWarnedResumeRef.current = true;
+                            }
                         }
                     } else {
                         // Submission is already completed (passed/failed) - REDIRECT TO RESULTS
@@ -201,11 +348,11 @@ export default function TakeQuiz() {
                         .from('quiz_submissions')
                         .insert({
                             quiz_id: quizId,
-                            student_id: user.id,
+                            student_id: userId,
                             total_obtained: 0,
                             status: 'pending',
                             quiz_version: quizData.version,
-                            started_at: new Date().toISOString()
+                            started_at: new Date(startTimeRef.current).toISOString()
                         })
                         .select()
                         .single();
@@ -218,12 +365,13 @@ export default function TakeQuiz() {
                                 .from('quiz_submissions')
                                 .select('*')
                                 .eq('quiz_id', quizId)
-                                .eq('student_id', user.id)
+                                .eq('student_id', userId)
                                 .eq('status', 'pending')
                                 .maybeSingle();
 
                             if (recoveredSub) {
                                 setSubmissionId(recoveredSub.id);
+                                submissionIdRef.current = recoveredSub.id;
                                 // Should load answers here too technically, but usually new/empty
                             }
                         } else {
@@ -231,6 +379,7 @@ export default function TakeQuiz() {
                         }
                     } else if (newSubmission) {
                         setSubmissionId(newSubmission.id);
+                        submissionIdRef.current = newSubmission.id;
                     }
                 }
 
@@ -246,14 +395,13 @@ export default function TakeQuiz() {
             } catch (error: any) {
                 console.error('Error loading quiz:', JSON.stringify(error, null, 2));
                 toast.error(`Failed to load quiz: ${error.message || 'Unknown error'}`);
-                navigate('/student/quizzes');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchQuizData();
-    }, [quizId, user, navigate]);
+    }, [authLoading, getStorageKey, quizId, userId]);
 
     useEffect(() => {
         if (result && quizId) {
@@ -285,16 +433,45 @@ export default function TakeQuiz() {
     }, [result, quizId]);
 
     const handleAnswerChange = async (questionId: string, optionId: string) => {
-        setAnswers(prev => ({ ...prev, [questionId]: optionId }));
+        if (answers[questionId] === optionId) return;
+        const nextAnswers = { ...answers, [questionId]: optionId };
+        setAnswers(nextAnswers);
+        saveAttemptSnapshot(nextAnswers);
 
-        if (submissionId) {
-            const { error } = await supabase.from('quiz_answers').upsert({
-                submission_id: submissionId,
-                question_id: questionId,
-                selected_option: optionId
-            }, { onConflict: 'submission_id,question_id' } as any);
+        try {
+            const activeSubmissionId = await ensureActiveSubmission();
+            const { data: existingAnswerRow, error: existingAnswerError } = await supabase
+                .from('quiz_answers')
+                .select('id')
+                .eq('submission_id', activeSubmissionId)
+                .eq('question_id', questionId)
+                .maybeSingle();
 
-            if (error) console.error("Error auto-saving answer", error);
+            if (existingAnswerError) throw existingAnswerError;
+
+            if (existingAnswerRow?.id) {
+                const { error } = await supabase
+                    .from('quiz_answers')
+                    .update({
+                        selected_option: optionId,
+                    })
+                    .eq('id', existingAnswerRow.id);
+
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('quiz_answers')
+                    .insert({
+                        submission_id: activeSubmissionId,
+                        question_id: questionId,
+                        selected_option: optionId,
+                    });
+
+                if (error) throw error;
+            }
+        } catch (error) {
+            console.error("Error auto-saving answer", error);
+            toast.error("We couldn't save that answer. Please try again.");
         }
     };
 
@@ -302,32 +479,106 @@ export default function TakeQuiz() {
         const currentQuestion = questions[currentIndex];
         const existingAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
         if (currentQuestion && existingAnswer) {
-            setAnswers(prev => {
-                const newAnswers = { ...prev };
-                delete newAnswers[currentQuestion.id];
-                return newAnswers;
-            });
+            const newAnswers = { ...answers };
+            delete newAnswers[currentQuestion.id];
+            setAnswers(newAnswers);
+            saveAttemptSnapshot(newAnswers);
 
-            if (submissionId) {
+            try {
+                const activeSubmissionId = submissionIdRef.current ?? await ensureActiveSubmission();
                 const { error } = await supabase
                     .from('quiz_answers')
                     .delete()
-                    .eq('submission_id', submissionId)
+                    .eq('submission_id', activeSubmissionId)
                     .eq('question_id', currentQuestion.id);
 
                 if (error) {
-                    console.error("Error clearing saved answer", error);
-                    setAnswers(prev => ({ ...prev, [currentQuestion.id]: existingAnswer }));
-                    toast.error("Failed to clear answer");
+                    throw error;
                 }
+            } catch (error) {
+                console.error("Error clearing saved answer", error);
+                const restoredAnswers = { ...newAnswers, [currentQuestion.id]: existingAnswer };
+                setAnswers(restoredAnswers);
+                saveAttemptSnapshot(restoredAnswers);
+                toast.error("Failed to clear answer");
             }
         }
     };
 
+    useEffect(() => {
+        if (authLoading || !quizId || !userId) return;
+
+        const channel = supabase
+            .channel(`take_quiz_${quizId}_${userId}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'quiz_submissions', filter: `student_id=eq.${userId}` },
+                (payload) => {
+                    const record = (payload.new || payload.old) as any;
+                    if (record?.quiz_id !== quizId) return;
+
+                    if (payload.eventType === 'DELETE') {
+                        setSubmissionId(null);
+                        submissionIdRef.current = null;
+                        localStorage.removeItem(getStorageKey('submissionId'));
+                        return;
+                    }
+
+                    if (payload.new && (payload.new as any).id) {
+                        const nextSubmissionId = (payload.new as any).id as string;
+                        setSubmissionId(nextSubmissionId);
+                        submissionIdRef.current = nextSubmissionId;
+                        localStorage.setItem(getStorageKey('submissionId'), nextSubmissionId);
+                    }
+
+                    if ((payload.new as any)?.status && (payload.new as any).status !== 'pending') {
+                        setResult(payload.new);
+                        if (quizId) {
+                            localStorage.removeItem(getStorageKey('currentIndex'));
+                            localStorage.removeItem(getStorageKey('startTime'));
+                            localStorage.removeItem(getStorageKey('answers'));
+                            localStorage.removeItem(getStorageKey('submissionId'));
+                        }
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'quiz_answers' },
+                (payload) => {
+                    const activeSubmissionId = submissionIdRef.current;
+                    const record = (payload.new || payload.old) as any;
+
+                    if (!activeSubmissionId || record?.submission_id !== activeSubmissionId) return;
+
+                    if (payload.eventType === 'DELETE' || record?.selected_option === 'skipped') {
+                        setAnswers((prev) => {
+                            const next = { ...prev };
+                            delete next[record.question_id];
+                            return next;
+                        });
+                        return;
+                    }
+
+                    if (record?.question_id && record?.selected_option) {
+                        setAnswers((prev) => ({
+                            ...prev,
+                            [record.question_id]: record.selected_option,
+                        }));
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [authLoading, getStorageKey, quizId, userId]);
+
     const { recordAcademicAction } = useStreak();
 
     const handleSubmit = async () => {
-        if (!user || !quiz) return;
+        if (!userId || !quiz) return;
         setIsConfirmSubmitOpen(false);
 
         // Record academic action (Submitting a quiz)
@@ -351,7 +602,7 @@ export default function TakeQuiz() {
                     .from('quiz_submissions')
                     .select('id')
                     .eq('quiz_id', quizId)
-                    .eq('student_id', user.id)
+                    .eq('student_id', userId)
                     .eq('status', 'pending')
                     .maybeSingle();
 
@@ -359,6 +610,7 @@ export default function TakeQuiz() {
                     console.log("Found existing pending submission:", existingSub.id);
                     activeSubmissionId = existingSub.id;
                     setSubmissionId(existingSub.id);
+                    submissionIdRef.current = existingSub.id;
                 } else {
                     // 2. Only create if no pending submission exists
                     console.log("No pending submission found, creating new one...");
@@ -366,22 +618,24 @@ export default function TakeQuiz() {
                         .from('quiz_submissions')
                         .insert({
                             quiz_id: quizId,
-                            student_id: user.id,
+                            student_id: userId,
                             total_obtained: 0,
-                            status: 'pending'
+                            status: 'pending',
+                            quiz_version: quiz.version || 1,
+                            started_at: new Date(startTimeRef.current).toISOString()
                         })
                         .select()
                         .single();
 
                     if (createError) {
                         if (createError.code === '23505' || createError.message?.includes('duplicate key')) { // Unique violation code or message check
-                            console.log('Duplicate key error detected. Attempting recovery via RPC...', { quizId, userId: user.id });
+                            console.log('Duplicate key error detected. Attempting recovery via RPC...', { quizId, userId });
 
                             // Use RPC to bypass RLS and find the exact active submission
                             const { data: rpcResult, error: rpcError } = await supabase
                                 .rpc('get_active_student_submission', {
                                     p_quiz_id: quizId,
-                                    p_student_id: user.id
+                                    p_student_id: userId
                                 });
 
                             console.log('RPC Recovery Query Result:', { rpcResult, rpcError });
@@ -398,7 +652,7 @@ export default function TakeQuiz() {
                                 setSubmissionId(retrySub.id);
                             } else {
                                 console.error('Recovery failed: Active submission not found via RPC', rpcResult);
-                                throw new Error(`Failed to create submission: Duplicate detected but active submission not found via RPC. IDs: Q=${quizId}, U=${user.id}`);
+                                throw new Error(`Failed to create submission: Duplicate detected but active submission not found via RPC. IDs: Q=${quizId}, U=${userId}`);
                             }
                         } else {
                             throw new Error(`Failed to create submission: ${createError.message}`);
@@ -406,6 +660,7 @@ export default function TakeQuiz() {
                     } else {
                         activeSubmissionId = newSub.id;
                         setSubmissionId(newSub.id);
+                        submissionIdRef.current = newSub.id;
                     }
                 }
             }
@@ -476,7 +731,7 @@ export default function TakeQuiz() {
                     quiz.title,
                     quiz.id,
                     quiz.class_id,
-                    user.id
+                    userId
                 ).catch(err => console.error("Failed to notify lecturer:", err));
             }
 
@@ -496,6 +751,38 @@ export default function TakeQuiz() {
             handleSubmit();
         }
     };
+
+    useEffect(() => {
+        if (questions.length === 0) return;
+        if (currentIndex > questions.length - 1) {
+            setCurrentIndex(questions.length - 1);
+        }
+    }, [currentIndex, questions.length]);
+
+    const safeCurrentIndex = Math.min(currentIndex, Math.max(questions.length - 1, 0));
+    const hasInProgressAttempt = !!quizId && !loading && !result && (!!submissionId || Object.keys(answers).length > 0 || questions.length > 0);
+
+    useEffect(() => {
+        if (!hasInProgressAttempt) return;
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            saveAttemptSnapshot();
+            event.preventDefault();
+            event.returnValue = "Refreshing the page may interrupt your current quiz attempt. If you continue, the quiz may restart from the beginning.";
+        };
+
+        const handlePageHide = () => {
+            saveAttemptSnapshot();
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('pagehide', handlePageHide);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('pagehide', handlePageHide);
+        };
+    }, [hasInProgressAttempt, saveAttemptSnapshot]);
 
 
     if (loading) {
@@ -747,10 +1034,9 @@ export default function TakeQuiz() {
     }
 
     const progress = (Object.keys(answers).length / questions.length) * 100;
-    const currentQuestion = questions[currentIndex];
+    const currentQuestion = questions[safeCurrentIndex];
 
     if (!currentQuestion) {
-        setCurrentIndex(0);
         return null;
     }
 
@@ -761,9 +1047,16 @@ export default function TakeQuiz() {
                 {/* Top Header Bar */}
                 <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center size-10 rounded-xl bg-blue-500 text-white">
-                        </div>
-                        <h1 className="font-bold text-lg">{quiz.title}</h1>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleBackNavigation}
+                            className="size-9 rounded-xl text-slate-600 dark:text-slate-300"
+                        >
+                            <ArrowLeft className="size-5" />
+                        </Button>
+                        <h1 className="font-bold text-lg truncate">{quiz.title}</h1>
                     </div>
 
                     {/* Progress */}
@@ -851,7 +1144,7 @@ export default function TakeQuiz() {
                         <div className="max-w-3xl mx-auto px-6 py-8">
                             {/* Question Header Row */}
                             <div className="flex items-center gap-3 mb-6">
-                                <span className="text-3xl font-bold text-[#3b82f6]">Q{currentIndex + 1}</span>
+                                <span className="text-3xl font-bold text-[#3b82f6]">Q{safeCurrentIndex + 1}</span>
                                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Multiple Choice</span>
                             </div>
 
@@ -900,31 +1193,35 @@ export default function TakeQuiz() {
                             </div>
 
                             {/* Bottom Navigation */}
-                            <div className="flex items-center justify-between gap-4">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                                    disabled={currentIndex === 0}
-                                    className="h-11 px-5 font-medium gap-2 border-slate-300 dark:border-slate-600"
-                                >
-                                    <ChevronLeft className="size-4" /> Previous
-                                </Button>
+                            <div className="space-y-3">
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={clearAnswer}
+                                        disabled={!answers[currentQuestion.id]}
+                                        className="h-10 px-1 text-sm font-medium text-slate-500 hover:text-slate-700 disabled:opacity-40"
+                                    >
+                                        Clear Answer
+                                    </button>
+                                </div>
 
-                                <button
-                                    onClick={clearAnswer}
-                                    disabled={!answers[currentQuestion.id]}
-                                    className="h-11 px-5 font-medium text-slate-500 hover:text-slate-700 disabled:opacity-40"
-                                >
-                                    Clear Answer
-                                </button>
+                                <div className="grid grid-cols-2 gap-3 md:flex md:items-center md:justify-between">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                                        disabled={safeCurrentIndex === 0}
+                                        className="h-11 w-full min-w-0 px-3 md:px-5 font-medium gap-2 border-slate-300 dark:border-slate-600"
+                                    >
+                                        <ChevronLeft className="size-4" /> Previous
+                                    </Button>
 
-                                <Button
-                                    onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                                    disabled={currentIndex === questions.length - 1}
-                                    className="h-11 px-6 font-medium gap-2 bg-[#3b82f6] hover:bg-blue-600 text-white"
-                                >
-                                    Next Question <ChevronRight className="size-4" />
-                                </Button>
+                                    <Button
+                                        onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                        disabled={safeCurrentIndex === questions.length - 1}
+                                        className="h-11 w-full min-w-0 px-3 md:px-6 font-medium gap-2 bg-[#3b82f6] hover:bg-blue-600 text-white"
+                                    >
+                                        Next Question <ChevronRight className="size-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </main>
@@ -934,26 +1231,11 @@ export default function TakeQuiz() {
                 <div className="lg:hidden shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4">
                     <div className="flex items-center justify-between gap-2">
                         <Button
-                            variant="outline"
-                            onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                            disabled={currentIndex === 0}
-                            className="flex-1 h-12"
-                        >
-                            <ChevronLeft className="size-4" /> Prev
-                        </Button>
-                        <Button
                             onClick={handleAttemptSubmit}
                             disabled={submitting}
-                            className="flex-1 h-12 bg-blue-500"
+                            className="w-full h-12 bg-blue-500"
                         >
                             {submitting ? <Loader2 className="animate-spin" /> : 'Submit'}
-                        </Button>
-                        <Button
-                            onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                            disabled={currentIndex === questions.length - 1}
-                            className="flex-1 h-12 bg-blue-500"
-                        >
-                            Next <ChevronRight className="size-4" />
                         </Button>
                     </div>
                 </div>

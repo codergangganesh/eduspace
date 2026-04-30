@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,8 @@ import {
     LayoutDashboard,
     ChevronLeft,
     ChevronRight,
-    Info
+    Info,
+    ArrowLeft
 } from 'lucide-react';
 import {
     Sheet,
@@ -38,6 +39,7 @@ export default function QuizAttemptDetails() {
     const { quizId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const userId = user?.id;
 
     const [quiz, setQuiz] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
@@ -46,12 +48,25 @@ export default function QuizAttemptDetails() {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const submissionIdRef = useRef<string | null>(null);
+    const hasLoadedRef = useRef(false);
+
+    const handleBackNavigation = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+
+        navigate('/student/quizzes');
+    };
 
     useEffect(() => {
         const fetchDetails = async () => {
-            if (!quizId || !user) return;
+            if (!quizId || !userId) return;
             try {
-                setLoading(true);
+                if (!hasLoadedRef.current) {
+                    setLoading(true);
+                }
                 setError(null);
 
                 const { data: quizData, error: quizError } = await supabase
@@ -67,7 +82,8 @@ export default function QuizAttemptDetails() {
                     .from('quiz_submissions')
                     .select('*')
                     .eq('quiz_id', quizId)
-                    .eq('student_id', user.id)
+                    .eq('student_id', userId)
+                    .eq('is_archived', false)
                     .order('submitted_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
@@ -76,8 +92,12 @@ export default function QuizAttemptDetails() {
 
                 if (!submission) {
                     setError(`No submission record found`);
+                    setResult(null);
+                    setAnswers({});
+                    submissionIdRef.current = null;
                 } else {
                     setResult(submission);
+                    submissionIdRef.current = submission.id;
                 }
 
                 const { data: questionsData, error: questionsError } = await supabase
@@ -97,9 +117,13 @@ export default function QuizAttemptDetails() {
                 if (existingAnswers) {
                     const loadedAnswers: Record<string, string> = {};
                     existingAnswers.forEach((a: any) => {
-                        loadedAnswers[a.question_id] = a.selected_option;
+                        if (a.selected_option && a.selected_option !== 'skipped') {
+                            loadedAnswers[a.question_id] = a.selected_option;
+                        }
                     });
                     setAnswers(loadedAnswers);
+                } else {
+                    setAnswers({});
                 }
 
             } catch (error: any) {
@@ -107,11 +131,79 @@ export default function QuizAttemptDetails() {
                 setError(error.message || 'Failed to load details');
             } finally {
                 setLoading(false);
+                hasLoadedRef.current = true;
             }
         };
 
         fetchDetails();
-    }, [quizId, user]);
+
+        if (!quizId || !userId) return;
+
+        const channel = supabase
+            .channel(`quiz_attempt_details_${quizId}_${userId}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'quizzes', filter: `id=eq.${quizId}` },
+                () => fetchDetails()
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'quiz_questions', filter: `quiz_id=eq.${quizId}` },
+                () => fetchDetails()
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'quiz_submissions', filter: `student_id=eq.${userId}` },
+                (payload) => {
+                    const record = (payload.new || payload.old) as any;
+                    if (record?.quiz_id !== quizId) return;
+
+                    if (payload.eventType === 'DELETE') {
+                        submissionIdRef.current = null;
+                        setResult(null);
+                        setAnswers({});
+                        setError('No submission record found');
+                        return;
+                    }
+
+                    if ((payload.new as any)?.id) {
+                        submissionIdRef.current = (payload.new as any).id;
+                        setResult(payload.new);
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'quiz_answers' },
+                (payload) => {
+                    const activeSubmissionId = submissionIdRef.current;
+                    const record = (payload.new || payload.old) as any;
+
+                    if (!activeSubmissionId || record?.submission_id !== activeSubmissionId) return;
+
+                    if (payload.eventType === 'DELETE' || record?.selected_option === 'skipped') {
+                        setAnswers((prev) => {
+                            const next = { ...prev };
+                            delete next[record.question_id];
+                            return next;
+                        });
+                        return;
+                    }
+
+                    if (record?.question_id && record?.selected_option) {
+                        setAnswers((prev) => ({
+                            ...prev,
+                            [record.question_id]: record.selected_option,
+                        }));
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [quizId, userId]);
 
     const formatTimeFull = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -156,6 +248,15 @@ export default function QuizAttemptDetails() {
         toast.success("Download successful");
     };
 
+    useEffect(() => {
+        if (questions.length === 0) return;
+        if (currentIndex > questions.length - 1) {
+            setCurrentIndex(questions.length - 1);
+        }
+    }, [currentIndex, questions.length]);
+
+    const safeCurrentIndex = Math.min(currentIndex, Math.max(questions.length - 1, 0));
+
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
             <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 shrink-0">Review Questions</h2>
@@ -167,7 +268,7 @@ export default function QuizAttemptDetails() {
                         const ansId = answers[q.id];
                         const isCorrectQ = ansId === q.correct_answer;
                         const isSkippedQ = !ansId;
-                        const isActive = currentIndex === idx;
+                        const isActive = safeCurrentIndex === idx;
 
                         return (
                             <div key={q.id} className="flex items-center justify-center">
@@ -221,7 +322,7 @@ export default function QuizAttemptDetails() {
     if (loading) {
         return (
             <DashboardLayout fullHeight hideHeaderOnMobile>
-                <div className="min-h-full bg-slate-50 dark:bg-[#0A0C14] flex flex-col transition-colors duration-300">
+                <div className="h-full bg-slate-50 dark:bg-[#0A0C14] flex flex-col transition-colors duration-300">
                     <div className="h-20 bg-white dark:bg-[#0A0C14] border-b border-slate-200 dark:border-white/5 px-8 flex items-center justify-between transition-colors">
                         <div className="flex items-center gap-4">
                             <Skeleton className="size-10 rounded-lg bg-slate-100 dark:bg-white/5" />
@@ -276,17 +377,26 @@ export default function QuizAttemptDetails() {
         );
     }
 
-    const currentQuestion = questions[currentIndex];
+    const currentQuestion = questions[safeCurrentIndex];
     const userAnswerId = answers[currentQuestion?.id];
     const isCorrect = userAnswerId === currentQuestion?.correct_answer;
     const isSkipped = !userAnswerId;
 
     return (
         <DashboardLayout fullHeight hideHeaderOnMobile>
-            <div className="min-h-full bg-slate-50 dark:bg-[#0A0C14] flex flex-col font-sans transition-colors duration-300">
+            <div className="h-full bg-slate-50 dark:bg-[#0A0C14] flex flex-col font-sans transition-colors duration-300">
 
                 <header className="h-16 md:h-20 bg-white dark:bg-[#0A0C14] border-b border-slate-200 dark:border-white/5 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-sm transition-colors duration-300">
                     <div className="flex items-center gap-3 md:gap-4">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleBackNavigation}
+                            className="size-9 md:size-10 rounded-xl shrink-0 text-slate-600 dark:text-slate-300"
+                        >
+                            <ArrowLeft className="size-5" />
+                        </Button>
                         <Sheet>
                             <SheetTrigger asChild>
                                 <Button variant="ghost" size="icon" className="md:hidden shrink-0">
@@ -379,7 +489,7 @@ export default function QuizAttemptDetails() {
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <span className="text-4xl font-black text-blue-600/10 dark:text-blue-400/5 select-none">Q{currentIndex + 1}</span>
+                                        <span className="text-4xl font-black text-blue-600/10 dark:text-blue-400/5 select-none">Q{safeCurrentIndex + 1}</span>
                                         <div className="flex items-center gap-2">
                                             <Badge className={cn(
                                                 "font-black text-[10px] px-3 py-1 rounded-full border-none shadow-sm",
@@ -423,11 +533,11 @@ export default function QuizAttemptDetails() {
                                 </div>
 
                                 <div className="flex items-center justify-between pt-12 border-t border-slate-100 dark:border-white/5">
-                                    <Button onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))} disabled={currentIndex === 0} variant="ghost" className="gap-2 font-black">
+                                    <Button onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))} disabled={safeCurrentIndex === 0} variant="ghost" className="gap-2 font-black">
                                         <ChevronLeft className="size-4" /> PREV
                                     </Button>
-                                    <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Question {currentIndex + 1} OF {questions.length}</div>
-                                    <Button onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))} disabled={currentIndex === questions.length - 1} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 h-12 font-black shadow-lg shadow-blue-600/20">
+                                    <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Question {safeCurrentIndex + 1} OF {questions.length}</div>
+                                    <Button onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))} disabled={safeCurrentIndex === questions.length - 1} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 h-12 font-black shadow-lg shadow-blue-600/20">
                                         NEXT <ChevronRight className="size-4" />
                                     </Button>
                                 </div>
