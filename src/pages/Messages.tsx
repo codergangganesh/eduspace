@@ -1064,15 +1064,15 @@ export default function Messages() {
                 <ArrowLeft className="size-5" />
               </Button>
               <div className="flex items-center gap-3">
-                <Avatar className="size-7 md:size-10 ring-2 ring-emerald-500/20">
+                <Avatar className="size-7 md:size-10 ring-2 ring-emerald-500/20 shrink-0">
                   <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
                   <AvatarFallback className="bg-emerald-500 text-white font-semibold">
                     {profile?.full_name?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-semibold text-sm">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Active Now</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-xs truncate">{profile?.full_name || user?.user_metadata?.full_name || 'User'}</p>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Active Now</p>
                 </div>
               </div>
             </div >
