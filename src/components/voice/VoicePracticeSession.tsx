@@ -120,6 +120,16 @@ function isLikelyMobileBrowser() {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|Mobile|CriOS|FxiOS/i.test(userAgent) || isiPadDesktopMode;
 }
 
+function isStandalonePwa() {
+  if (typeof window === "undefined") return false;
+
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    document.referrer.includes("android-app://")
+  );
+}
+
 function getErrorMessage(error: unknown) {
   if (typeof error === "string") return error;
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
@@ -143,6 +153,30 @@ function isVoiceSelectionFailure(message: string) {
   );
 }
 
+function isLikelyTransientVoiceConnectionFailure(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("microphone") ||
+    normalized.includes("permission") ||
+    normalized.includes("denied") ||
+    normalized.includes("notallowederror")
+  ) {
+    return false;
+  }
+
+  return (
+    normalized.includes("connection") ||
+    normalized.includes("network") ||
+    normalized.includes("transport") ||
+    normalized.includes("signaling") ||
+    normalized.includes("meeting") ||
+    normalized.includes("daily") ||
+    normalized.includes("room") ||
+    normalized.includes("interrupted")
+  );
+}
+
 function getFriendlyVoiceError(message: string, isMobile: boolean) {
   const normalized = message.toLowerCase();
 
@@ -155,10 +189,20 @@ function getFriendlyVoiceError(message: string, isMobile: boolean) {
   if (
     normalized.includes("microphone") ||
     normalized.includes("permission") ||
+    normalized.includes("notfounderror") ||
+    normalized.includes("notreadableerror") ||
+    normalized.includes("device not found") ||
     normalized.includes("notallowederror") ||
     normalized.includes("denied")
   ) {
     return "Microphone access is required to start the AI Voice Tutor.";
+  }
+
+  if (
+    normalized.includes("offline") ||
+    normalized.includes("navigator offline")
+  ) {
+    return "Your device appears to be offline. Reconnect and try the voice tutor again.";
   }
 
   if (
@@ -448,6 +492,7 @@ export function VoicePracticeSession() {
   const mobileUnsupportedVoiceIdsRef = useRef<Set<string>>(new Set());
   const suppressVoiceSelectionErrorRef = useRef(false);
   const fallbackNoticeShownRef = useRef(false);
+  const warmupMicStreamRef = useRef<MediaStream | null>(null);
   const mobileAudioContextRef = useRef<AudioContext | null>(null);
   const micVisualizerContextRef = useRef<AudioContext | null>(null);
   const micVisualizerStreamRef = useRef<MediaStream | null>(null);
@@ -504,7 +549,9 @@ export function VoicePracticeSession() {
   const selectedVoice = useMemo(() => getTutorVoice(profile.voiceId), [profile.voiceId]);
   const prompt = useMemo(() => buildPrompt(profile), [profile]);
   const isMobileBrowser = useMemo(() => isLikelyMobileBrowser(), []);
+  const isStandaloneMode = useMemo(() => isStandalonePwa(), []);
   const isMobileEnvironment = isMobileViewport || isMobileBrowser;
+  const needsPwaVoiceWarmup = isMobileEnvironment || isStandaloneMode;
 
   const cleanup = () => {
     if (previewTimeoutRef.current) {
@@ -520,6 +567,8 @@ export function VoicePracticeSession() {
     previewActiveRef.current = false;
     previewStopPendingRef.current = false;
     setPreviewingVoiceId(null);
+    warmupMicStreamRef.current?.getTracks().forEach((track) => track.stop());
+    warmupMicStreamRef.current = null;
   };
 
   const stopMicLevelMonitoring = () => {
@@ -545,6 +594,49 @@ export function VoicePracticeSession() {
     lowBandLevel.set(0);
     midBandLevel.set(0);
     highBandLevel.set(0);
+  };
+
+  const releaseWarmupMicStream = () => {
+    warmupMicStreamRef.current?.getTracks().forEach((track) => track.stop());
+    warmupMicStreamRef.current = null;
+  };
+
+  const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+  const ensureVoiceRuntimeReady = async () => {
+    if (typeof window === "undefined") return;
+
+    if (!navigator.onLine) {
+      throw new Error("Navigator offline");
+    }
+
+    resumeMobileAudioContext();
+
+    if (!needsPwaVoiceWarmup) {
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone is unavailable on this device");
+    }
+
+    if (!warmupMicStreamRef.current) {
+      warmupMicStreamRef.current = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+    }
+
+    if (document.visibilityState === "hidden") {
+      await wait(150);
+    }
+
+    if (isStandaloneMode) {
+      await wait(250);
+    }
   };
 
   const startMicLevelMonitoring = async () => {
@@ -685,6 +777,7 @@ export function VoicePracticeSession() {
     const preferredVoice = getPreferredVoiceForMobile(sessionProfile.voiceId);
     const fallbackVoice = getFallbackVoiceFor(preferredVoice.id);
     const canRetryWithFallback = isMobileEnvironment && preferredVoice.id !== fallbackVoice.id;
+    const shouldRetryTransientStart = needsPwaVoiceWarmup;
 
     suppressVoiceSelectionErrorRef.current = canRetryWithFallback;
 
@@ -692,6 +785,14 @@ export function VoicePracticeSession() {
       await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, preferredVoice.id));
     } catch (error) {
       const errorMessage = getErrorMessage(error);
+
+      if (shouldRetryTransientStart && isLikelyTransientVoiceConnectionFailure(errorMessage)) {
+        await vapi.stop().catch(() => undefined);
+        await wait(isStandaloneMode ? 500 : 300);
+        await ensureVoiceRuntimeReady();
+        await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, preferredVoice.id));
+        return;
+      }
 
       if (!canRetryWithFallback || !isVoiceSelectionFailure(errorMessage)) {
         throw error;
@@ -803,6 +904,7 @@ export function VoicePracticeSession() {
     const preferredVoice = getPreferredVoiceForMobile(requestedVoiceId);
     const fallbackVoice = getFallbackVoiceFor(preferredVoice.id);
     const canRetryWithFallback = isMobileEnvironment && preferredVoice.id !== fallbackVoice.id;
+    const shouldRetryTransientStart = needsPwaVoiceWarmup;
 
     suppressVoiceSelectionErrorRef.current = canRetryWithFallback;
 
@@ -810,6 +912,14 @@ export function VoicePracticeSession() {
       await vapi.start(buildPreviewConfig(preferredVoice.id));
     } catch (error) {
       const errorMessage = getErrorMessage(error);
+
+      if (shouldRetryTransientStart && isLikelyTransientVoiceConnectionFailure(errorMessage)) {
+        await vapi.stop().catch(() => undefined);
+        await wait(isStandaloneMode ? 500 : 300);
+        await ensureVoiceRuntimeReady();
+        await vapi.start(buildPreviewConfig(preferredVoice.id));
+        return;
+      }
 
       if (!canRetryWithFallback || !isVoiceSelectionFailure(errorMessage)) {
         throw error;
@@ -849,7 +959,7 @@ export function VoicePracticeSession() {
 
     try {
       callTransitionRef.current = "preview-starting";
-      resumeMobileAudioContext();
+      await ensureVoiceRuntimeReady();
 
       if (previewTimeoutRef.current) {
         window.clearTimeout(previewTimeoutRef.current);
@@ -898,6 +1008,7 @@ export function VoicePracticeSession() {
       callTransitionRef.current = "idle";
       previewActiveRef.current = false;
       previewStopPendingRef.current = false;
+      releaseWarmupMicStream();
       setPreviewingVoiceId(null);
       toast.error(getFriendlyVoiceError(getErrorMessage(error), isMobileEnvironment));
     }
@@ -984,6 +1095,7 @@ export function VoicePracticeSession() {
       console.log("[VAPI] Call started");
       if (previewActiveRef.current) return;
 
+      releaseWarmupMicStream();
       setState("listening");
       vapiActiveRef.current = true;
       setErrorMsg(null);
@@ -997,6 +1109,7 @@ export function VoicePracticeSession() {
           window.clearTimeout(previewTimeoutRef.current);
           previewTimeoutRef.current = null;
         }
+        releaseWarmupMicStream();
         previewActiveRef.current = false;
         previewStopPendingRef.current = false;
         setPreviewingVoiceId(null);
@@ -1004,6 +1117,7 @@ export function VoicePracticeSession() {
         return;
       }
 
+      releaseWarmupMicStream();
       setState("idle");
       vapiActiveRef.current = false;
       previewActiveRef.current = false;
@@ -1113,6 +1227,7 @@ export function VoicePracticeSession() {
           window.clearTimeout(previewTimeoutRef.current);
           previewTimeoutRef.current = null;
         }
+        releaseWarmupMicStream();
         previewActiveRef.current = false;
         previewStopPendingRef.current = false;
         setPreviewingVoiceId(null);
@@ -1128,11 +1243,13 @@ export function VoicePracticeSession() {
 
       if (!shouldIgnore) {
         console.error("[VAPI] Real error:", errorMessage);
+        releaseWarmupMicStream();
         setErrorMsg(getFriendlyVoiceError(errorMessage, isMobileEnvironment));
         setState("idle");
         vapiActiveRef.current = false;
         callTransitionRef.current = "idle";
       } else {
+        releaseWarmupMicStream();
         console.debug("[VAPI] Ignored event:", errorMessage);
       }
     };
@@ -1177,6 +1294,7 @@ export function VoicePracticeSession() {
   useEffect(() => {
     return () => {
       stopMicLevelMonitoring();
+      releaseWarmupMicStream();
     };
   }, []);
 
@@ -1231,7 +1349,7 @@ export function VoicePracticeSession() {
       try {
         callTransitionRef.current = "session-starting";
         vapiActiveRef.current = true;
-        resumeMobileAudioContext();
+        await ensureVoiceRuntimeReady();
 
         if (options?.mobileImmediateStart) {
           setErrorMsg(null);
@@ -1245,6 +1363,7 @@ export function VoicePracticeSession() {
         callTransitionRef.current = "idle";
       } catch (e) {
         console.error(e);
+        releaseWarmupMicStream();
         setErrorMsg(getFriendlyVoiceError(getErrorMessage(e), isMobileEnvironment));
         vapiActiveRef.current = false;
         setState("idle");
