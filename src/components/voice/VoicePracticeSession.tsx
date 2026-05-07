@@ -104,6 +104,75 @@ const TUTOR_VOICES = [
   { id: "steve", name: "Steve", tone: "Direct and crisp" },
 ];
 
+const MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY = "eduspace.voiceTutor.mobileUnsupportedVoices";
+const MOBILE_FALLBACK_VOICE_ID = DEFAULT_PROFILE.voiceId;
+
+function getTutorVoice(voiceId: string) {
+  return TUTOR_VOICES.find((voice) => voice.id === voiceId) ?? TUTOR_VOICES[0];
+}
+
+function isLikelyMobileBrowser() {
+  if (typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent || navigator.vendor || "";
+  const isiPadDesktopMode = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
+
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|Mobile|CriOS|FxiOS/i.test(userAgent) || isiPadDesktopMode;
+}
+
+function getErrorMessage(error: unknown) {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return "Voice connection error";
+}
+
+function isVoiceSelectionFailure(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("selected voice preview") ||
+    normalized.includes("could not select the selected voice") ||
+    normalized.includes("voice preview") ||
+    ((normalized.includes("voice") || normalized.includes("11labs")) &&
+      (normalized.includes("unsupported") ||
+        normalized.includes("unavailable") ||
+        normalized.includes("invalid") ||
+        normalized.includes("not found") ||
+        normalized.includes("could not select")))
+  );
+}
+
+function getFriendlyVoiceError(message: string, isMobile: boolean) {
+  const normalized = message.toLowerCase();
+
+  if (isVoiceSelectionFailure(message)) {
+    return isMobile
+      ? "A compatible tutor voice could not be loaded on this device."
+      : "The selected tutor voice could not be loaded right now.";
+  }
+
+  if (
+    normalized.includes("microphone") ||
+    normalized.includes("permission") ||
+    normalized.includes("notallowederror") ||
+    normalized.includes("denied")
+  ) {
+    return "Microphone access is required to start the AI Voice Tutor.";
+  }
+
+  if (
+    normalized.includes("network") ||
+    normalized.includes("connection") ||
+    normalized.includes("signaling") ||
+    normalized.includes("transport")
+  ) {
+    return "The voice connection was interrupted. Please try again.";
+  }
+
+  return "Could not start the AI Voice Tutor right now. Please try again.";
+}
+
 function modeLabel(mode: PracticeMode) {
   return MODES.find((m) => m.id === mode)?.label ?? "Interview";
 }
@@ -376,6 +445,9 @@ export function VoicePracticeSession() {
   const previewSettleTimeoutRef = useRef<number | null>(null);
   const previewStopPendingRef = useRef(false);
   const callTransitionRef = useRef<"idle" | "preview-starting" | "session-starting" | "stopping">("idle");
+  const mobileUnsupportedVoiceIdsRef = useRef<Set<string>>(new Set());
+  const suppressVoiceSelectionErrorRef = useRef(false);
+  const fallbackNoticeShownRef = useRef(false);
   const mobileAudioContextRef = useRef<AudioContext | null>(null);
   const micVisualizerContextRef = useRef<AudioContext | null>(null);
   const micVisualizerStreamRef = useRef<MediaStream | null>(null);
@@ -429,8 +501,10 @@ export function VoicePracticeSession() {
   const waveBar9 = useTransform(() => 0.28 + smoothedMidBand.get() * 0.95);
 
   const mode = useMemo(() => MODES.find((m) => m.id === profile.practiceMode) ?? MODES[0], [profile.practiceMode]);
-  const selectedVoice = useMemo(() => TUTOR_VOICES.find((item) => item.id === profile.voiceId) ?? TUTOR_VOICES[0], [profile.voiceId]);
+  const selectedVoice = useMemo(() => getTutorVoice(profile.voiceId), [profile.voiceId]);
   const prompt = useMemo(() => buildPrompt(profile), [profile]);
+  const isMobileBrowser = useMemo(() => isLikelyMobileBrowser(), []);
+  const isMobileEnvironment = isMobileViewport || isMobileBrowser;
 
   const cleanup = () => {
     if (previewTimeoutRef.current) {
@@ -545,7 +619,14 @@ export function VoicePracticeSession() {
     }
   };
 
-  const buildAssistantConfig = (sessionProfile: SessionProfile, sessionPrompt: string, sessionMode: typeof MODES[number]) => {
+  const buildAssistantConfig = (
+    sessionProfile: SessionProfile,
+    sessionPrompt: string,
+    sessionMode: typeof MODES[number],
+    voiceIdOverride?: string
+  ) => {
+    const resolvedVoiceId = voiceIdOverride ?? sessionProfile.voiceId;
+
     let assistantConfig: any = {
       name: "Eduspace Voice Tutor",
       firstMessage: sessionMode.opening,
@@ -564,7 +645,7 @@ export function VoicePracticeSession() {
       },
       voice: {
         provider: "11labs",
-        voiceId: sessionProfile.voiceId,
+        voiceId: resolvedVoiceId,
       },
       model: {
         provider: "openai",
@@ -581,7 +662,7 @@ export function VoicePracticeSession() {
     if (sessionProfile.practiceMode === "interview") {
       const baseConfig = JSON.parse(JSON.stringify(interviewerConfig));
       baseConfig.model.messages[0].content = baseConfig.model.messages[0].content.replace("{{questions}}", sessionProfile.focusArea || "General behavioral and technical questions.");
-      baseConfig.voice.voiceId = sessionProfile.voiceId;
+      baseConfig.voice.voiceId = resolvedVoiceId;
       baseConfig.backgroundSpeechDenoisingPlan = {
         smartDenoisingPlan: {
           enabled: false,
@@ -596,8 +677,45 @@ export function VoicePracticeSession() {
     return assistantConfig;
   };
 
+  const startVoiceSessionWithFallback = async (
+    sessionProfile: SessionProfile,
+    sessionPrompt: string,
+    sessionMode: typeof MODES[number]
+  ) => {
+    const preferredVoice = getPreferredVoiceForMobile(sessionProfile.voiceId);
+    const fallbackVoice = getFallbackVoiceFor(preferredVoice.id);
+    const canRetryWithFallback = isMobileEnvironment && preferredVoice.id !== fallbackVoice.id;
+
+    suppressVoiceSelectionErrorRef.current = canRetryWithFallback;
+
+    try {
+      await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, preferredVoice.id));
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+
+      if (!canRetryWithFallback || !isVoiceSelectionFailure(errorMessage)) {
+        throw error;
+      }
+
+      markVoiceUnsupportedOnMobile(preferredVoice.id);
+      console.warn("[VAPI] Retrying mobile voice session with fallback voice", {
+        requestedVoiceId: sessionProfile.voiceId,
+        failedVoiceId: preferredVoice.id,
+        fallbackVoiceId: fallbackVoice.id,
+        error: errorMessage,
+      });
+
+      await vapi.stop().catch(() => undefined);
+      suppressVoiceSelectionErrorRef.current = false;
+      await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, fallbackVoice.id));
+      showMobileFallbackNotice();
+    } finally {
+      suppressVoiceSelectionErrorRef.current = false;
+    }
+  };
+
   const resumeMobileAudioContext = () => {
-    if (!isMobileViewport || typeof window === "undefined") return;
+    if (!isMobileEnvironment || typeof window === "undefined") return;
 
     const WindowWithWebkitAudio = window as typeof window & {
       webkitAudioContext?: typeof AudioContext;
@@ -612,6 +730,105 @@ export function VoicePracticeSession() {
 
     if (mobileAudioContextRef.current.state === "suspended") {
       void mobileAudioContextRef.current.resume();
+    }
+  };
+
+  const persistUnsupportedMobileVoices = (voiceIds: string[]) => {
+    try {
+      localStorage.setItem(MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY, JSON.stringify(voiceIds));
+    } catch (error) {
+      console.warn("Failed to persist mobile voice compatibility cache", error);
+    }
+  };
+
+  const markVoiceUnsupportedOnMobile = (voiceId: string) => {
+    if (!voiceId) return;
+    if (mobileUnsupportedVoiceIdsRef.current.has(voiceId)) return;
+
+    mobileUnsupportedVoiceIdsRef.current.add(voiceId);
+    persistUnsupportedMobileVoices(Array.from(mobileUnsupportedVoiceIdsRef.current));
+  };
+
+  const getFallbackVoiceFor = (voiceId: string) => {
+    return (
+      TUTOR_VOICES.find((voice) => voice.id === MOBILE_FALLBACK_VOICE_ID && voice.id !== voiceId) ??
+      TUTOR_VOICES.find((voice) => voice.id !== voiceId) ??
+      getTutorVoice(voiceId)
+    );
+  };
+
+  const getPreferredVoiceForMobile = (voiceId: string) => {
+    if (!isMobileEnvironment || !mobileUnsupportedVoiceIdsRef.current.has(voiceId)) {
+      return getTutorVoice(voiceId);
+    }
+
+    return getFallbackVoiceFor(voiceId);
+  };
+
+  const showMobileFallbackNotice = () => {
+    if (fallbackNoticeShownRef.current) return;
+    fallbackNoticeShownRef.current = true;
+    toast.info("Using a compatible tutor voice on this device.");
+  };
+
+  const buildPreviewConfig = (voiceId: string) => {
+    const voice = getTutorVoice(voiceId);
+
+    return {
+      name: "Eduspace Voice Preview",
+      firstMessage: `Hello, I am ${voice.name}, your AI tutor. This voice is ${voice.tone.toLowerCase()}, and I will guide you clearly through your practice sessions.`,
+      transcriber: {
+        provider: "deepgram",
+        model: "nova-2",
+        language: "en",
+      },
+      voice: {
+        provider: "11labs",
+        voiceId,
+      },
+      model: {
+        provider: "openai",
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are only previewing a voice. Say the first message exactly once, then stay silent.",
+          },
+        ],
+      },
+    };
+  };
+
+  const startVoicePreviewWithFallback = async (requestedVoiceId: string) => {
+    const preferredVoice = getPreferredVoiceForMobile(requestedVoiceId);
+    const fallbackVoice = getFallbackVoiceFor(preferredVoice.id);
+    const canRetryWithFallback = isMobileEnvironment && preferredVoice.id !== fallbackVoice.id;
+
+    suppressVoiceSelectionErrorRef.current = canRetryWithFallback;
+
+    try {
+      await vapi.start(buildPreviewConfig(preferredVoice.id));
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+
+      if (!canRetryWithFallback || !isVoiceSelectionFailure(errorMessage)) {
+        throw error;
+      }
+
+      markVoiceUnsupportedOnMobile(preferredVoice.id);
+      console.warn("[VAPI] Retrying mobile voice preview with fallback voice", {
+        requestedVoiceId,
+        failedVoiceId: preferredVoice.id,
+        fallbackVoiceId: fallbackVoice.id,
+        error: errorMessage,
+      });
+
+      await vapi.stop().catch(() => undefined);
+      suppressVoiceSelectionErrorRef.current = false;
+      await vapi.start(buildPreviewConfig(fallbackVoice.id));
+      showMobileFallbackNotice();
+    } finally {
+      suppressVoiceSelectionErrorRef.current = false;
     }
   };
 
@@ -632,6 +849,7 @@ export function VoicePracticeSession() {
 
     try {
       callTransitionRef.current = "preview-starting";
+      resumeMobileAudioContext();
 
       if (previewTimeoutRef.current) {
         window.clearTimeout(previewTimeoutRef.current);
@@ -653,29 +871,7 @@ export function VoicePracticeSession() {
       setPreviewingVoiceId(voice.id);
       setErrorMsg(null);
 
-      await vapi.start({
-        name: "Eduspace Voice Preview",
-        firstMessage: `Hello, I am ${voice.name}, your AI tutor. This voice is ${voice.tone.toLowerCase()}, and I will guide you clearly through your practice sessions.`,
-        transcriber: {
-          provider: "deepgram",
-          model: "nova-2",
-          language: "en",
-        },
-        voice: {
-          provider: "11labs",
-          voiceId: voice.id,
-        },
-        model: {
-          provider: "openai",
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "You are only previewing a voice. Say the first message exactly once, then stay silent.",
-            },
-          ],
-        },
-      });
+      await startVoicePreviewWithFallback(voice.id);
 
       callTransitionRef.current = "idle";
 
@@ -703,7 +899,7 @@ export function VoicePracticeSession() {
       previewActiveRef.current = false;
       previewStopPendingRef.current = false;
       setPreviewingVoiceId(null);
-      toast.error("Could not play the Vapi voice preview.");
+      toast.error(getFriendlyVoiceError(getErrorMessage(error), isMobileEnvironment));
     }
   };
 
@@ -750,6 +946,22 @@ export function VoicePracticeSession() {
       if (raw) setProfile((prev) => ({ ...prev, ...JSON.parse(raw) }));
     } catch (error) {
       console.warn("Failed to load voice tutor profile", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY);
+      if (!raw) return;
+
+      const voiceIds = JSON.parse(raw);
+      if (!Array.isArray(voiceIds)) return;
+
+      mobileUnsupportedVoiceIdsRef.current = new Set(
+        voiceIds.filter((voiceId): voiceId is string => typeof voiceId === "string")
+      );
+    } catch (error) {
+      console.warn("Failed to load mobile voice compatibility cache", error);
     }
   }, []);
 
@@ -872,7 +1084,7 @@ export function VoicePracticeSession() {
     };
 
     const onError = (error: any) => {
-      const errorMessage = typeof error === 'string' ? error : (error.message || "Voice connection error");
+      const errorMessage = getErrorMessage(error);
       
       // Suppress normal call-end signals that might be reported as errors
       const ignoredMessages = [
@@ -891,6 +1103,11 @@ export function VoicePracticeSession() {
         errorMessage.toLowerCase().includes(msg.toLowerCase())
       );
 
+      if (suppressVoiceSelectionErrorRef.current && isVoiceSelectionFailure(errorMessage)) {
+        console.debug("[VAPI] Suppressed voice selection error during fallback recovery:", errorMessage);
+        return;
+      }
+
       if (previewActiveRef.current) {
         if (previewTimeoutRef.current) {
           window.clearTimeout(previewTimeoutRef.current);
@@ -902,7 +1119,7 @@ export function VoicePracticeSession() {
         callTransitionRef.current = "idle";
         if (!shouldIgnore) {
           console.error("[VAPI] Voice preview error:", errorMessage);
-          toast.error("Could not play the selected voice preview.");
+          toast.error(getFriendlyVoiceError(errorMessage, isMobileEnvironment));
         } else {
           console.debug("[VAPI] Ignored preview event:", errorMessage);
         }
@@ -911,7 +1128,7 @@ export function VoicePracticeSession() {
 
       if (!shouldIgnore) {
         console.error("[VAPI] Real error:", errorMessage);
-        setErrorMsg(errorMessage);
+        setErrorMsg(getFriendlyVoiceError(errorMessage, isMobileEnvironment));
         setState("idle");
         vapiActiveRef.current = false;
         callTransitionRef.current = "idle";
@@ -1012,11 +1229,9 @@ export function VoicePracticeSession() {
       }
 
       try {
-        const assistantConfig = buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode);
         callTransitionRef.current = "session-starting";
         vapiActiveRef.current = true;
-
-        const startPromise = vapi.start(assistantConfig);
+        resumeMobileAudioContext();
 
         if (options?.mobileImmediateStart) {
           setErrorMsg(null);
@@ -1026,11 +1241,11 @@ export function VoicePracticeSession() {
           setErrorMsg(null);
         }
 
-        await startPromise;
+        await startVoiceSessionWithFallback(sessionProfile, sessionPrompt, sessionMode);
         callTransitionRef.current = "idle";
       } catch (e) {
         console.error(e);
-        setErrorMsg("Failed to start voice session.");
+        setErrorMsg(getFriendlyVoiceError(getErrorMessage(e), isMobileEnvironment));
         vapiActiveRef.current = false;
         setState("idle");
         callTransitionRef.current = "idle";

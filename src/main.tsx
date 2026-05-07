@@ -10,6 +10,17 @@ declare global {
     }
 }
 
+const silenceConsoleOutput = () => {
+    const noop = () => undefined;
+    const methods: Array<keyof Console> = ["log", "debug", "info", "warn", "error", "trace"];
+
+    methods.forEach((method) => {
+        console[method] = noop as Console[typeof method];
+    });
+};
+
+silenceConsoleOutput();
+
 // Initialize native features
 initializeCapacitor();
 
@@ -28,13 +39,9 @@ window.addEventListener("unhandledrejection", (event) => {
     ) {
         // 🔐 Silently suppress network errors to prevent freezing the UI.
         // window.confirm() was causing AI streams to hang/refresh.
-        console.warn("Caught suppressed network error:", reason);
         event.preventDefault();
         return;
     }
-
-    // Log unexpected errors for mobile debugging
-    console.error("Unhandled Rejection:", reason);
 });
 
 // In development, remove stale PWA workers/caches so Vite module URLs don't get cached.
@@ -63,15 +70,11 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
 
                 await Promise.all(staleCacheKeys.map((key) => caches.delete(key)));
             }
-        } catch (error) {
-            console.warn("Failed to clear development service workers:", error);
-        }
+        } catch (_error) {}
     })();
 }
 
-window.addEventListener("error", (event) => {
-    console.error("Global Error:", event.error);
-});
+window.addEventListener("error", (_event) => {});
 
 createRoot(document.getElementById("root")!).render(
     <HelmetProvider>

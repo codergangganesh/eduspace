@@ -23,8 +23,6 @@ if (isFirebaseConfigValid) {
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
   const { title, body } = payload.notification || {};
   const data = payload.data || {};
   
@@ -66,13 +64,9 @@ if (isFirebaseConfigValid) {
     return self.registration.showNotification(notificationTitle, notificationOptions);
   }
   });
-} else {
-  console.warn('[firebase-messaging-sw.js] Firebase config missing from service worker registration URL.');
 }
 
 self.addEventListener('notificationclick', (event) => {
-  console.log('[firebase-messaging-sw.js] Notification click Received.', event);
-  
   const notification = event.notification;
   const action = event.action;
   const data = notification.data;
@@ -98,9 +92,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       })
     );
-  } else if (action === 'reject') {
-    console.log('Call rejected');
-  } else {
+  } else if (action !== 'reject') {
     const urlToOpen = new URL(data.url || '/', self.location.origin).href;
     event.waitUntil(
       clients.openWindow(urlToOpen)
