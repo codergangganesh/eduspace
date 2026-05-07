@@ -1,20 +1,28 @@
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
-// These values should be replaced with actual project values from .env
+const searchParams = new URL(self.location.href).searchParams;
 const firebaseConfig = {
-  apiKey: "AIzaSyDsTmtfjVl4wFiVRMby9acYPSRADaxcvf8",
-  authDomain: "eduspace-da1ae.firebaseapp.com",
-  projectId: "eduspace-da1ae",
-  storageBucket: "eduspace-da1ae.firebasestorage.app",
-  messagingSenderId: "755677421309",
-  appId: "1:755677421309:web:3619ccecff760a99e66894"
+  apiKey: searchParams.get('apiKey') || '',
+  authDomain: searchParams.get('authDomain') || '',
+  projectId: searchParams.get('projectId') || '',
+  storageBucket: searchParams.get('storageBucket') || '',
+  messagingSenderId: searchParams.get('messagingSenderId') || '',
+  appId: searchParams.get('appId') || '',
 };
 
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+const isFirebaseConfigValid =
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.messagingSenderId &&
+  firebaseConfig.appId;
 
-messaging.onBackgroundMessage((payload) => {
+if (isFirebaseConfigValid) {
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+
+  messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
   
   const { title, body } = payload.notification || {};
@@ -57,7 +65,10 @@ messaging.onBackgroundMessage((payload) => {
     };
     return self.registration.showNotification(notificationTitle, notificationOptions);
   }
-});
+  });
+} else {
+  console.warn('[firebase-messaging-sw.js] Firebase config missing from service worker registration URL.');
+}
 
 self.addEventListener('notificationclick', (event) => {
   console.log('[firebase-messaging-sw.js] Notification click Received.', event);

@@ -216,9 +216,7 @@ export default function StudentLogin() {
                     <div className="flex justify-end">
                         <Link
                             to="/forgot-password"
-                            className={`text-sm font-medium text-blue-600 hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`}
-                            aria-disabled={!isCaptchaVerified}
-                            tabIndex={!isCaptchaVerified ? -1 : undefined}
+                            className="text-sm font-medium text-blue-600 hover:underline"
                         >
                             Forgot Password?
                         </Link>
@@ -250,7 +248,7 @@ export default function StudentLogin() {
                 {/* Footer - Only on mobile */}
                 <div className="mt-8 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
-                        Don't have an account? <Link to="/student/register" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Create Account</Link>
+                        Don't have an account? <Link to="/student/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
                     </p>
                 </div>
 
@@ -285,7 +283,7 @@ export default function StudentLogin() {
 
                     <div className="mt-4 text-center">
                         <p className="text-muted-foreground text-[11px]">
-                            Don't have an account? <Link to="/student/register" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Create Account</Link>
+                            Don't have an account? <Link to="/student/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
                         </p>
                     </div>
                 </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
-import { PasswordStrength, getPasswordRules } from "@/components/auth/PasswordStrength";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
 import DOMPurify from "dompurify";
@@ -263,9 +263,9 @@ export default function LecturerRegister() {
                 </form>
 
                 {/* Footer */}
-                <div className="mt-3 lg:mt-2 text-center">
+                <div className="mt-3 lg:mt-2 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm lg:text-xs">
-                        Already have an account? <Link to="/lecturer/login" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Sign In</Link>
+                        Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                     </p>
                 </div>
 
@@ -273,7 +273,7 @@ export default function LecturerRegister() {
                 <div className="hidden lg:block mt-4 pt-2 border-t border-border">
                     <div className="text-center">
                         <p className="text-muted-foreground text-[11px]">
-                            Already have an account? <Link to="/lecturer/login" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Sign In</Link>
+                            Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                         </p>
                     </div>
                 </div>

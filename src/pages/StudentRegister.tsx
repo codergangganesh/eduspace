@@ -347,7 +347,7 @@ export default function StudentRegister() {
                 {/* Footer - Only on mobile */}
                 <div className="mt-4 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
-                        Already have an account? <Link to="/student/login" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Sign In</Link>
+                        Already have an account? <Link to="/student/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                     </p>
                 </div>
 
@@ -382,7 +382,7 @@ export default function StudentRegister() {
 
                     <div className="mt-2 text-center">
                         <p className="text-muted-foreground text-[11px]">
-                            Already have an account? <Link to="/student/login" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Sign In</Link>
+                            Already have an account? <Link to="/student/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
                         </p>
                     </div>
                 </div>

@@ -17,7 +17,7 @@ interface CallModalProps {
 }
 
 export function CallModal({ isOpen, onClose, type, conversationId, userName, isMeeting, isMinimized, onMinimize }: CallModalProps) {
-    const appId = import.meta.env.VITE_JITSI_APP_ID || "vpaas-magic-cookie-f796d7a3ec46435793193a60b0aef396";
+    const appId = import.meta.env.VITE_JITSI_APP_ID;
     const domain = "8x8.vc";
     const [isLoading, setIsLoading] = useState(true);
 
@@ -29,6 +29,10 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
         const initJitsi = async () => {
             try {
                 setIsLoading(true);
+
+                if (!appId) {
+                    throw new Error("VITE_JITSI_APP_ID is not configured.");
+                }
 
                 const conferenceName = (isMeeting
                     ? `eduspace_meeting_${conversationId}`
@@ -124,7 +128,10 @@ export function CallModal({ isOpen, onClose, type, conversationId, userName, isM
             } catch (err) {
                 console.error("Failed to initialize Jitsi:", err);
                 setIsLoading(false);
-                toast.error("Failed to start the call.");
+                const message = err instanceof Error && err.message.includes("VITE_JITSI_APP_ID")
+                    ? "Calling is not configured. Please add VITE_JITSI_APP_ID in the frontend environment."
+                    : "Failed to start the call.";
+                toast.error(message);
             }
         };
 

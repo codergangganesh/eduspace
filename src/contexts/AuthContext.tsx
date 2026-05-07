@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearRegisteredCaches } from "@/lib/cacheRegistry";
 
 export type AppRole = "student" | "lecturer" | "admin";
+type SelectableRole = Exclude<AppRole, "admin">;
+
+const normalizeSelectableRole = (role: AppRole | string | null | undefined): SelectableRole =>
+  role === "lecturer" ? "lecturer" : "student";
 
 export interface Profile {
   id: string;
@@ -296,6 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole, captchaToken?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
+      const safeRole = normalizeSelectableRole(selectedRole);
 
       const { data: signUpData, error } = await supabase.auth.signUp({
         email,
@@ -305,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           captchaToken,
           data: {
             full_name: fullName,
-            role: selectedRole,
+            role: safeRole,
           },
         },
       });
@@ -332,7 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           body: {
             email,
             fullName,
-            role: selectedRole,
+            role: safeRole,
           },
         }).then(({ data, error }) => {
           if (error) console.error("❌ Failed to send welcome email:", error);
@@ -353,9 +358,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async (selectedRole: AppRole) => {
     try {
+      const safeRole = normalizeSelectableRole(selectedRole);
       // Store the selected role in localStorage for use after OAuth callback
-      localStorage.setItem("pendingRole", selectedRole);
-      console.log("🔐 Storing role in localStorage for OAuth:", selectedRole);
+      localStorage.setItem("pendingRole", safeRole);
+      console.log("🔐 Storing role in localStorage for OAuth:", safeRole);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -383,9 +389,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithNotion = async (selectedRole: AppRole) => {
     try {
+      const safeRole = normalizeSelectableRole(selectedRole);
       // Store the selected role in localStorage for use after OAuth callback
-      localStorage.setItem("pendingRole", selectedRole);
-      console.log("🔐 Storing role in localStorage for Notion OAuth:", selectedRole);
+      localStorage.setItem("pendingRole", safeRole);
+      console.log("🔐 Storing role in localStorage for Notion OAuth:", safeRole);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "notion",
@@ -409,14 +416,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGitHub = async (selectedRole: AppRole) => {
     try {
+      const safeRole = normalizeSelectableRole(selectedRole);
       // Store the selected role in localStorage for use after OAuth callback
-      localStorage.setItem("pendingRole", selectedRole);
-      console.log("🔐 Storing role in localStorage for GitHub OAuth:", selectedRole);
+      localStorage.setItem("pendingRole", safeRole);
+      console.log("🔐 Storing role in localStorage for GitHub OAuth:", safeRole);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "github",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?role=${selectedRole}`,
+          redirectTo: `${window.location.origin}/auth/callback?role=${safeRole}`,
           scopes: "user:email",
         },
       });

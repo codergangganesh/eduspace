@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "eduspace",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-05-07",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}

@@ -151,6 +151,34 @@ eduspace/
 
 ## Advanced Configuration
 
+### Cloudflare Pages Deployment
+This repository maps cleanly to Cloudflare Pages because the frontend is a client-rendered Vite SPA and the backend already lives in Supabase.
+
+1.  **Install Wrangler locally**
+    ```bash
+    npm install -D wrangler@latest
+    ```
+
+2.  **Authenticate with Cloudflare**
+    ```bash
+    npx wrangler login
+    ```
+
+3.  **Build and preview the Pages output locally**
+    ```bash
+    npm run cf:preview
+    ```
+
+4.  **Deploy directly from the CLI**
+    ```bash
+    npm run cf:deploy
+    ```
+
+Cloudflare-specific project files included here:
+*   `wrangler.jsonc` configures the Pages output directory and compatibility date.
+*   `public/_headers` preserves the security headers that were previously declared in `vercel.json`.
+*   `public/_redirects` keeps SPA routes resolving to `index.html`.
+
 ### Email Linking System
 Lecturers can pre-register students by adding their emails to the system. A database trigger (`trigger_auto_link_student`) automatically runs when a new user signs up. It checks the `student_emails` table and links the new account to their assigned classes upon registration.
 

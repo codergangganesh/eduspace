@@ -132,9 +132,7 @@ export default function LecturerLogin() {
                     <div className="flex justify-end pt-1">
                         <Link
                             to="/forgot-password"
-                            className={`text-sm font-medium text-blue-600 hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`}
-                            aria-disabled={!isCaptchaVerified}
-                            tabIndex={!isCaptchaVerified ? -1 : undefined}
+                            className="text-sm font-medium text-blue-600 hover:underline"
                         >
                             Forgot Password?
                         </Link>
@@ -166,7 +164,7 @@ export default function LecturerLogin() {
                 {/* Footer - Only on mobile */}
                 <div className="mt-8 text-center lg:hidden">
                     <p className="text-muted-foreground text-sm">
-                        Don't have an account? <Link to="/lecturer/register" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Create Account</Link>
+                        Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
                     </p>
                 </div>
 
@@ -174,7 +172,7 @@ export default function LecturerLogin() {
                 <div className="hidden lg:block mt-6 pt-2 border-t border-border">
                     <div className="text-center">
                         <p className="text-muted-foreground text-[11px]">
-                            Don't have an account? <Link to="/lecturer/register" className={`text-blue-600 font-bold hover:underline ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`} aria-disabled={!isCaptchaVerified} tabIndex={!isCaptchaVerified ? -1 : undefined}>Create Account</Link>
+                            Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
                         </p>
                     </div>
                 </div>

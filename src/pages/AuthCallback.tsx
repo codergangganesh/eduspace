@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { AppRole, useAuth } from "@/contexts/AuthContext";
 
+const normalizeSelectableRole = (role: string | null | undefined): Exclude<AppRole, "admin"> =>
+  role === "lecturer" ? "lecturer" : "student";
+
 export default function AuthCallback() {
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
@@ -60,11 +63,11 @@ export default function AuthCallback() {
         let userRole: AppRole = "student";
 
         // Always clean up pending role from storage
-        const pendingRole = localStorage.getItem("pendingRole") as AppRole | null;
+        const pendingRole = localStorage.getItem("pendingRole");
 
         // Also check URL query parameter (more reliable across OAuth redirects)
         const roleUrlParams = new URLSearchParams(window.location.search);
-        const urlRole = roleUrlParams.get('role') as AppRole | null;
+        const urlRole = roleUrlParams.get('role');
 
         console.log("🔍 OAuth Callback - Pending Role from localStorage:", pendingRole);
         console.log("🔍 OAuth Callback - Role from URL:", urlRole);
@@ -77,9 +80,9 @@ export default function AuthCallback() {
         } else {
           // New user via OAuth
           // Priority: 1. URL parameter (most reliable), 2. localStorage, 3. metadata, 4. default
-          const metadataRole = session.user.user_metadata?.role as AppRole | null;
-
-          userRole = urlRole || pendingRole || metadataRole || "student";
+          const metadataRole = session.user.user_metadata?.role as string | undefined;
+          const requestedRole = normalizeSelectableRole(urlRole || pendingRole || metadataRole);
+          userRole = requestedRole;
           console.log("🆕 New user - Selected role:", userRole, "| From:",
             urlRole ? "URL" : pendingRole ? "localStorage" : metadataRole ? "metadata" : "default");
 

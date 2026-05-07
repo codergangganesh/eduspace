@@ -117,9 +117,7 @@ export default function ForgotPassword() {
               <div className="flex justify-center pt-2">
                 <Link
                   to="/"
-                  className={`flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors ${!isCaptchaVerified ? "pointer-events-none opacity-50" : ""}`}
-                  aria-disabled={!isCaptchaVerified}
-                  tabIndex={!isCaptchaVerified ? -1 : undefined}
+                  className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="size-4 mr-2" />
                   Back to Sign In

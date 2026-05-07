@@ -5,12 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:testsprite": "vite --host 0.0.0.0 --port 4173",
     "dev:force": "vite --force",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test": "vitest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cf:build": "npm run build",
+    "cf:preview": "npm run build && npx wrangler pages dev dist",
+    "cf:deploy": "npm run build && npx wrangler pages deploy dist"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",

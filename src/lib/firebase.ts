@@ -12,6 +12,20 @@ const firebaseConfig = {
 };
 
 const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId;
+const FIREBASE_SW_SCOPE = "/firebase-cloud-messaging-push-scope";
+
+function getFirebaseServiceWorkerUrl() {
+    const params = new URLSearchParams({
+        apiKey: firebaseConfig.apiKey ?? "",
+        authDomain: firebaseConfig.authDomain ?? "",
+        projectId: firebaseConfig.projectId ?? "",
+        storageBucket: firebaseConfig.storageBucket ?? "",
+        messagingSenderId: firebaseConfig.messagingSenderId ?? "",
+        appId: firebaseConfig.appId ?? "",
+    });
+
+    return `/firebase-messaging-sw.js?${params.toString()}`;
+}
 
 // Initialize Firebase only if config is valid
 let app = null;
@@ -46,13 +60,17 @@ export const requestFirebaseToken = async (userId: string) => {
 
         // Register the service worker explicitly for Firebase if not already registered
         if ('serviceWorker' in navigator) {
+            const workerUrl = getFirebaseServiceWorkerUrl();
             const registrations = await navigator.serviceWorker.getRegistrations();
-            const hasSW = registrations.some(r => r.active?.scriptURL.includes('firebase-messaging-sw.js'));
+            const hasMatchingSW = registrations.some((registration) => {
+                const scriptUrl = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? registration.installing?.scriptURL;
+                return scriptUrl === new URL(workerUrl, window.location.origin).href;
+            });
 
-            if (!hasSW) {
+            if (!hasMatchingSW) {
                 console.log("Registering Firebase Service Worker...");
-                await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                    scope: '/firebase-cloud-messaging-push-scope',
+                await navigator.serviceWorker.register(workerUrl, {
+                    scope: FIREBASE_SW_SCOPE,
                 });
             }
         }
