@@ -2,6 +2,7 @@ import * as React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 
 import { cn } from "@/lib/utils";
+import { getOptimizedAssetUrl, preloadImage } from "@/lib/imagePerformance";
 
 const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
@@ -18,9 +19,27 @@ Avatar.displayName = AvatarPrimitive.Root.displayName;
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn("aspect-square h-full w-full", className)} {...props} />
-));
+>(({ className, src, ...props }, ref) => {
+  const optimizedSrc = typeof src === "string" ? getOptimizedAssetUrl(src) : src;
+
+  React.useEffect(() => {
+    if (typeof src === "string" && src) {
+      void preloadImage(src, "high");
+    }
+  }, [src]);
+
+  return (
+    <AvatarPrimitive.Image
+      ref={ref}
+      src={optimizedSrc}
+      loading="eager"
+      fetchPriority="high"
+      decoding="async"
+      className={cn("aspect-square h-full w-full object-cover", className)}
+      {...props}
+    />
+  );
+});
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
 const AvatarFallback = React.forwardRef<
@@ -29,6 +48,7 @@ const AvatarFallback = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Fallback
     ref={ref}
+    delayMs={150}
     className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)}
     {...props}
   />

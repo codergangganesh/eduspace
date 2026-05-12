@@ -11,13 +11,17 @@ export interface EnrolledStudent {
 }
 
 export function useLecturerStudents() {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [students, setStudents] = useState<EnrolledStudent[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchStudents = async () => {
-            if (!user) return;
+            if (!user || role !== "lecturer") {
+                setStudents([]);
+                setLoading(false);
+                return;
+            }
 
             try {
                 setLoading(true);
@@ -36,6 +40,7 @@ export function useLecturerStudents() {
                 }
 
                 const courseIds = courses.map(c => c.id);
+                const courseCodeMap = new Map(courses.map((course) => [course.id, course.course_code]));
 
                 // 2. Get all enrollments for these courses, joined with student profiles
                 const { data: enrollments, error: enrollError } = await supabase
@@ -58,7 +63,7 @@ export function useLecturerStudents() {
 
                 enrollments?.forEach((enrollment: any) => {
                     const studentId = enrollment.student_id;
-                    const courseCode = courses.find(c => c.id === enrollment.course_id)?.course_code || "Unknown";
+                    const courseCode = courseCodeMap.get(enrollment.course_id) || "Unknown";
                     const profile = enrollment.profiles;
 
                     if (studentMap.has(studentId)) {
@@ -84,7 +89,7 @@ export function useLecturerStudents() {
         };
 
         fetchStudents();
-    }, [user]);
+    }, [role, user]);
 
     return { students, loading };
 }

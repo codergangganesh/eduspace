@@ -25,6 +25,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMemo } from "react";
+import { readCachedProfileIdentity } from "@/lib/imagePerformance";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,8 +80,13 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const location = useLocation();
-  const { role, signOut, profile } = useAuth();
+  const { role, signOut, profile, user } = useAuth();
   const { isMobileSidebarCollapsed, tourActiveStepId } = useLayout();
+  const cachedIdentity = useMemo(() => readCachedProfileIdentity(user?.id), [user?.id]);
+  const displayName = profile?.full_name || cachedIdentity?.fullName || "User";
+  const displayEmail = profile?.email || cachedIdentity?.email || "No email provided";
+  const displayAvatar = profile?.avatar_url || cachedIdentity?.avatarUrl || "";
+  const displayInitials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase() || "U";
 
   const navItems: NavItem[] = role === "lecturer" ? lecturerNavItems : studentNavItems;
   const roleLabel = role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student";
@@ -125,7 +132,14 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               )}>
                 <Link to={role === "lecturer" ? "/lecturer-dashboard" : "/dashboard"} className="flex items-center gap-3" onClick={onClose}>
                   <div className="size-8 rounded-lg overflow-hidden border border-border shrink-0">
-                    <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                    <img
+                      src="/favicon.png"
+                      alt="Eduspace Logo"
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                      className="size-full object-cover"
+                    />
                   </div>
                   {!isMobileSidebarCollapsed && <span className="text-xl font-bold tracking-tight text-foreground">Eduspace</span>}
                 </Link>
@@ -178,6 +192,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                       {item.imageUrl ? (
                         <img
                           src={item.imageUrl}
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="async"
                           className={cn("size-6 shrink-0 rounded-full object-cover", !isActive && "group-hover:scale-110")}
                           alt={item.label}
                         />
@@ -201,9 +218,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                       )}
                     >
                       <Avatar className="size-10 border border-border/50 shadow-sm">
-                        <AvatarImage src={profile?.avatar_url || undefined} />
+                        <AvatarImage src={displayAvatar} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                          {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                          {displayInitials}
                         </AvatarFallback>
                       </Avatar>
 
@@ -211,7 +228,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                         <>
                           <div className="flex min-w-0 flex-1 flex-col">
                             <span className="truncate text-sm font-black text-foreground">
-                              {profile?.full_name || 'User'}
+                              {displayName}
                             </span>
                             <span className="truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                               {roleLabel}
@@ -231,10 +248,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   >
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1 py-1">
-                        <p className="text-sm font-semibold leading-none tracking-tight">{profile?.full_name || "User"}</p>
-                        <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">
-                          {profile?.email || "No email provided"}
-                        </p>
+                        <p className="text-sm font-semibold leading-none tracking-tight">{displayName}</p>
+                        <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">{displayEmail}</p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />

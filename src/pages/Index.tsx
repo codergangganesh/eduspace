@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LandingPage from "./LandingPage";
 import { Helmet } from "react-helmet-async";
+import { LoadingFrame } from "@/components/ui/app-loader";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -26,14 +27,20 @@ const Index = () => {
   // This prevents flickering by showing a consistent loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F1A]">
+      <LoadingFrame
+        fullScreen
+        loaderSize="lg"
+        className="bg-background px-6"
+        contentClassName="max-w-xs"
+        label="Loading Eduspace"
+      >
         <Helmet>
           <meta name="robots" content="noindex" />
         </Helmet>
-        <div className="size-20 rounded-3xl overflow-hidden border border-white/5 animate-pulse bg-slate-900/50 flex items-center justify-center">
-          <img src="/favicon.png" alt="Logo" className="size-12 object-contain opacity-40 grayscale" />
-        </div>
-      </div>
+        <p className="text-sm font-medium text-muted-foreground">
+          Loading Eduspace...
+        </p>
+      </LoadingFrame>
     );
   }
 

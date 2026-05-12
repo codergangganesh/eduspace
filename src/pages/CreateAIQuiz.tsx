@@ -17,6 +17,7 @@ import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 import { notifyQuizPublished } from '@/lib/notificationService';
 import { useClasses } from '@/hooks/useClasses';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
+import { AIQuizGenerationLoader } from '@/components/quizzes/AIQuizGenerationLoader';
 import {
     ArrowLeft,
     Sparkles,
@@ -819,21 +820,24 @@ export default function CreateAIQuiz() {
 
                     {/* ============ STEP: GENERATING ============ */}
                     {step === 'generating' && (
-                        <div className="flex flex-col items-center justify-center py-20 px-4">
-                            <div className="size-32 relative mb-10">
-                                <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-ping" />
-                                <div className="absolute inset-2 rounded-full bg-indigo-500/20 animate-pulse" />
-                                <div className="relative z-10 size-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl">
-                                    <Brain className="size-16 text-white" />
-                                </div>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                            className="flex flex-col items-center justify-center py-20 px-4"
+                        >
+                            <div className="flex flex-col items-center justify-center rounded-[2rem] border border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-950/50 px-8 py-10 shadow-[0_24px_80px_-32px_rgba(79,70,229,0.45)] backdrop-blur-sm">
+                                <AIQuizGenerationLoader />
+                                <h1 className="mt-8 text-3xl font-black tracking-tight text-center">Engines Firing...</h1>
+                                <p className="mt-2 text-center text-lg text-slate-500 dark:text-slate-400 font-medium max-w-xl">
+                                    {generationProgress}
+                                </p>
+                                <p className="mt-6 text-sm font-bold text-indigo-600 dark:text-indigo-300">
+                                    Llama-3 is analyzing content...
+                                </p>
                             </div>
-                            <h1 className="text-3xl font-black tracking-tight mb-2">Engines Firing...</h1>
-                            <p className="text-lg text-slate-500 font-medium mb-10">{generationProgress}</p>
-                            <div className="flex items-center gap-3 px-5 py-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm animate-bounce">
-                                <Loader2 className="size-5 animate-spin text-indigo-600" />
-                                <span className="text-sm font-bold">Llama-3 is analyzing content...</span>
-                            </div>
-                        </div>
+                        </motion.div>
                     )}
 
                     {/* ============ STEP: REVIEW ============ */}

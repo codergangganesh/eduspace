@@ -28,11 +28,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useLecturerStudents } from "@/hooks/useLecturerStudents";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { readCachedProfileIdentity } from "@/lib/imagePerformance";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,7 +91,7 @@ interface SidebarProps {
 export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, role, profile } = useAuth();
+  const { signOut, role, profile, user } = useAuth();
   const { tourActiveStepId } = useLayout();
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
   void onHoverChange;
@@ -98,6 +99,11 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   // Fetch students ONLY if user is a lecturer
   const { students } = useLecturerStudents();
   const isLecturer = role === "lecturer";
+  const cachedIdentity = useMemo(() => readCachedProfileIdentity(user?.id), [user?.id]);
+  const displayName = profile?.full_name || cachedIdentity?.fullName || "User";
+  const displayEmail = profile?.email || cachedIdentity?.email || "No email provided";
+  const displayAvatar = profile?.avatar_url || cachedIdentity?.avatarUrl || "";
+  const displayInitials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase() || "U";
 
   const navItems = isLecturer ? lecturerNavItems : studentNavItems;
 
@@ -134,7 +140,14 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
             <div className="relative group/logo">
               <Link to={dashboardPath} className="flex items-center gap-3">
                 <div className="size-8 rounded-lg overflow-hidden shrink-0 border border-border shadow-sm transition-all duration-300 group-hover/logo:scale-95 group-hover/logo:opacity-40">
-                  <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                  <img
+                    src="/favicon.png"
+                    alt="Eduspace Logo"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    className="size-full object-cover"
+                  />
                 </div>
                 {!isCollapsed && (
                   <span className="text-xl font-bold tracking-tight">Eduspace</span>
@@ -198,6 +211,9 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
+                        loading="eager"
+                        fetchPriority="high"
+                        decoding="async"
                         className={cn("size-6 shrink-0 rounded-full object-cover transition-transform duration-200", !isActive && "group-hover:scale-110")}
                         alt={item.label}
                       />
@@ -274,20 +290,20 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                 "flex items-center w-full gap-3 p-2 rounded-xl border border-transparent hover:bg-muted/50 transition-all duration-300 group outline-none",
                 isCollapsed ? "justify-center px-0" : "px-3"
               )}>
-                <Avatar className={cn(
+                  <Avatar className={cn(
                   "border border-border/50 shadow-sm transition-transform duration-300 group-hover:scale-105",
                   isCollapsed ? "size-10" : "size-9"
                 )}>
-                  <AvatarImage src={profile?.avatar_url || ""} />
+                  <AvatarImage src={displayAvatar} />
                   <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
-                    {profile?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
+                    {displayInitials}
                   </AvatarFallback>
                 </Avatar>
 
                 {!isCollapsed && (
                   <div className="flex-1 text-left min-w-0">
-                    <p className="text-sm font-black tracking-tight text-foreground/90 truncate group-hover:text-foreground transition-colors">
-                      {profile?.full_name || "User"}
+                      <p className="text-sm font-black tracking-tight text-foreground/90 truncate group-hover:text-foreground transition-colors">
+                      {displayName}
                     </p>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 truncate">
                       {role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student"}
@@ -309,10 +325,8 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
             >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1 py-1">
-                  <p className="text-sm font-semibold leading-none tracking-tight">{profile?.full_name || "User"}</p>
-                  <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">
-                    {profile?.email || "No email provided"}
-                  </p>
+                  <p className="text-sm font-semibold leading-none tracking-tight">{displayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">{displayEmail}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

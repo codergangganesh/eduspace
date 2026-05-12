@@ -2,6 +2,11 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { clearRegisteredCaches } from "@/lib/cacheRegistry";
+import {
+  clearCachedProfileIdentity,
+  preloadImage,
+  writeCachedProfileIdentity,
+} from "@/lib/imagePerformance";
 
 export type AppRole = "student" | "lecturer" | "admin";
 type SelectableRole = Exclude<AppRole, "admin">;
@@ -142,7 +147,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ...(data as any), has_seen_guide: false } as Profile;
       }
 
-      return data as any as Profile | null;
+      const profileData = data as any as Profile | null;
+      if (profileData?.avatar_url) {
+        void preloadImage(profileData.avatar_url, "high");
+      }
+      if (profileData?.user_id) {
+        writeCachedProfileIdentity({
+          userId: profileData.user_id,
+          avatarUrl: profileData.avatar_url,
+          fullName: profileData.full_name,
+          email: profileData.email,
+          updatedAt: profileData.updated_at,
+        });
+      }
+
+      return profileData;
     }).catch(err => {
       if (err.message?.includes('INTERNET_DISCONNECTED') || err.message?.includes('NETWORK_CHANGED')) {
         return null; // Silent failure for connectivity issues
@@ -449,6 +468,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Sign out error:", error);
     } finally {
       clearRegisteredCaches();
+      clearCachedProfileIdentity();
       setUser(null);
       setSession(null);
       setProfile(null);

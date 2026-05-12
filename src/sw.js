@@ -1,11 +1,50 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
+import { registerRoute } from 'workbox-routing';
+import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { ExpirationPlugin } from 'workbox-expiration';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
 self.skipWaiting();
 clientsClaim();
+
+registerRoute(
+  ({ request, url }) => request.destination === 'image' && url.origin === self.location.origin,
+  new CacheFirst({
+    cacheName: 'shell-image-assets',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 80,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+registerRoute(
+  ({ request, url }) =>
+    request.destination === 'image'
+    && (
+      url.hostname.includes('cloudinary.com')
+      || url.hostname.includes('supabase.co')
+    ),
+  new StaleWhileRevalidate({
+    cacheName: 'remote-profile-images',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 120,
+        maxAgeSeconds: 14 * 24 * 60 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
 
 // ─── App State Tracking (from client postMessage) ────────────────────────────
 let appState = {

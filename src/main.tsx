@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { HelmetProvider } from 'react-helmet-async';
 import { initializeCapacitor } from "./lib/capacitor";
+import { preloadImage, readCachedProfileIdentity, warmShellImages } from "./lib/imagePerformance";
 
 declare global {
     interface Window {
@@ -23,6 +24,12 @@ silenceConsoleOutput();
 
 // Initialize native features
 initializeCapacitor();
+void warmShellImages();
+
+const cachedIdentity = readCachedProfileIdentity();
+if (cachedIdentity?.avatarUrl) {
+    void preloadImage(cachedIdentity.avatarUrl, "high");
+}
 
 // Prevent Vite dev overlay and blank screens from crashing on background network fetch failures
 window.addEventListener("unhandledrejection", (event) => {

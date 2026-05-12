@@ -52,6 +52,95 @@
       display: flex;
       flex-direction: column;
     }
+
+    #app-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 42%),
+        linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 220ms ease, visibility 220ms ease;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #app-loading {
+        background:
+          radial-gradient(circle at top, rgba(37, 99, 235, 0.18), transparent 42%),
+          linear-gradient(180deg, #0b0f1a 0%, #131a2b 100%);
+      }
+    }
+
+    #app-loading.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .boot-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 112px;
+      height: 112px;
+      border-radius: 32px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(10px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .boot-loader {
+        background: rgba(15, 23, 42, 0.7);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+      }
+    }
+
+    .boot-loader .loader {
+      width: 40px;
+      aspect-ratio: 1;
+      color: #2563eb;
+      position: relative;
+      background: radial-gradient(10px, currentColor 94%, #0000);
+    }
+
+    .boot-loader .loader:before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(9px at bottom right, #0000 94%, currentColor) top left,
+        radial-gradient(9px at bottom left, #0000 94%, currentColor) top right,
+        radial-gradient(9px at top right, #0000 94%, currentColor) bottom left,
+        radial-gradient(9px at top left, #0000 94%, currentColor) bottom right;
+      background-size: 20px 20px;
+      background-repeat: no-repeat;
+      animation: loader-orbit 1.5s infinite cubic-bezier(0.3, 1, 0, 1);
+    }
+
+    @keyframes loader-orbit {
+      33% {
+        inset: -10px;
+        transform: rotate(0deg);
+      }
+
+      66% {
+        inset: -10px;
+        transform: rotate(90deg);
+      }
+
+      100% {
+        inset: 0;
+        transform: rotate(90deg);
+      }
+    }
   </style>
 
 
@@ -67,7 +156,25 @@
 </head>
 
 <body>
+  <div id="app-loading" aria-hidden="true">
+    <div class="boot-loader">
+      <div class="loader"></div>
+    </div>
+  </div>
   <div id="root"></div>
+  <script>
+    window.__hideAppLoading = function () {
+      const loadingEl = document.getElementById("app-loading");
+
+      if (!loadingEl) return;
+
+      loadingEl.classList.add("is-hidden");
+
+      const removeLoader = () => loadingEl.remove();
+      loadingEl.addEventListener("transitionend", removeLoader, { once: true });
+      setTimeout(removeLoader, 300);
+    };
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

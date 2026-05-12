@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -13,25 +13,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, Settings, LogOut, ChevronDown, Mail, GraduationCap, UserCheck, ShieldCheck, Sun, Moon, Monitor, MessageSquare } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { readCachedProfileIdentity } from "@/lib/imagePerformance";
 
 export function UserDropdown() {
-  const { profile, role, signOut } = useAuth();
+  const { profile, role, signOut, user } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const cachedIdentity = useMemo(() => readCachedProfileIdentity(user?.id), [user?.id]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
   };
 
-  const initials = profile?.full_name
+  const displayName = profile?.full_name || cachedIdentity?.fullName || "User";
+  const displayEmail = profile?.email || cachedIdentity?.email || "No email";
+  const displayAvatar = profile?.avatar_url || cachedIdentity?.avatarUrl || "";
+  const initials = displayName
     ?.split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase() || "U";
-
-  const displayName = profile?.full_name || "User";
   const displayRole = role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student";
 
   return (
@@ -39,7 +42,7 @@ export function UserDropdown() {
         <DropdownMenuTrigger asChild>
           <button className="flex items-center justify-center size-9 rounded-full border border-transparent hover:bg-muted/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-primary/20">
             <Avatar className="size-9 shadow-sm">
-              <AvatarImage src={profile?.avatar_url || ""} />
+              <AvatarImage src={displayAvatar} />
               <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
                 {initials}
               </AvatarFallback>
@@ -66,7 +69,7 @@ export function UserDropdown() {
                 </div>
               </div>
               <p className="text-xs leading-none text-muted-foreground font-medium opacity-80">
-                {profile?.email || "No email"}
+                {displayEmail}
               </p>
             </div>
           </DropdownMenuLabel>

@@ -8,6 +8,8 @@ interface MobileSplashScreenProps {
 
 export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
     const [phase, setPhase] = useState<"logo" | "expand" | "final">("logo");
+    const progressValue = phase === "logo" ? 14 : phase === "expand" ? 72 : 100;
+    const statusLabel = phase === "final" ? "Ready" : phase === "expand" ? "Preparing" : "Starting";
 
     useEffect(() => {
         // Skip initial logo phase and go straight to expand
@@ -20,13 +22,13 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[300] bg-white flex flex-col items-center justify-center overflow-hidden font-sans">
+        <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden bg-[#020617] font-sans px-5 pt-[calc(1.25rem+var(--safe-top))] pb-[calc(1.25rem+var(--safe-bottom))] sm:px-6 sm:pt-[calc(1.5rem+var(--safe-top))] sm:pb-[calc(1.5rem+var(--safe-bottom))]">
             {/* Expanding Circle */}
             <motion.div
                 initial={{ scale: 0 }}
                 animate={phase !== "logo" ? { scale: 50 } : { scale: 0 }}
                 transition={{ duration: 1.2, ease: "easeInOut" }}
-                className="absolute w-20 h-20 bg-[#0B0F1A] rounded-full z-0"
+                className="absolute z-0 h-20 w-20 rounded-full bg-[#0B0F1A]"
             />
 
             {/* Professional Background Animation Elements: Red, Orange, Blue Combo */}
@@ -36,44 +38,51 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                 transition={{ duration: 1 }}
                 className="absolute inset-0 z-0 pointer-events-none"
             >
+                <motion.div
+                    animate={{ opacity: [0.18, 0.28, 0.18] }}
+                    transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute inset-0 bg-[linear-gradient(135deg,#020617_0%,#0f172a_48%,#111827_100%)]"
+                />
+
                 {/* Orange Blob */}
                 <motion.div
                     animate={{
-                        x: [0, 40, -30, 0],
-                        y: [0, -60, 50, 0],
-                        scale: [1, 1.3, 0.8, 1],
+                        x: [0, 18, -12, 0],
+                        y: [0, -26, 22, 0],
+                        scale: [1, 1.12, 0.95, 1],
                     }}
-                    transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-[-20%] left-[-10%] w-[90%] h-[70%] rounded-full bg-orange-500/20 blur-[120px]"
+                    transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute left-[-18%] top-[-10%] h-[38svh] w-[78vw] rounded-full bg-blue-500/30 blur-[64px] sm:left-[-10%] sm:top-[-20%] sm:h-[70%] sm:w-[90%] sm:blur-[120px]"
                 />
 
                 {/* Red Blob */}
                 <motion.div
                     animate={{
-                        x: [0, -50, 40, 0],
-                        y: [0, 40, -60, 0],
-                        scale: [1, 0.9, 1.2, 1],
+                        x: [0, -16, 24, 0],
+                        y: [0, 18, -28, 0],
+                        scale: [1, 0.94, 1.1, 1],
                     }}
-                    transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute bottom-[-10%] left-[-20%] w-[80%] h-[80%] rounded-full bg-red-600/20 blur-[120px]"
+                    transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute bottom-[-8%] left-[-24%] h-[32svh] w-[74vw] rounded-full bg-violet-500/24 blur-[68px] sm:bottom-[-10%] sm:left-[-20%] sm:h-[80%] sm:w-[80%] sm:blur-[120px]"
                 />
 
                 {/* Blue Blob */}
                 <motion.div
                     animate={{
-                        x: [20, -30, 0, 20],
-                        y: [-30, 40, 0, -30],
-                        scale: [1.1, 1, 1.2, 1.1],
+                        x: [10, -16, 0, 10],
+                        y: [-16, 20, 0, -16],
+                        scale: [1.04, 1, 1.12, 1.04],
                     }}
-                    transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-[20%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-600/20 blur-[120px]"
+                    transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute right-[-20%] top-[18%] h-[34svh] w-[68vw] rounded-full bg-cyan-400/18 blur-[60px] sm:right-[-10%] sm:top-[20%] sm:h-[70%] sm:w-[70%] sm:blur-[120px]"
                 />
 
                 {/* Subtle Grid Dots or Pattern for depth */}
-                <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:24px_24px]" />
+                <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:22px_22px] sm:bg-[length:24px_24px]" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
             </motion.div>
 
-            <div className="relative z-10 flex flex-col items-center">
+            <div className="relative z-10 flex w-full max-w-sm flex-1 flex-col items-center justify-between py-4 sm:justify-center">
                 {/* Supabase-style edge glow sweep CSS */}
                 <style>{`
                     @property --logo-angle {
@@ -130,85 +139,135 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                     }
                 `}</style>
 
-                {/* App Logo & Name */}
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{
-                        opacity: phase === "final" ? 1 : 0,
-                        color: "#ffffff",
-                    }}
-                    transition={{ duration: 0.5 }}
-                    className="flex flex-col items-center"
+                    initial={{ opacity: 0, y: 22 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.75, ease: "easeOut" }}
+                    className="relative w-full flex-1"
                 >
+                    <div className="pointer-events-none absolute inset-x-0 top-[20%] h-[34svh] rounded-full bg-white/[0.04] blur-[80px]" />
+                    <div className="pointer-events-none absolute inset-x-5 top-[16%] h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
+                    <div className="pointer-events-none absolute inset-x-6 bottom-[20%] h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+
                     <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={phase === "final" ? { scale: 1.1, opacity: 1 } : {}}
-                        transition={{ duration: 0.6, type: "spring" }}
-                        className="relative mb-8"
-                        style={{ width: 104, height: 104 }}
+                        initial={{ opacity: 0 }}
+                        animate={{
+                            opacity: phase === "final" ? 1 : 0.94,
+                            color: "#ffffff",
+                        }}
+                        transition={{ duration: 0.5 }}
+                        className="relative flex h-full flex-col items-center justify-center text-center"
                     >
-                        <div className="logo-glow-ring" style={{ width: 104, height: 104 }}>
-                            <div className="logo-glow-inner">
-                                <img src="/favicon.png" alt="Eduspace" className="size-full object-cover rounded-[24px]" />
+                        <motion.div
+                            initial={{ scale: 0.82, opacity: 0 }}
+                            animate={phase === "final" ? { scale: 1.03, opacity: 1 } : { scale: 0.96, opacity: 1 }}
+                            transition={{ duration: 0.7, type: "spring" }}
+                            className="relative mb-5"
+                            style={{ width: 92, height: 92 }}
+                        >
+                            <div className="logo-glow-ring" style={{ width: 92, height: 92 }}>
+                                <div className="logo-glow-inner">
+                                    <img src="/favicon.png" alt="Eduspace" className="size-full object-contain rounded-[24px]" />
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.h1
+                            className="flex max-w-full flex-wrap justify-center text-center text-[2.55rem] font-black tracking-[-0.06em] drop-shadow-2xl sm:text-6xl"
+                            variants={{
+                                visible: { transition: { staggerChildren: 0.1 } }
+                            }}
+                            initial="hidden"
+                            animate={phase === "final" ? "visible" : "hidden"}
+                        >
+                            {"Eduspace".split("").map((letter, index) => (
+                                <motion.span
+                                    key={index}
+                                    variants={{
+                                        hidden: { scale: 0, opacity: 0, y: 50, rotate: -15 },
+                                        visible: {
+                                            scale: 1,
+                                            opacity: 1,
+                                            y: 0,
+                                            rotate: 0,
+                                            transition: {
+                                                type: "spring",
+                                                damping: 8,
+                                                stiffness: 200,
+                                            }
+                                        }
+                                    }}
+                                    animate={phase === "final" ? {
+                                        y: [0, -10, 0],
+                                        scale: [1, 1.05, 1],
+                                        transition: {
+                                            duration: 3.5,
+                                            repeat: Infinity,
+                                            ease: "easeInOut",
+                                            delay: index * 0.15
+                                        }
+                                    } : {}}
+                                    className="inline-block cursor-default transition-transform"
+                                >
+                                    {letter}
+                                </motion.span>
+                            ))}
+                        </motion.h1>
+
+                        <p className="mt-3 max-w-[16rem] text-sm font-medium leading-6 text-slate-300 sm:max-w-[18rem]">
+                            Smart Learning Platform
+                            <br />
+                            Preparing your personalized experience...
+                        </p>
+
+                        <div className="mt-8 w-full px-1">
+                            <div className="mb-2.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300/90">
+                                <span>{statusLabel}</span>
+                                <span>{progressValue}%</span>
+                            </div>
+
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                                <motion.div
+                                    initial={{ width: "10%" }}
+                                    animate={{ width: `${progressValue}%` }}
+                                    transition={{ duration: phase === "final" ? 0.45 : 0.95, ease: "easeInOut" }}
+                                    className="h-full rounded-full bg-[linear-gradient(90deg,#3b82f6,#8b5cf6)] shadow-[0_0_18px_rgba(59,130,246,0.55)]"
+                                />
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-center gap-2">
+                                {[0, 1, 2].map((dot) => (
+                                    <motion.span
+                                        key={dot}
+                                        animate={{
+                                            scale: [0.8, 1.25, 0.8],
+                                            opacity: [0.45, 1, 0.45],
+                                        }}
+                                        transition={{
+                                            duration: 1.4,
+                                            repeat: Infinity,
+                                            ease: "easeInOut",
+                                            delay: dot * 0.18,
+                                        }}
+                                        className="h-2.5 w-2.5 rounded-full bg-sky-300"
+                                    />
+                                ))}
                             </div>
                         </div>
                     </motion.div>
-
-                    <motion.h1
-                        className="text-7xl font-black tracking-tighter flex items-baseline drop-shadow-2xl"
-                        variants={{
-                            visible: { transition: { staggerChildren: 0.1 } }
-                        }}
-                        initial="hidden"
-                        animate={phase === "final" ? "visible" : "hidden"}
-                    >
-                        {"Eduspace".split("").map((letter, index) => (
-                            <motion.span
-                                key={index}
-                                variants={{
-                                    hidden: { scale: 0, opacity: 0, y: 50, rotate: -15 },
-                                    visible: {
-                                        scale: 1,
-                                        opacity: 1,
-                                        y: 0,
-                                        rotate: 0,
-                                        transition: {
-                                            type: "spring",
-                                            damping: 8,
-                                            stiffness: 200,
-                                        }
-                                    }
-                                }}
-                                animate={phase === "final" ? {
-                                    y: [0, -15, 0],
-                                    scale: [1, 1.08, 1],
-                                    transition: {
-                                        duration: 3.5,
-                                        repeat: Infinity,
-                                        ease: "easeInOut",
-                                        delay: index * 0.15
-                                    }
-                                } : {}}
-                                className="inline-block hover:scale-125 transition-transform cursor-default"
-                            >
-                                {letter}
-                            </motion.span>
-                        ))}
-                    </motion.h1>
                 </motion.div>
 
-                {/* Continue Button */}
                 <AnimatePresence>
                     {phase === "final" && (
                         <motion.div
-                            initial={{ opacity: 0, y: 30 }}
+                            initial={{ opacity: 0, y: 22 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 1, duration: 0.6 }}
-                            className="fixed bottom-16 left-0 right-0 px-8"
+                            transition={{ delay: 0.4, duration: 0.45 }}
+                            className="w-full pt-6"
                         >
                             <Button
                                 onClick={onComplete}
-                                className="w-full h-18 rounded-[24px] bg-white text-orange-600 hover:bg-slate-50 text-2xl font-black shadow-2xl shadow-black/20 active:scale-95 transition-all"
+                                className="h-15 w-full rounded-[22px] border border-white/15 bg-white/95 text-lg font-black text-sky-700 shadow-[0_16px_35px_rgba(15,23,42,0.24)] transition-all hover:bg-slate-50 active:scale-[0.98] sm:h-16 sm:text-xl"
                             >
                                 Continue
                             </Button>

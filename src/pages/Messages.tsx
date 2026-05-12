@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useDeferredValue, useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -483,6 +483,8 @@ export default function Messages() {
   // Mobile View State
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const conversationStorageKey = user ? `last_active_conversation_${user.id}` : null;
+  const deferredSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
+  const deferredMessageSearchQuery = useDeferredValue(messageSearchQuery.trim().toLowerCase());
 
   // Auto-open mobile chat when conversation selected
   useEffect(() => {
@@ -691,7 +693,10 @@ export default function Messages() {
     }
   }, [messages, selectedConversationId]);
 
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+  const selectedConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === selectedConversationId),
+    [conversations, selectedConversationId]
+  );
   const otherUserId = selectedConversation ? (selectedConversation.participant_1 === user?.id ? selectedConversation.participant_2 : selectedConversation.participant_1) : null;
   const isOtherUserOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
   const isOtherUserTyping = otherUserId ? typingUsers.has(otherUserId) : false;
@@ -939,96 +944,111 @@ export default function Messages() {
   };
 
   // Merge conversations with eligible contacts
-  const existingContactIds = new Set(conversations.map(c =>
-    c.participant_1 === user?.id ? c.participant_2 : c.participant_1
-  ));
-
-  const studentsWithoutChat = eligibleStudents.filter(s => !existingContactIds.has(s.id));
-  const lecturersWithoutChat = instructors.filter(i => !existingContactIds.has(i.id));
-
-  const virtualContacts = role === 'student'
-    ? lecturersWithoutChat.map(i => ({
-      id: `new:${i.id}`,
-      participant_1: user?.id || '',
-      participant_2: i.id,
-      last_message: 'Start a conversation',
-      last_message_at: null,
-      other_user_name: i.full_name,
-      other_user_avatar: i.avatar_url,
-      other_user_role: 'lecturer',
-      other_user_id: i.id,
-      is_virtual: true
-    }))
-    : studentsWithoutChat.map(s => ({
-      id: `new:${s.id}`,
-      participant_1: user?.id || '',
-      participant_2: s.id,
-      last_message: 'Start a conversation',
-      last_message_at: null,
-      other_user_name: s.full_name,
-      other_user_avatar: s.avatar_url,
-      other_user_role: 'student',
-      other_user_id: s.id,
-      is_virtual: true
-    }));
-
-  const allItems = [...conversations, ...virtualContacts].filter((item) =>
-    (item.other_user_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  ).filter(item => {
-    if (filterMode === 'all') return true;
-    if (filterMode === 'online') {
-      const realId = 'is_virtual' in item && item.is_virtual ? (item as any).other_user_id : (item.participant_1 === user?.id ? item.participant_2 : item.participant_1);
-      return onlineUsers.has(realId);
-    }
-    // Simplistic role filtering if possible, else just ignore
-    return true;
-  });
-
-  const sortedItems = allItems.sort((a, b) => {
-    if (a.last_message_at && b.last_message_at) {
-      return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
-    }
-    if (a.last_message_at) return -1;
-    if (b.last_message_at) return 1;
-    return (a.other_user_name || '').localeCompare(b.other_user_name || '');
-  });
-
-  // Group messages by date
-  const groupedMessages: { date: string; messages: any[] }[] = [];
-  let currentDateLabel = "";
-
-  const filteredMessages = messages.filter(msg =>
-    !messageSearchQuery ||
-    (msg.content && msg.content.toLowerCase().includes(messageSearchQuery.toLowerCase()))
+  const existingContactIds = useMemo(
+    () => new Set(conversations.map((conversation) =>
+      conversation.participant_1 === user?.id ? conversation.participant_2 : conversation.participant_1
+    )),
+    [conversations, user?.id]
   );
 
-  filteredMessages.forEach((msg) => {
-    const msgDate = new Date(msg.created_at);
-    const dateLabel = getDateLabel(msgDate);
+  const studentsWithoutChat = useMemo(
+    () => eligibleStudents.filter((student) => !existingContactIds.has(student.id)),
+    [eligibleStudents, existingContactIds]
+  );
+  const lecturersWithoutChat = useMemo(
+    () => instructors.filter((instructor) => !existingContactIds.has(instructor.id)),
+    [existingContactIds, instructors]
+  );
 
-    if (dateLabel !== currentDateLabel) {
-      currentDateLabel = dateLabel;
-      groupedMessages.push({ date: dateLabel, messages: [] });
-    }
+  const virtualContacts = useMemo(() => (
+    role === 'student'
+      ? lecturersWithoutChat.map((instructor) => ({
+        id: `new:${instructor.id}`,
+        participant_1: user?.id || '',
+        participant_2: instructor.id,
+        last_message: 'Start a conversation',
+        last_message_at: null,
+        other_user_name: instructor.full_name,
+        other_user_avatar: instructor.avatar_url,
+        other_user_role: 'lecturer',
+        other_user_id: instructor.id,
+        is_virtual: true
+      }))
+      : studentsWithoutChat.map((student) => ({
+        id: `new:${student.id}`,
+        participant_1: user?.id || '',
+        participant_2: student.id,
+        last_message: 'Start a conversation',
+        last_message_at: null,
+        other_user_name: student.full_name,
+        other_user_avatar: student.avatar_url,
+        other_user_role: 'student',
+        other_user_id: student.id,
+        is_virtual: true
+      }))
+  ), [lecturersWithoutChat, role, studentsWithoutChat, user?.id]);
 
-    groupedMessages[groupedMessages.length - 1].messages.push({
-      id: msg.id,
-      content: msg.content,
-      timestamp: format(msgDate, 'h:mm a'),
-      isOwn: msg.sender_id === user?.id,
-      sender: msg.sender_name || 'Unknown',
-      isEdited: msg.is_edited,
-      read_at: msg.read_at,
-      edit_count: msg.edit_count,
-      created_at_raw: msg.created_at,
-      attachment: msg.attachment_name ? {
-        name: msg.attachment_name,
-        size: msg.attachment_size || '',
-        type: msg.attachment_type || '',
-        url: msg.attachment_url || ''
-      } : undefined,
+  const sortedItems = useMemo(() => {
+    return [...conversations, ...virtualContacts]
+      .filter((item) => (item.other_user_name || "").toLowerCase().includes(deferredSearchQuery))
+      .filter((item) => {
+        if (filterMode === "all") return true;
+        if (filterMode === "online") {
+          const realId = "is_virtual" in item && item.is_virtual
+            ? (item as any).other_user_id
+            : (item.participant_1 === user?.id ? item.participant_2 : item.participant_1);
+          return onlineUsers.has(realId);
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.last_message_at && b.last_message_at) {
+          return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+        }
+        if (a.last_message_at) return -1;
+        if (b.last_message_at) return 1;
+        return (a.other_user_name || "").localeCompare(b.other_user_name || "");
+      });
+  }, [conversations, deferredSearchQuery, filterMode, onlineUsers, user?.id, virtualContacts]);
+
+  const groupedMessages = useMemo(() => {
+    const filteredMessages = messages.filter((msg) =>
+      !deferredMessageSearchQuery
+      || (msg.content && msg.content.toLowerCase().includes(deferredMessageSearchQuery))
+    );
+    const grouped: { date: string; messages: any[] }[] = [];
+    let currentDateLabel = "";
+
+    filteredMessages.forEach((msg) => {
+      const msgDate = new Date(msg.created_at);
+      const dateLabel = getDateLabel(msgDate);
+
+      if (dateLabel !== currentDateLabel) {
+        currentDateLabel = dateLabel;
+        grouped.push({ date: dateLabel, messages: [] });
+      }
+
+      grouped[grouped.length - 1].messages.push({
+        id: msg.id,
+        content: msg.content,
+        timestamp: format(msgDate, 'h:mm a'),
+        isOwn: msg.sender_id === user?.id,
+        sender: msg.sender_name || 'Unknown',
+        isEdited: msg.is_edited,
+        read_at: msg.read_at,
+        edit_count: msg.edit_count,
+        created_at_raw: msg.created_at,
+        attachment: msg.attachment_name ? {
+          name: msg.attachment_name,
+          size: msg.attachment_size || '',
+          type: msg.attachment_type || '',
+          url: msg.attachment_url || ''
+        } : undefined,
+      });
     });
-  });
+
+    return grouped;
+  }, [deferredMessageSearchQuery, messages, user?.id]);
 
   if (loading) {
     return (

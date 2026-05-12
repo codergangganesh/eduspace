@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { LoadingFrame } from "@/components/ui/app-loader";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -36,9 +36,17 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   // Show loading while auth is loading OR while role is being fetched
   if (isLoading || isRoleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background pointer-events-none">
-        <Loader2 className="size-6 animate-spin text-muted-foreground/40" />
-      </div>
+      <LoadingFrame
+        fullScreen
+        loaderSize="lg"
+        className="bg-background px-6"
+        contentClassName="max-w-xs"
+        label="Loading account"
+      >
+        <p className="text-sm font-medium text-muted-foreground">
+          Preparing your account...
+        </p>
+      </LoadingFrame>
     );
   }
 

@@ -82,17 +82,17 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
     const Icon = slide.icon;
 
     return (
-        <div className="fixed inset-0 z-[200] bg-white dark:bg-slate-950 flex flex-col font-sans overflow-hidden">
+        <div className="fixed inset-0 z-[200] flex min-h-[100dvh] flex-col overflow-hidden bg-white font-sans dark:bg-slate-950">
             {/* Top Illustration Area with Gradient Background */}
-            <div className={`relative h-[45%] w-full overflow-hidden transition-colors duration-500 ${slide.color}`}>
+            <div className={`relative w-full overflow-hidden transition-colors duration-500 h-[42svh] min-h-[280px] max-h-[390px] sm:h-[45%] ${slide.color}`}>
                 {/* Background Shapes */}
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-3xl"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-white/20 blur-3xl"></div>
 
                 {/* Branding: Logo and Name */}
-                <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
+                <div className="absolute left-4 z-30 flex items-center gap-2 top-[calc(1rem+var(--safe-top))]">
                     <div className="size-8 rounded-lg overflow-hidden border border-white/20 shadow-lg">
-                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-contain" />
                     </div>
                     <span className="text-white font-bold text-lg tracking-tight">
                         Eduspace
@@ -100,7 +100,7 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                 </div>
 
                 {/* Skip Button */}
-                <div className="absolute top-4 right-4 z-30">
+                <div className="absolute right-4 z-30 top-[calc(1rem+var(--safe-top))]">
                     <button
                         onClick={onComplete}
                         className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold py-2 px-6 rounded-full text-sm transition-all"
@@ -110,24 +110,26 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                 </div>
 
                 {/* Main Image in the center */}
-                <div className="absolute inset-0 flex items-center justify-center p-8 pt-16">
+                <div className="absolute inset-0 flex items-center justify-center px-5 pb-6 pt-20 sm:p-8 sm:pt-16">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={currentSlide}
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: -20, opacity: 0 }}
-                            className="relative w-full h-full max-w-[280px] max-h-[280px]"
+                            className="relative flex h-full w-full items-center justify-center"
                         >
-                            <img
-                                src={slide.image}
-                                alt={slide.title}
-                                className="w-full h-full object-cover rounded-[32px] shadow-2xl"
-                            />
+                            <div className="relative flex aspect-square w-full max-w-[260px] items-center justify-center overflow-visible rounded-[32px] bg-white/10 p-3 shadow-2xl backdrop-blur-[2px] sm:max-w-[280px]">
+                                <img
+                                    src={slide.image}
+                                    alt={slide.title}
+                                    className="h-full w-full rounded-[26px] object-contain object-center bg-white/12"
+                                />
+                            </div>
 
                             {/* Overlay Icon */}
-                            <div className="absolute -top-4 -left-4 bg-white p-4 rounded-[20px] shadow-xl">
-                                <Icon className={`w-8 h-8 ${slide.lightColor}`} />
+                            <div className="absolute left-1 top-1 bg-white p-3 rounded-[18px] shadow-xl sm:-left-4 sm:-top-4 sm:p-4 sm:rounded-[20px]">
+                                <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${slide.lightColor}`} />
                             </div>
                         </motion.div>
                     </AnimatePresence>
@@ -135,7 +137,7 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
             </div>
 
             {/* Bottom Content Area */}
-            <div className="flex-1 bg-white dark:bg-slate-900 px-8 pt-10 flex flex-col items-center">
+            <div className="flex flex-1 flex-col items-center bg-white px-5 pt-6 pb-[calc(1.5rem+var(--safe-bottom))] dark:bg-slate-900 sm:px-8 sm:pt-10">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentSlide}
@@ -144,20 +146,20 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                         exit={{ opacity: 0, x: -20 }}
                         className="w-full flex flex-col items-center text-center"
                     >
-                        <h2 className="text-[32px] font-black text-slate-900 dark:text-white mb-2 leading-tight tracking-tight">
+                        <h2 className="mb-2 text-[28px] font-black leading-tight tracking-tight text-slate-900 dark:text-white sm:text-[32px]">
                             {slide.title}
                         </h2>
-                        <h3 className={`text-xl font-bold ${slide.lightColor} mb-6`}>
+                        <h3 className={`mb-4 text-lg font-bold sm:mb-6 sm:text-xl ${slide.lightColor}`}>
                             {slide.subtitle}
                         </h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed mb-8 max-w-[320px]">
+                        <p className="mb-6 max-w-[320px] text-sm leading-relaxed text-slate-500 dark:text-slate-400 sm:mb-8 sm:text-base">
                             {slide.description}
                         </p>
                     </motion.div>
                 </AnimatePresence>
 
                 {/* Page Indicator / Steps */}
-                <div className="flex gap-2 mb-10">
+                <div className="mb-8 flex gap-2 sm:mb-10">
                     {slides.map((_, index) => (
                         <div
                             key={index}
@@ -170,19 +172,19 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                 </div>
 
                 {/* Navigation Buttons */}
-                <div className="w-full flex gap-4 mt-auto mb-10">
+                <div className="mt-auto flex w-full gap-3 sm:gap-4">
                     {currentSlide > 0 ? (
                         <>
                             <Button
                                 variant="outline"
                                 onClick={handleBack}
-                                className="flex-1 h-16 rounded-[24px] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                className="h-14 flex-1 rounded-[24px] border-slate-200 text-base font-bold text-slate-900 transition-all hover:bg-slate-50 dark:border-slate-700 dark:text-white dark:hover:bg-slate-800 sm:h-16 sm:text-lg"
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </Button>
                             <Button
                                 onClick={handleNext}
-                                className={`flex-1 h-16 rounded-[24px] font-bold text-lg text-white shadow-xl shadow-black/10 hover:opacity-90 active:scale-95 transition-all ${slide.color} border-none`}
+                                className={`h-14 flex-1 rounded-[24px] border-none text-base font-bold text-white shadow-xl shadow-black/10 transition-all hover:opacity-90 active:scale-95 sm:h-16 sm:text-lg ${slide.color}`}
                             >
                                 {currentSlide === slides.length - 1 ? "Get Started" : "Next"} <ChevronRight className="ml-2 h-5 w-5" />
                             </Button>
@@ -190,7 +192,7 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                     ) : (
                         <Button
                             onClick={handleNext}
-                            className={`w-full h-16 rounded-[24px] font-bold text-lg text-white shadow-xl shadow-black/10 hover:opacity-90 active:scale-95 transition-all ${slide.color} border-none`}
+                            className={`h-14 w-full rounded-[24px] border-none text-base font-bold text-white shadow-xl shadow-black/10 transition-all hover:opacity-90 active:scale-95 sm:h-16 sm:text-lg ${slide.color}`}
                         >
                             Next <ChevronRight className="ml-2 h-5 w-5" />
                         </Button>
