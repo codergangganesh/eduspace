@@ -5,12 +5,6 @@ import { HelmetProvider } from 'react-helmet-async';
 import { initializeCapacitor } from "./lib/capacitor";
 import { preloadImage, readCachedProfileIdentity, warmShellImages } from "./lib/imagePerformance";
 
-declare global {
-    interface Window {
-        __hideAppLoading?: () => void;
-    }
-}
-
 const silenceConsoleOutput = () => {
     const noop = () => undefined;
     const methods: Array<keyof Console> = ["log", "debug", "info", "warn", "error", "trace"];
@@ -88,7 +82,3 @@ createRoot(document.getElementById("root")!).render(
         <App />
     </HelmetProvider>
 );
-
-requestAnimationFrame(() => {
-    window.__hideAppLoading?.();
-});
