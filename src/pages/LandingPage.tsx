@@ -1,7 +1,10 @@
 import { useState, useEffect, Suspense, lazy } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Headset, Menu, X, ChevronRight, LayoutGrid, Users, GraduationCap, LifeBuoy } from "lucide-react";
+import {
+    Menu,
+    X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleSelectionDialog } from "@/components/auth/RoleSelectionDialog";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
@@ -9,11 +12,6 @@ import { TermsDialog } from "@/components/legal/TermsDialog";
 import { HelpCenterDialog } from "@/components/support/HelpCenterDialog";
 import { ContactSupportDialog } from "@/components/support/ContactSupportDialog";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import {
-    Sheet,
-    SheetContent,
-    SheetTrigger,
-} from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +41,6 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ deferMobileOnboarding = false }: LandingPageProps) {
-    const navigate = useNavigate();
     const [showRoleDialog, setShowRoleDialog] = useState(false);
     const [showPrivacy, setShowPrivacy] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
@@ -54,6 +51,67 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [showOnboarding, setShowOnboarding] = useState(true);
     const [isLandingReady, setIsLandingReady] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const mobileNavLinks = [
+        {
+            id: "home",
+            label: "Home",
+        },
+        {
+            id: "features",
+            label: "Features",
+        },
+        {
+            id: "students",
+            label: "AI Learning Tools",
+        },
+        {
+            id: "lecturers",
+            label: "Voice Tutor",
+        },
+        {
+            id: "faq",
+            label: "Quiz Generator",
+        },
+        {
+            id: "support",
+            label: "Contact Support",
+        },
+    ] as const;
+
+    const scrollToSection = (sectionId: string) => {
+        setIsMobileMenuOpen(false);
+
+        if (sectionId === "home") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+        }
+
+        if (sectionId === "support") {
+            setShowContact(true);
+            return;
+        }
+
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+            setActiveSection(sectionId);
+        }
+    };
+
+    useEffect(() => {
+        if (!isMobileMenuOpen) return;
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setIsMobileMenuOpen(false);
+            }
+        };
+
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, [isMobileMenuOpen]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -230,8 +288,24 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                             </Link>
                         </div>
 
-                        {/* Mobile Navigation & Actions removed as requested */}
                         <div className="flex md:hidden items-center gap-3">
+                            <ThemeToggle />
+
+                            <button
+                                type="button"
+                                aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+                                aria-expanded={isMobileMenuOpen}
+                                onClick={() => setIsMobileMenuOpen((open) => !open)}
+                                className="inline-flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white shadow-[0_10px_30px_rgba(15,23,42,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-blue-400/50 hover:bg-white/10"
+                            >
+                                <motion.div
+                                    initial={false}
+                                    animate={{ rotate: isMobileMenuOpen ? 180 : 0 }}
+                                    transition={{ duration: 0.25, ease: "easeOut" }}
+                                >
+                                    {isMobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+                                </motion.div>
+                            </button>
                         </div>
 
                         {/* Navigation Links (Desktop) */}
@@ -296,6 +370,50 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                     </div>
                 </div>
             </nav>
+
+            <AnimatePresence>
+                {isMobileMenuOpen && (
+                    <>
+                        <motion.button
+                            type="button"
+                            aria-label="Close mobile menu overlay"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.22, ease: "easeOut" }}
+                            className="fixed inset-0 z-[95] bg-black/45 md:hidden"
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, y: -18 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -18 }}
+                            transition={{ duration: 0.28, ease: "easeOut" }}
+                            className="fixed inset-x-0 top-[calc(var(--safe-top)+4.9rem)] z-[110] mx-0 border-t border-slate-200 bg-white text-slate-800 shadow-[0_20px_40px_rgba(15,23,42,0.18)] md:hidden"
+                        >
+                            <div className="max-h-[calc(100vh-6rem-var(--safe-top))] overflow-y-auto">
+                                <div className="bg-white">
+                                    {mobileNavLinks.map((link) => (
+                                        <button
+                                            key={link.id}
+                                            type="button"
+                                            onClick={() => scrollToSection(link.id)}
+                                            className="flex w-full items-center justify-between border-b border-slate-200 px-5 py-4 text-left transition-colors duration-200 hover:bg-slate-50"
+                                        >
+                                            <span>
+                                                <span className="block text-[18px] font-medium text-slate-800">
+                                                    {link.label}
+                                                </span>
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             <div className="relative z-10 backdrop-blur-[2px]">
                 <HeroSection onOpenRoleSelection={setShowRoleDialog} />
