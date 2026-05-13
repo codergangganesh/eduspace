@@ -38,7 +38,11 @@ const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection"
 const CTASection = lazy(() => import("@/components/landing/CTASection").then(module => ({ default: module.CTASection })));
 const FooterSection = lazy(() => import("@/components/landing/FooterSection").then(module => ({ default: module.FooterSection })));
 
-export default function LandingPage() {
+interface LandingPageProps {
+    deferMobileOnboarding?: boolean;
+}
+
+export default function LandingPage({ deferMobileOnboarding = false }: LandingPageProps) {
     const navigate = useNavigate();
     const [showRoleDialog, setShowRoleDialog] = useState(false);
     const [showPrivacy, setShowPrivacy] = useState(false);
@@ -49,6 +53,7 @@ export default function LandingPage() {
     const [activeSection, setActiveSection] = useState("");
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [showOnboarding, setShowOnboarding] = useState(true);
+    const [isLandingReady, setIsLandingReady] = useState(false);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -99,6 +104,11 @@ export default function LandingPage() {
             }, 150);
             return () => clearTimeout(timer);
         }
+    }, []);
+
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => setIsLandingReady(true));
+        return () => cancelAnimationFrame(frame);
     }, []);
 
     const LoadingFallback = () => (
@@ -190,11 +200,11 @@ export default function LandingPage() {
             <HelpCenterDialog open={showHelp} onOpenChange={setShowHelp} />
             <ContactSupportDialog open={showContact} onOpenChange={setShowContact} />
 
-            {showOnboarding && (
+            {showOnboarding && isLandingReady && !deferMobileOnboarding && (
                 <div className="block md:hidden relative z-[150] transition-all duration-500">
                     <MobileOnboarding onComplete={() => {
                         setShowOnboarding(false);
-                        setShowRoleDialog(true);
+                        requestAnimationFrame(() => setShowRoleDialog(true));
                     }} />
                 </div>
             )}

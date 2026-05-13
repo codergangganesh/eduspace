@@ -23,29 +23,30 @@ const Index = () => {
     }
   }, [isAuthenticated, role, isLoading, navigate]);
 
-  // Don't show landing page while auth is loading
-  // This prevents flickering by showing a consistent loading state
-  if (isLoading) {
-    return (
-      <LoadingFrame
-        fullScreen
-        loaderSize="lg"
-        className="bg-background px-6"
-        contentClassName="max-w-xs"
-        label="Loading Eduspace"
-      >
-        <Helmet>
-          <meta name="robots" content="noindex" />
-        </Helmet>
-        <p className="text-sm font-medium text-muted-foreground">
-          Loading Eduspace...
-        </p>
-      </LoadingFrame>
-    );
-  }
+  return (
+    <div className="relative min-h-screen">
+      <Helmet>
+        <meta name="robots" content="noindex" />
+      </Helmet>
 
-  // Only render LandingPage when auth is fully loaded and user is not authenticated
-  return <LandingPage />;
+      <LandingPage deferMobileOnboarding={isLoading} />
+
+      {isLoading && (
+        <LoadingFrame
+          overlay
+          blockInteraction
+          loaderSize="lg"
+          className="fixed inset-0 z-[400] bg-background/92 px-6 backdrop-blur-sm"
+          contentClassName="max-w-xs"
+          label="Loading Eduspace"
+        >
+          <p className="text-sm font-medium text-muted-foreground">
+            Loading Eduspace...
+          </p>
+        </LoadingFrame>
+      )}
+    </div>
+  );
 };
 
 export default Index;

@@ -9,7 +9,6 @@ interface MobileSplashScreenProps {
 export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
     const [phase, setPhase] = useState<"logo" | "expand" | "final">("logo");
     const progressValue = phase === "logo" ? 14 : phase === "expand" ? 72 : 100;
-    const statusLabel = phase === "final" ? "Ready" : phase === "expand" ? "Preparing" : "Starting";
 
     useEffect(() => {
         // Skip initial logo phase and go straight to expand
@@ -22,7 +21,7 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden bg-[#020617] font-sans px-5 pt-[calc(1.25rem+var(--safe-top))] pb-[calc(1.25rem+var(--safe-bottom))] sm:px-6 sm:pt-[calc(1.5rem+var(--safe-top))] sm:pb-[calc(1.5rem+var(--safe-bottom))]">
+        <div className="fixed inset-0 z-[300] flex min-h-[100dvh] flex-col overflow-hidden bg-[#020617] font-sans px-5 pt-[calc(1rem+var(--safe-top))] pb-[calc(1rem+var(--safe-bottom))] sm:px-6 sm:pt-[calc(1.5rem+var(--safe-top))] sm:pb-[calc(1.5rem+var(--safe-bottom))]">
             {/* Expanding Circle */}
             <motion.div
                 initial={{ scale: 0 }}
@@ -36,7 +35,7 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                 initial={{ opacity: 0 }}
                 animate={phase === "final" ? { opacity: 1 } : { opacity: 0 }}
                 transition={{ duration: 1 }}
-                className="absolute inset-0 z-0 pointer-events-none"
+                className="pointer-events-none absolute inset-0 z-0"
             >
                 <motion.div
                     animate={{ opacity: [0.18, 0.28, 0.18] }}
@@ -44,7 +43,6 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                     className="absolute inset-0 bg-[linear-gradient(135deg,#020617_0%,#0f172a_48%,#111827_100%)]"
                 />
 
-                {/* Orange Blob */}
                 <motion.div
                     animate={{
                         x: [0, 18, -12, 0],
@@ -55,7 +53,6 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                     className="absolute left-[-18%] top-[-10%] h-[38svh] w-[78vw] rounded-full bg-blue-500/30 blur-[64px] sm:left-[-10%] sm:top-[-20%] sm:h-[70%] sm:w-[90%] sm:blur-[120px]"
                 />
 
-                {/* Red Blob */}
                 <motion.div
                     animate={{
                         x: [0, -16, 24, 0],
@@ -66,7 +63,6 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                     className="absolute bottom-[-8%] left-[-24%] h-[32svh] w-[74vw] rounded-full bg-violet-500/24 blur-[68px] sm:bottom-[-10%] sm:left-[-20%] sm:h-[80%] sm:w-[80%] sm:blur-[120px]"
                 />
 
-                {/* Blue Blob */}
                 <motion.div
                     animate={{
                         x: [10, -16, 0, 10],
@@ -77,13 +73,15 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                     className="absolute right-[-20%] top-[18%] h-[34svh] w-[68vw] rounded-full bg-cyan-400/18 blur-[60px] sm:right-[-10%] sm:top-[20%] sm:h-[70%] sm:w-[70%] sm:blur-[120px]"
                 />
 
-                {/* Subtle Grid Dots or Pattern for depth */}
                 <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:22px_22px] sm:bg-[length:24px_24px]" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_24%,transparent_76%,rgba(255,255,255,0.03))]" />
             </motion.div>
 
-            <div className="relative z-10 flex w-full max-w-sm flex-1 flex-col items-center justify-between py-4 sm:justify-center">
-                {/* Supabase-style edge glow sweep CSS */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-32 bg-[linear-gradient(180deg,rgba(2,6,23,0.72),transparent)]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-40 bg-[linear-gradient(0deg,rgba(2,6,23,0.82),transparent)]" />
+            <div className="pointer-events-none absolute left-1/2 top-[32%] z-[1] h-[34svh] w-[130vw] -translate-x-1/2 rounded-full bg-white/[0.05] blur-[90px]" />
+
+            <div className="relative z-10 flex w-full flex-1 flex-col">
                 <style>{`
                     @property --logo-angle {
                         syntax: '<angle>';
@@ -140,14 +138,26 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                 `}</style>
 
                 <motion.div
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="flex items-start"
+                >
+                    <div className="rounded-full border border-white/12 bg-white/[0.06] px-3.5 py-2 backdrop-blur-xl">
+                        <p className="text-sm font-semibold text-white">
+                            Eduspace mobile
+                        </p>
+                    </div>
+                </motion.div>
+
+                <motion.div
                     initial={{ opacity: 0, y: 22 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.75, ease: "easeOut" }}
-                    className="relative w-full flex-1"
+                    className="relative flex flex-1 flex-col justify-center"
                 >
-                    <div className="pointer-events-none absolute inset-x-0 top-[20%] h-[34svh] rounded-full bg-white/[0.04] blur-[80px]" />
-                    <div className="pointer-events-none absolute inset-x-5 top-[16%] h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
-                    <div className="pointer-events-none absolute inset-x-6 bottom-[20%] h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+                    <div className="pointer-events-none absolute inset-x-5 top-[14%] h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
+                    <div className="pointer-events-none absolute inset-x-8 bottom-[18%] h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
 
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -156,16 +166,17 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                             color: "#ffffff",
                         }}
                         transition={{ duration: 0.5 }}
-                        className="relative flex h-full flex-col items-center justify-center text-center"
+                        className="relative flex flex-col items-center text-center"
                     >
                         <motion.div
                             initial={{ scale: 0.82, opacity: 0 }}
                             animate={phase === "final" ? { scale: 1.03, opacity: 1 } : { scale: 0.96, opacity: 1 }}
                             transition={{ duration: 0.7, type: "spring" }}
-                            className="relative mb-5"
-                            style={{ width: 92, height: 92 }}
+                            className="relative mb-6"
+                            style={{ width: 96, height: 96 }}
                         >
-                            <div className="logo-glow-ring" style={{ width: 92, height: 92 }}>
+                            <div className="absolute inset-[-18px] rounded-[38px] bg-white/10 blur-2xl" />
+                            <div className="logo-glow-ring" style={{ width: 96, height: 96 }}>
                                 <div className="logo-glow-inner">
                                     <img src="/favicon.png" alt="Eduspace" className="size-full object-contain rounded-[24px]" />
                                 </div>
@@ -173,7 +184,7 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                         </motion.div>
 
                         <motion.h1
-                            className="flex max-w-full flex-wrap justify-center text-center text-[2.55rem] font-black tracking-[-0.06em] drop-shadow-2xl sm:text-6xl"
+                            className="flex max-w-full flex-wrap justify-center text-center text-[2.7rem] font-black tracking-[-0.065em] drop-shadow-2xl sm:text-6xl"
                             variants={{
                                 visible: { transition: { staggerChildren: 0.1 } }
                             }}
@@ -214,45 +225,29 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                             ))}
                         </motion.h1>
 
-                        <p className="mt-3 max-w-[16rem] text-sm font-medium leading-6 text-slate-300 sm:max-w-[18rem]">
+                        <p className="mt-3 max-w-[18rem] text-sm font-medium leading-6 text-slate-300 sm:max-w-[18rem]">
                             Smart Learning Platform
                             <br />
                             Preparing your personalized experience...
                         </p>
 
-                        <div className="mt-8 w-full px-1">
-                            <div className="mb-2.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300/90">
-                                <span>{statusLabel}</span>
-                                <span>{progressValue}%</span>
-                            </div>
-
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                                <motion.div
-                                    initial={{ width: "10%" }}
-                                    animate={{ width: `${progressValue}%` }}
-                                    transition={{ duration: phase === "final" ? 0.45 : 0.95, ease: "easeInOut" }}
-                                    className="h-full rounded-full bg-[linear-gradient(90deg,#3b82f6,#8b5cf6)] shadow-[0_0_18px_rgba(59,130,246,0.55)]"
+                        <div className="mt-6 flex items-center justify-center gap-2">
+                            {[0, 1, 2].map((dot) => (
+                                <motion.span
+                                    key={dot}
+                                    animate={{
+                                        scale: [0.8, 1.25, 0.8],
+                                        opacity: [0.45, 1, 0.45],
+                                    }}
+                                    transition={{
+                                        duration: 1.4,
+                                        repeat: Infinity,
+                                        ease: "easeInOut",
+                                        delay: dot * 0.18,
+                                    }}
+                                    className="h-2.5 w-2.5 rounded-full bg-sky-300"
                                 />
-                            </div>
-
-                            <div className="mt-4 flex items-center justify-center gap-2">
-                                {[0, 1, 2].map((dot) => (
-                                    <motion.span
-                                        key={dot}
-                                        animate={{
-                                            scale: [0.8, 1.25, 0.8],
-                                            opacity: [0.45, 1, 0.45],
-                                        }}
-                                        transition={{
-                                            duration: 1.4,
-                                            repeat: Infinity,
-                                            ease: "easeInOut",
-                                            delay: dot * 0.18,
-                                        }}
-                                        className="h-2.5 w-2.5 rounded-full bg-sky-300"
-                                    />
-                                ))}
-                            </div>
+                            ))}
                         </div>
                     </motion.div>
                 </motion.div>
@@ -263,7 +258,7 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                             initial={{ opacity: 0, y: 22 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4, duration: 0.45 }}
-                            className="w-full pt-6"
+                            className="w-full pt-4"
                         >
                             <Button
                                 onClick={onComplete}
