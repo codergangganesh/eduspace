@@ -90,7 +90,6 @@ const LoadingFallback = () => {
   return (
     <LoadingFrame
       fullScreen
-      loaderSize="lg"
       className="bg-background px-6"
       contentClassName="max-w-xs"
       label="Loading page"

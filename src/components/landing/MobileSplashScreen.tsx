@@ -8,7 +8,6 @@ interface MobileSplashScreenProps {
 
 export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
     const [phase, setPhase] = useState<"logo" | "expand" | "final">("logo");
-    const progressValue = phase === "logo" ? 14 : phase === "expand" ? 72 : 100;
 
     useEffect(() => {
         // Skip initial logo phase and go straight to expand
@@ -230,25 +229,6 @@ export function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
                             <br />
                             Preparing your personalized experience...
                         </p>
-
-                        <div className="mt-6 flex items-center justify-center gap-2">
-                            {[0, 1, 2].map((dot) => (
-                                <motion.span
-                                    key={dot}
-                                    animate={{
-                                        scale: [0.8, 1.25, 0.8],
-                                        opacity: [0.45, 1, 0.45],
-                                    }}
-                                    transition={{
-                                        duration: 1.4,
-                                        repeat: Infinity,
-                                        ease: "easeInOut",
-                                        delay: dot * 0.18,
-                                    }}
-                                    className="h-2.5 w-2.5 rounded-full bg-sky-300"
-                                />
-                            ))}
-                        </div>
                     </motion.div>
                 </motion.div>
 

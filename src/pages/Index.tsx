@@ -35,7 +35,6 @@ const Index = () => {
         <LoadingFrame
           overlay
           blockInteraction
-          loaderSize="lg"
           className="fixed inset-0 z-[400] bg-background/92 px-6 backdrop-blur-sm"
           contentClassName="max-w-xs"
           label="Loading Eduspace"

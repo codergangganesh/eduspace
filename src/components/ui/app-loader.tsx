@@ -1,19 +1,6 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const loaderSizes = {
-  sm: 28,
-  md: 40,
-  lg: 56,
-} as const;
-
-type AppLoaderSize = keyof typeof loaderSizes;
-
-interface AppLoaderProps {
-  size?: AppLoaderSize;
-  className?: string;
-}
-
 interface LoadingFrameProps {
   className?: string;
   contentClassName?: string;
@@ -21,18 +8,7 @@ interface LoadingFrameProps {
   overlay?: boolean;
   blockInteraction?: boolean;
   label?: string;
-  loaderSize?: AppLoaderSize;
   children?: ReactNode;
-}
-
-export function AppLoader({ size = "md", className }: AppLoaderProps) {
-  return (
-    <div
-      className={cn("loader shrink-0", className)}
-      style={{ width: `${loaderSizes[size]}px` }}
-      aria-hidden="true"
-    />
-  );
 }
 
 export function LoadingFrame({
@@ -42,7 +18,6 @@ export function LoadingFrame({
   overlay = false,
   blockInteraction = false,
   label = "Loading content",
-  loaderSize = "md",
   children,
 }: LoadingFrameProps) {
   return (
@@ -64,7 +39,6 @@ export function LoadingFrame({
           contentClassName,
         )}
       >
-        <AppLoader size={loaderSize} />
         {children}
         <span className="sr-only">{label}</span>
       </div>
