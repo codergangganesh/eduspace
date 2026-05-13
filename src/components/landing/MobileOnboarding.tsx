@@ -12,7 +12,7 @@ const slides = [
         icon: GraduationCap,
         color: "bg-indigo-600",
         lightColor: "text-indigo-600",
-        image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=1000",
+        image: "/dashboard-icon.png",
     },
     {
         title: "Quizzes & Assignments",
@@ -21,7 +21,7 @@ const slides = [
         icon: FileText,
         color: "bg-emerald-500",
         lightColor: "text-emerald-500",
-        image: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&q=80&w=1000",
+        image: "/assignment-icon.png",
     },
     {
         title: "Private Video Calls",
@@ -30,7 +30,7 @@ const slides = [
         icon: Video,
         color: "bg-pink-600",
         lightColor: "text-pink-600",
-        image: "https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?auto=format&fit=crop&q=80&w=1000",
+        image: "/ai-tutor.png",
     },
     {
         title: "Real-Time Messaging",
@@ -39,7 +39,7 @@ const slides = [
         icon: MessageSquare,
         color: "bg-orange-600",
         lightColor: "text-orange-600",
-        image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=1000",
+        image: "/messages-icon.png",
     },
     {
         title: "Meeting Management",
@@ -48,7 +48,7 @@ const slides = [
         icon: Calendar,
         color: "bg-blue-500",
         lightColor: "text-blue-500",
-        image: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=1000",
+        image: "/schedule-icon.png",
     }
 ];
 
@@ -64,6 +64,14 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
     useEffect(() => {
         const frame = requestAnimationFrame(() => setIsVisible(true));
         return () => cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => {
+        slides.forEach((slide) => {
+            const image = new Image();
+            image.decoding = "async";
+            image.src = slide.image;
+        });
     }, []);
 
     const handleNext = () => {
@@ -104,7 +112,7 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                     transition={{ duration: 0.35, ease: "easeOut" }}
                     className="fixed inset-0 z-[200] flex min-h-[100dvh] flex-col overflow-hidden bg-white font-sans dark:bg-slate-950"
                 >
-                    <div className={`relative h-[42svh] min-h-[280px] max-h-[390px] w-full overflow-hidden transition-colors duration-500 sm:h-[45%] ${slide.color}`}>
+                    <div className={`relative h-[44dvh] min-h-[300px] max-h-[420px] w-full overflow-hidden transition-colors duration-500 sm:h-[45%] ${slide.color}`}>
                         <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-white/10 blur-3xl"></div>
                         <div className="absolute right-[-10%] bottom-[-10%] h-[50%] w-[50%] rounded-full bg-white/20 blur-3xl"></div>
 
@@ -126,7 +134,7 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                             </button>
                         </div>
 
-                        <div className="absolute inset-0 flex items-center justify-center px-5 pb-6 pt-20 sm:p-8 sm:pt-16">
+                        <div className="absolute inset-0 flex items-center justify-center px-4 pb-5 pt-20 sm:p-8 sm:pt-16">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={currentSlide}
@@ -135,11 +143,14 @@ export function MobileOnboarding({ onComplete }: MobileOnboardingProps) {
                                     exit={{ y: -20, opacity: 0 }}
                                     className="relative flex h-full w-full items-center justify-center"
                                 >
-                                    <div className="relative flex aspect-square w-full max-w-[260px] items-center justify-center overflow-visible rounded-[32px] bg-white/10 p-3 shadow-2xl backdrop-blur-[2px] sm:max-w-[280px]">
+                                    <div className="relative flex aspect-[1/1] w-full max-w-[min(78vw,320px)] items-center justify-center overflow-hidden rounded-[32px] border border-white/15 bg-white/12 p-3 shadow-2xl backdrop-blur-[2px] sm:max-w-[280px]">
                                         <img
                                             src={slide.image}
                                             alt={slide.title}
-                                            className="h-full w-full rounded-[26px] bg-white/12 object-contain object-center"
+                                            loading={currentSlide === 0 ? "eager" : "lazy"}
+                                            fetchPriority={currentSlide === 0 ? "high" : "auto"}
+                                            decoding="async"
+                                            className="h-full w-full rounded-[26px] bg-white/10 object-cover object-center"
                                         />
                                     </div>
 
