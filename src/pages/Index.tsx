@@ -23,19 +23,16 @@ const Index = () => {
     }
   }, [isAuthenticated, role, isLoading, navigate]);
 
-  return (
-    <div className="relative min-h-screen">
-      <Helmet>
-        <meta name="robots" content="noindex" />
-      </Helmet>
+  if (isLoading) {
+    return (
+      <div className="relative min-h-screen">
+        <Helmet>
+          <meta name="robots" content="noindex" />
+        </Helmet>
 
-      <LandingPage deferMobileOnboarding={isLoading} />
-
-      {isLoading && (
         <LoadingFrame
-          overlay
-          blockInteraction
-          className="fixed inset-0 z-[400] bg-background/92 px-6 backdrop-blur-sm"
+          fullScreen
+          className="bg-background px-6"
           contentClassName="max-w-xs"
           label="Loading Eduspace"
         >
@@ -43,7 +40,17 @@ const Index = () => {
             Loading Eduspace...
           </p>
         </LoadingFrame>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-screen">
+      <Helmet>
+        <meta name="robots" content="noindex" />
+      </Helmet>
+
+      <LandingPage deferMobileOnboarding={false} />
     </div>
   );
 };
