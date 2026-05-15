@@ -97,23 +97,34 @@ export function useAssignmentSubmissions(assignmentId: string, classId: string) 
                 });
             }
 
-            // 4. Merge data
+            // 4. Merge data (Optimized with Maps for O(1) lookups)
+            const submissionById = new Map();
+            const submissionByRegNum = new Map();
+            const submissionByEmail = new Map();
+
+            resolvedSubmissions?.forEach(s => {
+                if (s.student_id) submissionById.set(s.student_id, s);
+                if (s.register_number) {
+                    submissionByRegNum.set(s.register_number.trim().toLowerCase(), s);
+                }
+                
+                const submittedEmail = s.student_id ? submittedEmailsMap[s.student_id] : null;
+                if (submittedEmail) {
+                    submissionByEmail.set(submittedEmail.trim().toLowerCase(), s);
+                }
+            });
+
             const combinedData: AssignmentSubmissionDetail[] = (students || []).map(student => {
-                const submission = resolvedSubmissions?.find(s => {
-                    // Match by student_id
-                    const matchId = (s.student_id && student.student_id && s.student_id === student.student_id);
-
-                    // Match by register_number
-                    const matchReg = (s.register_number && student.register_number &&
-                        s.register_number.trim().toLowerCase() === student.register_number.trim().toLowerCase());
-
-                    // Match by email fallback
-                    const submittedEmail = s.student_id ? submittedEmailsMap[s.student_id] : null;
-                    const matchEmail = (submittedEmail && student.email &&
-                        submittedEmail.trim().toLowerCase() === student.email.trim().toLowerCase());
-
-                    return matchId || matchReg || matchEmail;
-                });
+                // Find submission using multi-key lookup (O(1))
+                let submission = null;
+                
+                if (student.student_id && submissionById.has(student.student_id)) {
+                    submission = submissionById.get(student.student_id);
+                } else if (student.register_number && submissionByRegNum.has(student.register_number.trim().toLowerCase())) {
+                    submission = submissionByRegNum.get(student.register_number.trim().toLowerCase());
+                } else if (student.email && submissionByEmail.has(student.email.trim().toLowerCase())) {
+                    submission = submissionByEmail.get(student.email.trim().toLowerCase());
+                }
 
                 return {
                     student_id: student.student_id || student.id,

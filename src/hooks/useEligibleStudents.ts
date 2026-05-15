@@ -114,14 +114,16 @@ export function useEligibleStudents() {
                     }
                 }
 
-                // 5. Group by Class
-                const groups: ClassGroup[] = classes.map(cls => ({
+                // 5. Group by Class (Optimized with Maps)
+                const groupMap = new Map(classes.map(cls => [cls.id, {
                     class_id: cls.id,
                     class_name: cls.class_name,
-                    students: []
-                }));
+                    students: [] as EligibleStudent[]
+                }]));
 
                 const flatList: EligibleStudent[] = [];
+                const seenInFlat = new Set();
+                const seenInClass = new Set(); // combined key: classId-studentId
 
                 data?.forEach((item: any) => {
                     // Try to resolve ID if missing
@@ -133,7 +135,7 @@ export function useEligibleStudents() {
                     // Only include if we have a valid ID (either originally present or resolved)
                     if (!studentId) return;
 
-                    const clsGroup = groups.find(g => g.class_id === item.class_id);
+                    const clsGroup = groupMap.get(item.class_id);
                     if (clsGroup) {
                         const student: EligibleStudent = {
                             id: studentId,
@@ -143,19 +145,22 @@ export function useEligibleStudents() {
                             class_name: clsGroup.class_name
                         };
 
-                        // Avoid duplicates in the same class (e.g. if Excel had dupes)
-                        if (!clsGroup.students.some(s => s.id === student.id)) {
+                        // Avoid duplicates in the same class (O(1) check)
+                        const classStudentKey = `${item.class_id}-${studentId}`;
+                        if (!seenInClass.has(classStudentKey)) {
                             clsGroup.students.push(student);
+                            seenInClass.add(classStudentKey);
                         }
 
-                        if (!flatList.some(s => s.id === student.id)) {
+                        // Avoid duplicates in flat list (O(1) check)
+                        if (!seenInFlat.has(studentId)) {
                             flatList.push(student);
+                            seenInFlat.add(studentId);
                         }
                     }
                 });
 
-                // Filter out empty classes so the UI doesn't render blank space or think we have data when we don't
-                const nonEmptyGroups = groups.filter(g => g.students.length > 0);
+                const nonEmptyGroups = Array.from(groupMap.values()).filter(g => g.students.length > 0);
                 setClassGroups(nonEmptyGroups);
                 setStudents(flatList);
 

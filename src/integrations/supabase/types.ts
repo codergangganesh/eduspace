@@ -1643,6 +1643,51 @@ export type Database = {
           },
         ]
       }
+      quiz_integrity_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          quiz_id: string
+          student_id: string
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          quiz_id: string
+          student_id: string
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          quiz_id?: string
+          student_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_integrity_events_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_integrity_events_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions: {
         Row: {
           correct_answer: string
@@ -1689,8 +1734,12 @@ export type Database = {
       }
       quiz_submissions: {
         Row: {
+          device_fingerprint: string | null
           id: string
+          integrity_summary: Json
           is_archived: boolean | null
+          last_activity_at: string | null
+          progress_snapshot: Json
           quiz_id: string
           quiz_version: number
           started_at: string | null
@@ -1701,8 +1750,12 @@ export type Database = {
           total_obtained: number
         }
         Insert: {
+          device_fingerprint?: string | null
           id?: string
+          integrity_summary?: Json
           is_archived?: boolean | null
+          last_activity_at?: string | null
+          progress_snapshot?: Json
           quiz_id: string
           quiz_version?: number
           started_at?: string | null
@@ -1713,8 +1766,12 @@ export type Database = {
           total_obtained?: number
         }
         Update: {
+          device_fingerprint?: string | null
           id?: string
+          integrity_summary?: Json
           is_archived?: boolean | null
+          last_activity_at?: string | null
+          progress_snapshot?: Json
           quiz_id?: string
           quiz_version?: number
           started_at?: string | null

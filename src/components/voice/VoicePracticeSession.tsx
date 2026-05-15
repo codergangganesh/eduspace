@@ -96,12 +96,12 @@ const DIFFICULTIES: Array<{ id: Difficulty; label: string }> = [
 ];
 
 const TUTOR_VOICES = [
-  { id: "sarah", name: "Sarah", tone: "Warm and clear" },
-  { id: "burt", name: "Burt", tone: "Deep and steady" },
-  { id: "marissa", name: "Marissa", tone: "Friendly coach" },
-  { id: "andrea", name: "Andrea", tone: "Calm and professional" },
-  { id: "phillip", name: "Phillip", tone: "Confident mentor" },
-  { id: "steve", name: "Steve", tone: "Direct and crisp" },
+  { id: "sarah", name: "Sarah", tone: "Young and energetic" },
+  { id: "burt", name: "Burt", tone: "Deep and resonant" },
+  { id: "marissa", name: "Marissa", tone: "Calm and mature" },
+  { id: "andrea", name: "Andrea", tone: "Modern and professional" },
+  { id: "phillip", name: "Phillip", tone: "Fast and youthful" },
+  { id: "steve", name: "Steve", tone: "Steady and crisp" },
 ];
 
 const MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY = "eduspace.voiceTutor.mobileUnsupportedVoices";
@@ -135,8 +135,50 @@ function getErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
     return error.message;
   }
-  return "Voice connection error";
+  return "Voice tutor error";
 }
+
+const findBestNativeVoice = (voiceId: string) => {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) return null;
+
+  const id = voiceId.toLowerCase();
+  
+  // Aggressive preference mapping to ensure variety
+  const mappings: Record<string, string[]> = {
+    // LADIES
+    sarah: ["samantha", "susan", "zira", "google us english", "female"],
+    marissa: ["google uk english female", "victoria", "hazel", "female"],
+    andrea: ["microsoft zira", "susan", "google us english", "female"],
+    // BOYS
+    burt: ["microsoft david", "google uk english male", "male", "david"],
+    phillip: ["google us english male", "alex", "male"],
+    steve: ["microsoft ravi", "alex", "google us english male", "male"],
+  };
+
+  const targets = mappings[id] || ["female"];
+  for (const target of targets) {
+    const voice = voices.find(v => v.name.toLowerCase().includes(target) && v.lang.startsWith("en"));
+    if (voice) return voice;
+  }
+
+  return voices.find(v => v.lang.startsWith("en")) || voices[0];
+};
+
+const getVoicePersonality = (voiceId: string) => {
+  const personalities: Record<string, { pitch: number; rate: number }> = {
+    // LADIES
+    sarah: { pitch: 1.4, rate: 1.15 },    // Young/High
+    marissa: { pitch: 0.85, rate: 0.9 },   // Mature/Deep Female
+    andrea: { pitch: 1.05, rate: 1.05 },  // Balanced/Professional
+    // BOYS
+    burt: { pitch: 0.5, rate: 0.85 },     // Very Deep/Slow
+    phillip: { pitch: 1.3, rate: 1.2 },   // Youthful/Fast
+    steve: { pitch: 0.95, rate: 1.0 },    // Solid/Middle
+  };
+  return personalities[voiceId.toLowerCase()] || { pitch: 1.0, rate: 1.0 };
+};
 
 function isVoiceSelectionFailure(message: string) {
   const normalized = message.toLowerCase();
@@ -494,6 +536,13 @@ export function VoicePracticeSession() {
   const fallbackNoticeShownRef = useRef(false);
   const warmupMicStreamRef = useRef<MediaStream | null>(null);
   const mobileAudioContextRef = useRef<AudioContext | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(typeof window !== "undefined" ? window.speechSynthesis : null);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
+  const isSpeakingRef = useRef(false);
+  const isAbortingRef = useRef(false);
+  const chatHistoryRef = useRef<{ role: string; content: string }[]>([]);
+
   const micVisualizerContextRef = useRef<AudioContext | null>(null);
   const micVisualizerStreamRef = useRef<MediaStream | null>(null);
   const micVisualizerAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -609,8 +658,6 @@ export function VoicePracticeSession() {
     if (!navigator.onLine) {
       throw new Error("Navigator offline");
     }
-
-    resumeMobileAudioContext();
 
     if (!needsPwaVoiceWarmup) {
       return;
@@ -872,170 +919,219 @@ export function VoicePracticeSession() {
     toast.info("Using a compatible tutor voice on this device.");
   };
 
-  const buildPreviewConfig = (voiceId: string) => {
-    const voice = getTutorVoice(voiceId);
-
-    return {
-      name: "Eduspace Voice Preview",
-      firstMessage: `Hello, I am ${voice.name}, your AI tutor. This voice is ${voice.tone.toLowerCase()}, and I will guide you clearly through your practice sessions.`,
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
-        language: "en",
-      },
-      voice: {
-        provider: "11labs",
-        voiceId,
-      },
-      model: {
-        provider: "openai",
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are only previewing a voice. Say the first message exactly once, then stay silent.",
-          },
-        ],
-      },
-    };
+  const stopSpeaking = () => {
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    isSpeakingRef.current = false;
   };
 
-  const startVoicePreviewWithFallback = async (requestedVoiceId: string) => {
-    const preferredVoice = getPreferredVoiceForMobile(requestedVoiceId);
-    const fallbackVoice = getFallbackVoiceFor(preferredVoice.id);
-    const canRetryWithFallback = isMobileEnvironment && preferredVoice.id !== fallbackVoice.id;
-    const shouldRetryTransientStart = needsPwaVoiceWarmup;
+  const speak = (text: string, voiceId: string, onEnd?: () => void) => {
+    if (!synthRef.current) return;
 
-    suppressVoiceSelectionErrorRef.current = canRetryWithFallback;
+    stopSpeaking();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = findBestNativeVoice(voiceId);
+    if (voice) {
+      utterance.voice = voice;
+    }
+    const personality = getVoicePersonality(voiceId);
+    utterance.pitch = personality.pitch;
+    utterance.rate = personality.rate;
+    utterance.volume = 1.0;
 
+    utterance.onstart = () => {
+      isSpeakingRef.current = true;
+      setState("speaking");
+    };
+
+    utterance.onend = () => {
+      isSpeakingRef.current = false;
+      setState("listening");
+      onEnd?.();
+    };
+
+    utterance.onerror = (event) => {
+      console.error("Speech synthesis error", event);
+      isSpeakingRef.current = false;
+      setState("listening");
+      onEnd?.();
+    };
+
+    synthRef.current.speak(utterance);
+  };
+
+  const startListening = () => {
+    if (typeof window === "undefined") return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setState("listening");
+      vapiActiveRef.current = true;
+      void startMicLevelMonitoring();
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = "";
+      let finalTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        handleUserSpeech(finalTranscript.trim());
+      } else {
+        setCurrentText(interimTranscript);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === "no-speech") return;
+      console.error("Speech recognition error", event.error);
+      if (!isAbortingRef.current) {
+        setErrorMsg(`Speech error: ${event.error}`);
+      }
+    };
+
+    recognition.onend = () => {
+      if (vapiActiveRef.current && !isSpeakingRef.current && !isAbortingRef.current) {
+        try {
+          recognition.start();
+        } catch (e) {}
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const stopListening = () => {
+    isAbortingRef.current = true;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+    recognitionRef.current = null;
+    vapiActiveRef.current = false;
+    stopMicLevelMonitoring();
+    setTimeout(() => {
+      isAbortingRef.current = false;
+    }, 100);
+  };
+
+  const handleUserSpeech = async (text: string) => {
+    if (!text) return;
+    
+    setCurrentText("");
+    setHistory(prev => [...prev, { role: "user", text }]);
+    
+    const analysis = analyzeText(text, profile);
+    setStats(prev => ({
+      ...prev,
+      words: prev.words + analysis.words,
+      turns: prev.turns + 1,
+      fillers: prev.fillers + analysis.fillers,
+      scopeViolations: prev.scopeViolations + (analysis.offContent ? 1 : 0),
+    }));
+
+    // Save to Supabase
     try {
-      await vapi.start(buildPreviewConfig(preferredVoice.id));
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
+      const sessId = await createOrLoadSession();
+      await voiceService.saveMessage(sessId, "user", text);
+    } catch (e) {
+      console.error("Failed to save message", e);
+    }
 
-      if (shouldRetryTransientStart && isLikelyTransientVoiceConnectionFailure(errorMessage)) {
-        await vapi.stop().catch(() => undefined);
-        await wait(isStandaloneMode ? 500 : 300);
-        await ensureVoiceRuntimeReady();
-        await vapi.start(buildPreviewConfig(preferredVoice.id));
-        return;
-      }
+    // Get AI response
+    setState("thinking");
+    try {
+      const currentMessages = [
+        { role: "system", content: buildPrompt(profile) },
+        ...chatHistoryRef.current,
+        { role: "user", content: text }
+      ];
+      
+      chatHistoryRef.current.push({ role: "user", content: text });
 
-      if (!canRetryWithFallback || !isVoiceSelectionFailure(errorMessage)) {
-        throw error;
-      }
-
-      markVoiceUnsupportedOnMobile(preferredVoice.id);
-      console.warn("[VAPI] Retrying mobile voice preview with fallback voice", {
-        requestedVoiceId,
-        failedVoiceId: preferredVoice.id,
-        fallbackVoiceId: fallbackVoice.id,
-        error: errorMessage,
+      let aiResponse = "";
+      const fullResponse = await aiChatService.streamChat(currentMessages, (token) => {
+        aiResponse += token;
+        setCurrentText(aiResponse);
       });
 
-      await vapi.stop().catch(() => undefined);
-      suppressVoiceSelectionErrorRef.current = false;
-      await vapi.start(buildPreviewConfig(fallbackVoice.id));
-      showMobileFallbackNotice();
-    } finally {
-      suppressVoiceSelectionErrorRef.current = false;
+      setHistory(prev => [...prev, { role: "assistant", text: fullResponse }]);
+      chatHistoryRef.current.push({ role: "assistant", content: fullResponse });
+      setCurrentText("");
+      
+      setStats(prev => ({
+        ...prev,
+        assistantWords: prev.assistantWords + fullResponse.split(" ").length,
+        assistantQuestions: prev.assistantQuestions + (fullResponse.includes("?") ? 1 : 0),
+      }));
+
+      // Save AI message
+      const sessId = await createOrLoadSession();
+      await voiceService.saveMessage(sessId, "assistant", fullResponse);
+
+      // Speak response
+      speak(fullResponse, profile.voiceId);
+    } catch (e) {
+      console.error("AI response failed", e);
+      setErrorMsg("Failed to get AI response. Please check your connection.");
+      setState("listening");
     }
   };
 
   const previewVoice = async (voice = selectedVoice) => {
-    if (!isVapiConfigured()) {
-      toast.error("Voice preview is not configured. Please add VITE_VAPI_PUBLIC_KEY.");
-      return;
-    }
-
-    if (callTransitionRef.current !== "idle") {
-      return;
-    }
-
-    if (vapiActiveRef.current && !previewActiveRef.current) {
-      toast.info("End the current tutor session before previewing another voice.");
-      return;
-    }
+    if (callTransitionRef.current !== "idle") return;
 
     try {
       callTransitionRef.current = "preview-starting";
-      await ensureVoiceRuntimeReady();
-
-      if (previewTimeoutRef.current) {
-        window.clearTimeout(previewTimeoutRef.current);
-        previewTimeoutRef.current = null;
-      }
-      if (previewSettleTimeoutRef.current) {
-        window.clearTimeout(previewSettleTimeoutRef.current);
-        previewSettleTimeoutRef.current = null;
-      }
-
-      if (previewActiveRef.current) {
-        await vapi.stop();
-        previewActiveRef.current = false;
-        previewStopPendingRef.current = false;
-      }
-
-      previewActiveRef.current = true;
-      previewStopPendingRef.current = false;
       setPreviewingVoiceId(voice.id);
-      setErrorMsg(null);
+      
+      const text = `Hello, I am ${voice.name}, your AI tutor. I will guide you clearly through your practice sessions.`;
+      
+      speak(text, voice.id, () => {
+        setPreviewingVoiceId(null);
+        callTransitionRef.current = "idle";
+      });
 
-      await startVoicePreviewWithFallback(voice.id);
-
-      callTransitionRef.current = "idle";
-
-      previewTimeoutRef.current = window.setTimeout(() => {
-        previewTimeoutRef.current = null;
-        if (previewActiveRef.current) {
-          previewStopPendingRef.current = true;
-          callTransitionRef.current = "stopping";
-          vapi.stop();
-          window.setTimeout(() => {
-            if (previewActiveRef.current) {
-              previewActiveRef.current = false;
-              setPreviewingVoiceId(null);
-            }
-            previewStopPendingRef.current = false;
-            if (callTransitionRef.current === "stopping") {
-              callTransitionRef.current = "idle";
-            }
-          }, 500);
-        }
-      }, 16000);
     } catch (error) {
       console.error("Voice preview failed", error);
-      callTransitionRef.current = "idle";
-      previewActiveRef.current = false;
-      previewStopPendingRef.current = false;
-      releaseWarmupMicStream();
       setPreviewingVoiceId(null);
-      toast.error(getFriendlyVoiceError(getErrorMessage(error), isMobileEnvironment));
+      callTransitionRef.current = "idle";
     }
   };
 
   const handleVoiceSettingsOpenChange = (open: boolean) => {
     setVoiceSettingsOpen(open);
 
-    if (!open && previewActiveRef.current) {
-      callTransitionRef.current = "stopping";
-      if (previewTimeoutRef.current) {
-        window.clearTimeout(previewTimeoutRef.current);
-        previewTimeoutRef.current = null;
-      }
-      if (previewSettleTimeoutRef.current) {
-        window.clearTimeout(previewSettleTimeoutRef.current);
-        previewSettleTimeoutRef.current = null;
-      }
-      vapi.stop();
-      previewActiveRef.current = false;
-      previewStopPendingRef.current = false;
+    if (!open) {
+      stopSpeaking();
       setPreviewingVoiceId(null);
-      window.setTimeout(() => {
-        if (callTransitionRef.current === "stopping") {
-          callTransitionRef.current = "idle";
-        }
-      }, 300);
+      callTransitionRef.current = "idle";
     }
   };
 
@@ -1093,8 +1189,6 @@ export function VoicePracticeSession() {
 
     const onCallStart = () => {
       console.log("[VAPI] Call started");
-      if (previewActiveRef.current) return;
-
       releaseWarmupMicStream();
       setState("listening");
       vapiActiveRef.current = true;
@@ -1104,19 +1198,6 @@ export function VoicePracticeSession() {
 
     const onCallEnd = () => {
       console.log("[VAPI] Call ended");
-      if (previewActiveRef.current) {
-        if (previewTimeoutRef.current) {
-          window.clearTimeout(previewTimeoutRef.current);
-          previewTimeoutRef.current = null;
-        }
-        releaseWarmupMicStream();
-        previewActiveRef.current = false;
-        previewStopPendingRef.current = false;
-        setPreviewingVoiceId(null);
-        callTransitionRef.current = "idle";
-        return;
-      }
-
       releaseWarmupMicStream();
       setState("idle");
       vapiActiveRef.current = false;
@@ -1126,38 +1207,14 @@ export function VoicePracticeSession() {
     };
 
     const onSpeechStart = () => {
-      if (previewActiveRef.current) return;
       setState("speaking");
     };
 
     const onSpeechEnd = () => {
-      if (previewActiveRef.current) {
-        if (previewTimeoutRef.current) {
-          window.clearTimeout(previewTimeoutRef.current);
-          previewTimeoutRef.current = null;
-        }
-        if (previewSettleTimeoutRef.current) {
-          window.clearTimeout(previewSettleTimeoutRef.current);
-        }
-        previewStopPendingRef.current = true;
-        previewSettleTimeoutRef.current = window.setTimeout(() => {
-          previewSettleTimeoutRef.current = null;
-          if (!previewActiveRef.current) {
-            previewStopPendingRef.current = false;
-            return;
-          }
-          callTransitionRef.current = "stopping";
-          vapi.stop();
-        }, 1800);
-        return;
-      }
-      if (previewActiveRef.current) return;
       setState("listening");
     };
 
     const onMessage = async (message: any) => {
-      if (previewActiveRef.current) return;
-
       if (message.type === "transcript") {
         const text = message.transcript.trim();
         if (!text) return;
@@ -1200,7 +1257,6 @@ export function VoicePracticeSession() {
     const onError = (error: any) => {
       const errorMessage = getErrorMessage(error);
       
-      // Suppress normal call-end signals that might be reported as errors
       const ignoredMessages = [
         "Meeting ended",
         "ejection",
@@ -1218,26 +1274,6 @@ export function VoicePracticeSession() {
       );
 
       if (suppressVoiceSelectionErrorRef.current && isVoiceSelectionFailure(errorMessage)) {
-        console.debug("[VAPI] Suppressed voice selection error during fallback recovery:", errorMessage);
-        return;
-      }
-
-      if (previewActiveRef.current) {
-        if (previewTimeoutRef.current) {
-          window.clearTimeout(previewTimeoutRef.current);
-          previewTimeoutRef.current = null;
-        }
-        releaseWarmupMicStream();
-        previewActiveRef.current = false;
-        previewStopPendingRef.current = false;
-        setPreviewingVoiceId(null);
-        callTransitionRef.current = "idle";
-        if (!shouldIgnore) {
-          console.error("[VAPI] Voice preview error:", errorMessage);
-          toast.error(getFriendlyVoiceError(errorMessage, isMobileEnvironment));
-        } else {
-          console.debug("[VAPI] Ignored preview event:", errorMessage);
-        }
         return;
       }
 
@@ -1248,9 +1284,6 @@ export function VoicePracticeSession() {
         setState("idle");
         vapiActiveRef.current = false;
         callTransitionRef.current = "idle";
-      } else {
-        releaseWarmupMicStream();
-        console.debug("[VAPI] Ignored event:", errorMessage);
       }
     };
 
@@ -1270,6 +1303,30 @@ export function VoicePracticeSession() {
       vapi.off("error", onError);
     };
   }, [profile, prompt, currentSessionId]);
+
+  useEffect(() => {
+    if (!synthRef.current) return;
+
+    const loadVoices = () => {
+      const v = synthRef.current?.getVoices();
+      if (v && v.length > 0) {
+        setVoicesLoaded(true);
+      }
+    };
+
+    loadVoices();
+    if (synthRef.current.onvoiceschanged !== undefined) {
+      synthRef.current.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Voice runtime effects removed in favor of native logic
+    return () => {
+      stopSpeaking();
+      stopListening();
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -1319,17 +1376,7 @@ export function VoicePracticeSession() {
   const startStop = async (profileOverride?: SessionProfile, options?: { mobileImmediateStart?: boolean }) => {
     if (state === "thinking") return;
     if (callTransitionRef.current !== "idle") return;
-    if (previewActiveRef.current) {
-      callTransitionRef.current = "stopping";
-      await vapi.stop();
-      previewActiveRef.current = false;
-      vapiActiveRef.current = false;
-      previewStopPendingRef.current = false;
-      setPreviewingVoiceId(null);
-      setState("idle");
-      callTransitionRef.current = "idle";
-      return;
-    }
+
     const sessionProfile = profileOverride ?? profile;
     const sessionMode = MODES.find((m) => m.id === sessionProfile.practiceMode) ?? MODES[0];
     const sessionPrompt = buildPrompt(sessionProfile);
@@ -1352,6 +1399,7 @@ export function VoicePracticeSession() {
         await ensureVoiceRuntimeReady();
 
         if (options?.mobileImmediateStart) {
+          resumeMobileAudioContext();
           setErrorMsg(null);
           setState("thinking");
         } else {
@@ -1385,7 +1433,6 @@ export function VoicePracticeSession() {
 
   const handleMicButtonClick = () => {
     if (isMobileViewport && !vapiActiveRef.current && !previewActiveRef.current && callTransitionRef.current === "idle") {
-      resumeMobileAudioContext();
       void startStop(undefined, { mobileImmediateStart: true });
       return;
     }
@@ -2039,7 +2086,7 @@ Be specific and constructive.`;
               <SheetHeader>
                 <SheetTitle className="text-2xl font-extrabold tracking-tight text-white">Voice Settings</SheetTitle>
                 <SheetDescription className="text-white/75">
-                  Choose the Vapi/11Labs tutor voice used for new AI Voice Tutor sessions. Preview starts a short Vapi sample.
+                  Choose the tutor voice used for AI Voice Tutor sessions. Native speech ensures instant response times.
                 </SheetDescription>
               </SheetHeader>
             </div>
@@ -2119,7 +2166,7 @@ Be specific and constructive.`;
               </div>
 
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                Note: preview starts a short Vapi voice call using the same 11Labs voice that will be used in the live tutor session.
+                Note: Voice Tutor now uses browser-native speech for instant response and better reliability.
               </p>
             </div>
           </SheetContent>

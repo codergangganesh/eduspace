@@ -294,8 +294,9 @@ export function useLecturerAssignments() {
     }, [user]);
 
     // Client-side Join
+    const coursesMap = new Map(courses.map(c => [c.id, c]));
     const assignments: Assignment[] = rawAssignments.map((item) => {
-        const course = courses.find(c => c.id === item.course_id);
+        const course = coursesMap.get(item.course_id);
         return {
             ...item,
             course_title: course?.title || "Unknown Course",

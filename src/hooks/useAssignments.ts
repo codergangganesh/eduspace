@@ -207,9 +207,10 @@ export function useAssignments(selectedClassId?: string) {
                     }
 
                     // Enrich assignments with class, subject, and lecturer details
+                    const enrolledClassesMap = new Map(enrolledClasses.map(c => [c.id, c]));
                     data = data.map(a => {
                         const lecturer = lecturerMap.get(a.lecturer_id);
-                        const clsInfo = enrolledClasses.find(c => c.id === a.class_id);
+                        const clsInfo = enrolledClassesMap.get(a.class_id);
                         return {
                             ...a,
                             course_code: clsInfo?.course_code || a.course_code,

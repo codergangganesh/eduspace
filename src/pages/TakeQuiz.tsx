@@ -1,20 +1,99 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, Clock, Trophy, Target, ArrowLeft, Save, Download } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, FileText, ChevronLeft, ChevronRight, Clock, Trophy, Target, ArrowLeft, Maximize2, ShieldAlert } from 'lucide-react';
 import { DeleteConfirmDialog } from '@/components/layout/DeleteConfirmDialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { QuizSkeleton } from '@/components/skeletons/QuizSkeleton';
 import { notifyQuizSubmission } from '@/lib/notificationService';
 import { useStreak } from '@/contexts/StreakContext';
 import { knowledgeService } from '@/lib/knowledgeService';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { IntegrityPopup } from '@/components/quizzes/IntegrityPopup';
+
+type IntegrityEventType =
+    | 'fullscreen_enter'
+    | 'fullscreen_exit'
+    | 'tab_switch'
+    | 'refresh_attempt'
+    | 'idle_period'
+    | 'multi_session_access'
+    | 'resume_attempt'
+    | 'warning_shown'
+    | 'question_change'
+    | 'submit';
+
+type ProgressSnapshot = {
+    answers: Record<string, string>;
+    currentIndex: number;
+    elapsedTime: number;
+    progressPercentage: number;
+    questionDurations: Record<string, number>;
+    updatedAt: string;
+};
+
+type IntegritySummary = {
+    fullscreenExitCount: number;
+    tabSwitchCount: number;
+    refreshAttemptCount: number;
+    idleCount: number;
+    multiSessionAccessCount: number;
+    suspiciousActivityCount: number;
+    warningCount: number;
+    questionDurations: Record<string, number>;
+    completionBehavior: 'clean' | 'resumed' | 'submitted';
+};
+
+const IDLE_THRESHOLD_MS = 90_000;
+const QUIZ_FULLSCREEN_MEDIA = '(min-width: 1024px) and (pointer: fine)';
+
+const createDefaultIntegritySummary = (): IntegritySummary => ({
+    fullscreenExitCount: 0,
+    tabSwitchCount: 0,
+    refreshAttemptCount: 0,
+    idleCount: 0,
+    multiSessionAccessCount: 0,
+    suspiciousActivityCount: 0,
+    warningCount: 0,
+    questionDurations: {},
+    completionBehavior: 'clean',
+});
+
+const parseStoredJson = <T,>(value: string | null, fallback: T): T => {
+    if (!value) return fallback;
+
+    try {
+        return JSON.parse(value) as T;
+    } catch {
+        return fallback;
+    }
+};
+
+const buildDeviceFingerprint = () => {
+    if (typeof window === 'undefined') return 'server';
+
+    return [
+        navigator.userAgent,
+        navigator.language,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        window.screen.width,
+        window.screen.height,
+        window.devicePixelRatio,
+    ].join('|');
+};
 
 export default function TakeQuiz() {
     const { quizId } = useParams();
@@ -33,11 +112,37 @@ export default function TakeQuiz() {
     const [rank, setRank] = useState<{ position: number, total: number } | null>(null);
     const [elapsedTime, setElapsedTime] = useState<number>(0);
     const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [fullscreenPromptReason, setFullscreenPromptReason] = useState<'entry' | 'return'>('entry');
+    const [integritySummary, setIntegritySummary] = useState<IntegritySummary>(createDefaultIntegritySummary);
+    const [questionDurations, setQuestionDurations] = useState<Record<string, number>>({});
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(Date.now());
     const submissionIdRef = useRef<string | null>(null);
+    const answersRef = useRef<Record<string, string>>({});
+    const currentIndexRef = useRef(0);
+    const elapsedTimeRef = useRef(0);
+    const integritySummaryRef = useRef<IntegritySummary>(createDefaultIntegritySummary());
     const hasAttemptRecordedRef = useRef(false);
     const hasWarnedResumeRef = useRef(false);
+    const quizShellRef = useRef<HTMLDivElement | null>(null);
+    const quizContentRef = useRef<HTMLDivElement | null>(null);
+    const questionDurationsRef = useRef<Record<string, number>>({});
+    const currentQuestionIdRef = useRef<string | null>(null);
+    const questionEnteredAtRef = useRef<number>(Date.now());
+    const lastActivityAtRef = useRef<number>(Date.now());
+    const idleLoggedRef = useRef(false);
+    const visibilityLeaveRef = useRef(false);
+    const warningToastAtRef = useRef(0);
+    const fullscreenEnteredRef = useRef(false);
+    const fullscreenStateRef = useRef(false);
+    const saveProgressTimeoutRef = useRef<number | null>(null);
+    const deviceFingerprintRef = useRef<string>(buildDeviceFingerprint());
+    const fetchedAttemptKeyRef = useRef<string | null>(null);
+    const isDesktopQuizMode = useMemo(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia(QUIZ_FULLSCREEN_MEDIA).matches;
+    }, []);
 
     // LocalStorage keys for persistence
     const getStorageKey = useCallback(
@@ -54,6 +159,22 @@ export default function TakeQuiz() {
         navigate('/student/quizzes');
     };
 
+    useEffect(() => {
+        answersRef.current = answers;
+    }, [answers]);
+
+    useEffect(() => {
+        currentIndexRef.current = currentIndex;
+    }, [currentIndex]);
+
+    useEffect(() => {
+        elapsedTimeRef.current = elapsedTime;
+    }, [elapsedTime]);
+
+    useEffect(() => {
+        integritySummaryRef.current = integritySummary;
+    }, [integritySummary]);
+
     // Load saved quiz state from localStorage on mount
     useEffect(() => {
         if (!quizId || authLoading) return;
@@ -62,18 +183,21 @@ export default function TakeQuiz() {
         const savedAnswers = localStorage.getItem(getStorageKey('answers'));
         const savedStartTime = localStorage.getItem(getStorageKey('startTime'));
         const savedSubmissionId = localStorage.getItem(getStorageKey('submissionId'));
+        const savedQuestionDurations = localStorage.getItem(getStorageKey('questionDurations'));
+        const savedIntegritySummary = localStorage.getItem(getStorageKey('integritySummary'));
 
         if (savedIndex !== null) {
             setCurrentIndex(parseInt(savedIndex, 10));
         }
 
-        if (savedAnswers) {
-            try {
-                setAnswers(JSON.parse(savedAnswers));
-            } catch (error) {
-                console.error('Failed to parse saved quiz answers', error);
-            }
-        }
+        setAnswers(parseStoredJson<Record<string, string>>(savedAnswers, {}));
+        const storedDurations = parseStoredJson<Record<string, number>>(savedQuestionDurations, {});
+        questionDurationsRef.current = storedDurations;
+        setQuestionDurations(storedDurations);
+        setIntegritySummary({
+            ...createDefaultIntegritySummary(),
+            ...parseStoredJson<Partial<IntegritySummary>>(savedIntegritySummary, {}),
+        });
 
         if (savedSubmissionId) {
             setSubmissionId(savedSubmissionId);
@@ -87,6 +211,7 @@ export default function TakeQuiz() {
         if (!savedStartTime) {
             localStorage.setItem(getStorageKey('startTime'), startTimestamp.toString());
         }
+
 
         // Start timer — reads from ref so it can be reset mid-session
         timerRef.current = setInterval(() => {
@@ -105,11 +230,16 @@ export default function TakeQuiz() {
         if (quizId && !result) {
             localStorage.setItem(getStorageKey('currentIndex'), currentIndex.toString());
             localStorage.setItem(getStorageKey('answers'), JSON.stringify(answers));
+            localStorage.setItem(getStorageKey('questionDurations'), JSON.stringify(questionDurationsRef.current));
+            localStorage.setItem(getStorageKey('integritySummary'), JSON.stringify({
+                ...integritySummary,
+                questionDurations: questionDurationsRef.current,
+            }));
             if (submissionId) {
                 localStorage.setItem(getStorageKey('submissionId'), submissionId);
             }
         }
-    }, [answers, authLoading, currentIndex, getStorageKey, quizId, result, submissionId]);
+    }, [answers, authLoading, currentIndex, getStorageKey, integritySummary, questionDurations, quizId, result, submissionId]);
 
     // Clear localStorage when quiz is submitted
     const clearQuizStorage = () => {
@@ -118,6 +248,9 @@ export default function TakeQuiz() {
             localStorage.removeItem(getStorageKey('startTime'));
             localStorage.removeItem(getStorageKey('answers'));
             localStorage.removeItem(getStorageKey('submissionId'));
+            localStorage.removeItem(getStorageKey('questionDurations'));
+            localStorage.removeItem(getStorageKey('integritySummary'));
+            localStorage.removeItem(getStorageKey('pendingRefreshAttempt'));
         }
     };
 
@@ -126,11 +259,111 @@ export default function TakeQuiz() {
 
         localStorage.setItem(getStorageKey('currentIndex'), (nextIndex ?? currentIndex).toString());
         localStorage.setItem(getStorageKey('answers'), JSON.stringify(nextAnswers ?? answers));
+        localStorage.setItem(getStorageKey('questionDurations'), JSON.stringify(questionDurationsRef.current));
+        localStorage.setItem(getStorageKey('integritySummary'), JSON.stringify({
+            ...integritySummaryRef.current,
+            questionDurations: questionDurationsRef.current,
+        }));
 
         if (submissionIdRef.current) {
             localStorage.setItem(getStorageKey('submissionId'), submissionIdRef.current);
         }
     }, [answers, currentIndex, getStorageKey, quizId]);
+
+    const markUserActive = useCallback(() => {
+        lastActivityAtRef.current = Date.now();
+        idleLoggedRef.current = false;
+    }, []);
+
+    const captureCurrentQuestionDuration = useCallback((questionId?: string) => {
+        if (!questionId) return;
+
+        const now = Date.now();
+        const deltaSeconds = Math.max(0, Math.round((now - questionEnteredAtRef.current) / 1000));
+        questionEnteredAtRef.current = now;
+
+        if (deltaSeconds === 0) return;
+
+        const nextDurations = {
+            ...questionDurationsRef.current,
+            [questionId]: (questionDurationsRef.current[questionId] || 0) + deltaSeconds,
+        };
+        questionDurationsRef.current = nextDurations;
+        setQuestionDurations(nextDurations);
+    }, []);
+
+    const buildProgressSnapshot = useCallback((overrides?: Partial<ProgressSnapshot>): ProgressSnapshot => {
+        const liveAnswers = overrides?.answers ?? answersRef.current;
+        const liveQuestionCount = questions.length;
+        return {
+            answers: liveAnswers,
+            currentIndex: overrides?.currentIndex ?? currentIndexRef.current,
+            elapsedTime: overrides?.elapsedTime ?? elapsedTimeRef.current,
+            progressPercentage: overrides?.progressPercentage ?? (liveQuestionCount ? Math.round((Object.keys(liveAnswers).length / liveQuestionCount) * 100) : 0),
+            questionDurations: overrides?.questionDurations ?? questionDurationsRef.current,
+            updatedAt: overrides?.updatedAt ?? new Date().toISOString(),
+        };
+    }, [questions.length]);
+
+    const persistSubmissionState = useCallback(async (payload?: {
+        progressSnapshot?: ProgressSnapshot;
+        integrity?: IntegritySummary;
+        deviceFingerprint?: string;
+        status?: string;
+        submittedAt?: string;
+        totalObtained?: number;
+        timeTaken?: number;
+        quizVersion?: number;
+    }) => {
+        const activeSubmissionId = submissionIdRef.current;
+        if (!activeSubmissionId) return;
+
+        const updatePayload: Record<string, unknown> = {
+            progress_snapshot: payload?.progressSnapshot ?? buildProgressSnapshot(),
+            integrity_summary: payload?.integrity ?? {
+                ...integritySummaryRef.current,
+                questionDurations: questionDurationsRef.current,
+            },
+            last_activity_at: new Date(lastActivityAtRef.current).toISOString(),
+        };
+
+        if (payload?.deviceFingerprint !== undefined) updatePayload.device_fingerprint = payload.deviceFingerprint;
+        if (payload?.status !== undefined) updatePayload.status = payload.status;
+        if (payload?.submittedAt !== undefined) updatePayload.submitted_at = payload.submittedAt;
+        if (payload?.totalObtained !== undefined) updatePayload.total_obtained = payload.totalObtained;
+        if (payload?.timeTaken !== undefined) updatePayload.time_taken = payload.timeTaken;
+        if (payload?.quizVersion !== undefined) updatePayload.quiz_version = payload.quizVersion;
+
+        const { error } = await supabase
+            .from('quiz_submissions')
+            .update(updatePayload as any)
+            .eq('id', activeSubmissionId);
+
+        if (error) {
+            console.error('Failed to persist quiz state', error);
+        }
+    }, [buildProgressSnapshot]);
+
+    const queueProgressSync = useCallback((overrides?: Partial<ProgressSnapshot>) => {
+        if (!submissionIdRef.current) return;
+
+        if (saveProgressTimeoutRef.current) {
+            window.clearTimeout(saveProgressTimeoutRef.current);
+        }
+
+        saveProgressTimeoutRef.current = window.setTimeout(() => {
+            persistSubmissionState({ progressSnapshot: buildProgressSnapshot(overrides) });
+        }, 500);
+    }, [buildProgressSnapshot, persistSubmissionState]);
+
+    const updateIntegritySummary = useCallback((recipe: (current: IntegritySummary) => IntegritySummary) => {
+        let nextSummary: IntegritySummary | null = null;
+        setIntegritySummary((current) => {
+            nextSummary = recipe(current);
+            return nextSummary;
+        });
+        return nextSummary;
+    }, []);
 
     const ensureActiveSubmission = useCallback(async () => {
         if (!quizId || !userId) {
@@ -172,7 +405,14 @@ export default function TakeQuiz() {
                 total_obtained: 0,
                 status: 'pending',
                 quiz_version: quiz?.version || 1,
-                started_at: new Date(startTimeRef.current).toISOString()
+                started_at: new Date(startTimeRef.current).toISOString(),
+                progress_snapshot: buildProgressSnapshot(),
+                integrity_summary: {
+                    ...integritySummaryRef.current,
+                    questionDurations: questionDurationsRef.current,
+                },
+                last_activity_at: new Date().toISOString(),
+                device_fingerprint: deviceFingerprintRef.current,
             })
             .select('id')
             .single();
@@ -207,7 +447,28 @@ export default function TakeQuiz() {
         setSubmissionId(createdSubmission.id);
         localStorage.setItem(getStorageKey('submissionId'), createdSubmission.id);
         return createdSubmission.id;
-    }, [getStorageKey, quiz?.version, quizId, userId]);
+    }, [buildProgressSnapshot, getStorageKey, quiz?.version, quizId, userId]);
+
+    const logIntegrityEvent = useCallback(async (eventType: IntegrityEventType, details: Record<string, unknown> = {}, nextSummary?: IntegritySummary) => {
+        if (!quizId || !userId) return;
+
+        try {
+            const activeSubmissionId = await ensureActiveSubmission();
+            await supabase.from('quiz_integrity_events').insert({
+                submission_id: activeSubmissionId,
+                quiz_id: quizId,
+                student_id: userId,
+                event_type: eventType,
+                details,
+            } as any);
+
+            if (nextSummary) {
+                await persistSubmissionState({ integrity: nextSummary });
+            }
+        } catch (error) {
+            console.error(`Failed to log quiz event: ${eventType}`, error);
+        }
+    }, [ensureActiveSubmission, persistSubmissionState, quizId, userId]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -215,10 +476,22 @@ export default function TakeQuiz() {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const safeCurrentIndex = Math.min(currentIndex, Math.max(questions.length - 1, 0));
+    const hasInProgressAttempt = !!quizId && !loading && !result && (!!submissionId || Object.keys(answers).length > 0 || questions.length > 0);
+    const isDesktopFullscreenRequired = isDesktopQuizMode && !result;
+    const isQuizInteractionBlocked = isDesktopFullscreenRequired && !isFullscreen;
+
     useEffect(() => {
         const fetchQuizData = async () => {
             if (authLoading || !quizId || !userId) return;
+
+            const attemptKey = `${quizId}:${userId}`;
+            if (fetchedAttemptKeyRef.current === attemptKey) {
+                return;
+            }
+
             try {
+                fetchedAttemptKeyRef.current = attemptKey;
                 setLoading(true);
                 const { data: quizData, error: quizError } = await supabase
                     .from('quizzes')
@@ -254,6 +527,26 @@ export default function TakeQuiz() {
                         setElapsedTime(Math.floor((Date.now() - startedAt) / 1000));
                         localStorage.setItem(getStorageKey('startTime'), startedAt.toString());
                     }
+                }
+
+                const serverSnapshot = (submission?.progress_snapshot || {}) as Partial<ProgressSnapshot>;
+                if (typeof serverSnapshot.currentIndex === 'number' && localStorage.getItem(getStorageKey('currentIndex')) === null) {
+                    setCurrentIndex(serverSnapshot.currentIndex);
+                }
+                if (serverSnapshot.questionDurations && Object.keys(serverSnapshot.questionDurations).length > 0) {
+                    questionDurationsRef.current = Object.keys(questionDurationsRef.current).length > 0
+                        ? questionDurationsRef.current
+                        : serverSnapshot.questionDurations || {};
+                    setQuestionDurations(questionDurationsRef.current);
+                }
+
+                const serverIntegrity = (submission?.integrity_summary || {}) as Partial<IntegritySummary>;
+                if (Object.keys(serverIntegrity).length > 0) {
+                    setIntegritySummary((prev) => ({
+                        ...prev,
+                        ...serverIntegrity,
+                        questionDurations: serverIntegrity.questionDurations || prev.questionDurations,
+                    }));
                 }
 
                 // If submission exists and is completed, load answers and show result view
@@ -333,6 +626,38 @@ export default function TakeQuiz() {
                                 hasWarnedResumeRef.current = true;
                             }
                         }
+
+                        if (submission.device_fingerprint && submission.device_fingerprint !== deviceFingerprintRef.current) {
+                            const nextSummary = updateIntegritySummary((current) => ({
+                                ...current,
+                                multiSessionAccessCount: current.multiSessionAccessCount + 1,
+                                suspiciousActivityCount: current.suspiciousActivityCount + 1,
+                                completionBehavior: 'resumed',
+                            }));
+                            if (nextSummary) {
+                                await logIntegrityEvent('multi_session_access', {
+                                    previousFingerprint: submission.device_fingerprint,
+                                    currentFingerprint: deviceFingerprintRef.current,
+                                }, nextSummary);
+                            }
+                        } else if (!submission.device_fingerprint) {
+                            await persistSubmissionState({ deviceFingerprint: deviceFingerprintRef.current });
+                        }
+
+                        if (localStorage.getItem(getStorageKey('pendingRefreshAttempt'))) {
+                            localStorage.removeItem(getStorageKey('pendingRefreshAttempt'));
+                            const nextSummary = updateIntegritySummary((current) => ({
+                                ...current,
+                                refreshAttemptCount: current.refreshAttemptCount + 1,
+                                suspiciousActivityCount: current.suspiciousActivityCount + 1,
+                                completionBehavior: 'resumed',
+                            }));
+                            if (nextSummary) {
+                                await logIntegrityEvent('refresh_attempt', {
+                                    restoredAt: new Date().toISOString(),
+                                }, nextSummary);
+                            }
+                        }
                     } else {
                         // Submission is already completed (passed/failed) - REDIRECT TO RESULTS
                         console.log('Quiz already completed. Redirecting to results page.');
@@ -352,7 +677,14 @@ export default function TakeQuiz() {
                             total_obtained: 0,
                             status: 'pending',
                             quiz_version: quizData.version,
-                            started_at: new Date(startTimeRef.current).toISOString()
+                            started_at: new Date(startTimeRef.current).toISOString(),
+                            progress_snapshot: buildProgressSnapshot(),
+                            integrity_summary: {
+                                ...integritySummaryRef.current,
+                                questionDurations: questionDurationsRef.current,
+                            },
+                            last_activity_at: new Date().toISOString(),
+                            device_fingerprint: deviceFingerprintRef.current,
                         })
                         .select()
                         .single();
@@ -393,6 +725,7 @@ export default function TakeQuiz() {
                 setQuestions(questionsData || []);
 
             } catch (error: any) {
+                fetchedAttemptKeyRef.current = null;
                 console.error('Error loading quiz:', JSON.stringify(error, null, 2));
                 toast.error(`Failed to load quiz: ${error.message || 'Unknown error'}`);
             } finally {
@@ -401,7 +734,7 @@ export default function TakeQuiz() {
         };
 
         fetchQuizData();
-    }, [authLoading, getStorageKey, quizId, userId]);
+    }, [authLoading, buildProgressSnapshot, getStorageKey, logIntegrityEvent, persistSubmissionState, quizId, updateIntegritySummary, userId]);
 
     useEffect(() => {
         if (result && quizId) {
@@ -432,11 +765,227 @@ export default function TakeQuiz() {
         }
     }, [result, quizId]);
 
+    useEffect(() => {
+        if (!questions[safeCurrentIndex]?.id || result) return;
+
+        const previousQuestionId = currentQuestionIdRef.current;
+        if (previousQuestionId) {
+            captureCurrentQuestionDuration(previousQuestionId);
+        }
+        currentQuestionIdRef.current = questions[safeCurrentIndex]?.id;
+        questionEnteredAtRef.current = Date.now();
+        markUserActive();
+
+        const nextSummary = updateIntegritySummary((current) => ({
+            ...current,
+            questionDurations,
+        }));
+
+        queueProgressSync({
+            currentIndex: safeCurrentIndex,
+            questionDurations,
+        });
+
+        if (nextSummary) {
+            logIntegrityEvent('question_change', {
+                currentIndex: safeCurrentIndex,
+                questionId: questions[safeCurrentIndex]?.id,
+            }, nextSummary);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [safeCurrentIndex]);
+
+    useEffect(() => {
+        if (!hasInProgressAttempt || result) return;
+
+        queueProgressSync();
+    }, [answers, currentIndex, hasInProgressAttempt, queueProgressSync, questionDurations, result]);
+
+    useEffect(() => {
+        if (!hasInProgressAttempt || result) return;
+
+        const handleActivity = () => markUserActive();
+        const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
+        activityEvents.forEach((eventName) => window.addEventListener(eventName, handleActivity, { passive: true }));
+
+        const idleInterval = window.setInterval(() => {
+            if (Date.now() - lastActivityAtRef.current < IDLE_THRESHOLD_MS || idleLoggedRef.current) return;
+
+            idleLoggedRef.current = true;
+            const nextSummary = updateIntegritySummary((current) => ({
+                ...current,
+                idleCount: current.idleCount + 1,
+                suspiciousActivityCount: current.suspiciousActivityCount + 1,
+            }));
+
+            if (nextSummary) {
+                toast.warning('You have been inactive for a while. Quiz activity may be reviewed.');
+                logIntegrityEvent('idle_period', {
+                    idleForSeconds: Math.round((Date.now() - lastActivityAtRef.current) / 1000),
+                }, nextSummary);
+            }
+        }, 15000);
+
+        return () => {
+            activityEvents.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+            window.clearInterval(idleInterval);
+        };
+    }, [hasInProgressAttempt, logIntegrityEvent, markUserActive, result, updateIntegritySummary]);
+
+    useEffect(() => {
+        if (!hasInProgressAttempt || result) return;
+
+        const emitWindowLeave = () => {
+            if (visibilityLeaveRef.current) return;
+            visibilityLeaveRef.current = true;
+
+            const now = Date.now();
+            if (now - warningToastAtRef.current > 5000) {
+                toast.warning('Leaving the quiz window may be recorded.');
+                warningToastAtRef.current = now;
+            }
+
+            const nextSummary = updateIntegritySummary((current) => ({
+                ...current,
+                tabSwitchCount: current.tabSwitchCount + 1,
+                suspiciousActivityCount: current.suspiciousActivityCount + 1,
+                warningCount: current.warningCount + 1,
+            }));
+
+            if (nextSummary) {
+                logIntegrityEvent('tab_switch', {
+                    hidden: document.visibilityState === 'hidden',
+                }, nextSummary);
+            }
+        };
+
+        const resetWindowLeave = () => {
+            visibilityLeaveRef.current = false;
+            markUserActive();
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                emitWindowLeave();
+                return;
+            }
+
+            resetWindowLeave();
+        };
+
+        const handleBlur = () => emitWindowLeave();
+        const handleFocus = () => resetWindowLeave();
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [hasInProgressAttempt, logIntegrityEvent, markUserActive, result, updateIntegritySummary]);
+
+    useEffect(() => {
+        if (!hasInProgressAttempt || result || !isDesktopQuizMode) return;
+
+        const syncFullscreenState = () => {
+            const active = document.fullscreenElement === quizShellRef.current;
+            if (fullscreenStateRef.current === active) {
+                return;
+            }
+
+            fullscreenStateRef.current = active;
+            setIsFullscreen(active);
+
+            if (active) {
+                fullscreenEnteredRef.current = true;
+                markUserActive();
+                logIntegrityEvent('fullscreen_enter', {
+                    enteredAt: new Date().toISOString(),
+                });
+                return;
+            }
+
+            if (fullscreenEnteredRef.current) {
+                setFullscreenPromptReason('return');
+                const nextSummary = updateIntegritySummary((current) => ({
+                    ...current,
+                    fullscreenExitCount: current.fullscreenExitCount + 1,
+                    suspiciousActivityCount: current.suspiciousActivityCount + 1,
+                    warningCount: current.warningCount + 1,
+                }));
+
+                if (nextSummary) {
+                    logIntegrityEvent('fullscreen_exit', {
+                        exitedAt: new Date().toISOString(),
+                    }, nextSummary);
+                    logIntegrityEvent('warning_shown', {
+                        warning: 'fullscreen_exit',
+                    }, nextSummary);
+                }
+            } else {
+                setFullscreenPromptReason('entry');
+            }
+        };
+
+        document.addEventListener('fullscreenchange', syncFullscreenState);
+        syncFullscreenState();
+
+        return () => {
+            document.removeEventListener('fullscreenchange', syncFullscreenState);
+        };
+    }, [hasInProgressAttempt, isDesktopQuizMode, logIntegrityEvent, markUserActive, result, updateIntegritySummary]);
+
+    useEffect(() => {
+        if (!hasInProgressAttempt || result) return;
+
+        const container = quizContentRef.current;
+        if (!container) return;
+
+        const shouldBlock = (target: EventTarget | null) => target instanceof Node && container.contains(target);
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (!shouldBlock(event.target)) return;
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+                event.preventDefault();
+            }
+        };
+
+        const preventDefault = (event: Event) => {
+            if (!shouldBlock(event.target)) return;
+            event.preventDefault();
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        container.addEventListener('copy', preventDefault);
+        container.addEventListener('contextmenu', preventDefault);
+        container.addEventListener('selectstart', preventDefault);
+        container.addEventListener('dragstart', preventDefault);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            container.removeEventListener('copy', preventDefault);
+            container.removeEventListener('contextmenu', preventDefault);
+            container.removeEventListener('selectstart', preventDefault);
+            container.removeEventListener('dragstart', preventDefault);
+        };
+    }, [hasInProgressAttempt, result]);
+
+    useEffect(() => () => {
+        if (saveProgressTimeoutRef.current) {
+            window.clearTimeout(saveProgressTimeoutRef.current);
+        }
+    }, []);
+
     const handleAnswerChange = async (questionId: string, optionId: string) => {
         if (answers[questionId] === optionId) return;
         const nextAnswers = { ...answers, [questionId]: optionId };
+        markUserActive();
         setAnswers(nextAnswers);
         saveAttemptSnapshot(nextAnswers);
+        queueProgressSync({ answers: nextAnswers });
 
         try {
             const activeSubmissionId = await ensureActiveSubmission();
@@ -481,8 +1030,10 @@ export default function TakeQuiz() {
         if (currentQuestion && existingAnswer) {
             const newAnswers = { ...answers };
             delete newAnswers[currentQuestion.id];
+            markUserActive();
             setAnswers(newAnswers);
             saveAttemptSnapshot(newAnswers);
+            queueProgressSync({ answers: newAnswers });
 
             try {
                 const activeSubmissionId = submissionIdRef.current ?? await ensureActiveSubmission();
@@ -553,6 +1104,9 @@ export default function TakeQuiz() {
 
                     if (payload.eventType === 'DELETE' || record?.selected_option === 'skipped') {
                         setAnswers((prev) => {
+                            if (!(record.question_id in prev)) {
+                                return prev;
+                            }
                             const next = { ...prev };
                             delete next[record.question_id];
                             return next;
@@ -561,10 +1115,16 @@ export default function TakeQuiz() {
                     }
 
                     if (record?.question_id && record?.selected_option) {
-                        setAnswers((prev) => ({
-                            ...prev,
-                            [record.question_id]: record.selected_option,
-                        }));
+                        setAnswers((prev) => {
+                            if (prev[record.question_id] === record.selected_option) {
+                                return prev;
+                            }
+
+                            return {
+                                ...prev,
+                                [record.question_id]: record.selected_option,
+                            };
+                        });
                     }
                 }
             )
@@ -580,6 +1140,8 @@ export default function TakeQuiz() {
     const handleSubmit = async () => {
         if (!userId || !quiz) return;
         setIsConfirmSubmitOpen(false);
+        captureCurrentQuestionDuration(questions[safeCurrentIndex]?.id);
+        markUserActive();
 
         // Record academic action (Submitting a quiz)
         await recordAcademicAction();
@@ -622,7 +1184,11 @@ export default function TakeQuiz() {
                             total_obtained: 0,
                             status: 'pending',
                             quiz_version: quiz.version || 1,
-                            started_at: new Date(startTimeRef.current).toISOString()
+                            started_at: new Date(startTimeRef.current).toISOString(),
+                            progress_snapshot: buildProgressSnapshot(),
+                            integrity_summary: { ...integritySummary, questionDurations },
+                            last_activity_at: new Date().toISOString(),
+                            device_fingerprint: deviceFingerprintRef.current,
                         })
                         .select()
                         .single();
@@ -650,6 +1216,7 @@ export default function TakeQuiz() {
                                 }
                                 activeSubmissionId = retrySub.id;
                                 setSubmissionId(retrySub.id);
+                                submissionIdRef.current = retrySub.id;
                             } else {
                                 console.error('Recovery failed: Active submission not found via RPC', rpcResult);
                                 throw new Error(`Failed to create submission: Duplicate detected but active submission not found via RPC. IDs: Q=${quizId}, U=${userId}`);
@@ -684,6 +1251,21 @@ export default function TakeQuiz() {
 
             const percentage = (score / quiz.total_marks) * 100;
             const status = percentage >= quiz.pass_percentage ? 'passed' : 'failed';
+            const finalQuestionDurations = {
+                ...questionDurationsRef.current,
+            };
+            const finalIntegritySummary: IntegritySummary = {
+                ...integritySummary,
+                questionDurations: finalQuestionDurations,
+                completionBehavior: integritySummary.completionBehavior === 'clean' ? 'submitted' : integritySummary.completionBehavior,
+            };
+            const finalProgressSnapshot = buildProgressSnapshot({
+                answers,
+                currentIndex: safeCurrentIndex,
+                elapsedTime,
+                progressPercentage: 100,
+                questionDurations: finalQuestionDurations,
+            });
 
             // Delete old answers and insert new ones
             const { error: deleteError } = await supabase.from('quiz_answers').delete().eq('submission_id', activeSubmissionId);
@@ -700,13 +1282,23 @@ export default function TakeQuiz() {
                     status: status,
                     submitted_at: new Date().toISOString(),
                     time_taken: elapsedTime,
-                    quiz_version: quiz.version || 1
+                    quiz_version: quiz.version || 1,
+                    progress_snapshot: finalProgressSnapshot,
+                    integrity_summary: finalIntegritySummary,
+                    last_activity_at: new Date(lastActivityAtRef.current).toISOString(),
+                    device_fingerprint: deviceFingerprintRef.current,
                 })
                 .eq('id', activeSubmissionId)
                 .select()
                 .single();
 
             if (subError) throw subError;
+
+            await logIntegrityEvent('submit', {
+                status,
+                score,
+                progressPercentage: 100,
+            }, finalIntegritySummary);
 
             // Clear localStorage on successful submission
             clearQuizStorage();
@@ -752,6 +1344,24 @@ export default function TakeQuiz() {
         }
     };
 
+    const requestQuizFullscreen = useCallback(async () => {
+        if (!isDesktopQuizMode || !quizShellRef.current) {
+            return;
+        }
+
+        try {
+            if (document.fullscreenElement === quizShellRef.current) {
+                await document.exitFullscreen();
+                return;
+            }
+
+            await quizShellRef.current.requestFullscreen();
+        } catch (error) {
+            console.error('Failed to enter fullscreen mode', error);
+            toast.warning('Fullscreen could not be enabled. Please try again to continue the quiz.');
+        }
+    }, [isDesktopQuizMode]);
+
     useEffect(() => {
         if (questions.length === 0) return;
         if (currentIndex > questions.length - 1) {
@@ -759,20 +1369,21 @@ export default function TakeQuiz() {
         }
     }, [currentIndex, questions.length]);
 
-    const safeCurrentIndex = Math.min(currentIndex, Math.max(questions.length - 1, 0));
-    const hasInProgressAttempt = !!quizId && !loading && !result && (!!submissionId || Object.keys(answers).length > 0 || questions.length > 0);
-
     useEffect(() => {
         if (!hasInProgressAttempt) return;
 
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            captureCurrentQuestionDuration(questions[safeCurrentIndex]?.id);
             saveAttemptSnapshot();
+            localStorage.setItem(getStorageKey('pendingRefreshAttempt'), new Date().toISOString());
             event.preventDefault();
             event.returnValue = "Refreshing the page may interrupt your current quiz attempt. If you continue, the quiz may restart from the beginning.";
         };
 
         const handlePageHide = () => {
+            captureCurrentQuestionDuration(questions[safeCurrentIndex]?.id);
             saveAttemptSnapshot();
+            queueProgressSync();
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -782,7 +1393,7 @@ export default function TakeQuiz() {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             window.removeEventListener('pagehide', handlePageHide);
         };
-    }, [hasInProgressAttempt, saveAttemptSnapshot]);
+    }, [captureCurrentQuestionDuration, getStorageKey, hasInProgressAttempt, questions, queueProgressSync, safeCurrentIndex, saveAttemptSnapshot]);
 
 
     if (loading) {
@@ -808,7 +1419,6 @@ export default function TakeQuiz() {
     // ==================== RESULT VIEW ====================
     if (result) {
         const percentage = Math.round((result.total_obtained / quiz.total_marks) * 100);
-        const isPassed = result.status === 'passed';
         const correctCount = questions.filter(q => answers[q.id] === q.correct_answer).length;
 
         return (
@@ -1043,9 +1653,12 @@ export default function TakeQuiz() {
     // ==================== QUIZ TAKING VIEW ====================
     return (
         <DashboardLayout fullHeight>
-            <div className="h-full flex flex-col overflow-hidden bg-[#f8fafc] dark:bg-slate-950">
+            <div
+                ref={quizShellRef}
+                className="h-full flex flex-col overflow-hidden bg-[#f8fafc] dark:bg-slate-950"
+            >
                 {/* Top Header Bar */}
-                <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-6 py-3 flex items-center justify-between">
+                <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-6 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <Button
                             type="button"
@@ -1060,7 +1673,7 @@ export default function TakeQuiz() {
                     </div>
 
                     {/* Progress */}
-                    <div className="hidden md:flex items-center gap-3">
+                    <div className="hidden md:flex items-center gap-3 min-w-0">
                         <span className="text-sm text-muted-foreground font-medium">PROGRESS</span>
                         <div className="w-40 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
@@ -1071,14 +1684,52 @@ export default function TakeQuiz() {
                         <span className="text-sm font-bold text-blue-600">{Math.round(progress)}%</span>
                     </div>
 
-                    {/* Timer */}
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl">
-                        <Clock className="size-5 text-blue-500" />
-                        <span className="font-mono font-bold text-lg tracking-wider">{formatTime(elapsedTime)}</span>
+                    <div className="flex items-center gap-2">
+                        {isDesktopQuizMode && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={requestQuizFullscreen}
+                                className="hidden lg:inline-flex border-slate-300 dark:border-slate-700"
+                            >
+                                <Maximize2 className="size-4 mr-2" />
+                                {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                            </Button>
+                        )}
+
+                        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl">
+                            <Clock className="size-5 text-blue-500" />
+                            <span className="font-mono font-bold text-lg tracking-wider">{formatTime(elapsedTime)}</span>
+                        </div>
                     </div>
                 </header>
 
-                <div className="flex-1 flex overflow-hidden">
+                {isDesktopQuizMode && (
+                    <div className="hidden lg:block shrink-0 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <ShieldAlert className="size-4 text-blue-500" />
+                                <span>
+                                    {isFullscreen
+                                        ? 'Quiz is active in fullscreen mode.'
+                                        : 'Fullscreen is required on desktop before you can continue this quiz.'}
+                                </span>
+                            </div>
+                            <Badge variant="outline" className="border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                                {isFullscreen ? 'Fullscreen Active' : 'Waiting for Fullscreen'}
+                            </Badge>
+                        </div>
+                    </div>
+                )}
+
+                <div
+                    ref={quizContentRef}
+                    className={cn(
+                        "flex-1 flex overflow-hidden select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [user-select:none]",
+                        isQuizInteractionBlocked && "pointer-events-none blur-[2px] opacity-60"
+                    )}
+                    aria-hidden={isQuizInteractionBlocked}
+                >
                     {/* Left Sidebar - Question Navigator */}
                     <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-5">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Question Navigator</h3>
@@ -1143,9 +1794,14 @@ export default function TakeQuiz() {
                     <main className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950">
                         <div className="max-w-3xl mx-auto px-6 py-8">
                             {/* Question Header Row */}
-                            <div className="flex items-center gap-3 mb-6">
+                            <div className="flex flex-wrap items-center gap-3 mb-6">
                                 <span className="text-3xl font-bold text-[#3b82f6]">Q{safeCurrentIndex + 1}</span>
                                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Multiple Choice</span>
+                                {questionDurations[currentQuestion.id] ? (
+                                    <Badge variant="outline" className="border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                                        {questionDurations[currentQuestion.id]}s on this question
+                                    </Badge>
+                                ) : null}
                             </div>
 
                             {/* Question Box */}
@@ -1240,6 +1896,12 @@ export default function TakeQuiz() {
                     </div>
                 </div>
             </div>
+            <IntegrityPopup 
+                open={isQuizInteractionBlocked}
+                reason={fullscreenPromptReason}
+                onAction={requestQuizFullscreen}
+                isFullscreen={isFullscreen}
+            />
             <DeleteConfirmDialog
                 open={isConfirmSubmitOpen}
                 onOpenChange={setIsConfirmSubmitOpen}
