@@ -93,6 +93,9 @@ const timeSlots = [
 ];
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const SCHEDULE_TIME_COLUMN_WIDTH = 80;
+const SCHEDULE_HOUR_HEIGHT = 80;
+const SCHEDULE_GRID_TEMPLATE = `${SCHEDULE_TIME_COLUMN_WIDTH}px repeat(7, minmax(120px, 1fr))`;
 
 export default function Schedule() {
   const { role, profile, user } = useAuth();
@@ -238,14 +241,14 @@ export default function Schedule() {
     const [hours, minutes] = startTime.split(":").map(Number);
     const startHour = 8;
     const position = ((hours - startHour) * 60 + minutes) / 60;
-    return Math.max(0, position * 80); // 80px per hour
+    return Math.max(0, position * SCHEDULE_HOUR_HEIGHT);
   };
 
   const getEventHeight = (startTime: string, endTime: string) => {
     const [startHours, startMinutes] = startTime.split(":").map(Number);
     const [endHours, endMinutes] = endTime.split(":").map(Number);
     const duration = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
-    return Math.max(40, (duration / 60) * 80); // Min height 40px
+    return Math.max(40, (duration / 60) * SCHEDULE_HOUR_HEIGHT);
   };
 
   const getTypeLabel = (type: ClassEvent["type"]) => {
@@ -414,7 +417,10 @@ export default function Schedule() {
             {classes.map((cls) => (
               <SectionClassCard
                 key={cls.id}
-                classData={cls}
+                classData={{
+                  ...cls,
+                  class_name: cls.class_name || "Untitled Class"
+                }}
                 variant="schedule"
                 onAction={(classId) => handleClassSelect(classId)}
               />
@@ -772,10 +778,10 @@ export default function Schedule() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
-                    <div className="min-w-[800px]">
+                    <div className="min-w-[920px]">
                       {/* Day Headers */}
-                      <div className="grid grid-cols-8 border-b border-border">
-                        <div className="w-20 shrink-0" />
+                      <div className="grid border-b border-border" style={{ gridTemplateColumns: SCHEDULE_GRID_TEMPLATE }}>
+                        <div style={{ width: `${SCHEDULE_TIME_COLUMN_WIDTH}px` }} />
                         {days.map((day, index) => {
                           const date = addDays(displayWeekStart, index);
                           const isToday = isSameDay(date, new Date());
@@ -804,11 +810,12 @@ export default function Schedule() {
                       {/* Time Grid */}
                       <div className="relative">
                         {/* Time Labels */}
-                        <div className="absolute left-0 top-0 w-20">
+                        <div className="absolute left-0 top-0" style={{ width: `${SCHEDULE_TIME_COLUMN_WIDTH}px` }}>
                           {timeSlots.map((time) => (
                             <div
                               key={time}
-                              className="h-20 flex items-start justify-end pr-3 pt-1"
+                              className="flex items-start justify-end pr-3 pt-1"
+                              style={{ height: `${SCHEDULE_HOUR_HEIGHT}px` }}
                             >
                               <span className="text-xs text-muted-foreground">{time}</span>
                             </div>
@@ -816,19 +823,19 @@ export default function Schedule() {
                         </div>
 
                         {/* Grid */}
-                        <div className="ml-20 grid grid-cols-7">
+                        <div className="grid" style={{ gridTemplateColumns: `repeat(7, minmax(120px, 1fr))`, marginLeft: `${SCHEDULE_TIME_COLUMN_WIDTH}px` }}>
                           {days.map((_, dayIndex) => (
                             <div
                               key={dayIndex}
                               className="relative border-l border-border"
-                              style={{ height: `${timeSlots.length * 80}px` }}
+                              style={{ height: `${timeSlots.length * SCHEDULE_HOUR_HEIGHT}px` }}
                             >
                               {/* Hour lines */}
                               {timeSlots.map((_, i) => (
                                 <div
                                   key={i}
                                   className="absolute w-full border-t border-border"
-                                  style={{ top: `${i * 80}px` }}
+                                  style={{ top: `${i * SCHEDULE_HOUR_HEIGHT}px` }}
                                 />
                               ))}
 
@@ -976,7 +983,7 @@ export default function Schedule() {
                   mode="single"
                   selected={selectedDate}
                   onSelect={setSelectedDate}
-                  className="w-full"
+                  className="w-full p-1"
                 />
               </CardContent>
             </Card>

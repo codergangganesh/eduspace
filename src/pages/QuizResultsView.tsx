@@ -13,7 +13,8 @@ import {
     ShieldAlert,
     Maximize2,
     EyeOff,
-    RotateCcw
+    RotateCcw,
+    X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -22,9 +23,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Drawer } from 'vaul';
 import {
     Table,
     TableBody,
@@ -40,6 +43,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 const parseSummary = (value: any) => {
     const summary = value && typeof value === 'object' ? value : {};
@@ -67,6 +71,7 @@ export default function QuizResultsView() {
     const { classId, quizId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const isMobile = useIsMobile();
     const [quiz, setQuiz] = useState<any>(null);
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
@@ -272,6 +277,67 @@ export default function QuizResultsView() {
     // Top performers podium logic (Only real submissions)
     const podiumStudents = submissions.slice(0, 3);
 
+    const renderIntegrityReviewBody = () => {
+        if (!selectedSubmission) return null;
+
+        return (
+            <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-[11px] sm:text-sm text-slate-500"><ShieldAlert className="size-4" /> Suspicious</div>
+                        <div className="mt-2 text-xl sm:text-2xl font-bold">{selectedSubmission.integrity.suspiciousActivityCount}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-[11px] sm:text-sm text-slate-500"><Maximize2 className="size-4" /> Fullscreen exits</div>
+                        <div className="mt-2 text-xl sm:text-2xl font-bold">{selectedSubmission.integrity.fullscreenExitCount}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-[11px] sm:text-sm text-slate-500"><EyeOff className="size-4" /> Tab leaves</div>
+                        <div className="mt-2 text-xl sm:text-2xl font-bold">{selectedSubmission.integrity.tabSwitchCount}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-[11px] sm:text-sm text-slate-500"><RotateCcw className="size-4" /> Refreshes</div>
+                        <div className="mt-2 text-xl sm:text-2xl font-bold">{selectedSubmission.integrity.refreshAttemptCount}</div>
+                    </div>
+                </div>
+                <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                        <p className="text-xs sm:text-sm font-medium text-slate-500">Completion behavior</p>
+                        <p className="mt-2 text-base sm:text-lg font-semibold">{selectedSubmission.behaviorLabel}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-slate-500">Fast-answer flags: {selectedSubmission.integrity.fastAnswerCount}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-slate-500">Average time per question: {selectedSubmission.averageQuestionTime || 0}s</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                        <p className="text-xs sm:text-sm font-medium text-slate-500">Attempt summary</p>
+                        <p className="mt-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300">Score: {selectedSubmission.total_obtained} / {stats?.maxMarks}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-slate-700 dark:text-slate-300">Time spent: {selectedSubmission.completionTime}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-slate-700 dark:text-slate-300">Warnings shown: {selectedSubmission.integrity.warningCount}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-slate-700 dark:text-slate-300">Multi-session signals: {selectedSubmission.integrity.multiSessionAccessCount}</p>
+                    </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-slate-800">
+                    <p className="text-xs sm:text-sm font-medium text-slate-500">Question timing</p>
+                    <div className="mt-3">
+                        {Object.entries(selectedSubmission.integrity.questionDurations).length > 0 ? (
+                            <div className="max-h-56 sm:max-h-64 overflow-y-auto no-scrollbar pr-1">
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {(Object.entries(selectedSubmission.integrity.questionDurations) as Array<[string, number]>).map(([questionId, seconds], index) => (
+                                        <div key={questionId} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs sm:text-sm dark:bg-slate-900">
+                                            <span>Question {index + 1}</span>
+                                            <span className="font-semibold">{seconds}s</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-xs sm:text-sm text-slate-500">No per-question timing data was captured for this attempt.</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     if (loading) return <ResultsSkeleton />;
 
     return (
@@ -310,7 +376,7 @@ export default function QuizResultsView() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8">
+                <main className="flex-1 overflow-auto no-scrollbar p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8">
                     {/* Stats Overview */}
                     <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
                         <PremiumStatsCard
@@ -468,6 +534,7 @@ export default function QuizResultsView() {
                                 <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">Details</CardTitle>
                                 <p className="text-sm text-slate-500 mt-1">Full Standings</p>
                             </div>
+
                             <div className="relative w-full sm:w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                                 <Input
@@ -479,16 +546,17 @@ export default function QuizResultsView() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <div className="overflow-x-auto">
-                                <Table>
+                            <div className="overflow-x-auto no-scrollbar">
+                                <Table className="min-w-[760px]">
                                     <TableHeader className="bg-slate-50 dark:bg-slate-950">
                                         <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
                                             <TableHead className="w-[60px] sm:w-[80px] font-medium text-slate-500 px-3 sm:px-4">Rank</TableHead>
                                             <TableHead className="font-medium text-slate-500 px-3 sm:px-4">Student</TableHead>
-                                            <TableHead className="hidden md:table-cell font-medium text-slate-500">Performance</TableHead>
+
+                                            <TableHead className="font-medium text-slate-500">Performance</TableHead>
                                             <TableHead className="font-medium text-slate-500">Score</TableHead>
-                                            <TableHead className="hidden sm:table-cell font-medium text-slate-500">Time</TableHead>
-                                            <TableHead className="hidden lg:table-cell font-medium text-slate-500">Integrity</TableHead>
+                                            <TableHead className="font-medium text-slate-500">Time</TableHead>
+                                            <TableHead className="font-medium text-slate-500">Integrity</TableHead>
                                             <TableHead className="font-medium text-slate-500 text-right pr-3 sm:pr-6">Status</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -497,8 +565,7 @@ export default function QuizResultsView() {
                                             <TableRow key={s.id} className={`border-slate-100 dark:border-slate-800 ${user?.id === s.student_id ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                                                 <TableCell className="font-semibold text-slate-700 dark:text-slate-300 px-3 sm:px-4">
                                                     {s.rank <= 3 ? (
-                                                        <span className={`inline-flex items-center justify-center size-6 sm:size-7 rounded-full text-[10px] sm:text-xs text-white ${s.rank === 1 ? 'bg-amber-500' : s.rank === 2 ? 'bg-slate-400' : 'bg-orange-600'
-                                                            }`}>
+                                                        <span className={`inline-flex items-center justify-center size-6 sm:size-7 rounded-full text-[10px] sm:text-xs text-white ${s.rank === 1 ? 'bg-amber-500' : s.rank === 2 ? 'bg-slate-400' : 'bg-orange-600'}`}>
                                                             {s.rank}
                                                         </span>
                                                     ) : (
@@ -519,7 +586,7 @@ export default function QuizResultsView() {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="hidden md:table-cell w-[200px]">
+                                                <TableCell className="w-[200px]">
                                                     <div className="flex items-center gap-2">
                                                         <div className="h-2 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                                             <div
@@ -535,32 +602,38 @@ export default function QuizResultsView() {
                                                         {s.total_obtained} <span className="text-slate-400 text-[10px] sm:text-xs font-normal">/ {stats?.maxMarks}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
+                                                <TableCell>
                                                     <div className="flex flex-col text-[10px] sm:text-xs">
                                                         <span className="font-medium text-slate-700 dark:text-slate-300">{s.completionTime}</span>
-                                                        <span className={`text-[9px] sm:text-[10px] ${s.timingLabel === 'Late' ? 'text-red-500' : 'text-slate-400'}`}>{s.timingLabel} • {s.averageQuestionTime || 0}s avg/q</span>
+                                                        <span className={`hidden sm:inline text-[9px] sm:text-[10px] ${s.timingLabel === 'Late' ? 'text-red-500' : 'text-slate-400'}`}>{s.timingLabel} • {s.averageQuestionTime || 0}s avg/q</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="hidden lg:table-cell">
+                                                <TableCell>
                                                     <button
                                                         type="button"
                                                         onClick={() => setSelectedSubmission(s)}
-                                                        className="flex items-center gap-2 text-left"
+                                                        className="flex items-center gap-1 sm:gap-2 text-left"
                                                     >
-                                                        <Badge variant="outline" className={s.integrity.suspiciousActivityCount > 0 ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-emerald-300 bg-emerald-50 text-emerald-700'}>
-                                                            {s.integrity.suspiciousActivityCount > 0 ? `${s.integrity.suspiciousActivityCount} flags` : 'Clean'}
+                                                        <Badge variant="outline" className={`h-6 px-1.5 text-[10px] sm:h-auto sm:px-2 ${s.integrity.suspiciousActivityCount > 0 ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-emerald-300 bg-emerald-50 text-emerald-700'}`}>
+                                                            <span className="inline-flex items-center gap-1 sm:hidden">
+                                                                <ShieldAlert className="size-3" />
+                                                                <span>{s.integrity.suspiciousActivityCount}</span>
+                                                            </span>
+                                                            <span className="hidden sm:inline">
+                                                                {s.integrity.suspiciousActivityCount > 0 ? `${s.integrity.suspiciousActivityCount} flags` : 'Clean'}
+                                                            </span>
                                                         </Badge>
-                                                        <span className="text-[10px] text-slate-500">
+                                                        <span className="hidden sm:inline text-[10px] text-slate-500">
                                                             {s.behaviorLabel}
                                                         </span>
                                                     </button>
                                                 </TableCell>
                                                 <TableCell className="text-right pr-3 sm:pr-6">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="sm" onClick={() => setSelectedSubmission(s)} className="hidden sm:inline-flex">
+                                                    <div className="flex items-center justify-end gap-1 sm:gap-2 whitespace-nowrap">
+                                                        <Button variant="ghost" size="sm" onClick={() => setSelectedSubmission(s)} className="inline-flex h-6 px-2 text-[10px] sm:h-9 sm:px-3 sm:text-xs">
                                                             Review
                                                         </Button>
-                                                        <Badge variant="outline" className={`font-black text-[9px] sm:text-xs px-2 py-0 border ${s.status === 'passed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                                        <Badge variant="outline" className={`font-black text-[9px] sm:text-xs px-1.5 sm:px-2 py-0 border ${s.status === 'passed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                                                             {s.status === 'passed' ? 'PASS' : 'FAIL'}
                                                         </Badge>
                                                     </div>
@@ -578,6 +651,7 @@ export default function QuizResultsView() {
                                 </Table>
                             </div>
                         </CardContent>
+
                         {totalPages > 1 && (
                             <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                                 <span className="text-sm text-slate-500">Page {currentPage} of {totalPages}</span>
@@ -590,68 +664,68 @@ export default function QuizResultsView() {
                     </Card>
                 </main>
             </div>
-            <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Quiz Integrity Review</DialogTitle>
-                        <DialogDescription>
-                            {selectedSubmission?.profiles?.full_name || 'Student'} activity summary for this quiz attempt.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {selectedSubmission && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                    <div className="flex items-center gap-2 text-sm text-slate-500"><ShieldAlert className="size-4" /> Suspicious</div>
-                                    <div className="mt-2 text-2xl font-bold">{selectedSubmission.integrity.suspiciousActivityCount}</div>
+            {isMobile ? (
+                <Drawer.Root open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+                    <Drawer.Portal>
+                        <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-[2px]" />
+                        <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] flex flex-col bg-slate-50 dark:bg-slate-900 rounded-t-[32px] outline-none h-[92vh]">
+                            <div className="mx-auto w-12 h-1.5 flex-shrink-0 cursor-grab rounded-full bg-slate-200 dark:bg-slate-800 mt-4 mb-2" />
+                            <div className="flex-1 overflow-hidden px-4 pb-6">
+                                <div className="flex items-start justify-between gap-3 pt-2 pb-4">
+                                    <div className="min-w-0">
+                                        <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">Flag Report</h2>
+                                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                            {selectedSubmission?.profiles?.full_name || 'Student'} activity summary for this quiz attempt.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedSubmission(null)}
+                                        className="size-10 flex items-center justify-center rounded-full hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400 shrink-0"
+                                        title="Close"
+                                    >
+                                        <X className="size-5" />
+                                    </button>
                                 </div>
-                                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                    <div className="flex items-center gap-2 text-sm text-slate-500"><Maximize2 className="size-4" /> Fullscreen exits</div>
-                                    <div className="mt-2 text-2xl font-bold">{selectedSubmission.integrity.fullscreenExitCount}</div>
-                                </div>
-                                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                    <div className="flex items-center gap-2 text-sm text-slate-500"><EyeOff className="size-4" /> Tab leaves</div>
-                                    <div className="mt-2 text-2xl font-bold">{selectedSubmission.integrity.tabSwitchCount}</div>
-                                </div>
-                                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                    <div className="flex items-center gap-2 text-sm text-slate-500"><RotateCcw className="size-4" /> Refreshes</div>
-                                    <div className="mt-2 text-2xl font-bold">{selectedSubmission.integrity.refreshAttemptCount}</div>
-                                </div>
-                            </div>
-                            <div className="grid gap-3 md:grid-cols-2">
-                                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                    <p className="text-sm font-medium text-slate-500">Completion behavior</p>
-                                    <p className="mt-2 text-lg font-semibold">{selectedSubmission.behaviorLabel}</p>
-                                    <p className="mt-1 text-sm text-slate-500">Fast-answer flags: {selectedSubmission.integrity.fastAnswerCount}</p>
-                                    <p className="mt-1 text-sm text-slate-500">Average time per question: {selectedSubmission.averageQuestionTime || 0}s</p>
-                                </div>
-                                <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                    <p className="text-sm font-medium text-slate-500">Attempt summary</p>
-                                    <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">Score: {selectedSubmission.total_obtained} / {stats?.maxMarks}</p>
-                                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Time spent: {selectedSubmission.completionTime}</p>
-                                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Warnings shown: {selectedSubmission.integrity.warningCount}</p>
-                                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Multi-session signals: {selectedSubmission.integrity.multiSessionAccessCount}</p>
+                                <div className="h-[calc(92vh-110px)] overflow-y-auto no-scrollbar pb-4">
+                                    {renderIntegrityReviewBody()}
                                 </div>
                             </div>
-                            <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                                <p className="text-sm font-medium text-slate-500">Question timing</p>
-                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                    {Object.entries(selectedSubmission.integrity.questionDurations).length > 0 ? (
-                                        Object.entries(selectedSubmission.integrity.questionDurations).map(([questionId, seconds], index) => (
-                                            <div key={questionId} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900">
-                                                <span>Question {index + 1}</span>
-                                                <span className="font-semibold">{seconds}s</span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-slate-500">No per-question timing data was captured for this attempt.</p>
-                                    )}
+                        </Drawer.Content>
+                    </Drawer.Portal>
+                </Drawer.Root>
+            ) : (
+                <Sheet open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+                    <SheetContent
+                        side="right"
+                        className="flex flex-col p-0 border-none bg-background shadow-2xl transition-all duration-500 ease-in-out h-full w-full sm:max-w-md pt-[var(--safe-top)] z-[10001] [&>button]:hidden"
+                    >
+                        <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900">
+                            <div className="flex items-start justify-between gap-3 px-4 mt-8 mb-6 shrink-0">
+                                <div className="min-w-0">
+                                    <DialogTitle className="font-black text-foreground tracking-tight text-2xl">
+                                        Flag Report
+                                    </DialogTitle>
+                                    <DialogDescription className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                        {selectedSubmission?.profiles?.full_name || 'Student'} activity summary for this quiz attempt.
+                                    </DialogDescription>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedSubmission(null)}
+                                    className="size-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground/60 hover:text-foreground active:scale-90 shrink-0"
+                                    title="Close"
+                                >
+                                    <X className="size-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-6">
+                                {renderIntegrityReviewBody()}
                             </div>
                         </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+                    </SheetContent>
+                </Sheet>
+            )}
         </DashboardLayout>
     );
 }
