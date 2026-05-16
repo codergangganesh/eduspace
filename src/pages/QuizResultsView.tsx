@@ -247,23 +247,66 @@ export default function QuizResultsView() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Results');
         sheet.columns = [
-            { header: 'Rank',    key: 'rank',    width: 8  },
+            { header: 'Rank', key: 'rank', width: 8 },
             { header: 'Student', key: 'student', width: 28 },
-            { header: 'Score',   key: 'score',   width: 10 },
-            { header: 'Max',     key: 'max',     width: 10 },
-            { header: 'Status',  key: 'status',  width: 12 },
-            { header: 'Time',    key: 'time',    width: 14 },
-            { header: 'Date',    key: 'date',    width: 24 },
+            { header: 'Performance %', key: 'performance', width: 14 },
+            { header: 'Score', key: 'score', width: 10 },
+            { header: 'Max Marks', key: 'max', width: 12 },
+            { header: 'Time', key: 'time', width: 14 },
+            { header: 'Timing', key: 'timing', width: 12 },
+            { header: 'Integrity', key: 'integrity', width: 14 },
+            { header: 'Status', key: 'status', width: 12 },
+            { header: 'Suspicious Events', key: 'suspicious', width: 18 },
+            { header: 'Fullscreen Exits', key: 'fullscreenExits', width: 18 },
+            { header: 'Tab Leaves', key: 'tabSwitches', width: 14 },
+            { header: 'Refreshes', key: 'refreshAttempts', width: 14 },
+            { header: 'Idle Events', key: 'idleCount', width: 14 },
+            { header: 'Multi-Session Access', key: 'multiSessionAccess', width: 20 },
+            { header: 'Warnings', key: 'warnings', width: 12 },
+            { header: 'Fast Answers', key: 'fastAnswers', width: 14 },
+            { header: 'Completion Behavior', key: 'completionBehavior', width: 20 },
+            { header: 'Avg Question Time (s)', key: 'avgQuestionTime', width: 20 },
+            { header: 'Question Timing Summary', key: 'questionTimingSummary', width: 40 },
+            { header: 'Date', key: 'date', width: 24 },
         ];
-        submissions.forEach(s => sheet.addRow({
-            rank:    s.rank,
-            student: s.profiles?.full_name || 'Unknown',
-            score:   s.total_obtained,
-            max:     quiz?.total_marks,
-            status:  s.status,
-            time:    s.completionTime,
-            date:    new Date(s.submitted_at).toLocaleString(),
-        }));
+
+        submissions.forEach((s) => {
+            const integrity = s.integrity || parseSummary(s.integrity_summary);
+            const questionTimingSummary = Object.entries(integrity.questionDurations || {})
+                .map(([_, seconds], index) => `Q${index + 1}: ${seconds}s`)
+                .join(' | ');
+
+            sheet.addRow({
+                rank: s.rank,
+                student: s.profiles?.full_name || 'Unknown',
+                performance: `${s.percentage}%`,
+                score: s.total_obtained,
+                max: quiz?.total_marks,
+                time: s.completionTime,
+                timing: s.timingLabel,
+                integrity: s.behaviorLabel,
+                status: s.status === 'passed' ? 'PASS' : 'FAIL',
+                suspicious: integrity.suspiciousActivityCount,
+                fullscreenExits: integrity.fullscreenExitCount,
+                tabSwitches: integrity.tabSwitchCount,
+                refreshAttempts: integrity.refreshAttemptCount,
+                idleCount: integrity.idleCount,
+                multiSessionAccess: integrity.multiSessionAccessCount,
+                warnings: integrity.warningCount,
+                fastAnswers: integrity.fastAnswerCount,
+                completionBehavior: integrity.completionBehavior,
+                avgQuestionTime: s.averageQuestionTime || 0,
+                questionTimingSummary: questionTimingSummary || 'N/A',
+                date: new Date(s.submitted_at).toLocaleString(),
+            });
+        });
+
+        sheet.getRow(1).font = { bold: true };
+        sheet.autoFilter = {
+            from: 'A1',
+            to: sheet.getColumn(sheet.columns.length).letter + '1',
+        };
+
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
@@ -341,7 +384,7 @@ export default function QuizResultsView() {
     if (loading) return <ResultsSkeleton />;
 
     return (
-        <DashboardLayout fullHeight>
+        <DashboardLayout fullHeight hideHeaderOnMobile>
             <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
                 {/* Header */}
                 <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm z-10">
