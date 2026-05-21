@@ -1,8 +1,6 @@
-
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic,
   X,
@@ -52,7 +50,7 @@ import { aiChatService } from "@/lib/aiChatService";
 
 
 type Difficulty = "beginner" | "intermediate" | "advanced";
-type SessionState = "idle" | "listening" | "thinking" | "speaking" | "ending" | "summary";
+type SessionState = "idle" | "listening" | "thinking" | "speaking" | "summary";
 
 type SessionProfile = {
   practiceMode: PracticeMode;
@@ -96,168 +94,13 @@ const DIFFICULTIES: Array<{ id: Difficulty; label: string }> = [
 ];
 
 const TUTOR_VOICES = [
-  { id: "sarah", name: "Sarah", tone: "Young and energetic" },
-  { id: "burt", name: "Burt", tone: "Deep and resonant" },
-  { id: "marissa", name: "Marissa", tone: "Calm and mature" },
-  { id: "andrea", name: "Andrea", tone: "Modern and professional" },
-  { id: "phillip", name: "Phillip", tone: "Fast and youthful" },
-  { id: "steve", name: "Steve", tone: "Steady and crisp" },
+  { id: "sarah", name: "Sarah", tone: "Warm and clear" },
+  { id: "burt", name: "Burt", tone: "Deep and steady" },
+  { id: "marissa", name: "Marissa", tone: "Friendly coach" },
+  { id: "andrea", name: "Andrea", tone: "Calm and professional" },
+  { id: "phillip", name: "Phillip", tone: "Confident mentor" },
+  { id: "steve", name: "Steve", tone: "Direct and crisp" },
 ];
-
-const MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY = "eduspace.voiceTutor.mobileUnsupportedVoices";
-const MOBILE_FALLBACK_VOICE_ID = DEFAULT_PROFILE.voiceId;
-
-function getTutorVoice(voiceId: string) {
-  return TUTOR_VOICES.find((voice) => voice.id === voiceId) ?? TUTOR_VOICES[0];
-}
-
-function isLikelyMobileBrowser() {
-  if (typeof navigator === "undefined") return false;
-
-  const userAgent = navigator.userAgent || navigator.vendor || "";
-  const isiPadDesktopMode = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
-
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|Mobile|CriOS|FxiOS/i.test(userAgent) || isiPadDesktopMode;
-}
-
-function isStandalonePwa() {
-  if (typeof window === "undefined") return false;
-
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
-    document.referrer.includes("android-app://")
-  );
-}
-
-function getErrorMessage(error: unknown) {
-  if (typeof error === "string") return error;
-  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
-    return error.message;
-  }
-  return "Voice tutor error";
-}
-
-const findBestNativeVoice = (voiceId: string) => {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) return null;
-
-  const id = voiceId.toLowerCase();
-  
-  // Aggressive preference mapping to ensure variety
-  const mappings: Record<string, string[]> = {
-    // LADIES
-    sarah: ["samantha", "susan", "zira", "google us english", "female"],
-    marissa: ["google uk english female", "victoria", "hazel", "female"],
-    andrea: ["microsoft zira", "susan", "google us english", "female"],
-    // BOYS
-    burt: ["microsoft david", "google uk english male", "male", "david"],
-    phillip: ["google us english male", "alex", "male"],
-    steve: ["microsoft ravi", "alex", "google us english male", "male"],
-  };
-
-  const targets = mappings[id] || ["female"];
-  for (const target of targets) {
-    const voice = voices.find(v => v.name.toLowerCase().includes(target) && v.lang.startsWith("en"));
-    if (voice) return voice;
-  }
-
-  return voices.find(v => v.lang.startsWith("en")) || voices[0];
-};
-
-const getVoicePersonality = (voiceId: string) => {
-  const personalities: Record<string, { pitch: number; rate: number }> = {
-    // LADIES
-    sarah: { pitch: 1.4, rate: 1.15 },    // Young/High
-    marissa: { pitch: 0.85, rate: 0.9 },   // Mature/Deep Female
-    andrea: { pitch: 1.05, rate: 1.05 },  // Balanced/Professional
-    // BOYS
-    burt: { pitch: 0.5, rate: 0.85 },     // Very Deep/Slow
-    phillip: { pitch: 1.3, rate: 1.2 },   // Youthful/Fast
-    steve: { pitch: 0.95, rate: 1.0 },    // Solid/Middle
-  };
-  return personalities[voiceId.toLowerCase()] || { pitch: 1.0, rate: 1.0 };
-};
-
-function isVoiceSelectionFailure(message: string) {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("selected voice preview") ||
-    normalized.includes("could not select the selected voice") ||
-    normalized.includes("voice preview") ||
-    ((normalized.includes("voice") || normalized.includes("11labs")) &&
-      (normalized.includes("unsupported") ||
-        normalized.includes("unavailable") ||
-        normalized.includes("invalid") ||
-        normalized.includes("not found") ||
-        normalized.includes("could not select")))
-  );
-}
-
-function isLikelyTransientVoiceConnectionFailure(message: string) {
-  const normalized = message.toLowerCase();
-
-  if (
-    normalized.includes("microphone") ||
-    normalized.includes("permission") ||
-    normalized.includes("denied") ||
-    normalized.includes("notallowederror")
-  ) {
-    return false;
-  }
-
-  return (
-    normalized.includes("connection") ||
-    normalized.includes("network") ||
-    normalized.includes("transport") ||
-    normalized.includes("signaling") ||
-    normalized.includes("meeting") ||
-    normalized.includes("daily") ||
-    normalized.includes("room") ||
-    normalized.includes("interrupted")
-  );
-}
-
-function getFriendlyVoiceError(message: string, isMobile: boolean) {
-  const normalized = message.toLowerCase();
-
-  if (isVoiceSelectionFailure(message)) {
-    return isMobile
-      ? "A compatible tutor voice could not be loaded on this device."
-      : "The selected tutor voice could not be loaded right now.";
-  }
-
-  if (
-    normalized.includes("microphone") ||
-    normalized.includes("permission") ||
-    normalized.includes("notfounderror") ||
-    normalized.includes("notreadableerror") ||
-    normalized.includes("device not found") ||
-    normalized.includes("notallowederror") ||
-    normalized.includes("denied")
-  ) {
-    return "Microphone access is required to start the AI Voice Tutor.";
-  }
-
-  if (
-    normalized.includes("offline") ||
-    normalized.includes("navigator offline")
-  ) {
-    return "Your device appears to be offline. Reconnect and try the voice tutor again.";
-  }
-
-  if (
-    normalized.includes("network") ||
-    normalized.includes("connection") ||
-    normalized.includes("signaling") ||
-    normalized.includes("transport")
-  ) {
-    return "The voice connection was interrupted. Please try again.";
-  }
-
-  return "Could not start the AI Voice Tutor right now. Please try again.";
-}
 
 function modeLabel(mode: PracticeMode) {
   return MODES.find((m) => m.id === mode)?.label ?? "Interview";
@@ -506,7 +349,6 @@ export function VoicePracticeSession() {
   const [history, setHistory] = useState<{ role: string; text: string }[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [summary, setSummary] = useState<ReturnType<typeof buildSummary> | null>(null);
-  const [sessionDurationSeconds, setSessionDurationSeconds] = useState<number>(0);
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -531,76 +373,11 @@ export function VoicePracticeSession() {
   const previewSettleTimeoutRef = useRef<number | null>(null);
   const previewStopPendingRef = useRef(false);
   const callTransitionRef = useRef<"idle" | "preview-starting" | "session-starting" | "stopping">("idle");
-  const mobileUnsupportedVoiceIdsRef = useRef<Set<string>>(new Set());
-  const suppressVoiceSelectionErrorRef = useRef(false);
-  const fallbackNoticeShownRef = useRef(false);
-  const warmupMicStreamRef = useRef<MediaStream | null>(null);
-  const mobileAudioContextRef = useRef<AudioContext | null>(null);
-  const recognitionRef = useRef<any>(null);
-  const synthRef = useRef<SpeechSynthesis | null>(typeof window !== "undefined" ? window.speechSynthesis : null);
-  const [voicesLoaded, setVoicesLoaded] = useState(false);
-  const isSpeakingRef = useRef(false);
-  const isAbortingRef = useRef(false);
-  const chatHistoryRef = useRef<{ role: string; content: string }[]>([]);
-
-  const micVisualizerContextRef = useRef<AudioContext | null>(null);
-  const micVisualizerStreamRef = useRef<MediaStream | null>(null);
-  const micVisualizerAnalyserRef = useRef<AnalyserNode | null>(null);
-  const micVisualizerSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const micVisualizerFrameRef = useRef<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const micLevel = useMotionValue(0);
-  const lowBandLevel = useMotionValue(0);
-  const midBandLevel = useMotionValue(0);
-  const highBandLevel = useMotionValue(0);
-  const smoothedMicLevel = useSpring(micLevel, {
-    stiffness: 180,
-    damping: 26,
-    mass: 0.8,
-  });
-  const smoothedLowBand = useSpring(lowBandLevel, {
-    stiffness: 160,
-    damping: 24,
-    mass: 0.9,
-  });
-  const smoothedMidBand = useSpring(midBandLevel, {
-    stiffness: 170,
-    damping: 24,
-    mass: 0.88,
-  });
-  const smoothedHighBand = useSpring(highBandLevel, {
-    stiffness: 180,
-    damping: 22,
-    mass: 0.82,
-  });
-  const activeMicScale = useTransform(smoothedMicLevel, [0, 1], [1, 1.16]);
-  const activeGlowOpacity = useTransform(smoothedMicLevel, [0, 1], [0.18, 0.6]);
-  const activeWaveScale = useTransform(smoothedMicLevel, [0, 1], [1.04, 1.5]);
-  const activeWaveOpacity = useTransform(smoothedMicLevel, [0, 1], [0.12, 0.36]);
-  const liquidCoreScale = useTransform(() => 0.98 + smoothedMicLevel.get() * 0.09 + smoothedMidBand.get() * 0.05);
-  const liquidHaloScale = useTransform(() => 1.02 + smoothedMicLevel.get() * 0.18 + smoothedLowBand.get() * 0.06);
-  const cyanBlobScale = useTransform(() => 0.94 + smoothedLowBand.get() * 0.24 + smoothedMicLevel.get() * 0.08);
-  const violetBlobScale = useTransform(() => 0.94 + smoothedMidBand.get() * 0.22 + smoothedMicLevel.get() * 0.07);
-  const pinkBlobScale = useTransform(() => 0.94 + smoothedHighBand.get() * 0.2 + smoothedMicLevel.get() * 0.08);
-  const shimmerOpacity = useTransform(() => 0.42 + smoothedHighBand.get() * 0.22 + smoothedMicLevel.get() * 0.12);
-  const flowTilt = useTransform(() => -8 + smoothedLowBand.get() * 10 - smoothedHighBand.get() * 6);
-  const waveBar1 = useTransform(() => 0.28 + smoothedLowBand.get() * 0.95);
-  const waveBar2 = useTransform(() => 0.36 + smoothedMidBand.get() * 1.1);
-  const waveBar3 = useTransform(() => 0.3 + smoothedHighBand.get() * 1.05);
-  const waveBar4 = useTransform(() => 0.34 + (smoothedLowBand.get() * 0.45 + smoothedMidBand.get() * 0.8));
-  const waveBar5 = useTransform(() => 0.26 + smoothedMicLevel.get() * 1.2);
-  const waveBar6 = useTransform(() => 0.34 + (smoothedMidBand.get() * 0.5 + smoothedHighBand.get() * 0.82));
-  const waveBar7 = useTransform(() => 0.3 + smoothedLowBand.get() * 1.02);
-  const waveBar8 = useTransform(() => 0.36 + smoothedHighBand.get() * 1.08);
-  const waveBar9 = useTransform(() => 0.28 + smoothedMidBand.get() * 0.95);
 
   const mode = useMemo(() => MODES.find((m) => m.id === profile.practiceMode) ?? MODES[0], [profile.practiceMode]);
-  const selectedVoice = useMemo(() => getTutorVoice(profile.voiceId), [profile.voiceId]);
+  const selectedVoice = useMemo(() => TUTOR_VOICES.find((item) => item.id === profile.voiceId) ?? TUTOR_VOICES[0], [profile.voiceId]);
   const prompt = useMemo(() => buildPrompt(profile), [profile]);
-  const isMobileBrowser = useMemo(() => isLikelyMobileBrowser(), []);
-  const isStandaloneMode = useMemo(() => isStandalonePwa(), []);
-  const isMobileEnvironment = isMobileViewport || isMobileBrowser;
-  const needsPwaVoiceWarmup = isMobileEnvironment || isStandaloneMode;
 
   const cleanup = () => {
     if (previewTimeoutRef.current) {
@@ -616,522 +393,122 @@ export function VoicePracticeSession() {
     previewActiveRef.current = false;
     previewStopPendingRef.current = false;
     setPreviewingVoiceId(null);
-    warmupMicStreamRef.current?.getTracks().forEach((track) => track.stop());
-    warmupMicStreamRef.current = null;
-  };
-
-  const stopMicLevelMonitoring = () => {
-    if (micVisualizerFrameRef.current) {
-      window.cancelAnimationFrame(micVisualizerFrameRef.current);
-      micVisualizerFrameRef.current = null;
-    }
-
-    micVisualizerSourceRef.current?.disconnect();
-    micVisualizerSourceRef.current = null;
-    micVisualizerAnalyserRef.current?.disconnect();
-    micVisualizerAnalyserRef.current = null;
-
-    micVisualizerStreamRef.current?.getTracks().forEach((track) => track.stop());
-    micVisualizerStreamRef.current = null;
-
-    if (micVisualizerContextRef.current) {
-      void micVisualizerContextRef.current.close().catch(() => undefined);
-      micVisualizerContextRef.current = null;
-    }
-
-    micLevel.set(0);
-    lowBandLevel.set(0);
-    midBandLevel.set(0);
-    highBandLevel.set(0);
-  };
-
-  const releaseWarmupMicStream = () => {
-    warmupMicStreamRef.current?.getTracks().forEach((track) => track.stop());
-    warmupMicStreamRef.current = null;
-  };
-
-  const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
-
-  const ensureVoiceRuntimeReady = async () => {
-    if (typeof window === "undefined") return;
-
-    if (!navigator.onLine) {
-      throw new Error("Navigator offline");
-    }
-
-    if (!needsPwaVoiceWarmup) {
-      return;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error("Microphone is unavailable on this device");
-    }
-
-    if (!warmupMicStreamRef.current) {
-      warmupMicStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-    }
-
-    if (document.visibilityState === "hidden") {
-      await wait(150);
-    }
-
-    if (isStandaloneMode) {
-      await wait(250);
-    }
-  };
-
-  const startMicLevelMonitoring = async () => {
-    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) return;
-    if (micVisualizerAnalyserRef.current || micVisualizerStreamRef.current) return;
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-
-      const WindowWithWebkitAudio = window as typeof window & {
-        webkitAudioContext?: typeof AudioContext;
-      };
-      const AudioContextCtor = window.AudioContext ?? WindowWithWebkitAudio.webkitAudioContext;
-
-      if (!AudioContextCtor) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-
-      const context = new AudioContextCtor();
-      const analyser = context.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.82;
-
-      const source = context.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      const buffer = new Uint8Array(analyser.frequencyBinCount);
-
-      micVisualizerContextRef.current = context;
-      micVisualizerStreamRef.current = stream;
-      micVisualizerAnalyserRef.current = analyser;
-      micVisualizerSourceRef.current = source;
-
-      const tick = () => {
-        const currentAnalyser = micVisualizerAnalyserRef.current;
-        if (!currentAnalyser) return;
-
-        currentAnalyser.getByteFrequencyData(buffer);
-        const average = buffer.reduce((sum, value) => sum + value, 0) / (buffer.length * 255);
-        const normalized = clamp((average - 0.02) * 3.1, 0, 1);
-        const third = Math.floor(buffer.length / 3);
-        const averageBand = (start: number, end: number) => {
-          const sliceLength = Math.max(end - start, 1);
-          let sum = 0;
-          for (let index = start; index < end; index += 1) {
-            sum += buffer[index];
-          }
-          return sum / (sliceLength * 255);
-        };
-        const low = clamp((averageBand(0, third) - 0.015) * 3.2, 0, 1);
-        const mid = clamp((averageBand(third, third * 2) - 0.015) * 3.4, 0, 1);
-        const high = clamp((averageBand(third * 2, buffer.length) - 0.01) * 3.8, 0, 1);
-
-        micLevel.set(normalized);
-        lowBandLevel.set(low);
-        midBandLevel.set(mid);
-        highBandLevel.set(high);
-        micVisualizerFrameRef.current = window.requestAnimationFrame(tick);
-      };
-
-      tick();
-    } catch (error) {
-      console.warn("Mic visualizer unavailable", error);
-      stopMicLevelMonitoring();
-    }
-  };
-
-  const buildAssistantConfig = (
-    sessionProfile: SessionProfile,
-    sessionPrompt: string,
-    sessionMode: typeof MODES[number],
-    voiceIdOverride?: string
-  ) => {
-    const resolvedVoiceId = voiceIdOverride ?? sessionProfile.voiceId;
-
-    let assistantConfig: any = {
-      name: "Eduspace Voice Tutor",
-      firstMessage: sessionMode.opening,
-      backgroundSpeechDenoisingPlan: {
-        smartDenoisingPlan: {
-          enabled: false,
-        },
-        fourierDenoisingPlan: {
-          enabled: false,
-        },
-      },
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
-        language: "en",
-      },
-      voice: {
-        provider: "11labs",
-        voiceId: resolvedVoiceId,
-      },
-      model: {
-        provider: "openai",
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: sessionPrompt,
-          },
-        ],
-      },
-    };
-
-    if (sessionProfile.practiceMode === "interview") {
-      const baseConfig = JSON.parse(JSON.stringify(interviewerConfig));
-      baseConfig.model.messages[0].content = baseConfig.model.messages[0].content.replace("{{questions}}", sessionProfile.focusArea || "General behavioral and technical questions.");
-      baseConfig.voice.voiceId = resolvedVoiceId;
-      baseConfig.backgroundSpeechDenoisingPlan = {
-        smartDenoisingPlan: {
-          enabled: false,
-        },
-        fourierDenoisingPlan: {
-          enabled: false,
-        },
-      };
-      assistantConfig = baseConfig;
-    }
-
-    return assistantConfig;
-  };
-
-  const startVoiceSessionWithFallback = async (
-    sessionProfile: SessionProfile,
-    sessionPrompt: string,
-    sessionMode: typeof MODES[number]
-  ) => {
-    const preferredVoice = getPreferredVoiceForMobile(sessionProfile.voiceId);
-    const fallbackVoice = getFallbackVoiceFor(preferredVoice.id);
-    const canRetryWithFallback = isMobileEnvironment && preferredVoice.id !== fallbackVoice.id;
-    const shouldRetryTransientStart = needsPwaVoiceWarmup;
-
-    suppressVoiceSelectionErrorRef.current = canRetryWithFallback;
-
-    try {
-      await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, preferredVoice.id));
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-
-      if (shouldRetryTransientStart && isLikelyTransientVoiceConnectionFailure(errorMessage)) {
-        await vapi.stop().catch(() => undefined);
-        await wait(isStandaloneMode ? 500 : 300);
-        await ensureVoiceRuntimeReady();
-        await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, preferredVoice.id));
-        return;
-      }
-
-      if (!canRetryWithFallback || !isVoiceSelectionFailure(errorMessage)) {
-        throw error;
-      }
-
-      markVoiceUnsupportedOnMobile(preferredVoice.id);
-      console.warn("[VAPI] Retrying mobile voice session with fallback voice", {
-        requestedVoiceId: sessionProfile.voiceId,
-        failedVoiceId: preferredVoice.id,
-        fallbackVoiceId: fallbackVoice.id,
-        error: errorMessage,
-      });
-
-      await vapi.stop().catch(() => undefined);
-      suppressVoiceSelectionErrorRef.current = false;
-      await vapi.start(buildAssistantConfig(sessionProfile, sessionPrompt, sessionMode, fallbackVoice.id));
-      showMobileFallbackNotice();
-    } finally {
-      suppressVoiceSelectionErrorRef.current = false;
-    }
-  };
-
-  const resumeMobileAudioContext = () => {
-    if (!isMobileEnvironment || typeof window === "undefined") return;
-
-    const WindowWithWebkitAudio = window as typeof window & {
-      webkitAudioContext?: typeof AudioContext;
-    };
-    const AudioContextCtor = window.AudioContext ?? WindowWithWebkitAudio.webkitAudioContext;
-
-    if (!AudioContextCtor) return;
-
-    if (!mobileAudioContextRef.current) {
-      mobileAudioContextRef.current = new AudioContextCtor();
-    }
-
-    if (mobileAudioContextRef.current.state === "suspended") {
-      void mobileAudioContextRef.current.resume();
-    }
-  };
-
-  const persistUnsupportedMobileVoices = (voiceIds: string[]) => {
-    try {
-      localStorage.setItem(MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY, JSON.stringify(voiceIds));
-    } catch (error) {
-      console.warn("Failed to persist mobile voice compatibility cache", error);
-    }
-  };
-
-  const markVoiceUnsupportedOnMobile = (voiceId: string) => {
-    if (!voiceId) return;
-    if (mobileUnsupportedVoiceIdsRef.current.has(voiceId)) return;
-
-    mobileUnsupportedVoiceIdsRef.current.add(voiceId);
-    persistUnsupportedMobileVoices(Array.from(mobileUnsupportedVoiceIdsRef.current));
-  };
-
-  const getFallbackVoiceFor = (voiceId: string) => {
-    return (
-      TUTOR_VOICES.find((voice) => voice.id === MOBILE_FALLBACK_VOICE_ID && voice.id !== voiceId) ??
-      TUTOR_VOICES.find((voice) => voice.id !== voiceId) ??
-      getTutorVoice(voiceId)
-    );
-  };
-
-  const getPreferredVoiceForMobile = (voiceId: string) => {
-    if (!isMobileEnvironment || !mobileUnsupportedVoiceIdsRef.current.has(voiceId)) {
-      return getTutorVoice(voiceId);
-    }
-
-    return getFallbackVoiceFor(voiceId);
-  };
-
-  const showMobileFallbackNotice = () => {
-    if (fallbackNoticeShownRef.current) return;
-    fallbackNoticeShownRef.current = true;
-    toast.info("Using a compatible tutor voice on this device.");
-  };
-
-  const stopSpeaking = () => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-    }
-    isSpeakingRef.current = false;
-  };
-
-  const speak = (text: string, voiceId: string, onEnd?: () => void) => {
-    if (!synthRef.current) return;
-
-    stopSpeaking();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voice = findBestNativeVoice(voiceId);
-    if (voice) {
-      utterance.voice = voice;
-    }
-    const personality = getVoicePersonality(voiceId);
-    utterance.pitch = personality.pitch;
-    utterance.rate = personality.rate;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => {
-      isSpeakingRef.current = true;
-      setState("speaking");
-    };
-
-    utterance.onend = () => {
-      isSpeakingRef.current = false;
-      setState("listening");
-      onEnd?.();
-    };
-
-    utterance.onerror = (event) => {
-      console.error("Speech synthesis error", event);
-      isSpeakingRef.current = false;
-      setState("listening");
-      onEnd?.();
-    };
-
-    synthRef.current.speak(utterance);
-  };
-
-  const startListening = () => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error("Speech recognition is not supported in this browser.");
-      return;
-    }
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onstart = () => {
-      setState("listening");
-      vapiActiveRef.current = true;
-      void startMicLevelMonitoring();
-    };
-
-    recognition.onresult = (event: any) => {
-      let interimTranscript = "";
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-
-      if (finalTranscript) {
-        handleUserSpeech(finalTranscript.trim());
-      } else {
-        setCurrentText(interimTranscript);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === "no-speech") return;
-      console.error("Speech recognition error", event.error);
-      if (!isAbortingRef.current) {
-        setErrorMsg(`Speech error: ${event.error}`);
-      }
-    };
-
-    recognition.onend = () => {
-      if (vapiActiveRef.current && !isSpeakingRef.current && !isAbortingRef.current) {
-        try {
-          recognition.start();
-        } catch (e) {}
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  const stopListening = () => {
-    isAbortingRef.current = true;
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-    recognitionRef.current = null;
-    vapiActiveRef.current = false;
-    stopMicLevelMonitoring();
-    setTimeout(() => {
-      isAbortingRef.current = false;
-    }, 100);
-  };
-
-  const handleUserSpeech = async (text: string) => {
-    if (!text) return;
-    
-    setCurrentText("");
-    setHistory(prev => [...prev, { role: "user", text }]);
-    
-    const analysis = analyzeText(text, profile);
-    setStats(prev => ({
-      ...prev,
-      words: prev.words + analysis.words,
-      turns: prev.turns + 1,
-      fillers: prev.fillers + analysis.fillers,
-      scopeViolations: prev.scopeViolations + (analysis.offContent ? 1 : 0),
-    }));
-
-    // Save to Supabase
-    try {
-      const sessId = await createOrLoadSession();
-      await voiceService.saveMessage(sessId, "user", text);
-    } catch (e) {
-      console.error("Failed to save message", e);
-    }
-
-    // Get AI response
-    setState("thinking");
-    try {
-      const currentMessages = [
-        { role: "system", content: buildPrompt(profile) },
-        ...chatHistoryRef.current,
-        { role: "user", content: text }
-      ];
-      
-      chatHistoryRef.current.push({ role: "user", content: text });
-
-      let aiResponse = "";
-      const fullResponse = await aiChatService.streamChat(currentMessages, (token) => {
-        aiResponse += token;
-        setCurrentText(aiResponse);
-      });
-
-      setHistory(prev => [...prev, { role: "assistant", text: fullResponse }]);
-      chatHistoryRef.current.push({ role: "assistant", content: fullResponse });
-      setCurrentText("");
-      
-      setStats(prev => ({
-        ...prev,
-        assistantWords: prev.assistantWords + fullResponse.split(" ").length,
-        assistantQuestions: prev.assistantQuestions + (fullResponse.includes("?") ? 1 : 0),
-      }));
-
-      // Save AI message
-      const sessId = await createOrLoadSession();
-      await voiceService.saveMessage(sessId, "assistant", fullResponse);
-
-      // Speak response
-      speak(fullResponse, profile.voiceId);
-    } catch (e) {
-      console.error("AI response failed", e);
-      setErrorMsg("Failed to get AI response. Please check your connection.");
-      setState("listening");
-    }
   };
 
   const previewVoice = async (voice = selectedVoice) => {
-    if (callTransitionRef.current !== "idle") return;
+    if (!isVapiConfigured()) {
+      toast.error("Voice preview is not configured. Please add VITE_VAPI_PUBLIC_KEY.");
+      return;
+    }
+
+    if (callTransitionRef.current !== "idle") {
+      return;
+    }
+
+    if (vapiActiveRef.current && !previewActiveRef.current) {
+      toast.info("End the current tutor session before previewing another voice.");
+      return;
+    }
 
     try {
       callTransitionRef.current = "preview-starting";
+
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+        previewTimeoutRef.current = null;
+      }
+      if (previewSettleTimeoutRef.current) {
+        window.clearTimeout(previewSettleTimeoutRef.current);
+        previewSettleTimeoutRef.current = null;
+      }
+
+      if (previewActiveRef.current) {
+        await vapi.stop();
+        previewActiveRef.current = false;
+        previewStopPendingRef.current = false;
+      }
+
+      previewActiveRef.current = true;
+      previewStopPendingRef.current = false;
       setPreviewingVoiceId(voice.id);
-      
-      const text = `Hello, I am ${voice.name}, your AI tutor. I will guide you clearly through your practice sessions.`;
-      
-      speak(text, voice.id, () => {
-        setPreviewingVoiceId(null);
-        callTransitionRef.current = "idle";
+      setErrorMsg(null);
+
+      await vapi.start({
+        name: "Eduspace Voice Preview",
+        firstMessage: `Hello, I am ${voice.name}, your AI tutor. This voice is ${voice.tone.toLowerCase()}, and I will guide you clearly through your practice sessions.`,
+        transcriber: {
+          provider: "deepgram",
+          model: "nova-2",
+          language: "en",
+        },
+        voice: {
+          provider: "11labs",
+          voiceId: voice.id,
+        },
+        model: {
+          provider: "openai",
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are only previewing a voice. Say the first message exactly once, then stay silent.",
+            },
+          ],
+        },
       });
 
+      callTransitionRef.current = "idle";
+
+      previewTimeoutRef.current = window.setTimeout(() => {
+        previewTimeoutRef.current = null;
+        if (previewActiveRef.current) {
+          previewStopPendingRef.current = true;
+          callTransitionRef.current = "stopping";
+          vapi.stop();
+          window.setTimeout(() => {
+            if (previewActiveRef.current) {
+              previewActiveRef.current = false;
+              setPreviewingVoiceId(null);
+            }
+            previewStopPendingRef.current = false;
+            if (callTransitionRef.current === "stopping") {
+              callTransitionRef.current = "idle";
+            }
+          }, 500);
+        }
+      }, 16000);
     } catch (error) {
       console.error("Voice preview failed", error);
-      setPreviewingVoiceId(null);
       callTransitionRef.current = "idle";
+      previewActiveRef.current = false;
+      previewStopPendingRef.current = false;
+      setPreviewingVoiceId(null);
+      toast.error("Could not play the Vapi voice preview.");
     }
   };
 
   const handleVoiceSettingsOpenChange = (open: boolean) => {
     setVoiceSettingsOpen(open);
 
-    if (!open) {
-      stopSpeaking();
+    if (!open && previewActiveRef.current) {
+      callTransitionRef.current = "stopping";
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+        previewTimeoutRef.current = null;
+      }
+      if (previewSettleTimeoutRef.current) {
+        window.clearTimeout(previewSettleTimeoutRef.current);
+        previewSettleTimeoutRef.current = null;
+      }
+      vapi.stop();
+      previewActiveRef.current = false;
+      previewStopPendingRef.current = false;
       setPreviewingVoiceId(null);
-      callTransitionRef.current = "idle";
+      window.setTimeout(() => {
+        if (callTransitionRef.current === "stopping") {
+          callTransitionRef.current = "idle";
+        }
+      }, 300);
     }
   };
 
@@ -1158,22 +535,6 @@ export function VoicePracticeSession() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(MOBILE_UNSUPPORTED_VOICE_STORAGE_KEY);
-      if (!raw) return;
-
-      const voiceIds = JSON.parse(raw);
-      if (!Array.isArray(voiceIds)) return;
-
-      mobileUnsupportedVoiceIdsRef.current = new Set(
-        voiceIds.filter((voiceId): voiceId is string => typeof voiceId === "string")
-      );
-    } catch (error) {
-      console.warn("Failed to load mobile voice compatibility cache", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
       localStorage.setItem("eduspace.voiceTutor.profile", JSON.stringify(profile));
     } catch (error) {
       console.warn("Failed to save voice tutor profile", error);
@@ -1189,32 +550,66 @@ export function VoicePracticeSession() {
 
     const onCallStart = () => {
       console.log("[VAPI] Call started");
-      releaseWarmupMicStream();
+      if (previewActiveRef.current) return;
+
       setState("listening");
       vapiActiveRef.current = true;
       setErrorMsg(null);
-      void startMicLevelMonitoring();
     };
 
     const onCallEnd = () => {
       console.log("[VAPI] Call ended");
-      releaseWarmupMicStream();
+      if (previewActiveRef.current) {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+          previewTimeoutRef.current = null;
+        }
+        previewActiveRef.current = false;
+        previewStopPendingRef.current = false;
+        setPreviewingVoiceId(null);
+        callTransitionRef.current = "idle";
+        return;
+      }
+
       setState("idle");
       vapiActiveRef.current = false;
       previewActiveRef.current = false;
       callTransitionRef.current = "idle";
-      stopMicLevelMonitoring();
     };
 
     const onSpeechStart = () => {
+      if (previewActiveRef.current) return;
       setState("speaking");
     };
 
     const onSpeechEnd = () => {
+      if (previewActiveRef.current) {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+          previewTimeoutRef.current = null;
+        }
+        if (previewSettleTimeoutRef.current) {
+          window.clearTimeout(previewSettleTimeoutRef.current);
+        }
+        previewStopPendingRef.current = true;
+        previewSettleTimeoutRef.current = window.setTimeout(() => {
+          previewSettleTimeoutRef.current = null;
+          if (!previewActiveRef.current) {
+            previewStopPendingRef.current = false;
+            return;
+          }
+          callTransitionRef.current = "stopping";
+          vapi.stop();
+        }, 1800);
+        return;
+      }
+      if (previewActiveRef.current) return;
       setState("listening");
     };
 
     const onMessage = async (message: any) => {
+      if (previewActiveRef.current) return;
+
       if (message.type === "transcript") {
         const text = message.transcript.trim();
         if (!text) return;
@@ -1225,7 +620,7 @@ export function VoicePracticeSession() {
           const role = message.role;
           setCurrentText("");
           setHistory(prev => [...prev, { role, text }]);
-          
+
           if (role === "user") {
             const analysis = analyzeText(text, profile);
             setStats(prev => ({
@@ -1255,8 +650,9 @@ export function VoicePracticeSession() {
     };
 
     const onError = (error: any) => {
-      const errorMessage = getErrorMessage(error);
-      
+      const errorMessage = typeof error === 'string' ? error : (error.message || "Voice connection error");
+
+      // Suppress normal call-end signals that might be reported as errors
       const ignoredMessages = [
         "Meeting ended",
         "ejection",
@@ -1269,21 +665,36 @@ export function VoicePracticeSession() {
         "daily-error",
       ];
 
-      const shouldIgnore = ignoredMessages.some(msg => 
+      const shouldIgnore = ignoredMessages.some(msg =>
         errorMessage.toLowerCase().includes(msg.toLowerCase())
       );
 
-      if (suppressVoiceSelectionErrorRef.current && isVoiceSelectionFailure(errorMessage)) {
+      if (previewActiveRef.current) {
+        if (previewTimeoutRef.current) {
+          window.clearTimeout(previewTimeoutRef.current);
+          previewTimeoutRef.current = null;
+        }
+        previewActiveRef.current = false;
+        previewStopPendingRef.current = false;
+        setPreviewingVoiceId(null);
+        callTransitionRef.current = "idle";
+        if (!shouldIgnore) {
+          console.error("[VAPI] Voice preview error:", errorMessage);
+          toast.error("Could not play the selected voice preview.");
+        } else {
+          console.debug("[VAPI] Ignored preview event:", errorMessage);
+        }
         return;
       }
 
       if (!shouldIgnore) {
         console.error("[VAPI] Real error:", errorMessage);
-        releaseWarmupMicStream();
-        setErrorMsg(getFriendlyVoiceError(errorMessage, isMobileEnvironment));
+        setErrorMsg(errorMessage);
         setState("idle");
         vapiActiveRef.current = false;
         callTransitionRef.current = "idle";
+      } else {
+        console.debug("[VAPI] Ignored event:", errorMessage);
       }
     };
 
@@ -1303,30 +714,6 @@ export function VoicePracticeSession() {
       vapi.off("error", onError);
     };
   }, [profile, prompt, currentSessionId]);
-
-  useEffect(() => {
-    if (!synthRef.current) return;
-
-    const loadVoices = () => {
-      const v = synthRef.current?.getVoices();
-      if (v && v.length > 0) {
-        setVoicesLoaded(true);
-      }
-    };
-
-    loadVoices();
-    if (synthRef.current.onvoiceschanged !== undefined) {
-      synthRef.current.onvoiceschanged = loadVoices;
-    }
-  }, []);
-
-  useEffect(() => {
-    // Voice runtime effects removed in favor of native logic
-    return () => {
-      stopSpeaking();
-      stopListening();
-    };
-  }, []);
 
 
   useEffect(() => {
@@ -1348,13 +735,6 @@ export function VoicePracticeSession() {
     }
   }, [currentSessionId, history.length, prompt, state]);
 
-  useEffect(() => {
-    return () => {
-      stopMicLevelMonitoring();
-      releaseWarmupMicStream();
-    };
-  }, []);
-
   const createOrLoadSession = async () => {
     let sessionId = currentSessionId;
     if (!sessionId) {
@@ -1373,14 +753,24 @@ export function VoicePracticeSession() {
     return sessionId;
   };
 
-  const startStop = async (profileOverride?: SessionProfile, options?: { mobileImmediateStart?: boolean }) => {
+  const startStop = async (profileOverride?: SessionProfile) => {
     if (state === "thinking") return;
     if (callTransitionRef.current !== "idle") return;
-
+    if (previewActiveRef.current) {
+      callTransitionRef.current = "stopping";
+      await vapi.stop();
+      previewActiveRef.current = false;
+      vapiActiveRef.current = false;
+      previewStopPendingRef.current = false;
+      setPreviewingVoiceId(null);
+      setState("idle");
+      callTransitionRef.current = "idle";
+      return;
+    }
     const sessionProfile = profileOverride ?? profile;
     const sessionMode = MODES.find((m) => m.id === sessionProfile.practiceMode) ?? MODES[0];
     const sessionPrompt = buildPrompt(sessionProfile);
-    
+
     if (vapiActiveRef.current) {
       callTransitionRef.current = "stopping";
       vapi.stop();
@@ -1393,26 +783,65 @@ export function VoicePracticeSession() {
         return;
       }
 
-      try {
-        callTransitionRef.current = "session-starting";
-        vapiActiveRef.current = true;
-        await ensureVoiceRuntimeReady();
+      callTransitionRef.current = "session-starting";
+      setState("thinking");
+      setErrorMsg(null);
+      vapiActiveRef.current = true;
 
-        if (options?.mobileImmediateStart) {
-          resumeMobileAudioContext();
-          setErrorMsg(null);
-          setState("thinking");
-        } else {
-          setState("thinking");
-          setErrorMsg(null);
+      try {
+        let assistantConfig: any = {
+          name: "Eduspace Voice Tutor",
+          firstMessage: sessionMode.opening,
+          backgroundSpeechDenoisingPlan: {
+            smartDenoisingPlan: {
+              enabled: false,
+            },
+            fourierDenoisingPlan: {
+              enabled: false,
+            },
+          },
+          transcriber: {
+            provider: "deepgram",
+            model: "nova-2",
+            language: "en",
+          },
+          voice: {
+            provider: "11labs",
+            voiceId: sessionProfile.voiceId,
+          },
+          model: {
+            provider: "openai",
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: sessionPrompt,
+              },
+            ],
+          },
+        };
+
+        // Use the specific interviewer config from the reference project if in interview mode
+        if (sessionProfile.practiceMode === "interview") {
+          const baseConfig = JSON.parse(JSON.stringify(interviewerConfig));
+          baseConfig.model.messages[0].content = baseConfig.model.messages[0].content.replace("{{questions}}", sessionProfile.focusArea || "General behavioral and technical questions.");
+          baseConfig.voice.voiceId = sessionProfile.voiceId;
+          baseConfig.backgroundSpeechDenoisingPlan = {
+            smartDenoisingPlan: {
+              enabled: false,
+            },
+            fourierDenoisingPlan: {
+              enabled: false,
+            },
+          };
+          assistantConfig = baseConfig;
         }
 
-        await startVoiceSessionWithFallback(sessionProfile, sessionPrompt, sessionMode);
+        await vapi.start(assistantConfig);
         callTransitionRef.current = "idle";
       } catch (e) {
         console.error(e);
-        releaseWarmupMicStream();
-        setErrorMsg(getFriendlyVoiceError(getErrorMessage(e), isMobileEnvironment));
+        setErrorMsg("Failed to start voice session.");
         vapiActiveRef.current = false;
         setState("idle");
         callTransitionRef.current = "idle";
@@ -1431,141 +860,9 @@ export function VoicePracticeSession() {
     void startStop();
   };
 
-  const handleMicButtonClick = () => {
-    if (isMobileViewport && !vapiActiveRef.current && !previewActiveRef.current && callTransitionRef.current === "idle") {
-      void startStop(undefined, { mobileImmediateStart: true });
-      return;
-    }
-
-    void startStop();
-  };
-
-  const isMicListening = state === "listening";
-  const isAiResponding = state === "speaking" || state === "thinking";
-  const isMicActive = state !== "idle";
-
-  const renderVoiceReactiveMic = (options?: {
-    buttonClassName?: string;
-    activeButtonClassName?: string;
-    iconClassName?: string;
-    useMaterialIcon?: boolean;
-  }) => (
-    <motion.button
-      type="button"
-      onClick={handleMicButtonClick}
-      whileTap={{ scale: 0.94 }}
-      className={cn(
-        "relative isolate overflow-visible outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-        "flex items-center justify-center transition-all duration-300",
-        isMicActive
-          ? "h-16 w-[15.5rem] rounded-[2rem] px-1"
-          : "rounded-full border border-white/20 backdrop-blur-3xl shadow-2xl",
-        isMicActive ? options?.activeButtonClassName : options?.buttonClassName
-      )}
-      animate={
-        isAiResponding
-          ? {
-              boxShadow: isMicActive
-                ? [
-                    "0 0 0 rgba(0,0,0,0)",
-                    "0 0 0 rgba(0,0,0,0)",
-                    "0 0 0 rgba(0,0,0,0)",
-                  ]
-                : [
-                    "0 18px 40px rgba(168,85,247,0.22)",
-                    "0 22px 52px rgba(56,189,248,0.3)",
-                    "0 18px 40px rgba(168,85,247,0.22)",
-                  ],
-            }
-          : {
-              boxShadow: isMicActive
-                ? "0 0 0 rgba(0,0,0,0)"
-                : "0 18px 42px rgba(79,70,229,0.2)",
-            }
-      }
-      transition={isAiResponding ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.28 }}
-    >
-      {isMicActive ? (
-        <div className="relative z-10 flex h-full w-full items-center justify-center">
-          <div className="relative flex h-12 w-full max-w-[15rem] items-center justify-center gap-1.5">
-            <motion.div
-              className="pointer-events-none absolute inset-x-2 inset-y-2 rounded-full blur-xl"
-              style={{
-                opacity: shimmerOpacity,
-                background: "linear-gradient(90deg, rgba(45,212,191,0.24), rgba(96,165,250,0.3), rgba(168,85,247,0.28), rgba(244,114,182,0.24))",
-                scaleX: activeWaveScale,
-              }}
-              animate={
-                isMicListening
-                  ? { x: [-18, 18, -12] }
-                  : isAiResponding
-                    ? { x: [-10, 10, -6] }
-                    : { x: [-6, 6, -4] }
-              }
-              transition={{ duration: isMicListening ? 1.5 : isAiResponding ? 1.9 : 3.4, repeat: Infinity, ease: "easeInOut" }}
-            />
-            {[
-              waveBar1,
-              waveBar2,
-              waveBar3,
-              waveBar4,
-              waveBar5,
-              waveBar6,
-              waveBar7,
-              waveBar8,
-              waveBar9,
-            ].map((bar, index) => (
-              <motion.span
-                key={index}
-                className="relative z-10 block w-1.5 sm:w-2 rounded-full"
-                style={{
-                  height: "78%",
-                  scaleY: isMicListening ? bar : isAiResponding ? activeMicScale : 0.32,
-                  opacity: isMicListening ? 1 : isAiResponding ? 0.88 : 0.58,
-                  background: index % 3 === 0
-                    ? "linear-gradient(180deg, rgba(45,212,191,1), rgba(59,130,246,0.86))"
-                    : index % 3 === 1
-                      ? "linear-gradient(180deg, rgba(96,165,250,1), rgba(168,85,247,0.9))"
-                      : "linear-gradient(180deg, rgba(244,114,182,1), rgba(99,102,241,0.88))",
-                  boxShadow: "0 0 10px rgba(125,211,252,0.24)",
-                }}
-                animate={
-                  isAiResponding
-                    ? { y: [0, -1.5, 0] }
-                    : { y: [0, 0.5, 0] }
-                }
-                transition={{ duration: 1.35 + index * 0.08, repeat: Infinity, ease: "easeInOut" }}
-              />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <motion.div
-          className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-primary"
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.2 }}
-        >
-          {options?.useMaterialIcon ? (
-            <motion.span
-              className={cn("material-symbols-outlined text-white", options?.iconClassName)}
-              style={{ fontVariationSettings: "'FILL' 1" }}
-              animate={{ y: 0, scale: 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              mic
-            </motion.span>
-          ) : (
-            <Mic className={cn("text-primary-foreground", options?.iconClassName)} />
-          )}
-        </motion.div>
-      )}
-    </motion.button>
-  );
-
 
   const newSession = () => {
     cleanup();
-    stopMicLevelMonitoring();
     setCurrentSessionId(null);
     setHistory([]);
     setMessages([{ role: "system", content: buildPrompt(profile) }]);
@@ -1668,26 +965,18 @@ export function VoicePracticeSession() {
   };
 
   const endSession = async () => {
-    if (state === "thinking" || state === "ending") return;
-    
+    if (state === "thinking") return;
+
     // Stop Vapi if active
     if (vapiActiveRef.current) {
       vapi.stop();
       vapiActiveRef.current = false;
     }
 
-    // Show ending loading screen immediately
-    setState("ending");
-
-    // Capture exact duration now before any async work
-    const capturedDurationSeconds = Math.max(1, Math.round((Date.now() - stats.startTime.getTime()) / 1000));
-    setSessionDurationSeconds(capturedDurationSeconds);
-
-    // Build local summary right away so the screen can show instantly
+    setState("thinking");
     const computed = buildSummary(history, profile, stats);
-    setSummary(computed);
 
-    // Run AI-powered evaluation in the background and update summary when ready
+    // Attempt to get AI-powered structured feedback similar to the interviewer folder
     let finalSummary = computed;
     try {
       const transcriptText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join("\n");
@@ -1712,7 +1001,7 @@ Return exactly in JSON format:
 
 Be specific and constructive.`;
 
-      const aiResponse = await aiChatService.streamChat([{ role: "user", content: evalPrompt }], () => {});
+      const aiResponse = await aiChatService.streamChat([{ role: "user", content: evalPrompt }], () => { });
       if (aiResponse) {
         const extractedJson = extractJsonObject(aiResponse);
         if (extractedJson) {
@@ -1729,16 +1018,14 @@ Be specific and constructive.`;
             recommendations: aiData.improvements || computed.recommendations,
             note: aiData.finalAssessment || computed.note
           };
-          setSummary(finalSummary);
         }
       }
     } catch (e) {
       console.error("AI Evaluation failed, using local summary", e);
     }
 
-    // Transition to summary — either with AI-enhanced or local data
+    setSummary(finalSummary);
     setState("summary");
-
     if (currentSessionId) {
       try {
         await voiceService.updateSessionMeta(currentSessionId, {
@@ -1780,51 +1067,23 @@ Be specific and constructive.`;
   const scopeReply = buildOutOfContentReply(profile);
   const focusTopic = profile.focusArea.trim() ? profile.focusArea.trim() : mode.label;
 
-  if (state === "ending") {
-    return (
-      <div className="flex-1 flex flex-col h-full bg-background items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-6 text-center px-6"
-        >
-          <div className="relative">
-            <div className="size-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Loader2 className="size-9 text-primary animate-spin" />
-            </div>
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/10"
-              animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-black tracking-tight">Ending Session</h3>
-            <p className="text-sm text-muted-foreground font-medium">Analyzing your performance and generating feedback…</p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   if (state === "summary") {
     const finalSummary = summary ?? buildSummary(history, profile, stats);
-    const durationSeconds = Math.max(1, Math.round((Date.now() - stats.startTime.getTime()) / 1000));
-    const durationDisplay = durationSeconds < 60
-      ? `${durationSeconds}s`
-      : `${(durationSeconds / 60).toFixed(1)} min`;
     return (
       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
         <ScrollArea className="flex-1">
           <div className="min-h-full flex flex-col items-center p-4 md:p-8">
-            <div className="max-w-5xl w-full space-y-6 pb-20">
+            <div className="max-w-4xl w-full space-y-6 pb-20">
               <div className="text-center space-y-3">
+                <div className="size-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
+                  <Sparkles className="size-8 text-primary" />
+                </div>
                 <h2 className="text-3xl md:text-4xl font-black">Practice Review</h2>
                 <p className="text-muted-foreground">Saved with coaching notes, rubric scores, and next-step recommendations.</p>
               </div>
 
-              <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border bg-card p-5"><Clock className="size-5 text-primary" /><div className="mt-2 text-2xl font-black">{durationDisplay}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Duration</div></div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border bg-card p-5"><Clock className="size-5 text-primary" /><div className="mt-2 text-2xl font-black">{Math.round((Date.now() - stats.startTime.getTime()) / 1000)}s</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Duration</div></div>
                 <div className="rounded-2xl border bg-card p-5"><BarChart2 className="size-5 text-fuchsia-500" /><div className="mt-2 text-2xl font-black">{finalSummary.score}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Coach score</div></div>
                 <div className="rounded-2xl border bg-card p-5"><CheckCircle2 className="size-5 text-emerald-500" /><div className="mt-2 text-2xl font-black">{totalTurns}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Turns</div></div>
                 <div className="rounded-2xl border bg-card p-5"><Mic className="size-5 text-cyan-500" /><div className="mt-2 text-2xl font-black">{totalWords}</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Words</div></div>
@@ -1891,23 +1150,23 @@ Be specific and constructive.`;
       </AnimatePresence>
 
       {showMobileFreshShell && (
-        <div className="md:hidden absolute inset-0 z-20 flex flex-col bg-background text-foreground overflow-hidden">
-          <header className="w-full shrink-0 px-4 py-2.5 bg-background/95 backdrop-blur-xl z-30 sticky top-0 border-b border-border/20">
+        <div className="md:hidden absolute inset-0 z-20 flex flex-col bg-surface text-on-surface overflow-hidden">
+          <header className="w-full shrink-0 px-4 py-2.5 bg-surface/95 backdrop-blur-xl z-30 sticky top-0 border-b border-outline/10">
             <div className="flex justify-between items-center w-full max-w-md mx-auto">
               <div className="flex items-center gap-3 min-w-0">
-                <button className="p-2 rounded-full hover:bg-muted active:scale-95 duration-200" onClick={() => setMobileOpen(true)}>
-                  <Menu className="size-5 text-muted-foreground" />
+                <button className="p-2 rounded-full hover:bg-[#f2f4f6] active:scale-95 duration-200" onClick={() => setMobileOpen(true)}>
+                  <Menu className="size-5 text-[#424655]" />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden ring-2 ring-primary/20 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-primary-fixed overflow-hidden ring-2 ring-white shrink-0">
                   <img alt="User profile" className="w-full h-full object-cover" src="/favicon.png" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-sm font-bold tracking-tighter text-primary truncate">Fluid Mentor</h1>
-                  <p className="text-[11px] text-muted-foreground truncate">AI Voice Tutor</p>
+                  <h1 className="text-sm font-bold tracking-tighter text-[#0051d4] truncate">Fluid Mentor</h1>
+                  <p className="text-[11px] text-[#424655] truncate">AI Voice Tutor</p>
                 </div>
               </div>
-              <button className="p-2 rounded-full hover:bg-muted active:scale-95 duration-200" type="button">
-                <Settings className="size-5 text-muted-foreground" />
+              <button className="p-2 rounded-full hover:bg-[#f2f4f6] active:scale-95 duration-200" type="button">
+                <Settings className="size-5 text-[#424655]" />
               </button>
             </div>
           </header>
@@ -1915,18 +1174,19 @@ Be specific and constructive.`;
           <ScrollArea className="flex-1">
             <main className="px-4 py-4 flex flex-col gap-6 max-w-md mx-auto pb-28">
               <section className="flex flex-col gap-2">
-                <div className="inline-flex items-center self-start px-3 py-1 bg-primary/10 text-primary rounded-full text-[11px] font-semibold tracking-wide uppercase">
+                <div className="inline-flex items-center self-start px-3 py-1 bg-secondary-container text-[#2e4687] rounded-full text-[11px] font-semibold tracking-wide uppercase">
                   Multi-mode Coach
                 </div>
-                <h2 className="text-4xl font-extrabold tracking-tight text-foreground whitespace-nowrap">Voice Tutor</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">
+                <h2 className="text-4xl font-extrabold tracking-tight text-on-surface whitespace-nowrap">Voice Tutor</h2>
+                <p className="text-on-surface-variant text-sm leading-relaxed">
                   Refine your communication skills with real-time AI feedback tailored to your goals.
                 </p>
               </section>
 
               <section className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <h3 className="text-lg font-bold tracking-tight text-foreground">Select Mode</h3>
+                  <h3 className="text-lg font-bold tracking-tight">Select Mode</h3>
+                  <span className="text-xs font-medium text-primary cursor-pointer">View All</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {MODES.slice(0, 4).map((item) => {
@@ -1939,16 +1199,16 @@ Be specific and constructive.`;
                         className={cn(
                           "p-4 rounded-xl flex flex-col gap-3 text-left transition-all active:scale-[0.98]",
                           active
-                            ? "bg-card shadow-sm border-2 border-primary/30"
-                            : "bg-muted/40 border border-transparent hover:bg-muted/60"
+                            ? "bg-surface-container-lowest shadow-sm border-2 border-primary/10"
+                            : "bg-surface-container-low border border-transparent hover:bg-surface-container-high"
                         )}
                       >
-                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", active ? "bg-primary/15 dark:bg-primary/20 dark:ring-1 dark:ring-primary/40" : "bg-muted")}>
-                          <Icon className={cn("size-5", active ? "text-primary" : "text-muted-foreground")} />
+                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", active ? "bg-primary/10" : "bg-on-surface-variant/10")}>
+                          <Icon className={cn("size-5", active ? "text-primary" : "text-on-surface-variant")} />
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-foreground">{item.label}</p>
-                          <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+                          <p className="font-bold text-sm">{item.label}</p>
+                          <p className="text-[11px] text-on-surface-variant">{item.desc}</p>
                         </div>
                       </button>
                     );
@@ -1957,12 +1217,12 @@ Be specific and constructive.`;
               </section>
 
               <section className="flex flex-col gap-4">
-                <h3 className="text-lg font-bold tracking-tight text-foreground">Session Setup</h3>
-                <div className="bg-card rounded-[1.5rem] p-6 shadow-sm border border-border/40 flex flex-col gap-6">
+                <h3 className="text-lg font-bold tracking-tight">Session Setup</h3>
+                <div className="bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-sm flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Focus Area</label>
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Focus Area</label>
                     <input
-                      className="w-full bg-muted/50 border border-border/60 rounded-xl py-3 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/40 placeholder:text-on-surface-variant/60"
                       placeholder="e.g. Technical Leadership"
                       type="text"
                       value={profile.focusArea}
@@ -1971,15 +1231,15 @@ Be specific and constructive.`;
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="min-w-0 rounded-2xl border border-border/60 bg-card shadow-sm p-4 flex flex-col gap-3">
+                    <div className="min-w-0 rounded-2xl border border-border/60 bg-gradient-to-br from-white to-surface-container-low shadow-sm p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.18em]">Difficulty</label>
-                        <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-500">Mode</span>
+                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Difficulty</label>
+                        <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-600">Mode</span>
                       </div>
-                      <p className="text-[12px] font-semibold text-foreground capitalize">{profile.difficulty}</p>
+                      <p className="text-[12px] font-semibold text-on-surface">Beginner</p>
                       <div className="relative">
                         <select
-                          className="w-full appearance-none rounded-xl border border-border/60 bg-muted/50 px-3 py-3 pr-9 text-sm font-semibold text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                          className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                           value={profile.difficulty}
                           onChange={(e) => setProfile((prev) => ({ ...prev, difficulty: e.target.value as Difficulty }))}
                         >
@@ -1987,19 +1247,19 @@ Be specific and constructive.`;
                           <option value="intermediate">Intermediate</option>
                           <option value="advanced">Advanced</option>
                         </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
                       </div>
                     </div>
 
-                    <div className="min-w-0 rounded-2xl border border-border/60 bg-card shadow-sm p-4 flex flex-col gap-3">
+                    <div className="min-w-0 rounded-2xl border border-border/60 bg-gradient-to-br from-white to-surface-container-low shadow-sm p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.18em]">Duration</label>
-                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-500">Goal</span>
+                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Duration</label>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600">Goal</span>
                       </div>
-                      <p className="text-[12px] font-semibold text-foreground">{profile.targetDurationMinutes} mins</p>
+                      <p className="text-[12px] font-semibold text-on-surface">{profile.targetDurationMinutes} mins</p>
                       <div className="relative">
                         <select
-                          className="w-full appearance-none rounded-xl border border-border/60 bg-muted/50 px-3 py-3 pr-9 text-sm font-semibold text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                          className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
                           value={String(profile.targetDurationMinutes)}
                           onChange={(e) => setProfile((prev) => ({ ...prev, targetDurationMinutes: Number(e.target.value) }))}
                         >
@@ -2008,14 +1268,14 @@ Be specific and constructive.`;
                           <option value="15">15 mins</option>
                           <option value="20">20 mins</option>
                         </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
                       </div>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2 pt-1">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Initial Prompt</label>
-                    <div className="bg-muted/40 border border-border/40 rounded-xl p-4 italic text-sm text-muted-foreground leading-relaxed">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Initial Prompt</label>
+                    <div className="bg-surface-container-low/50 rounded-xl p-4 italic text-sm text-on-surface-variant leading-relaxed">
                       "{mode.opening}"
                     </div>
                   </div>
@@ -2027,12 +1287,14 @@ Be specific and constructive.`;
 
           <div className="fixed bottom-0 left-0 w-full z-50 pointer-events-none">
             <div className="flex justify-center pb-6 pointer-events-auto">
-              {renderVoiceReactiveMic({
-                buttonClassName: "h-20 w-20",
-                activeButtonClassName: "h-16 w-[13.5rem]",
-                iconClassName: "text-4xl",
-                useMaterialIcon: true,
-              })}
+              <button
+                className="w-20 h-20 rounded-full bg-primary shadow-2xl shadow-primary/35 flex items-center justify-center active:scale-90 transition-transform duration-300 border border-white/20"
+                onClick={handleSessionToggle}
+              >
+                <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  mic
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -2081,28 +1343,28 @@ Be specific and constructive.`;
         </div>
 
         <Sheet open={voiceSettingsOpen} onOpenChange={handleVoiceSettingsOpenChange}>
-          <SheetContent side="right" className="w-full sm:max-w-xl border-l border-border bg-background p-0 text-foreground overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-br from-[#000b60] via-[#142283] to-[#dfe0ff] dark:from-primary/80 dark:via-primary/60 dark:to-primary/20 px-6 py-6 text-white">
+          <SheetContent side="right" className="w-full sm:max-w-xl border-l-[#c6c5d4]/70 bg-[#fbf8ff] p-0 text-[#1b1b21] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-br from-[#000b60] via-[#142283] to-[#dfe0ff] px-6 py-6 text-white">
               <SheetHeader>
                 <SheetTitle className="text-2xl font-extrabold tracking-tight text-white">Voice Settings</SheetTitle>
                 <SheetDescription className="text-white/75">
-                  Choose the tutor voice used for AI Voice Tutor sessions. Native speech ensures instant response times.
+                  Choose the Vapi/11Labs tutor voice used for new AI Voice Tutor sessions. Preview starts a short Vapi sample.
                 </SheetDescription>
               </SheetHeader>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-5 px-6 pb-6 pt-6">
-              <div className="rounded-2xl bg-card p-4 shadow-sm ring-1 ring-border/60">
+              <div className="rounded-2xl bg-white p-4 shadow-[0_16px_32px_-18px_rgba(0,11,96,0.35)] ring-1 ring-[#c6c5d4]/60">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Selected Voice</p>
-                    <h3 className="mt-1 text-xl font-extrabold text-foreground">{selectedVoice.name}</h3>
-                    <p className="mt-1 text-sm font-medium text-muted-foreground">{selectedVoice.tone}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#454652]">Selected Voice</p>
+                    <h3 className="mt-1 text-xl font-extrabold text-[#000b60]">{selectedVoice.name}</h3>
+                    <p className="mt-1 text-sm font-medium text-[#454652]">{selectedVoice.tone}</p>
                   </div>
                   <Button
                     type="button"
                     onClick={() => previewVoice(selectedVoice)}
-                    className="rounded-full bg-primary px-5 font-extrabold text-white hover:bg-primary/90"
+                    className="rounded-full bg-[#000b60] px-5 font-extrabold text-white hover:bg-[#142283]"
                   >
                     <Volume2 className="mr-2 size-4" />
                     {previewingVoiceId === selectedVoice.id ? "Playing..." : "Preview"}
@@ -2117,18 +1379,18 @@ Be specific and constructive.`;
                     <div
                       key={voice.id}
                       className={cn(
-                        "rounded-2xl border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5",
-                        active ? "border-primary ring-2 ring-primary" : "border-border/60 hover:border-primary/50"
+                        "rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5",
+                        active ? "border-[#000b60] ring-2 ring-[#000b60]" : "border-[#c6c5d4]/70 hover:border-[#000b60]/50"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-base font-extrabold text-foreground">{voice.name}</p>
-                          <p className="mt-1 text-xs font-semibold text-muted-foreground">{voice.tone}</p>
+                          <p className="text-base font-extrabold text-[#000b60]">{voice.name}</p>
+                          <p className="mt-1 text-xs font-semibold text-[#454652]">{voice.tone}</p>
                         </div>
                         <span className={cn(
                           "rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em]",
-                          active ? "bg-primary text-white" : "bg-muted text-foreground"
+                          active ? "bg-[#000b60] text-white" : "bg-[#eae7ef] text-[#000b60]"
                         )}>
                           {active ? "Active" : "Select"}
                         </span>
@@ -2139,8 +1401,8 @@ Be specific and constructive.`;
                           className={cn(
                             "inline-flex h-8 items-center rounded-full px-3 py-1 text-[11px] font-extrabold leading-none transition",
                             active
-                              ? "bg-primary text-white hover:bg-primary/90"
-                              : "bg-muted text-foreground hover:bg-muted/80"
+                              ? "bg-[#000b60] text-white hover:bg-[#142283]"
+                              : "bg-[#eae7ef] text-[#000b60] hover:bg-[#d6d1df]"
                           )}
                           onClick={() => {
                             setProfile((prev) => ({ ...prev, voiceId: voice.id }));
@@ -2153,7 +1415,7 @@ Be specific and constructive.`;
                         </button>
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center rounded-full bg-muted px-3 py-1 text-[11px] font-extrabold leading-none text-foreground transition hover:bg-primary hover:text-white"
+                          className="inline-flex h-8 items-center rounded-full bg-[#eae7ef] px-3 py-1 text-[11px] font-extrabold leading-none text-[#000b60] transition hover:bg-[#000b60] hover:text-white"
                           onClick={() => previewVoice(voice)}
                         >
                           <Volume2 className="mr-1.5 size-3.5" />
@@ -2165,8 +1427,8 @@ Be specific and constructive.`;
                 })}
               </div>
 
-              <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                Note: Voice Tutor now uses browser-native speech for instant response and better reliability.
+              <p className="text-xs font-medium leading-relaxed text-[#454652]">
+                Note: preview starts a short Vapi voice call using the same 11Labs voice that will be used in the live tutor session.
               </p>
             </div>
           </SheetContent>
@@ -2188,37 +1450,37 @@ Be specific and constructive.`;
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] dark:bg-background text-[#1b1b21] dark:text-foreground"
+                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] text-[#1b1b21]"
               >
-                <section className="relative flex flex-1 px-8 py-12 xl:px-14 xl:py-16 2xl:px-20">
-                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb] dark:bg-muted/20" />
-                  <div className="relative z-10 grid w-full items-start gap-10 lg:grid-cols-12">
+                <section className="relative flex min-h-[520px] flex-1 overflow-hidden px-8 py-12 xl:px-14 xl:py-16 2xl:px-20">
+                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb]" />
+                  <div className="relative z-10 grid w-full items-center gap-10 lg:grid-cols-12">
                     <div className="lg:col-span-7">
-                      <span className="inline-flex rounded-full bg-[#142283] dark:bg-primary/20 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2] dark:text-primary">
+                      <span className="inline-flex rounded-full bg-[#142283] px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2]">
                         Premium Intelligence
                       </span>
-                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] dark:text-foreground xl:text-7xl">
+                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] xl:text-7xl">
                         Master Your <br /> Next Interview
                       </h1>
-                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] dark:text-muted-foreground xl:text-lg">
+                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] xl:text-lg">
                         Practice DSA, SQL, interviews, presentations, and communication in a calm coaching space built for focused voice sessions.
                       </p>
 
-                      <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
-                        <Input
+                      <div className="mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-[minmax(260px,1fr)_minmax(150px,180px)_minmax(150px,180px)]">
+                        <Textarea
                           value={profile.focusArea}
                           onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
                           placeholder="Focus area, e.g. Binary trees, SQL joins, HR interview..."
-                          className="h-[52px] rounded-full border-[#c6c5d4] dark:border-border bg-white/90 dark:bg-muted/50 px-6 text-sm font-semibold text-[#1b1b21] dark:text-foreground shadow-[0_8px_24px_-6px_rgba(0,11,96,0.08)] placeholder:text-[#767683] dark:placeholder:text-muted-foreground focus:border-[#000b60] dark:focus:border-primary focus-visible:ring-[#000b60]/20 dark:focus-visible:ring-primary/20"
+                          className="min-h-[58px] rounded-full border-[#c6c5d4] bg-white/90 px-6 py-4 text-sm font-semibold text-[#1b1b21] shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] placeholder:text-[#767683] focus:border-[#000b60] focus:ring-[#000b60]/20 sm:col-span-3 xl:col-span-1"
                         />
                         <Select
                           value={profile.difficulty}
                           onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
                         >
-                          <SelectTrigger className="h-[52px] rounded-full border-[#c6c5d4] dark:border-border bg-[#f5f2fb] dark:bg-muted/50 px-5 text-xs font-extrabold text-[#000b60] dark:text-foreground shadow-sm focus:ring-[#000b60]/20 dark:focus:ring-primary/20">
+                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
                             <SelectValue placeholder="Difficulty" />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-[#c6c5d4] dark:border-border bg-white/95 dark:bg-card backdrop-blur-3xl z-[60]">
+                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
                             <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
                             <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
                             <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
@@ -2228,10 +1490,10 @@ Be specific and constructive.`;
                           value={String(profile.targetDurationMinutes)}
                           onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
                         >
-                          <SelectTrigger className="h-[52px] rounded-full border-[#c6c5d4] dark:border-border bg-[#f5f2fb] dark:bg-muted/50 px-5 text-xs font-extrabold text-[#000b60] dark:text-foreground shadow-sm focus:ring-[#000b60]/20 dark:focus:ring-primary/20">
+                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
                             <SelectValue placeholder="Duration" />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-[#c6c5d4] dark:border-border bg-white/95 dark:bg-card backdrop-blur-3xl z-[60]">
+                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
                             <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
                             <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
                             <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
@@ -2243,36 +1505,46 @@ Be specific and constructive.`;
                       <div className="mt-8 flex flex-wrap gap-4">
                         <Button
                           onClick={handleSessionToggle}
-                          className="h-12 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] dark:from-primary dark:to-primary/80 px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60]"
+                          className="h-14 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60]"
                         >
                           Begin Your Journey
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
-                          className="h-12 rounded-full bg-[#eae7ef] dark:bg-muted px-8 text-sm font-extrabold text-[#000b60] dark:text-foreground hover:bg-[#e4e1ea] dark:hover:bg-muted/80"
-                          onClick={() => setProfile((prev) => ({ ...prev, focusArea: mode.label }))}
+                          className="h-14 rounded-full bg-[#eae7ef] px-8 text-sm font-extrabold text-[#000b60] hover:bg-[#e4e1ea] hover:text-[#000b60]"
+                          onClick={() => setProfile((prev) => ({ ...prev, focusArea: prev.focusArea || mode.label }))}
                         >
                           Use Current Focus
                         </Button>
                       </div>
                     </div>
 
-                    <div className="hidden lg:col-span-5 lg:flex lg:items-center lg:justify-center">
-                      <div className="w-full max-w-[420px] rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] dark:bg-muted/30 p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
-                        <div className="flex items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] dark:from-muted/40 dark:via-muted/20 dark:to-primary/10 p-10">
-                          <img src="/ai-tutor.png" alt="AI Voice Tutor" className="h-auto max-h-[320px] w-full object-contain drop-shadow-2xl" />
+                    <div className="relative hidden lg:col-span-5 lg:block">
+                      <div className="aspect-square rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
+                        <div className="flex h-full items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] p-10">
+                          <img src="/ai-tutor.png" alt="AI Voice Tutor" className="h-full max-h-[360px] w-full object-contain drop-shadow-2xl" />
                         </div>
+                      </div>
+                      <div className="absolute -bottom-8 -left-8 max-w-[250px] rounded-2xl border border-white/40 bg-white/75 p-6 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.18)] backdrop-blur-2xl">
+                        <div className="mb-3 flex items-center gap-3">
+                          <BarChart2 className="size-5 text-[#5c1800]" />
+                          <span className="text-sm font-extrabold text-[#1b1b21]">Confidence Score</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ffdbd0]">
+                          <div className="h-full w-[78%] rounded-full bg-[#380b00]" />
+                        </div>
+                        <p className="mt-2 text-xs font-semibold text-[#454652]">Focused on {focusTopic}</p>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                <section className="bg-[#efecf5] dark:bg-muted/10 px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
+                <section className="bg-[#efecf5] px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
                   <div className="mb-8 flex items-end justify-between gap-6">
                     <div>
-                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60] dark:text-foreground">Focus Your Preparation</h2>
-                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652] dark:text-muted-foreground">
+                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60]">Focus Your Preparation</h2>
+                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652]">
                         Choose the coaching area first, then start your voice practice with the selected setup.
                       </p>
                     </div>
@@ -2295,19 +1567,19 @@ Be specific and constructive.`;
                             }
                           }}
                           className={cn(
-                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white dark:bg-card p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] dark:shadow-none dark:border dark:border-border/40 transition-all duration-300 hover:-translate-y-1",
-                            active && "ring-2 ring-[#000b60] dark:ring-primary"
+                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] transition-all duration-300 hover:-translate-y-1",
+                            active && "ring-2 ring-[#000b60]"
                           )}
                         >
                           <div>
                             <div className={cn(
-                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 dark:bg-primary/15 text-[#000b60] dark:text-primary transition-transform group-hover:scale-110",
-                              active && "bg-[#000b60] dark:bg-primary/20 dark:ring-2 dark:ring-primary/40 text-white dark:text-primary"
+                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 text-[#000b60] transition-transform group-hover:scale-110",
+                              active && "bg-[#000b60] text-white"
                             )}>
                               <Icon className="size-7" />
                             </div>
-                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60] dark:text-foreground">{item.label}</h3>
-                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652] dark:text-muted-foreground">{item.desc}</p>
+                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60]">{item.label}</h3>
+                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652]">{item.desc}</p>
                           </div>
                           <button
                             type="button"
@@ -2315,7 +1587,7 @@ Be specific and constructive.`;
                               event.stopPropagation();
                               startPracticeWithMode(item.id);
                             }}
-                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] dark:bg-muted px-5 py-3 text-sm font-extrabold text-[#000b60] dark:text-foreground transition-all group-hover:bg-[#000b60] dark:group-hover:bg-primary group-hover:text-white"
+                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] px-5 py-3 text-sm font-extrabold text-[#000b60] transition-all group-hover:bg-[#000b60] group-hover:text-white"
                           >
                             Start Practice
                             <ChevronDown className="-rotate-90 size-4" />
@@ -2328,248 +1600,248 @@ Be specific and constructive.`;
               </motion.div>
             ) : (
               <>
-              <AnimatePresence>
-              {history.length === 0 && state === "idle" && (
-                <motion.div
-                  key="session-cards"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.3 }}
-                  className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 w-full relative z-20 mb-4"
-                >
-                  <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Mode</p>
-                        <div className="mt-1 flex items-center gap-1.5 min-w-0">
-                          <mode.icon className="size-3 text-primary shrink-0" />
-                          <span className="font-black text-[10px] sm:text-[12px] truncate">{mode.label}</span>
-                        </div>
-                      </div>
-                      <span className="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-primary">Live</span>
-                    </div>
-                    <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">{mode.desc}</p>
-                  </div>
-                  <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Diff</p>
-                        <div className="mt-1 flex items-center gap-1.5 min-w-0">
-                          <ShieldCheck className="size-3 text-fuchsia-500 shrink-0" />
-                          <span className="font-black text-[10px] sm:text-[12px] capitalize truncate">{profile.difficulty}</span>
-                        </div>
-                      </div>
-                      <span className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-fuchsia-500">Set</span>
-                    </div>
-                    <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">Support and follow-up intensity.</p>
-                  </div>
-                  <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Target</p>
-                        <div className="mt-1 flex items-center gap-1.5 min-w-0">
-                          <Clock className="size-3 text-emerald-500 shrink-0" />
-                          <span className="font-black text-[10px] sm:text-[12px]">{profile.targetDurationMinutes}m</span>
-                        </div>
-                      </div>
-                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-emerald-500">Goal</span>
-                    </div>
-                    <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">Paced to this duration.</p>
-                  </div>
-                  <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Pace</p>
-                        <div className="mt-1 flex items-center gap-1.5 min-w-0">
-                          <BarChart2 className="size-3 text-cyan-500 shrink-0" />
-                          <span className="font-black text-[10px] sm:text-[12px]">{Math.round((Date.now() - stats.startTime.getTime()) / 1000)}s</span>
-                        </div>
-                      </div>
-                      <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-cyan-500">Now</span>
-                    </div>
-                    <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">{stats.turns} turn{stats.turns === 1 ? "" : "s"} and {stats.words} words.</p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            </>
-          )
-        }
-
-            {!showDesktopFreshStudio && (
-            <div className={cn("w-full", state === "idle" && "lg:grid lg:grid-cols-[1fr_380px] lg:gap-8")}>
-              <div className="space-y-6 min-w-0">
-                {history.length === 0 && state === "idle" && (
-                  <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.18em] text-primary">
-                      <Sparkles className="size-3" /> MULTI-MODE COACH
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-foreground uppercase tracking-tight leading-none">Voice Tutor</h1>
-                    <p className="text-muted-foreground max-w-sm font-medium text-[12px] sm:text-[14px] leading-relaxed opacity-70 mt-2">
-                      Refine your communication skills with real-time AI feedback tailored to your goals.
-                    </p>
-                    <div className="flex items-center justify-between mt-6 mb-3 px-1">
-                      <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Select Mode</h2>
-                      <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">View All</button>
-                    </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                      {MODES.map((item) => {
-                        const Icon = item.icon;
-                        const active = profile.practiceMode === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
-                            className={cn(
-                              "group rounded-2xl border p-4 text-left min-w-0 transition-all active:scale-95 shadow-sm relative overflow-hidden flex flex-col items-start gap-4",
-                              active
-                                ? "border-primary bg-card dark:bg-card/90 ring-1 ring-primary/20"
-                                : "border-border/60 bg-card/40 hover:bg-muted/30"
-                            )}
-                          >
-                            <div className={cn(
-                              "size-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
-                              active ? "bg-primary text-white shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                            )}>
-                              <Icon className="size-6" />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="font-black text-sm block leading-none mb-1">{item.label}</span>
-                              <p className="text-[10px] text-muted-foreground leading-tight opacity-70 font-medium">{item.desc}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {state !== "idle" && history.length === 0 && (
-                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <div className="relative">
-                      <div className={cn("size-24 rounded-full bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-2 shadow-2xl relative z-10 overflow-hidden", state === "speaking" && "animate-speak-pulse")}>
-                        <img
-                          src="/ai-tutor.png"
-                          alt="AI Voice Tutor"
-                          className="size-full object-cover rounded-full"
-                        />
-                      </div>
-                      {state === "speaking" && (
-                        <motion.div 
-                          className="absolute inset-0 rounded-full bg-primary/20 -z-0"
-                          animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        />
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <h3 className="text-lg font-black uppercase tracking-tighter">Fluid Tutor</h3>
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mt-1">{state === "speaking" ? "Speaking..." : state === "listening" ? "Listening..." : "Connecting..."}</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {history.map((msg, idx) => (
-                  <motion.div key={idx} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className={cn("flex flex-col mb-4", msg.role === "user" ? "items-end" : "items-start")}>
-                    <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] font-semibold md:text-[16px] leading-relaxed shadow-sm", msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border/40 text-foreground rounded-bl-sm")}>{msg.text}</div>
-                  </motion.div>
-                ))}
-
                 <AnimatePresence>
-                  {(state === "listening" || state === "thinking" || state === "speaking") && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn("flex flex-col", state === "listening" ? "items-end" : "items-start")}>
-                      {state === "speaking" && (
-                        <div className="mb-2 ml-4 flex items-center gap-2">
-                          <div className="size-2 rounded-full bg-primary animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Tutor is speaking</span>
+                  {history.length === 0 && state === "idle" && (
+                    <motion.div
+                      key="session-cards"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3 }}
+                      className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 w-full relative z-20 mb-4"
+                    >
+                      <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Mode</p>
+                            <div className="mt-1 flex items-center gap-1.5 min-w-0">
+                              <mode.icon className="size-3 text-primary shrink-0" />
+                              <span className="font-black text-[10px] sm:text-[12px] truncate">{mode.label}</span>
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-primary">Live</span>
                         </div>
-                      )}
-                      <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] md:text-[16px] leading-relaxed flex items-center gap-3", state === "listening" ? "bg-primary/10 text-primary border border-primary/20 rounded-br-sm italic font-bold" : "bg-card border border-border text-foreground rounded-bl-sm font-semibold")}>
-                        {state === "thinking" && <Loader2 className="size-4 animate-spin text-primary shrink-0" />}
-                        <p>{currentText || (state === "listening" ? "Listening..." : state === "speaking" ? "..." : "Thinking...")}</p>
+                        <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">{mode.desc}</p>
+                      </div>
+                      <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Diff</p>
+                            <div className="mt-1 flex items-center gap-1.5 min-w-0">
+                              <ShieldCheck className="size-3 text-fuchsia-500 shrink-0" />
+                              <span className="font-black text-[10px] sm:text-[12px] capitalize truncate">{profile.difficulty}</span>
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-fuchsia-500">Set</span>
+                        </div>
+                        <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">Support and follow-up intensity.</p>
+                      </div>
+                      <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Target</p>
+                            <div className="mt-1 flex items-center gap-1.5 min-w-0">
+                              <Clock className="size-3 text-emerald-500 shrink-0" />
+                              <span className="font-black text-[10px] sm:text-[12px]">{profile.targetDurationMinutes}m</span>
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-emerald-500">Goal</span>
+                        </div>
+                        <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">Paced to this duration.</p>
+                      </div>
+                      <div className="min-w-0 rounded-2xl border bg-card/80 p-2 md:p-3 min-h-20 sm:min-h-28 flex flex-col justify-between">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground font-black">Pace</p>
+                            <div className="mt-1 flex items-center gap-1.5 min-w-0">
+                              <BarChart2 className="size-3 text-cyan-500 shrink-0" />
+                              <span className="font-black text-[10px] sm:text-[12px]">{Math.round((Date.now() - stats.startTime.getTime()) / 1000)}s</span>
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-cyan-500">Now</span>
+                        </div>
+                        <p className="mt-2 hidden sm:block text-[11px] text-muted-foreground leading-snug line-clamp-2">{stats.turns} turn{stats.turns === 1 ? "" : "s"} and {stats.words} words.</p>
                       </div>
                     </motion.div>
                   )}
-                  {errorMsg && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-2"><p className="text-destructive font-black text-[10px] uppercase tracking-widest bg-destructive/10 border border-destructive/20 px-6 py-2 rounded-full shadow-sm">{errorMsg}</p></motion.div>}
                 </AnimatePresence>
-              </div>
+              </>
+            )
+            }
 
-              {state === "idle" && (
-                <div className={cn("space-y-4", history.length > 0 && "hidden lg:block")}>
-                  <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm h-fit sticky top-4">
-                    <div className="mt-2 mb-4 px-1">
-                      <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">
-                        {history.length === 0 ? "Session Setup" : "Session Details"}
-                      </h2>
+            {!showDesktopFreshStudio && (
+              <div className={cn("w-full", state === "idle" && "lg:grid lg:grid-cols-[1fr_380px] lg:gap-8")}>
+                <div className="space-y-6 min-w-0">
+                  {history.length === 0 && state === "idle" && (
+                    <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.18em] text-primary">
+                        <Sparkles className="size-3" /> MULTI-MODE COACH
+                      </div>
+                      <h1 className="text-3xl sm:text-4xl font-black text-foreground uppercase tracking-tight leading-none">Voice Tutor</h1>
+                      <p className="text-muted-foreground max-w-sm font-medium text-[12px] sm:text-[14px] leading-relaxed opacity-70 mt-2">
+                        Refine your communication skills with real-time AI feedback tailored to your goals.
+                      </p>
+                      <div className="flex items-center justify-between mt-6 mb-3 px-1">
+                        <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Select Mode</h2>
+                        <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">View All</button>
+                      </div>
+
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        {MODES.map((item) => {
+                          const Icon = item.icon;
+                          const active = profile.practiceMode === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
+                              className={cn(
+                                "group rounded-2xl border p-4 text-left min-w-0 transition-all active:scale-95 shadow-sm relative overflow-hidden flex flex-col items-start gap-4",
+                                active
+                                  ? "border-primary bg-card dark:bg-card/90 ring-1 ring-primary/20"
+                                  : "border-border/60 bg-card/40 hover:bg-muted/30"
+                              )}
+                            >
+                              <div className={cn(
+                                "size-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
+                                active ? "bg-primary text-white shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                              )}>
+                                <Icon className="size-6" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-black text-sm block leading-none mb-1">{item.label}</span>
+                                <p className="text-[10px] text-muted-foreground leading-tight opacity-70 font-medium">{item.desc}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="rounded-2xl border border-border/40 bg-card/60 p-5 space-y-4 text-left shadow-lg">
-                      <div className="space-y-2.5">
-                        <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Focus Area</label>
-                        <Textarea
-                          value={profile.focusArea}
-                          onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
-                          placeholder="e.g. Technical Leadership Interview..."
-                          className="h-[88px] max-h-[88px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                        />
-                      </div>
+                  )}
 
-                      <div className="grid grid-cols-2 gap-4">
+                  {state !== "idle" && history.length === 0 && (
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-10 space-y-4">
+                      <div className="relative">
+                        <div className={cn("size-24 rounded-full bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-2 shadow-2xl relative z-10 overflow-hidden", state === "speaking" && "animate-speak-pulse")}>
+                          <img
+                            src="/ai-tutor.png"
+                            alt="AI Voice Tutor"
+                            className="size-full object-cover rounded-full"
+                          />
+                        </div>
+                        {state === "speaking" && (
+                          <motion.div
+                            className="absolute inset-0 rounded-full bg-primary/20 -z-0"
+                            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          />
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-lg font-black uppercase tracking-tighter">Fluid Tutor</h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mt-1">{state === "speaking" ? "Speaking..." : state === "listening" ? "Listening..." : "Connecting..."}</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {history.map((msg, idx) => (
+                    <motion.div key={idx} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className={cn("flex flex-col mb-4", msg.role === "user" ? "items-end" : "items-start")}>
+                      <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] font-semibold md:text-[16px] leading-relaxed shadow-sm", msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border/40 text-foreground rounded-bl-sm")}>{msg.text}</div>
+                    </motion.div>
+                  ))}
+
+                  <AnimatePresence>
+                    {(state === "listening" || state === "thinking" || state === "speaking") && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn("flex flex-col", state === "listening" ? "items-end" : "items-start")}>
+                        {state === "speaking" && (
+                          <div className="mb-2 ml-4 flex items-center gap-2">
+                            <div className="size-2 rounded-full bg-primary animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Tutor is speaking</span>
+                          </div>
+                        )}
+                        <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] md:text-[16px] leading-relaxed flex items-center gap-3", state === "listening" ? "bg-primary/10 text-primary border border-primary/20 rounded-br-sm italic font-bold" : "bg-card border border-border text-foreground rounded-bl-sm font-semibold")}>
+                          {state === "thinking" && <Loader2 className="size-4 animate-spin text-primary shrink-0" />}
+                          <p>{currentText || (state === "listening" ? "Listening..." : state === "speaking" ? "..." : "Thinking...")}</p>
+                        </div>
+                      </motion.div>
+                    )}
+                    {errorMsg && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-2"><p className="text-destructive font-black text-[10px] uppercase tracking-widest bg-destructive/10 border border-destructive/20 px-6 py-2 rounded-full shadow-sm">{errorMsg}</p></motion.div>}
+                  </AnimatePresence>
+                </div>
+
+                {state === "idle" && (
+                  <div className={cn("space-y-4", history.length > 0 && "hidden lg:block")}>
+                    <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm h-fit sticky top-4">
+                      <div className="mt-2 mb-4 px-1">
+                        <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">
+                          {history.length === 0 ? "Session Setup" : "Session Details"}
+                        </h2>
+                      </div>
+                      <div className="rounded-2xl border border-border/40 bg-card/60 p-5 space-y-4 text-left shadow-lg">
                         <div className="space-y-2.5">
-                          <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Difficulty</label>
-                          <Select
-                            value={profile.difficulty}
-                            onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
-                          >
-                            <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
-                              <SelectValue placeholder="Select Difficulty" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
-                              <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
-                              <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
-                              <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Focus Area</label>
+                          <Textarea
+                            value={profile.focusArea}
+                            onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
+                            placeholder="e.g. Technical Leadership Interview..."
+                            className="min-h-[100px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium"
+                          />
                         </div>
 
-                        <div className="space-y-2.5">
-                          <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Duration</label>
-                          <Select
-                            value={String(profile.targetDurationMinutes)}
-                            onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
-                          >
-                            <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
-                              <SelectValue placeholder="Select Duration" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
-                              <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
-                              <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
-                              <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
-                              <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2.5">
+                            <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Difficulty</label>
+                            <Select
+                              value={profile.difficulty}
+                              onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
+                            >
+                              <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
+                                <SelectValue placeholder="Select Difficulty" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
+                                <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
+                                <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
+                                <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2.5">
+                            <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Duration</label>
+                            <Select
+                              value={String(profile.targetDurationMinutes)}
+                              onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
+                            >
+                              <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
+                                <SelectValue placeholder="Select Duration" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
+                                <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
+                                <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
+                                <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
+                                <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
+
+                        <div className="space-y-2.5 pt-2">
+                          <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Initial Prompt</label>
+                          <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-left italic">
+                            <p className="text-[12px] sm:text-sm text-foreground/80 leading-relaxed font-medium">"{mode.opening}"</p>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={handleSessionToggle}
+                          className="w-full h-14 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                        >
+                          {history.length === 0 ? "Start Voice Session" : "Resume Practice"}
+                        </Button>
                       </div>
-
-                      <div className="space-y-2.5 pt-2">
-                        <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Initial Prompt</label>
-                        <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-left italic">
-                          <p className="text-[12px] sm:text-sm text-foreground/80 leading-relaxed font-medium">"{mode.opening}"</p>
-                        </div>
-                      </div>
-
-                      <Button 
-                        onClick={handleSessionToggle} 
-                        className="w-full h-14 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground"
-                      >
-                        {history.length === 0 ? "Start Voice Session" : "Resume Practice"}
-                      </Button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             )}
             <div ref={endRef} className="h-4" />
           </div>
@@ -2578,11 +1850,21 @@ Be specific and constructive.`;
         <div className={cn("absolute left-0 right-0 bottom-0 z-40 flex flex-col items-center pointer-events-none pb-5 md:pb-10", showDesktopFreshStudio && "hidden")}>
           <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 md:h-48 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
           <div className="relative flex flex-col items-center justify-center pointer-events-auto">
-            {renderVoiceReactiveMic({
-              buttonClassName: "size-20 sm:size-[5.5rem] md:size-24",
-              activeButtonClassName: "h-16 w-[14rem] sm:w-[15rem] md:w-[16rem]",
-              iconClassName: "size-6 sm:size-7 md:size-8",
-            })}
+            <div className="relative cursor-pointer group" onClick={handleSessionToggle}>
+              {state !== "idle" && (
+                <motion.div
+                  className="absolute -inset-4 rounded-full bg-primary/20 -z-10 animate-speak-pulse"
+                  layoutId="mic-pulse"
+                />
+              )}
+              <motion.div className={cn("size-20 sm:size-[5.5rem] md:size-24 rounded-full shadow-2xl flex items-center justify-center transition-all duration-500 border border-white/20 z-10 relative overflow-hidden backdrop-blur-3xl", state === "idle" ? "bg-primary" : "bg-fuchsia-600")} whileTap={{ scale: 0.94 }}>
+                {state === "thinking" ? (
+                  <Loader2 className="size-8 text-white animate-spin" />
+                ) : (
+                  <Mic className="size-6 sm:size-7 md:size-8 text-primary-foreground" />
+                )}
+              </motion.div>
+            </div>
             <motion.div className="mt-4 md:mt-6 flex flex-col items-center gap-1.5" animate={{ opacity: state === "idle" ? 0.7 : 0, y: state === "idle" ? 0 : 15 }}><p className="text-muted-foreground text-[10px] sm:text-[11px] font-black uppercase tracking-[0.35em] sm:tracking-[0.5em] text-center">Tap to talk</p></motion.div>
           </div>
         </div>
