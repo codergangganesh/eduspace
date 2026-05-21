@@ -783,10 +783,37 @@ export function VoicePracticeSession() {
         return;
       }
 
+      // Check for secure context on mobile viewport to prevent silence / daily-js crashes on insecure HTTP dev servers
+      if (typeof window !== "undefined" && typeof navigator !== "undefined") {
+        const isSecure = window.isSecureContext || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        if (!isSecure) {
+          setErrorMsg("Voice practice requires a secure context (HTTPS) on mobile. Please access using HTTPS.");
+          return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setErrorMsg("Your browser blocks microphone access in this context. Please use a secure HTTPS link.");
+          return;
+        }
+      }
+
       callTransitionRef.current = "session-starting";
       setState("thinking");
       setErrorMsg(null);
       vapiActiveRef.current = true;
+
+      // Acquire mic access synchronously inside the user's click interaction block to satisfy Safari gesture restrictions
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStream.getTracks().forEach(track => track.stop()); // release mic immediately, Vapi will request it back
+      } catch (micErr) {
+        console.error("Mic pre-flight request failed:", micErr);
+        setErrorMsg("Microphone permission was denied. Please allow mic access in browser settings.");
+        vapiActiveRef.current = false;
+        setState("idle");
+        callTransitionRef.current = "idle";
+        return;
+      }
 
       try {
         let assistantConfig: any = {
