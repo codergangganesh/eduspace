@@ -35,6 +35,8 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+import { StreakDuelsManager } from '@/components/streak/StreakDuelsManager';
+
 const IconMap: Record<string, React.ElementType> = {
     Trophy,
     Medal,
@@ -261,6 +263,11 @@ export default function StreakPage() {
                                     </motion.div>
                                 </div>
                             </Card>
+                        </div>
+
+                        {/* PvP Streak Duels Section */}
+                        <div className="pt-4">
+                            <StreakDuelsManager />
                         </div>
 
                         {/* Badges Section */}

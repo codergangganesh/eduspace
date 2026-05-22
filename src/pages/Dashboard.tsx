@@ -22,6 +22,7 @@ import { useStreak } from "@/contexts/StreakContext";
 import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWeekly";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAttendance } from "@/hooks/useAttendance";
+import { DashboardDuelCard } from "@/components/dashboard/DashboardDuelCard";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -288,6 +289,7 @@ export default function Dashboard() {
                 </h3>
               </div>
               <DashboardStreakWeekly streak={displayStreak} />
+              <DashboardDuelCard className="mt-3" />
             </div>
 
 
@@ -311,6 +313,7 @@ export default function Dashboard() {
                 </h3>
               </div>
               <DashboardStreakWeekly streak={displayStreak} />
+              <DashboardDuelCard className="mt-3" />
             </div>
 
             {/* Upcoming Classes Widget */}
