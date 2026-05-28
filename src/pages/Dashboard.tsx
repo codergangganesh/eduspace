@@ -23,6 +23,7 @@ import { DashboardStreakWeekly } from "@/components/dashboard/DashboardStreakWee
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAttendance } from "@/hooks/useAttendance";
 import { DashboardDuelCard } from "@/components/dashboard/DashboardDuelCard";
+import { DashboardStreakCard } from "@/components/dashboard/DashboardStreakCard";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -288,8 +289,7 @@ export default function Dashboard() {
                   Momentum Tracker
                 </h3>
               </div>
-              <DashboardStreakWeekly streak={displayStreak} />
-              <DashboardDuelCard className="mt-3" />
+              <DashboardStreakCard streak={displayStreak} className="mt-3" />
             </div>
 
 
@@ -312,8 +312,7 @@ export default function Dashboard() {
                   Momentum Tracker
                 </h3>
               </div>
-              <DashboardStreakWeekly streak={displayStreak} />
-              <DashboardDuelCard className="mt-3" />
+              <DashboardStreakCard streak={displayStreak} className="mt-3" />
             </div>
 
             {/* Upcoming Classes Widget */}

@@ -19,6 +19,7 @@ import {
   Sparkles,
   Mic,
   ChevronDown,
+  Shield,
 } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";

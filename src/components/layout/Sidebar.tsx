@@ -20,6 +20,7 @@ import {
   Megaphone,
   Sparkles,
   Mic,
+  Shield,
 } from "lucide-react";
 import {
   Tooltip,

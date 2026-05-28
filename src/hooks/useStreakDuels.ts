@@ -1,127 +1,59 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { StreakDuelService, StreakDuel, ClassGroup } from "@/services/streakDuelService";
 import { toast } from "sonner";
-
-// High-performance module-level cache for instant visual load
-let cachedUserId = "";
-let cachedActiveDuels: StreakDuel[] = [];
-let cachedPendingDuels: StreakDuel[] = [];
-let cachedPastDuels: StreakDuel[] = [];
-let cachedClassesAndClassmates: ClassGroup[] = [];
-let hasCachedData = false;
-let cachedIsLoading = false;
-
-type DuelStoreSnapshot = {
-  activeDuels: StreakDuel[];
-  pendingDuels: StreakDuel[];
-  pastDuels: StreakDuel[];
-  classesAndClassmates: ClassGroup[];
-  isLoading: boolean;
-};
-
-const subscribers = new Set<(snapshot: DuelStoreSnapshot) => void>();
-
-const getSnapshot = (): DuelStoreSnapshot => ({
-  activeDuels: cachedActiveDuels,
-  pendingDuels: cachedPendingDuels,
-  pastDuels: cachedPastDuels,
-  classesAndClassmates: cachedClassesAndClassmates,
-  isLoading: cachedIsLoading,
-});
-
-const broadcastSnapshot = () => {
-  const snapshot = getSnapshot();
-  subscribers.forEach((listener) => listener(snapshot));
-};
-
-const subscribeToSnapshot = (listener: (snapshot: DuelStoreSnapshot) => void) => {
-  subscribers.add(listener);
-  listener(getSnapshot());
-  return () => {
-    subscribers.delete(listener);
-  };
-};
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function useStreakDuels() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Safe cache eviction & sync when user login state changes
-  if (user?.id && cachedUserId !== user.id) {
-    cachedUserId = user.id;
-    cachedActiveDuels = [];
-    cachedPendingDuels = [];
-    cachedPastDuels = [];
-    cachedClassesAndClassmates = [];
-    hasCachedData = false;
-    cachedIsLoading = false;
-    broadcastSnapshot();
-  }
-
-  const [activeDuels, setActiveDuels] = useState<StreakDuel[]>(cachedActiveDuels);
-  const [pendingDuels, setPendingDuels] = useState<StreakDuel[]>(cachedPendingDuels);
-  const [pastDuels, setPastDuels] = useState<StreakDuel[]>(cachedPastDuels);
-  const [classesAndClassmates, setClassesAndClassmates] = useState<ClassGroup[]>(cachedClassesAndClassmates);
-  const [isLoading, setIsLoading] = useState<boolean>(!hasCachedData);
-
-  useEffect(() => {
-    return subscribeToSnapshot((snapshot) => {
-      setActiveDuels(snapshot.activeDuels);
-      setPendingDuels(snapshot.pendingDuels);
-      setPastDuels(snapshot.pastDuels);
-      setClassesAndClassmates(snapshot.classesAndClassmates);
-      setIsLoading(snapshot.isLoading);
-    });
-  }, []);
-
-  const fetchAllData = useCallback(async (silent = false) => {
-    if (!user?.id) return;
-    if (!silent) {
-      cachedIsLoading = true;
-      broadcastSnapshot();
-    }
-    try {
-      // Sync scores and check expirations first
+  // 1. Queries using TanStack React Query
+  const { data: activeDuels = [], isLoading: isActiveLoading } = useQuery({
+    queryKey: ["streakDuels", "active", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      // Sync scores via database RPC on load
       await StreakDuelService.syncActiveDuelsScores(user.id);
+      return StreakDuelService.fetchActiveDuels(user.id);
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 2, // Cache is fresh for 2 minutes to allow smooth navigations
+  });
 
-      // Fetch all categories
-      const [active, pending, past, classmates] = await Promise.all([
-        StreakDuelService.fetchActiveDuels(user.id),
-        StreakDuelService.fetchPendingDuels(user.id),
-        StreakDuelService.fetchDuelHistory(user.id),
-        StreakDuelService.fetchClassesAndClassmates(user.id),
-      ]);
+  const { data: pendingDuels = [], isLoading: isPendingLoading } = useQuery({
+    queryKey: ["streakDuels", "pending", user?.id],
+    queryFn: () => (user?.id ? StreakDuelService.fetchPendingDuels(user.id) : []),
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 3,
+  });
 
-      setActiveDuels(active);
-      setPendingDuels(pending);
-      setPastDuels(past);
-      setClassesAndClassmates(classmates);
+  const { data: pastDuels = [], isLoading: isPastLoading } = useQuery({
+    queryKey: ["streakDuels", "past", user?.id],
+    queryFn: () => (user?.id ? StreakDuelService.fetchDuelHistory(user.id) : []),
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5,
+  });
 
-      // Update module-level cache for next instant mounts
-      cachedActiveDuels = active;
-      cachedPendingDuels = pending;
-      cachedPastDuels = past;
-      cachedClassesAndClassmates = classmates;
-      hasCachedData = true;
-      cachedIsLoading = false;
-      broadcastSnapshot();
-    } catch (error) {
-      console.error("Failed to load duel data:", error);
-      toast.error("Failed to load duels and classmates list.");
-    } finally {
-      cachedIsLoading = false;
-      broadcastSnapshot();
-    }
-  }, [user?.id]);
+  const { data: classesAndClassmates = [], isLoading: isClassmatesLoading } = useQuery({
+    queryKey: ["classesAndClassmates", user?.id],
+    queryFn: () => (user?.id ? StreakDuelService.fetchClassesAndClassmates(user.id) : []),
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 10, // Class roster rarely updates, keep it cached longer
+  });
 
-  useEffect(() => {
-    if (!user?.id) return;
-    // If there is cached data, perform a silent refresh in background; otherwise, show full loader.
-    fetchAllData(hasCachedData);
-  }, [user?.id, fetchAllData]);
+  const isLoading = isActiveLoading || isPendingLoading || isPastLoading || isClassmatesLoading;
 
-  // Real-time subscription
+  // Helper to invalidate all related queries to force UI refetches
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["streakDuels", "active", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["streakDuels", "pending", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["streakDuels", "past", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["classesAndClassmates", user?.id] });
+  };
+
+  // 2. Real-time changes subscription linked with React Query invalidation
   useEffect(() => {
     if (!user?.id) return;
 
@@ -141,7 +73,6 @@ export function useStreakDuels() {
 
           // 1. Challenged: INSERT event where current user is defender
           if (payload.eventType === 'INSERT' && newRecord.defender_id === user.id) {
-            // Fetch challenger name
             const { data: profile } = await supabase
               .from('student_profiles')
               .select('full_name')
@@ -212,8 +143,8 @@ export function useStreakDuels() {
             }
           }
 
-          // Refetch state to keep in sync
-          fetchAllData(true);
+          // Invalidate React Query cache to keep UI perfectly synchronized in real-time
+          invalidateAll();
         }
       )
       .subscribe();
@@ -221,57 +152,74 @@ export function useStreakDuels() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchAllData]);
+  }, [user?.id]);
 
-  // Actions
-  const challengeClassmate = async (defenderId: string, classId: string) => {
-    if (!user?.id) return false;
-    const duel = await StreakDuelService.createDuel(user.id, defenderId, classId);
-    if (duel) {
-      toast.success("Challenge Sent! ⚔️", {
-        description: `Waiting for ${duel.defender_name} to accept your streak battle.`
-      });
-      fetchAllData(true);
-      return true;
-    } else {
-      toast.error("Could not send challenge.", {
-        description: "You might already have a duel pending or active with this peer."
-      });
-      return false;
+  // 3. React Query Mutations for Clean Action Tracking
+  const challengeClassmateMutation = useMutation({
+    mutationFn: async ({ defenderId, classId }: { defenderId: string; classId: string }) => {
+      if (!user?.id) throw new Error("No authenticated user");
+      return StreakDuelService.createDuel(user.id, defenderId, classId);
+    },
+    onSuccess: (duel) => {
+      if (duel) {
+        toast.success("Challenge Sent! ⚔️", {
+          description: `Waiting for ${duel.defender_name} to accept your streak battle.`
+        });
+        invalidateAll();
+      } else {
+        toast.error("Could not send challenge.", {
+          description: "You might already have a duel pending or active with this peer."
+        });
+      }
+    },
+    onError: () => {
+      toast.error("Could not send challenge.");
     }
-  };
+  });
 
-  const acceptChallenge = async (duelId: string) => {
-    const success = await StreakDuelService.respondToDuel(duelId, true);
-    if (success) {
-      toast.success("Duel Accepted! ⚔️", {
-        description: "Consistency starts today. Let the battle begin!"
-      });
-      fetchAllData(true);
-    } else {
+  const acceptChallengeMutation = useMutation({
+    mutationFn: (duelId: string) => StreakDuelService.respondToDuel(duelId, true),
+    onSuccess: (success) => {
+      if (success) {
+        toast.success("Duel Accepted! ⚔️", {
+          description: "Consistency starts today. Let the battle begin!"
+        });
+        invalidateAll();
+      } else {
+        toast.error("Error accepting duel.");
+      }
+    },
+    onError: () => {
       toast.error("Error accepting duel.");
     }
-    return success;
-  };
+  });
 
-  const declineChallenge = async (duelId: string) => {
-    const success = await StreakDuelService.respondToDuel(duelId, false);
-    if (success) {
-      toast.info("Duel Declined", {
-        description: "The challenge request was rejected."
-      });
-      fetchAllData(true);
-    } else {
+  const declineChallengeMutation = useMutation({
+    mutationFn: (duelId: string) => StreakDuelService.respondToDuel(duelId, false),
+    onSuccess: (success) => {
+      if (success) {
+        toast.info("Duel Declined", {
+          description: "The challenge request was rejected."
+        });
+        invalidateAll();
+      } else {
+        toast.error("Error declining duel.");
+      }
+    },
+    onError: () => {
       toast.error("Error declining duel.");
     }
-    return success;
-  };
+  });
 
-  const syncScores = async () => {
-    if (!user?.id) return;
-    await StreakDuelService.syncActiveDuelsScores(user.id);
-    fetchAllData(true);
-  };
+  const syncScoresMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) return;
+      return StreakDuelService.syncActiveDuelsScores(user.id);
+    },
+    onSuccess: () => {
+      invalidateAll();
+    }
+  });
 
   return {
     activeDuels,
@@ -279,10 +227,23 @@ export function useStreakDuels() {
     pastDuels,
     classesAndClassmates,
     isLoading,
-    challengeClassmate,
-    acceptChallenge,
-    declineChallenge,
-    syncScores,
-    refresh: fetchAllData
+    challengeClassmate: async (defenderId: string, classId: string) => {
+      challengeClassmateMutation.mutate({ defenderId, classId });
+      return true;
+    },
+    acceptChallenge: async (duelId: string) => {
+      acceptChallengeMutation.mutate(duelId);
+      return true;
+    },
+    declineChallenge: async (duelId: string) => {
+      declineChallengeMutation.mutate(duelId);
+      return true;
+    },
+    syncScores: async () => {
+      syncScoresMutation.mutate();
+    },
+    refresh: async () => {
+      invalidateAll();
+    }
   };
 }

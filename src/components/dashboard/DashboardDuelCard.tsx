@@ -124,10 +124,12 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
           </h3>
         </div>
         
-        {/* Countdown */}
-        <div className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-200/50 dark:border-slate-700/50">
-          <Timer className="size-3 text-indigo-400" />
-          <span>{timeLeftStr} remaining</span>
+        <div className="flex items-center gap-2">
+          {/* Countdown */}
+          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-200/50 dark:border-slate-700/50">
+            <Timer className="size-3 text-indigo-400" />
+            <span>{timeLeftStr} remaining</span>
+          </div>
         </div>
       </div>
 
@@ -258,6 +260,13 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
           </button>
         </div>
       )}
+
+      {/* Mobile Touch Hint inside card (Very small, static, non-glowing caption) */}
+      <div className="w-full text-center mt-4 lg:hidden pointer-events-none select-none relative z-10">
+        <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 block">
+          Tap card to view calendar 🔥
+        </span>
+      </div>
     </div>
   );
 }

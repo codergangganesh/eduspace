@@ -2198,6 +2198,188 @@ export type Database = {
           }
         ]
       }
+      user_streaks: {
+        Row: {
+          user_id: string
+          current_streak: number | null
+          longest_streak: number | null
+          total_days: number | null
+          last_action_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          user_id: string
+          current_streak?: number | null
+          longest_streak?: number | null
+          total_days?: number | null
+          last_action_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          user_id?: string
+          current_streak?: number | null
+          longest_streak?: number | null
+          total_days?: number | null
+          last_action_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      streak_duels: {
+        Row: {
+          id: string
+          challenger_id: string
+          defender_id: string
+          class_id: string
+          status: string
+          challenger_start_streak: number
+          defender_start_streak: number
+          challenger_current_streak: number
+          defender_current_streak: number
+          challenger_score: number
+          defender_score: number
+          winner_id: string | null
+          started_at: string | null
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          challenger_id: string
+          defender_id: string
+          class_id: string
+          status?: string
+          challenger_start_streak?: number
+          defender_start_streak?: number
+          challenger_current_streak?: number
+          defender_current_streak?: number
+          challenger_score?: number
+          defender_score?: number
+          winner_id?: string | null
+          started_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          challenger_id?: string
+          defender_id?: string
+          class_id?: string
+          status?: string
+          challenger_start_streak?: number
+          defender_start_streak?: number
+          challenger_current_streak?: number
+          defender_current_streak?: number
+          challenger_score?: number
+          defender_score?: number
+          winner_id?: string | null
+          started_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streak_duels_challenger_id_fkey"
+            columns: ["challenger_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streak_duels_defender_id_fkey"
+            columns: ["defender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streak_duels_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streak_duels_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_badges: {
+        Row: {
+          id: string
+          user_id: string | null
+          badge_type: string
+          unlocked_at: string | null
+          streak_count: number
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          badge_type: string
+          unlocked_at?: string | null
+          streak_count: number
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          badge_type?: string
+          unlocked_at?: string | null
+          streak_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_activity_log: {
+        Row: {
+          id: string
+          user_id: string | null
+          action_date: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action_date: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action_date?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       class_all_students: {
@@ -2309,6 +2491,10 @@ export type Database = {
         Returns: boolean
       }
       migrate_class_students_to_emails: { Args: never; Returns: undefined }
+      sync_user_active_duels: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       toggle_ai_conversation_pin: {
         Args: { conv_id: string }
         Returns: boolean

@@ -120,10 +120,12 @@ export class StreakDuelService {
       // 3. Extract classmate student_ids to fetch profiles and streaks
       const peerStudentIds = peers.map((p: any) => p.student_id).filter(Boolean);
 
-      // Fetch profiles
+      // Fetch profiles and streaks in parallel
       let profilesMap = new Map<string, DuelIdentity>();
+      let streaksMap = new Map<string, number>();
+
       if (peerStudentIds.length > 0) {
-        const [{ data: studentProfiles }, { data: appProfiles }] = await Promise.all([
+        const [{ data: studentProfiles }, { data: appProfiles }, { data: streaks }] = await Promise.all([
           supabase
             .from('student_profiles')
             .select('user_id, full_name, profile_image, bio')
@@ -131,6 +133,10 @@ export class StreakDuelService {
           supabase
             .from('profiles')
             .select('user_id, full_name, avatar_url, bio')
+            .in('user_id', peerStudentIds),
+          supabase
+            .from('user_streaks')
+            .select('user_id, current_streak')
             .in('user_id', peerStudentIds)
         ]);
 
@@ -150,15 +156,6 @@ export class StreakDuelService {
             bio: existing?.bio || p.bio || undefined
           });
         });
-      }
-
-      // Fetch streaks
-      let streaksMap = new Map<string, number>();
-      if (peerStudentIds.length > 0) {
-        const { data: streaks } = await supabase
-          .from('user_streaks')
-          .select('user_id, current_streak')
-          .in('user_id', peerStudentIds);
 
         streaks?.forEach((s: any) => {
           streaksMap.set(s.user_id, s.current_streak || 0);
@@ -443,91 +440,12 @@ export class StreakDuelService {
    */
   static async syncActiveDuelsScores(userId: string): Promise<void> {
     try {
-      const { data: duels, error } = await supabase
-        .from('streak_duels')
-        .select('*')
-        .eq('status', 'active')
-        .or(`challenger_id.eq.${userId},defender_id.eq.${userId}`);
+      const { error } = await supabase.rpc('sync_user_active_duels', {
+        p_user_id: userId
+      });
 
-      if (error || !duels || duels.length === 0) return;
-
-      const now = new Date();
-
-      for (const duel of duels) {
-        // 1. Get current streaks from user_streaks
-        const { data: chStreak } = await supabase
-          .from('user_streaks')
-          .select('current_streak')
-          .eq('user_id', duel.challenger_id)
-          .maybeSingle();
-
-        const { data: defStreak } = await supabase
-          .from('user_streaks')
-          .select('current_streak')
-          .eq('user_id', duel.defender_id)
-          .maybeSingle();
-
-        // 2. Count distinct action_dates in user_activity_log since started_at
-        const startFormatted = format(new Date(duel.started_at), 'yyyy-MM-dd');
-        const endFormatted = format(now, 'yyyy-MM-dd');
-
-        const { data: chLogs } = await supabase
-          .from('user_activity_log')
-          .select('action_date')
-          .eq('user_id', duel.challenger_id)
-          .gte('action_date', startFormatted)
-          .lte('action_date', endFormatted);
-
-        const { data: defLogs } = await supabase
-          .from('user_activity_log')
-          .select('action_date')
-          .eq('user_id', duel.defender_id)
-          .gte('action_date', startFormatted)
-          .lte('action_date', endFormatted);
-
-        const chScore = chLogs?.length || 0;
-        const defScore = defLogs?.length || 0;
-
-        let status = 'active';
-        let winnerId = null;
-
-        // Check if the duel period has expired
-        if (now > new Date(duel.expires_at)) {
-          status = 'completed';
-          if (chScore > defScore) {
-            winnerId = duel.challenger_id;
-          } else if (defScore > chScore) {
-            winnerId = duel.defender_id;
-          } else {
-            // It's a tie
-            winnerId = null;
-          }
-        }
-
-        const challengerCurrentStreak = chStreak?.current_streak || 0;
-        const defenderCurrentStreak = defStreak?.current_streak || 0;
-
-        const hasChanges =
-          duel.challenger_current_streak !== challengerCurrentStreak ||
-          duel.defender_current_streak !== defenderCurrentStreak ||
-          duel.challenger_score !== chScore ||
-          duel.defender_score !== defScore ||
-          duel.status !== status ||
-          duel.winner_id !== winnerId;
-
-        if (hasChanges) {
-          await supabase
-            .from('streak_duels')
-            .update({
-              challenger_current_streak: challengerCurrentStreak,
-              defender_current_streak: defenderCurrentStreak,
-              challenger_score: chScore,
-              defender_score: defScore,
-              status,
-              winner_id: winnerId
-            })
-            .eq('id', duel.id);
-        }
+      if (error) {
+        console.error("RPC Error syncing active duels:", error);
       }
     } catch (err) {
       console.error("Failed to sync duel scores:", err);

@@ -62,25 +62,27 @@ export const DashboardStreakWeekly = ({ streak: propStreak, badges: propBadges }
                         </div>
                     </div>
 
-                    {/* Badge Mini Gallery */}
-                    <div className="flex -space-x-3 hover:space-x-1 transition-all duration-300">
-                        {badgeIcons.map((bi) => {
-                            const isUnlocked = badges.some(b => b.badge_type === bi.type);
-                            return (
-                                <div key={bi.type} className={cn(
-                                    "size-9 rounded-lg rotate-12 flex items-center justify-center border-2 transition-all duration-500",
-                                    isUnlocked
-                                        ? "opacity-100 scale-100 z-10 border-white/20 dark:border-white/20 shadow-xl shadow-slate-200 dark:shadow-black/40 rotate-0"
-                                        : "opacity-20 scale-90 grayscale border-transparent"
-                                )}
-                                    style={{
-                                        background: `linear-gradient(135deg, ${bi.color} 0%, ${bi.color}CC 100%)`,
-                                        clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
-                                    }}>
-                                    <span className="text-[8px] font-black text-white">{bi.label}</span>
-                                </div>
-                            );
-                        })}
+                    <div className="flex items-center gap-3">
+                        {/* Badge Mini Gallery */}
+                        <div className="flex -space-x-3 hover:space-x-1 transition-all duration-300">
+                            {badgeIcons.map((bi) => {
+                                const isUnlocked = badges.some(b => b.badge_type === bi.type);
+                                return (
+                                    <div key={bi.type} className={cn(
+                                        "size-9 rounded-lg rotate-12 flex items-center justify-center border-2 transition-all duration-500",
+                                        isUnlocked
+                                            ? "opacity-100 scale-100 z-10 border-white/20 dark:border-white/20 shadow-xl shadow-slate-200 dark:shadow-black/40 rotate-0"
+                                            : "opacity-20 scale-90 grayscale border-transparent"
+                                    )}
+                                        style={{
+                                            background: `linear-gradient(135deg, ${bi.color} 0%, ${bi.color}CC 100%)`,
+                                            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
+                                        }}>
+                                        <span className="text-[8px] font-black text-white">{bi.label}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -200,6 +202,13 @@ export const DashboardStreakWeekly = ({ streak: propStreak, badges: propBadges }
                             );
                         })}
                     </div>
+                </div>
+
+                {/* Mobile Touch Hint inside card (Very small, static, non-glowing caption) */}
+                <div className="w-full text-center mt-4 lg:hidden pointer-events-none select-none">
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 block">
+                        Tap card to view duels ⚔️
+                    </span>
                 </div>
             </div>
         </div>
