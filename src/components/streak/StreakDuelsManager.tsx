@@ -41,10 +41,11 @@ import confetti from "canvas-confetti";
 // Custom Subcomponents
 // import { DuelistProgressCard } from "./DuelistProgressCard";
 import { RanksPodium } from "./RanksPodium";
-import { AchievementBadgesCard } from "./AchievementBadgesCard";
+import { DuelAchievementBadgesCard } from "./DuelAchievementBadgesCard";
 import { ClanHub } from "@/components/clans/ClanHub";
 import { ClanLeaderboard } from "@/components/clans/ClanLeaderboard";
 import { ArenaLeaderboard } from "./ArenaLeaderboard";
+import { DashboardDuelCard } from "@/components/dashboard/DashboardDuelCard";
 
 type DuelViewKey = "active" | "roster" | "invites" | "history";
 
@@ -372,64 +373,8 @@ export function StreakDuelsManager() {
 
                     {/* Active battles list */}
                     {activeTab === "active" && (
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        {activeDuels.length === 0 ? (
-                          <div className="col-span-2 flex flex-col items-center justify-center py-12 text-center">
-                            <Swords className="mb-2 size-10 animate-pulse text-slate-300 dark:text-slate-700" />
-                            <p className="text-xs font-bold text-slate-500">No active duels currently</p>
-                            <button
-                              onClick={() => setActiveTab("roster")}
-                              className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-[10px] font-black text-white uppercase tracking-wider shadow-md hover:bg-indigo-700 active:scale-95"
-                            >
-                              Challenge Classmate
-                            </button>
-                          </div>
-                        ) : (
-                          activeDuels.map((duel) => {
-                            const isChallenger = duel.challenger_id === user?.id;
-                            const myScore = isChallenger ? duel.challenger_score : duel.defender_score;
-                            const oppScore = isChallenger ? duel.defender_score : duel.challenger_score;
-                            const myStreak = isChallenger ? duel.challenger_current_streak : duel.defender_current_streak;
-                            const oppStreak = isChallenger ? duel.defender_current_streak : duel.challenger_current_streak;
-                            const myName = isChallenger ? duel.challenger_name : duel.defender_name;
-                            const oppName = isChallenger ? duel.defender_name : duel.challenger_name;
-                            const isWinning = myScore > oppScore;
-                            const isTied = myScore === oppScore;
-
-                            return (
-                              <div key={duel.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50 space-y-3 shadow-sm select-none">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[8px] font-black uppercase text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded">
-                                    {duel.class_name || duel.course_code}
-                                  </span>
-                                  <span className="text-[8px] font-bold text-slate-400">
-                                    Started {format(new Date(duel.started_at || ""), "MMM d")}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center justify-between gap-2 border-b border-slate-50 dark:border-slate-800/80 pb-2">
-                                  <div className="min-w-0">
-                                    <h5 className="truncate text-xs font-black text-slate-800 dark:text-white">{oppName}</h5>
-                                    <p className="text-[9px] font-bold text-orange-500 flex items-center gap-0.5 mt-0.5">
-                                      <Flame className="size-3 fill-orange-500" /> {oppStreak} streak
-                                    </p>
-                                  </div>
-                                  <div className="text-right shrink-0">
-                                    <span className="text-sm font-black text-slate-800 dark:text-white">
-                                      {myScore} <span className="text-[9px] text-slate-400">vs</span> {oppScore}
-                                    </span>
-                                    <span className={cn(
-                                      "block text-[8px] font-black uppercase mt-0.5",
-                                      isWinning ? "text-emerald-500" : isTied ? "text-indigo-500" : "text-rose-500"
-                                    )}>
-                                      {isWinning ? "Winning" : isTied ? "Tied" : "Trailing"}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
+                      <div className="w-full">
+                        <DashboardDuelCard className="shadow-none border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-950/20" />
                       </div>
                     )}
 
@@ -664,10 +609,7 @@ export function StreakDuelsManager() {
 
       {/* Full-width Achievement Badges Area */}
       <div className="mt-2">
-        <AchievementBadgesCard 
-          currentStreak={currentStreakVal} 
-          wonDuelsCount={pastDuels.filter(d => d.winner_id === user?.id).length} 
-        />
+        <DuelAchievementBadgesCard />
       </div>
       </>
       )}

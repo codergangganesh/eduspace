@@ -90,8 +90,8 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
   const isTied = myScore === oppScore;
 
   // Time remaining
-  const timeLeftStr = currentDuel.expires_at 
-    ? formatDistanceToNow(new Date(currentDuel.expires_at), { addSuffix: false }) 
+  const timeLeftStr = currentDuel.expires_at
+    ? formatDistanceToNow(new Date(currentDuel.expires_at), { addSuffix: false })
     : "7 days";
 
   // Cycle handlers
@@ -123,7 +123,7 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
             <Swords className="size-3.5" /> LIVE STREAK DUEL
           </h3>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {/* Countdown */}
           <div className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-200/50 dark:border-slate-700/50">
@@ -140,8 +140,8 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
           <div className="relative">
             <Avatar className={cn(
               "size-16 sm:size-20 border-2 transition-transform duration-300 hover:scale-105",
-              isWinning ? "border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]" : 
-              isTied ? "border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]" : "border-rose-400"
+              isWinning ? "border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]" :
+                isTied ? "border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]" : "border-rose-400"
             )}>
               <AvatarImage src={myAvatar ?? undefined} alt={myName ?? "My profile"} />
               <AvatarFallback className="bg-indigo-600 text-white font-bold text-sm">
@@ -175,8 +175,8 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
           <div className="relative">
             <Avatar className={cn(
               "size-16 sm:size-20 border-2 transition-transform duration-300 hover:scale-105",
-              !isWinning && !isTied ? "border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]" : 
-              isTied ? "border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]" : "border-rose-400"
+              !isWinning && !isTied ? "border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]" :
+                isTied ? "border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]" : "border-rose-400"
             )}>
               <AvatarImage src={oppAvatar ?? undefined} alt={oppName ?? "Opponent profile"} />
               <AvatarFallback className="bg-slate-600 text-white font-bold text-sm">
@@ -218,7 +218,7 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
             className={cn(
               "h-full rounded-l-full transition-all duration-500 ease-out",
               isWinning ? "bg-gradient-to-r from-emerald-500 to-teal-400" :
-              isTied ? "bg-gradient-to-r from-indigo-500 to-indigo-400" : "bg-gradient-to-r from-rose-500 to-rose-400"
+                isTied ? "bg-gradient-to-r from-indigo-500 to-indigo-400" : "bg-gradient-to-r from-rose-500 to-rose-400"
             )}
             style={{ width: `${Math.max(10, myScore === 0 && oppScore === 0 ? 50 : (myScore / (myScore + oppScore)) * 100)}%` }}
           />
@@ -227,23 +227,22 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
             className={cn(
               "h-full rounded-r-full transition-all duration-500 ease-out",
               !isWinning && !isTied ? "bg-gradient-to-l from-emerald-500 to-teal-400" :
-              isTied ? "bg-gradient-to-l from-indigo-500 to-indigo-400" : "bg-gradient-to-l from-rose-500 to-rose-400"
+                isTied ? "bg-gradient-to-l from-indigo-500 to-indigo-400" : "bg-gradient-to-l from-rose-500 to-rose-400"
             )}
             style={{ width: `${Math.max(10, myScore === 0 && oppScore === 0 ? 50 : (oppScore / (myScore + oppScore)) * 100)}%` }}
           />
         </div>
-        
+
         {/* Helper footer */}
         <div className="flex justify-between items-center text-[9px] text-indigo-600/85 dark:text-indigo-400/85 mt-2.5 font-bold">
           <span>Class: {currentDuel.class_name || currentDuel.course_code || "LMS"}</span>
-          <span>🏆 XP reward at end of week</span>
         </div>
       </div>
 
       {/* Multi-duel selector */}
       {activeDuels.length > 1 && (
         <div className="relative z-10 flex justify-center items-center gap-3 mt-4 border-t border-slate-200/40 dark:border-slate-700/40 pt-3">
-          <button 
+          <button
             onClick={handlePrev}
             className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
           >
@@ -252,7 +251,7 @@ export function DashboardDuelCard({ className }: DashboardDuelCardProps) {
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
             Duel {currentIndex + 1} of {activeDuels.length}
           </span>
-          <button 
+          <button
             onClick={handleNext}
             className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
           >

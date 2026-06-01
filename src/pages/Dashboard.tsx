@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, AlertCircle, Calendar, Clock, Flame, PieChart } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Calendar, Clock, Flame, PieChart, Swords } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 import { DashboardSlidingHero } from "@/components/dashboard/DashboardSlidingHero";
