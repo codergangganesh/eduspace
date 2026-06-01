@@ -48,7 +48,7 @@ export default function LecturerTimeTable() {
     const [currentTime, setCurrentTime] = useState(new Date());
     const { classes } = useClasses();
     const navigate = useNavigate();
-    const { toast } = useToast();
+    const { toast: shadcnToast } = useToast();
     const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
 
     useEffect(() => {
@@ -83,7 +83,7 @@ export default function LecturerTimeTable() {
 
     const handleCreateEvent = () => {
         if (classes.length === 0) {
-            toast({
+            shadcnToast({
                 title: "No Classes Found",
                 description: "Please create a class before adding events.",
             });

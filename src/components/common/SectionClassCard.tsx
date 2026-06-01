@@ -24,11 +24,11 @@ import {
 
 export interface ClassData {
     id: string;
-    class_name: string;
+    class_name: string | null;
     course_code: string;
-    lecturer_department?: string;
+    lecturer_department?: string | null;
     student_count?: number;
-    [key: string]: unknown;
+    [key: string]: any;
 }
 
 export interface SectionClassCardProps {

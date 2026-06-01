@@ -60,12 +60,6 @@ export default function AssignmentSubmissionsPage() {
     const [isReviewOpen, setIsReviewOpen] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
 
-    // Only submitted students are reviewable
-    const reviewableSubmissions = useMemo(() =>
-        filteredSubmissions.filter(s => s.status !== 'pending'),
-        [filteredSubmissions]
-    );
-
     // Reset to page 1 when search or filter changes
     useEffect(() => {
         setCurrentPage(1);
@@ -123,6 +117,12 @@ export default function AssignmentSubmissionsPage() {
             return true;
         });
     }, [submissions, searchQuery, filter]);
+
+    // Only submitted students are reviewable
+    const reviewableSubmissions = useMemo(() =>
+        filteredSubmissions.filter(s => s.status !== 'pending'),
+        [filteredSubmissions]
+    );
 
     // Pagination Logic
     const paginatedSubmissions = useMemo(() => {
