@@ -6,6 +6,7 @@ import {
     Clock,
     Zap
 } from "lucide-react";
+import { GlowCard } from "@/components/ui/spotlight-card";
 
 export function BenefitsSection() {
     return (
@@ -14,7 +15,11 @@ export function BenefitsSection() {
                 <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
                     {/* Left - Visual (Matched to Hero Style) */}
                     <div className="w-full lg:w-1/2 relative order-last lg:order-first">
-                        <div className="relative z-10 bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-md rounded-[2rem] border border-white/10 dark:border-slate-700/50 p-8 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]">
+                        <GlowCard
+                            customSize={true}
+                            glowColor="blue"
+                            className="relative z-10 bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-md rounded-[2rem] !border-none !p-8 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] !gap-0 !grid-rows-none"
+                        >
                             {/* Stats Header */}
                             <div className="flex items-center justify-between mb-8">
                                 <div className="space-y-1">
@@ -111,7 +116,7 @@ export function BenefitsSection() {
                                     <div className="text-2xl font-bold text-white">100%</div>
                                 </div>
                             </div>
-                        </div>
+                        </GlowCard>
 
                         {/* Decorative Blur */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-sm max-h-sm bg-blue-500/20 rounded-full blur-3xl -z-10" />

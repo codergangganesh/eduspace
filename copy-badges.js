@@ -1,24 +1,23 @@
 import fs from 'fs';
 import path from 'path';
 
-const srcDir = 'C:\\Users\\Mannam Ganesh Babu\\.gemini\\antigravity-ide\\brain\\92b4b7de-60df-42cd-b23b-41fa6ae96cdb';
+const srcDir = 'C:\\Users\\Mannam Ganesh Babu\\.gemini\\antigravity-ide\\brain\\b18a15a4-247d-46ce-b307-1774c9a2e9f9';
 const destDir = 'd:\\eduspace\\eduspace\\public';
 
 const files = [
-  { src: 'gladiator_rising_1780037185260.png', dest: 'gladiator_rising.png' },
-  { src: 'arena_master_1780037208622.png', dest: 'arena_master.png' },
-  { src: 'streak_overlord_1780037227067.png', dest: 'streak_overlord.png' },
-  { src: 'duel_champion_1780037246621.png', dest: 'duel_champion.png' },
-  { src: 'top_challenger_1780037273325.png', dest: 'top_challenger.png' },
-  { src: 'rank_climber_1780037313019.png', dest: 'rank_climber.png' },
-  { src: 'unbeaten_legend_1780039899777.png', dest: 'unbeaten_legend.png' },
-  { src: 'elite_competitor_1780039920804.png', dest: 'elite_competitor.png' },
-  { src: 'duel_veteran_1780039944799.png', dest: 'duel_veteran.png' },
-  { src: 'fast_challenger_1780039967114.png', dest: 'fast_challenger.png' },
-  { src: 'grand_master_duelist_1780039987515.png', dest: 'grand_master_duelist.png' }
+  { src: 'streak_novice_1780301353319.png', dest: 'streak_novice.png' },
+  { src: 'streak_learner_1780301458269.png', dest: 'streak_learner.png' },
+  { src: 'streak_scholar_1780301783391.png', dest: 'streak_scholar.png' },
+  { src: 'streak_prodigy_1780301802578.png', dest: 'streak_prodigy.png' },
+  { src: 'streak_warrior_1780301822409.png', dest: 'streak_warrior.png' },
+  { src: 'streak_elite_1780301840127.png', dest: 'streak_elite.png' },
+  { src: 'streak_master_1780301861417.png', dest: 'streak_master.png' },
+  { src: 'streak_grandmaster_1780301889067.png', dest: 'streak_grandmaster.png' },
+  { src: 'streak_titan_1780301910360.png', dest: 'streak_titan.png' },
+  { src: 'streak_immortal_1780301933198.png', dest: 'streak_immortal.png' }
 ];
 
-console.log('Starting badge copy process...');
+console.log('Starting Streak Achievement badge copy process...');
 
 if (!fs.existsSync(destDir)) {
   fs.mkdirSync(destDir, { recursive: true });
@@ -42,4 +41,4 @@ files.forEach(f => {
   }
 });
 
-console.log(`Badge copy complete! Successfully copied ${successCount} of ${files.length} badges.`);
+console.log(`Streak Achievement badge copy complete! Successfully copied ${successCount} of ${files.length} badges.`);

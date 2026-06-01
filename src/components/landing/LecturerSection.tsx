@@ -157,13 +157,34 @@ export function LecturerSection() {
                             ))}
                         </div>
                         <motion.div variants={itemVariants} className="pt-4">
-                            <Link to="/lecturer/login">
+                            <Link to="/lecturer/login" className="w-full sm:w-auto">
                                 <Button
                                     size="lg"
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 w-full sm:w-auto px-10 h-14 font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20"
+                                    className="relative bg-indigo-600 hover:bg-indigo-700 text-white gap-2 w-full sm:w-auto px-10 h-14 font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 overflow-hidden"
                                 >
-                                    Get Started as Lecturer
-                                    <ArrowRight className="size-5" />
+                                    <div
+                                        className="absolute -inset-px pointer-events-none rounded-[inherit] border-2 border-transparent border-inset [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]"
+                                    >
+                                        <motion.div
+                                            className="absolute aspect-square bg-gradient-to-r from-transparent via-white to-indigo-200"
+                                            animate={{
+                                                offsetDistance: ["0%", "100%"],
+                                            }}
+                                            style={{
+                                                width: 30,
+                                                offsetPath: "rect(0 auto auto 0 round 8px)",
+                                            }}
+                                            transition={{
+                                                repeat: Number.POSITIVE_INFINITY,
+                                                duration: 4,
+                                                ease: "linear",
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="relative z-10 flex items-center gap-2">
+                                        Get Started as Lecturer
+                                        <ArrowRight className="size-5" />
+                                    </span>
                                 </Button>
                             </Link>
                         </motion.div>

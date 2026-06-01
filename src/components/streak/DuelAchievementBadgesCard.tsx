@@ -126,6 +126,45 @@ export function DuelAchievementBadgesCard() {
     }
   });
 
+  // Real-time listener for all user duels and completed duels changes
+  React.useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`realtime-achievement-duels-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'streak_duels',
+          filter: `challenger_id=eq.${user.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["achievementDuels", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["achievementAllCompletedDuels"] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'streak_duels',
+          filter: `defender_id=eq.${user.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["achievementDuels", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["achievementAllCompletedDuels"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
   // --- Real-time statistics aggregation ---
   const winsCount = userDuels.filter(d => d.status === "completed" && d.winner_id === user?.id).length;
   const challengesCount = userDuels.filter(d => d.challenger_id === user?.id).length;
@@ -429,7 +468,7 @@ export function DuelAchievementBadgesCard() {
                       src={badge.imageUrl}
                       alt={badge.name}
                       className={cn(
-                        "size-7 shrink-0 object-contain",
+                        "size-7 shrink-0 object-cover rounded-full",
                         !isUnlocked && "grayscale opacity-30 brightness-50 contrast-75 blur-[0.2px]"
                       )}
                     />

@@ -468,7 +468,7 @@ export const DuelBadgeDetailModal: React.FC<DuelBadgeDetailModalProps> = ({
                                 <img
                                   src={details.imageUrl}
                                   alt={details.name}
-                                  className="size-6 sm:size-10 lg:size-12 object-contain"
+                                  className="size-6 sm:size-10 lg:size-12 object-cover rounded-full"
                                 />
                               ) : (
                                 <IconComponent

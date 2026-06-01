@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStreak } from "@/contexts/StreakContext";
 import { StreakDuel } from "@/services/streakDuelService";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, Search, Award, Flame, ChevronRight, ChevronLeft, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import GlowingSearchBar from "@/components/ui/animated-glowing-search-bar";
 
 // ─── Types ──────────────────────────────────────────────────
 interface ArenaLeaderboardProps {
@@ -23,6 +24,9 @@ interface RawPlayer {
   streak: number;
   totalDays: number;
   longestStreak: number;
+  wins: number;
+  totalDuels: number;
+  badgeXp: number;
 }
 
 interface EnrichedPlayer extends RawPlayer {
@@ -71,6 +75,49 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  const queryClient = useQueryClient();
+
+  // Real-time synchronization: instantly invalidate leaderboard queries on database changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel("realtime-arena-leaderboard-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_streaks" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["globalLeaderboardPlayers"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_badges" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["globalLeaderboardPlayers"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_duel_badges" as any },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["globalLeaderboardPlayers"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "streak_duels" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["globalLeaderboardPlayers"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
   // ─── React Query: Aggressive caching for instant display ───
   // gcTime (formerly cacheTime) keeps data in memory for 5 min after unmount.
   // staleTime of 60s means data is considered fresh and won't trigger refetch.
@@ -95,6 +142,85 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
       const uids = streaks.map((s: any) => s.user_id);
       if (uids.length === 0) return [];
 
+      // Fetch completed duels for real-time win rate
+      const { data: completedDuels } = await supabase
+        .from("streak_duels")
+        .select("winner_id, challenger_id, defender_id")
+        .eq("status", "completed");
+
+      // Aggregate completed duels by user
+      const duelsMap = new Map<string, { wins: number; total: number }>();
+      completedDuels?.forEach((d: any) => {
+        if (d.challenger_id) {
+          const stats = duelsMap.get(d.challenger_id) || { wins: 0, total: 0 };
+          duelsMap.set(d.challenger_id, { ...stats, total: stats.total + 1 });
+        }
+        if (d.defender_id) {
+          const stats = duelsMap.get(d.defender_id) || { wins: 0, total: 0 };
+          duelsMap.set(d.defender_id, { ...stats, total: stats.total + 1 });
+        }
+        if (d.winner_id) {
+          const stats = duelsMap.get(d.winner_id) || { wins: 0, total: 0 };
+          duelsMap.set(d.winner_id, { ...stats, wins: stats.wins + 1 });
+        }
+      });
+
+      // Fetch real-time user badges for XP calculation
+      const { data: userBadges } = await supabase
+        .from("user_badges")
+        .select("user_id, badge_type")
+        .in("user_id", uids);
+
+      const { data: userDuelBadges } = await supabase
+        .from("user_duel_badges" as any)
+        .select("user_id, badge_type")
+        .in("user_id", uids);
+
+      // Aggregate user badges XP
+      const badgeXpMap = new Map<string, number>();
+      
+      const STREAK_BADGE_XP: Record<string, number> = {
+          novice: 100,
+          learner: 250,
+          scholar: 500,
+          prodigy: 750,
+          warrior: 1000,
+          elite: 2000,
+          master: 3000,
+          grandmaster: 5000,
+          titan: 10000,
+          immortal: 25000,
+      };
+
+      const DUEL_BADGE_XP: Record<string, number> = {
+        'first-victory': 100,
+        '5-wins': 250,
+        '10-wins': 500,
+        '25-wins': 1000,
+        'duel-champion': 2000,
+        'top-challenger': 300,
+        'rank-climber': 400,
+        'unbeaten-streak': 600,
+        'elite-competitor': 750,
+        'duel-veteran': 800,
+        'fast-challenger': 350,
+        'grand-master-duelist': 5000,
+      };
+
+      userBadges?.forEach((b: any) => {
+        if (b.user_id && b.badge_type) {
+          const xp = STREAK_BADGE_XP[b.badge_type] || 0;
+          badgeXpMap.set(b.user_id, (badgeXpMap.get(b.user_id) || 0) + xp);
+        }
+      });
+
+      userDuelBadges?.forEach((b: any) => {
+        if (b.user_id && b.badge_type) {
+          const xp = DUEL_BADGE_XP[b.badge_type] || 0;
+          badgeXpMap.set(b.user_id, (badgeXpMap.get(b.user_id) || 0) + xp);
+        }
+      });
+
       // Batch profile fetch — single query with IN clause
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
@@ -115,6 +241,9 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
       return streaks.map((s: any) => {
         const prof = profileMap.get(s.user_id);
         const name = prof?.full_name || "Platform Challenger";
+        const duelStats = duelsMap.get(s.user_id) || { wins: 0, total: 0 };
+        const badgeXpVal = badgeXpMap.get(s.user_id) || 0;
+
         return {
           id: s.user_id,
           name,
@@ -124,6 +253,9 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
           streak: s.current_streak || 0,
           totalDays: s.total_days || s.current_streak * 2 || 0,
           longestStreak: s.longest_streak || s.current_streak || 0,
+          wins: duelStats.wins,
+          totalDuels: duelStats.total,
+          badgeXp: badgeXpVal
         };
       });
     },
@@ -152,14 +284,23 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
     // Single O(n) pass: compute rank, XP, win rate, league
     return sorted.map((player, idx) => {
       const rank = idx + 1;
+      
+      // Calculate Win Rate: Use real-time completed duels stats if they exist,
+      // otherwise fall back to the premium mock calculated rate to keep the UI beautiful.
       const streakMultiplier = player.streak * 2.2;
-      const winRate = Math.min(98.5, Math.max(52.0, 68.5 + streakMultiplier + (idx % 3)));
-      const xp = player.streak * 100 + player.totalDays * 50 || 1200;
+      const fallbackWinRate = Math.min(98.5, Math.max(52.0, 68.5 + streakMultiplier + (idx % 3)));
+      const winRate = player.totalDuels > 0 
+        ? ((player.wins / player.totalDuels) * 100).toFixed(1) 
+        : fallbackWinRate.toFixed(1);
+
+      // Calculate Total XP: Sum real-time streak days XP and actual earned badge XP.
+      // Removed the static fallback so that the XP updates instantly in real-time when actions are recorded.
+      const xp = (player.streak * 100) + (player.totalDays * 50) + player.badgeXp;
 
       return {
         ...player,
         rank,
-        winRate: winRate.toFixed(1),
+        winRate,
         xp,
         league: getLeague(rank),
         isUser: player.id === userId,
@@ -223,15 +364,15 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
             <ChevronRight className="size-3" />
             <span className="text-primary">Leaderboard</span>
           </div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Climb the Ranks</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-bold max-w-xl">
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">Climb the Ranks</h2>
+          <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-bold max-w-xl">
             Maintain your streak to stay on top of the leaderboard.
           </p>
         </div>
 
         {/* Background refresh indicator */}
         {isFetching && (
-          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-500 animate-pulse">
+          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-500 animate-pulse shrink-0">
             <div className="size-1.5 rounded-full bg-indigo-500 animate-ping" />
             Syncing
           </div>
@@ -240,108 +381,108 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
 
       {/* 2. Visual Pedestal Podium */}
       {(firstRank || secondRank || thirdRank) && (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end justify-center max-w-4xl mx-auto pt-4 pb-1">
+        <div className="grid grid-cols-3 gap-2 md:gap-4 items-end justify-center max-w-4xl mx-auto pt-4 pb-1 px-2">
 
-        {/* Silver Pedestal (Rank 2) */}
-        {secondRank && (
-          <div className="flex flex-col items-center order-2 md:order-1 group">
-            <div className="relative mb-4 flex flex-col items-center">
-              <div className="relative">
-                <Avatar className="size-24 border-4 border-slate-300/80 shadow-2xl relative transition-transform duration-500 group-hover:scale-105">
-                  <AvatarImage src={secondRank.avatar} alt={secondRank.name} />
-                  <AvatarFallback className="bg-slate-600 text-white font-black text-xl">
-                    {getInitials(secondRank.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-2 -right-2 size-8 rounded-full bg-slate-300 border-2 border-white dark:border-slate-900 flex items-center justify-center font-black text-xs text-slate-800 shadow">
-                  2
+          {/* Silver Pedestal (Rank 2) */}
+          {secondRank && (
+            <div className="flex flex-col items-center order-1 group w-full">
+              <div className="relative mb-2 md:mb-4 flex flex-col items-center">
+                <div className="relative">
+                  <Avatar className="size-14 md:size-24 border-[3px] md:border-4 border-slate-300/80 shadow-2xl relative transition-transform duration-500 group-hover:scale-105 shrink-0">
+                    <AvatarImage src={secondRank.avatar} alt={secondRank.name} />
+                    <AvatarFallback className="bg-slate-600 text-white font-black text-xs md:text-xl">
+                      {getInitials(secondRank.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 size-5 md:-bottom-2 md:-right-2 md:size-8 rounded-full bg-slate-300 border border-white dark:border-slate-900 flex items-center justify-center font-black text-[9px] md:text-xs text-slate-800 shadow">
+                    2
+                  </div>
+                </div>
+                <div className="text-center mt-2 md:mt-3 max-w-[80px] md:max-w-none">
+                  <h4 className="text-[10px] md:text-sm font-black text-slate-800 dark:text-slate-100 truncate w-full">{secondRank.name}</h4>
+                  <p className="text-[8px] md:text-[10px] text-indigo-500 dark:text-indigo-400 font-extrabold uppercase mt-0.5 tracking-wider truncate w-full">
+                    {secondRank.winRate}% Win<span className="hidden md:inline"> Rate</span>
+                  </p>
                 </div>
               </div>
-              <div className="text-center mt-3">
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">{secondRank.name}</h4>
-                <p className="text-[10px] text-indigo-500 dark:text-indigo-400 font-extrabold uppercase mt-0.5 tracking-wider">
-                  {secondRank.winRate}% Win Rate
-                </p>
+
+              {/* The Pedestal Base */}
+              <div className="w-full max-w-[90px] md:w-48 h-14 md:h-24 bg-gradient-to-b from-slate-200/80 to-slate-100/50 dark:from-slate-800/80 dark:to-slate-900/30 rounded-t-[1.25rem] md:rounded-t-[2rem] border-t border-x border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-lg">
+                <Award className="size-5 md:size-8 text-slate-400 drop-shadow-[0_0_8px_rgba(203,213,225,0.4)]" />
               </div>
             </div>
+          )}
 
-            {/* The Pedestal Base */}
-            <div className="w-48 h-24 bg-gradient-to-b from-slate-200/80 to-slate-100/50 dark:from-slate-800/80 dark:to-slate-900/30 rounded-t-[2rem] border-t border-x border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-lg">
-              <Award className="size-8 text-slate-400 drop-shadow-[0_0_8px_rgba(203,213,225,0.4)]" />
-            </div>
-          </div>
-        )}
-
-        {/* Gold Pedestal (Rank 1 - Taller and Centered) */}
-        {firstRank && (
-          <div className="flex flex-col items-center order-1 md:order-2 group z-10 -translate-y-4">
-            <div className="relative mb-4 flex flex-col items-center">
-              <div className="absolute -top-6 text-yellow-400 fill-yellow-400 animate-bounce">
-                <Star className="size-6 fill-yellow-400 text-yellow-400" />
-              </div>
-              <div className="relative">
-                <Avatar className="size-32 border-4 border-yellow-400 shadow-2xl relative transition-transform duration-500 group-hover:scale-105">
-                  <AvatarImage src={firstRank.avatar} alt={firstRank.name} />
-                  <AvatarFallback className="bg-indigo-600 text-white font-black text-2xl">
-                    {getInitials(firstRank.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-2 -right-2 size-9 rounded-full bg-yellow-400 border-2 border-white dark:border-slate-900 flex items-center justify-center font-black text-sm text-yellow-950 shadow-md">
-                  1
+          {/* Gold Pedestal (Rank 1 - Taller and Centered) */}
+          {firstRank && (
+            <div className="flex flex-col items-center order-2 group z-10 -translate-y-3 md:-translate-y-4 w-full">
+              <div className="relative mb-2 md:mb-4 flex flex-col items-center">
+                <div className="absolute -top-4 md:-top-6 text-yellow-400 fill-yellow-400 animate-bounce">
+                  <Star className="size-4 md:size-6 fill-yellow-400 text-yellow-400" />
+                </div>
+                <div className="relative">
+                  <Avatar className="size-20 md:size-32 border-[3px] md:border-4 border-yellow-400 shadow-2xl relative transition-transform duration-500 group-hover:scale-105 shrink-0">
+                    <AvatarImage src={firstRank.avatar} alt={firstRank.name} />
+                    <AvatarFallback className="bg-indigo-600 text-white font-black text-sm md:text-2xl">
+                      {getInitials(firstRank.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 size-6 md:-bottom-2 md:-right-2 md:size-9 rounded-full bg-yellow-400 border border-white dark:border-slate-900 flex items-center justify-center font-black text-[10px] md:text-sm text-yellow-950 shadow-md">
+                    1
+                  </div>
+                </div>
+                <div className="text-center mt-2 md:mt-3 max-w-[90px] md:max-w-none">
+                  <h4 className="text-xs md:text-base font-black text-slate-900 dark:text-white truncate w-full">
+                    {firstRank.name}
+                  </h4>
+                  <p className="text-[8px] md:text-[10px] text-yellow-500 font-extrabold uppercase mt-0.5 tracking-wider truncate w-full">
+                    {firstRank.winRate}% Win<span className="hidden md:inline"> Rate</span>
+                  </p>
                 </div>
               </div>
-              <div className="text-center mt-3">
-                <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-1">
-                  {firstRank.name}
-                </h4>
-                <p className="text-[10px] text-yellow-500 font-extrabold uppercase mt-0.5 tracking-wider">
-                  {firstRank.winRate}% Win Rate
-                </p>
+
+              {/* The Pedestal Base */}
+              <div className="w-full max-w-[110px] md:w-56 h-20 md:h-32 bg-gradient-to-b from-yellow-100/30 to-yellow-50/10 dark:from-yellow-500/10 dark:to-yellow-600/5 rounded-t-[1.25rem] md:rounded-t-[2rem] border-t-2 border-x border-yellow-400/50 flex items-center justify-center shadow-2xl shadow-yellow-500/5">
+                <Trophy className="size-6 md:size-10 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.6)] animate-pulse" />
               </div>
             </div>
+          )}
 
-            {/* The Pedestal Base */}
-            <div className="w-56 h-32 bg-gradient-to-b from-yellow-100/30 to-yellow-50/10 dark:from-yellow-500/10 dark:to-yellow-600/5 rounded-t-[2rem] border-t-2 border-x border-yellow-400/50 flex items-center justify-center shadow-2xl shadow-yellow-500/5">
-              <Trophy className="size-10 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.6)] animate-pulse" />
-            </div>
-          </div>
-        )}
-
-        {/* Bronze Pedestal (Rank 3) */}
-        {thirdRank && (
-          <div className="flex flex-col items-center order-3 group">
-            <div className="relative mb-4 flex flex-col items-center">
-              <div className="relative">
-                <Avatar className="size-24 border-4 border-amber-600/80 shadow-2xl relative transition-transform duration-500 group-hover:scale-105">
-                  <AvatarImage src={thirdRank.avatar} alt={thirdRank.name} />
-                  <AvatarFallback className="bg-slate-600 text-white font-black text-xl">
-                    {getInitials(thirdRank.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-2 -right-2 size-8 rounded-full bg-amber-600 border-2 border-white dark:border-slate-900 flex items-center justify-center font-black text-xs text-white shadow">
-                  3
+          {/* Bronze Pedestal (Rank 3) */}
+          {thirdRank && (
+            <div className="flex flex-col items-center order-3 group w-full">
+              <div className="relative mb-2 md:mb-4 flex flex-col items-center">
+                <div className="relative">
+                  <Avatar className="size-14 md:size-24 border-[3px] md:border-4 border-amber-600/80 shadow-2xl relative transition-transform duration-500 group-hover:scale-105 shrink-0">
+                    <AvatarImage src={thirdRank.avatar} alt={thirdRank.name} />
+                    <AvatarFallback className="bg-slate-600 text-white font-black text-xs md:text-xl">
+                      {getInitials(thirdRank.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 size-5 md:-bottom-2 md:-right-2 md:size-8 rounded-full bg-amber-600 border border-white dark:border-slate-900 flex items-center justify-center font-black text-[9px] md:text-xs text-white shadow">
+                    3
+                  </div>
+                </div>
+                <div className="text-center mt-2 md:mt-3 max-w-[80px] md:max-w-none">
+                  <h4 className="text-[10px] md:text-sm font-black text-slate-800 dark:text-slate-100 truncate w-full">{thirdRank.name}</h4>
+                  <p className="text-[8px] md:text-[10px] text-amber-600 dark:text-amber-500 font-extrabold uppercase mt-0.5 tracking-wider truncate w-full">
+                    {thirdRank.winRate}% Win<span className="hidden md:inline"> Rate</span>
+                  </p>
                 </div>
               </div>
-              <div className="text-center mt-3">
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">{thirdRank.name}</h4>
-                <p className="text-[10px] text-amber-600 dark:text-amber-500 font-extrabold uppercase mt-0.5 tracking-wider">
-                  {thirdRank.winRate}% Win Rate
-                </p>
+
+              {/* The Pedestal Base */}
+              <div className="w-full max-w-[90px] md:w-48 h-12 md:h-20 bg-gradient-to-b from-amber-900/15 to-amber-950/5 dark:from-amber-800/10 dark:to-amber-900/5 rounded-t-[1.25rem] md:rounded-t-[2rem] border-t border-x border-amber-500/30 flex items-center justify-center shadow-lg">
+                <Award className="size-5 md:size-7 text-amber-600 drop-shadow-[0_0_8px_rgba(217,119,6,0.4)]" />
               </div>
             </div>
+          )}
 
-            {/* The Pedestal Base */}
-            <div className="w-48 h-20 bg-gradient-to-b from-amber-900/15 to-amber-950/5 dark:from-amber-800/10 dark:to-amber-900/5 rounded-t-[2rem] border-t border-x border-amber-500/30 flex items-center justify-center shadow-lg">
-              <Award className="size-7 text-amber-600 drop-shadow-[0_0_8px_rgba(217,119,6,0.4)]" />
-            </div>
-          </div>
-        )}
-
-      </div>
+        </div>
       )}
 
       {/* 3. Standings Table Card */}
-      <div className="bg-white dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/85 rounded-[2.5rem] p-5 shadow-xl backdrop-blur-md space-y-4">
+      <div className="bg-white dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/85 rounded-[1.5rem] sm:rounded-[2.5rem] p-3 md:p-5 shadow-xl backdrop-blur-md space-y-4">
 
         {/* Table Header Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -362,11 +503,10 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                <th className="py-4 px-4 w-16">Rank</th>
-                <th className="py-4 px-4">Player</th>
-                <th className="py-4 px-4 text-center">Win Rate</th>
-                <th className="py-4 px-4 text-right">Total XP</th>
+              <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                <th className="py-3 px-2 md:py-4 md:px-4 w-10 md:w-16">Rank</th>
+                <th className="py-3 px-2 md:py-4 md:px-4">Player</th>
+                <th className="py-3 px-2 md:py-4 md:px-4 text-center">Win Rate</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/40">
@@ -374,35 +514,37 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
                 <tr
                   key={player.id}
                   className={cn(
-                    "text-xs transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-950/20",
+                    "text-[11px] md:text-xs transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-950/20",
                     player.isUser && "bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-pink-500/10 border-y border-indigo-500/30"
                   )}
                 >
                   {/* Rank Column */}
-                  <td className="py-4 px-4 font-black text-slate-800 dark:text-white flex items-center gap-1.5 h-[56px]">
-                    <span>{player.rank}</span>
-                    {player.isUser && (
-                      <span className="text-[9px] text-indigo-500 animate-pulse">▲</span>
-                    )}
+                  <td className="py-3 px-2 md:py-4 md:px-4 font-black text-slate-800 dark:text-white">
+                    <div className="flex items-center gap-1">
+                      <span>{player.rank}</span>
+                      {player.isUser && (
+                        <span className="text-[9px] text-indigo-500 animate-pulse">▲</span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Player info Column */}
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-9 border border-slate-200/50 dark:border-slate-800">
+                  <td className="py-3 px-2 md:py-4 md:px-4">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <Avatar className="size-8 md:size-9 border border-slate-200/50 dark:border-slate-800 shrink-0">
                         <AvatarImage src={player.avatar} />
                         <AvatarFallback className="bg-indigo-600 text-white font-black text-[10px]">
                           {getInitials(player.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-black text-slate-800 dark:text-slate-200">{player.name}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="font-black text-slate-800 dark:text-slate-200 truncate max-w-[70px] sm:max-w-none inline-block">{player.name}</span>
                           {player.isUser && (
-                            <span className="text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider">YOU</span>
+                            <span className="text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">YOU</span>
                           )}
                         </div>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                        <p className="text-[8px] md:text-[9px] text-slate-400 font-bold uppercase tracking-tight truncate">
                           {player.league} {player.isUser && "• Rising"}
                         </p>
                       </div>
@@ -410,29 +552,18 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
                   </td>
 
                   {/* Win rate Column */}
-                  <td className="py-4 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2 max-w-[120px] mx-auto">
-                      <div className="h-2 w-20 bg-slate-100 dark:bg-slate-850 rounded-full overflow-hidden shrink-0 border border-slate-200/10">
+                  <td className="py-3 px-2 md:py-4 md:px-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5 max-w-[120px] mx-auto">
+                      <div className="h-2 w-16 bg-slate-100 dark:bg-slate-850 rounded-full overflow-hidden shrink-0 border border-slate-200/10 hidden sm:block">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
                           style={{ width: `${player.winRate}%` }}
                         />
                       </div>
-                      <span className="font-extrabold text-slate-700 dark:text-slate-300">{player.winRate}%</span>
+                      <span className="font-extrabold text-slate-700 dark:text-slate-300 text-[10px] md:text-xs">{player.winRate}%</span>
                     </div>
                   </td>
 
-                  {/* Total XP Column */}
-                  <td className="py-4 px-4 text-right font-black text-slate-800 dark:text-white">
-                    <div>
-                      <span>{player.xp.toLocaleString()}</span>
-                      {player.isUser && (
-                        <span className="block text-[8px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5 uppercase">
-                          +450 Today
-                        </span>
-                      )}
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>

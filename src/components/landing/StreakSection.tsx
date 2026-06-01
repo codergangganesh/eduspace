@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { GlowCard } from "@/components/ui/spotlight-card";
 
 interface StreakSectionProps {
     onOpenRoleSelection: (open: boolean) => void;
@@ -21,7 +23,11 @@ export function StreakSection({ onOpenRoleSelection }: StreakSectionProps) {
                     {/* Visual Side */}
                     <div className="relative order-2 lg:order-1">
                         {/* Main Streak Card */}
-                        <div className="relative z-10 bg-slate-950/80 backdrop-blur-2xl rounded-[3rem] p-8 sm:p-12 shadow-2xl border border-white/10 dark:border-slate-800">
+                        <GlowCard
+                            customSize={true}
+                            glowColor="orange"
+                            className="relative z-10 bg-slate-950/80 backdrop-blur-2xl rounded-[3rem] !p-8 sm:!p-12 shadow-2xl !border-none !gap-0 !grid-rows-none"
+                        >
                             <div className="flex items-center justify-between mb-12">
                                 <div className="space-y-1">
                                     <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">Your Momentum</h3>
@@ -72,7 +78,7 @@ export function StreakSection({ onOpenRoleSelection }: StreakSectionProps) {
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">God Mode</span>
                                 </div>
                             </div>
-                        </div>
+                        </GlowCard>
 
                         {/* Floating Elements */}
                         <div className="absolute -top-6 -right-6 z-20 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 animate-bounce transition-all duration-1000">
@@ -119,10 +125,31 @@ export function StreakSection({ onOpenRoleSelection }: StreakSectionProps) {
                             <Button
                                 size="lg"
                                 onClick={() => onOpenRoleSelection(true)}
-                                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white gap-3 px-10 h-16 rounded-2xl text-lg font-bold shadow-xl border border-white/10 group"
+                                className="relative bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white gap-3 px-10 h-16 rounded-2xl text-lg font-bold shadow-xl border border-white/10 group overflow-hidden"
                             >
-                                Start Your Streak
-                                <ArrowRight className="size-6 group-hover:translate-x-1 transition-transform" />
+                                <div
+                                    className="absolute -inset-px pointer-events-none rounded-[inherit] border-2 border-transparent border-inset [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]"
+                                >
+                                    <motion.div
+                                        className="absolute aspect-square bg-gradient-to-r from-transparent via-orange-300 to-red-300"
+                                        animate={{
+                                            offsetDistance: ["0%", "100%"],
+                                        }}
+                                        style={{
+                                            width: 35,
+                                            offsetPath: "rect(0 auto auto 0 round 16px)",
+                                        }}
+                                        transition={{
+                                            repeat: Number.POSITIVE_INFINITY,
+                                            duration: 4,
+                                            ease: "linear",
+                                        }}
+                                    />
+                                </div>
+                                <span className="relative z-10 flex items-center gap-3">
+                                    Start Your Streak
+                                    <ArrowRight className="size-6 group-hover:translate-x-1 transition-transform" />
+                                </span>
                             </Button>
                         </div>
                     </div>

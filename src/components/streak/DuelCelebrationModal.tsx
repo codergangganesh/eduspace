@@ -206,7 +206,7 @@ export const DuelCelebrationModal: React.FC<DuelCelebrationModalProps> = ({
                       style={{ backgroundColor: `${details.imageUrl ? '#FBBF24' : details.color}25`, borderColor: details.imageUrl ? '#FBBF24' : details.color }}
                     >
                       {details.imageUrl ? (
-                        <img src={details.imageUrl} alt={details.name} className="size-8 shrink-0 object-contain" />
+                        <img src={details.imageUrl} alt={details.name} className="size-8 shrink-0 object-cover rounded-full" />
                       ) : (
                         <IconComponent className="size-5 shrink-0" style={{ color: details.color }} />
                       )}

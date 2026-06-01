@@ -64,23 +64,61 @@ export function HeroSection({ onOpenRoleSelection }: HeroSectionProps) {
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <Link to="/student/login">
+                        <Link to="/student/login" className="w-full sm:w-auto">
                             <Button
                                 size="lg"
-                                className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-8 w-full rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.2)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.3)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
+                                className="relative bg-blue-600 hover:bg-blue-700 text-white gap-2 px-8 w-full rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.2)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.3)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 transition-all overflow-hidden"
                             >
-                                <GraduationCap className="size-5" />
-                                I'm a Student
+                                <div
+                                    className="absolute -inset-px pointer-events-none rounded-[inherit] border-2 border-transparent border-inset [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]"
+                                >
+                                    <motion.div
+                                        className="absolute aspect-square bg-gradient-to-r from-transparent via-white to-blue-200"
+                                        animate={{
+                                            offsetDistance: ["0%", "100%"],
+                                        }}
+                                        style={{
+                                            width: 30,
+                                            offsetPath: "rect(0 auto auto 0 round 12px)",
+                                        }}
+                                        transition={{
+                                            repeat: Number.POSITIVE_INFINITY,
+                                            duration: 4,
+                                            ease: "linear",
+                                        }}
+                                    />
+                                </div>
+                                <GraduationCap className="size-5 relative z-10" />
+                                <span className="relative z-10">I'm a Student</span>
                             </Button>
                         </Link>
-                        <Link to="/lecturer/login">
+                        <Link to="/lecturer/login" className="w-full sm:w-auto">
                             <Button
                                 size="lg"
                                 variant="outline"
-                                className="gap-2 px-8 border-slate-300 dark:border-slate-700 w-full rounded-xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.15)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2)] active:scale-95 transition-all"
+                                className="relative gap-2 px-8 border-slate-300 dark:border-slate-700 w-full rounded-xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.1)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.15)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2)] active:scale-95 transition-all overflow-hidden"
                             >
-                                <BookOpen className="size-5" />
-                                I'm a Lecturer
+                                <div
+                                    className="absolute -inset-px pointer-events-none rounded-[inherit] border-2 border-transparent border-inset [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]"
+                                >
+                                    <motion.div
+                                        className="absolute aspect-square bg-gradient-to-r from-transparent via-blue-500 to-indigo-400"
+                                        animate={{
+                                            offsetDistance: ["0%", "100%"],
+                                        }}
+                                        style={{
+                                            width: 30,
+                                            offsetPath: "rect(0 auto auto 0 round 12px)",
+                                        }}
+                                        transition={{
+                                            repeat: Number.POSITIVE_INFINITY,
+                                            duration: 4,
+                                            ease: "linear",
+                                        }}
+                                    />
+                                </div>
+                                <BookOpen className="size-5 relative z-10" />
+                                <span className="relative z-10">I'm a Lecturer</span>
                             </Button>
                         </Link>
                     </div>

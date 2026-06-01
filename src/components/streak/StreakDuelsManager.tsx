@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -49,10 +49,96 @@ import { DashboardDuelCard } from "@/components/dashboard/DashboardDuelCard";
 
 type DuelViewKey = "active" | "roster" | "invites" | "history";
 
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+
+const DUEL_BADGE_XP_VALUES: Record<string, number> = {
+  'first-victory': 100,
+  '5-wins': 250,
+  '10-wins': 500,
+  '25-wins': 1000,
+  'duel-champion': 2000,
+  'top-challenger': 300,
+  'rank-climber': 400,
+  'unbeaten-streak': 600,
+  'elite-competitor': 750,
+  'duel-veteran': 800,
+  'fast-challenger': 350,
+  'grand-master-duelist': 5000,
+};
+
 export function StreakDuelsManager() {
   const { user } = useAuth();
   const { streak, badges } = useStreak();
-  
+  const queryClient = useQueryClient();
+
+  // Fetch real-time unlocked duel badges from DB
+  const { data: dbUnlockedBadges = [] } = useQuery({
+    queryKey: ["unlockedDuelBadges", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("user_duel_badges" as any)
+        .select("badge_type")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.warn("user_duel_badges query failed", error);
+        return [];
+      }
+      return (data || []).map((row: any) => row.badge_type) as string[];
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData
+  });
+
+  // Real-time listener to invalidate React Query cache on database changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`realtime-user-duel-badges-sync-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_duel_badges',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["unlockedDuelBadges", user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
+  // Compute Duel Badge XP stats
+  const { earnedXp, totalPossibleXp, unlockedCount, totalCount, progressPercentage } = useMemo(() => {
+    const allBadgeTypes = Object.keys(DUEL_BADGE_XP_VALUES);
+    const totalPossible = allBadgeTypes.reduce((sum, type) => sum + (DUEL_BADGE_XP_VALUES[type] || 0), 0);
+
+    // Count user's unique unlocked duel badges
+    const userUnlockedTypes = new Set(dbUnlockedBadges);
+    const earned = Array.from(userUnlockedTypes).reduce((sum, type) => sum + (DUEL_BADGE_XP_VALUES[type] || 0), 0);
+
+    const percentage = totalPossible > 0 ? Math.round((earned / totalPossible) * 100) : 0;
+
+    return {
+      earnedXp: earned,
+      totalPossibleXp: totalPossible,
+      unlockedCount: userUnlockedTypes.size,
+      totalCount: allBadgeTypes.length,
+      progressPercentage: percentage
+    };
+  }, [dbUnlockedBadges]);
+
   // 1. Existing Individual PvP state hooks
   const {
     activeDuels,
@@ -199,39 +285,39 @@ export function StreakDuelsManager() {
     count: number;
     icon: any;
   }> = [
-    {
-      key: "active",
-      label: "Live Battles",
-      title: "Active 1v1 Duels",
-      description: "Daily streak logging duel progression",
-      count: activeDuels.length,
-      icon: Swords
-    },
-    {
-      key: "roster",
-      label: "Classmates",
-      title: "Class Roster PvP",
-      description: "Challenge a student in your enrolled classes",
-      count: rosterCount,
-      icon: Users
-    },
-    {
-      key: "invites",
-      label: "Invites",
-      title: "Duel Invitations",
-      description: "Review pending challenges from your peers",
-      count: pendingDuels.length,
-      icon: Inbox
-    },
-    {
-      key: "history",
-      label: "History",
-      title: "PvP History Logs",
-      description: "Outcome records of previous battles",
-      count: pastDuels.length,
-      icon: Trophy
-    }
-  ];
+      {
+        key: "active",
+        label: "Live Battles",
+        title: "Active 1v1 Duels",
+        description: "Daily streak logging duel progression",
+        count: activeDuels.length,
+        icon: Swords
+      },
+      {
+        key: "roster",
+        label: "Classmates",
+        title: "Class Roster PvP",
+        description: "Challenge a student in your enrolled classes",
+        count: rosterCount,
+        icon: Users
+      },
+      {
+        key: "invites",
+        label: "Invites",
+        title: "Duel Invitations",
+        description: "Review pending challenges from your peers",
+        count: pendingDuels.length,
+        icon: Inbox
+      },
+      {
+        key: "history",
+        label: "History",
+        title: "PvP History Logs",
+        description: "Outcome records of previous battles",
+        count: pastDuels.length,
+        icon: Trophy
+      }
+    ];
 
   const activeView = viewOptions.find((option) => option.key === activeTab) ?? viewOptions[0];
   const ActiveViewIcon = activeView.icon;
@@ -262,6 +348,65 @@ export function StreakDuelsManager() {
   return (
     <div className="w-full space-y-4">
 
+      {/* Badge XP Status Bar */}
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200/60 bg-white/70 p-4 shadow-md backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-900/40 w-full space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
+        <GlowingEffect
+          glow={true}
+          disabled={false}
+          proximity={64}
+          inactiveZone={0.01}
+          borderWidth={1.5}
+        />
+        {/* Decorative subtle glows */}
+        <div className="absolute -top-12 -right-12 size-24 rounded-full bg-indigo-500/10 blur-xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 size-24 rounded-full bg-amber-500/5 blur-xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/10 shrink-0">
+              <Award className="size-4" />
+            </div>
+            <div>
+              <h4 className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Duel Badge Mastery XP</h4>
+              <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight">Win duels and climb ranks to earn huge bonus XP</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs font-black text-slate-700 dark:text-slate-200">
+            <div className="space-y-0.5 text-left sm:text-right">
+              <span className="block text-[8px] text-slate-400 font-black uppercase tracking-wider">Earned XP</span>
+              <span className="text-sm font-black text-slate-850 dark:text-white flex items-center gap-1.5 leading-none">
+                <Sparkles className="size-3.5 text-amber-500 fill-amber-500/30 animate-pulse" />
+                {earnedXp.toLocaleString()} <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">/ {totalPossibleXp.toLocaleString()} XP</span>
+              </span>
+            </div>
+            <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+            <div className="space-y-0.5 text-left sm:text-right">
+              <span className="block text-[8px] text-slate-400 font-black uppercase tracking-wider">Badges</span>
+              <span className="text-sm font-black text-slate-850 dark:text-white leading-none">
+                {unlockedCount} <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">/ {totalCount} Unlocked</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span>Progress to Max Badge XP</span>
+            <span className="text-indigo-600 dark:text-indigo-400">{progressPercentage}%</span>
+          </div>
+          <div className="h-3 w-full bg-slate-100 dark:bg-slate-950 rounded-full overflow-hidden p-[2px] border border-slate-200/20 shadow-inner">
+            <div
+              className="h-full bg-gradient-to-r from-amber-400 via-indigo-500 to-purple-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(99,102,241,0.3)] relative overflow-hidden"
+              style={{ width: `${Math.max(2, progressPercentage)}%` }}
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.25)_50%,transparent_100%)] animate-pulse w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 2. Main Switcher Tabs matching design */}
       <div className="flex justify-start pt-1 select-none">
         <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 p-1 rounded-2xl flex items-center gap-1 shadow-inner relative">
@@ -276,8 +421,8 @@ export function StreakDuelsManager() {
                 onClick={() => setArenaMode(mode.id as "1v1" | "leaderboard")}
                 className={cn(
                   "relative px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center gap-2 z-10 active:scale-95",
-                  isActive 
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10" 
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
                     : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                 )}
               >
@@ -293,325 +438,325 @@ export function StreakDuelsManager() {
         <ArenaLeaderboard classmates={classesAndClassmates[0]?.classmates || []} pastDuels={pastDuels} />
       ) : (
         <>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-          
-          {/* Left Column (xl:col-span-2) */}
-          <div className="xl:col-span-2 space-y-6 flex flex-col justify-between">
-            
-            {/* Live Duels / Groups Card */}
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-white/70 p-6 shadow-xl backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-900/40 w-full flex-1 flex flex-col justify-between">
-              <div className="absolute -top-24 -left-24 size-48 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
-              
-              <div className="relative z-10 flex flex-col h-full justify-between space-y-5">
-              
-              {/* Card Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Swords className="size-4 text-indigo-500" />
-                    Live Duels Workspace
-                  </h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-                    Participate in daily learning wars
-                  </p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
 
-              {/* Toggle Content rendering */}
-              <div className="flex-1 flex flex-col h-full justify-between">
-                  <div className="space-y-5">
-                    
-                    {/* Action controllers */}
-                    <div className="flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-2xl border border-slate-200/10">
-                      <div className="flex items-center gap-2">
-                        <ActiveViewIcon className="size-4 text-indigo-500" />
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                          {activeView.title}
-                        </span>
-                      </div>
+            {/* Left Column (xl:col-span-2) */}
+            <div className="xl:col-span-2 space-y-6 flex flex-col justify-between">
 
-                      <div className="flex items-center gap-2">
-                        {activeTab === "active" && (
-                          <button
-                            onClick={syncScores}
-                            className="rounded-xl border border-slate-200/50 bg-white/50 dark:bg-slate-900/50 px-3 py-1.5 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 shadow-sm transition-colors hover:bg-slate-100"
-                          >
-                            Sync Scores
-                          </button>
-                        )}
+              {/* Live Duels / Groups Card */}
+              <div className="relative overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-white/70 p-6 shadow-xl backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-900/40 w-full flex-1 flex flex-col justify-between">
+                <div className="absolute -top-24 -left-24 size-48 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white dark:bg-slate-950 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-50">
-                              <SlidersHorizontal className="size-3" />
-                              <span>{activeView.label}</span>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 border border-slate-100 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900">
-                            {viewOptions.map((opt) => (
-                              <DropdownMenuItem
-                                key={opt.key}
-                                onClick={() => setActiveTab(opt.key)}
-                                className={cn(
-                                  "flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-[10px] font-black uppercase tracking-wider",
-                                  activeTab === opt.key && "bg-indigo-500/10 text-indigo-500"
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <opt.icon className="size-3.5" />
-                                  <span>{opt.label}</span>
-                                </div>
-                                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[9px]">
-                                  {opt.count}
-                                </span>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                <div className="relative z-10 flex flex-col h-full justify-between space-y-5">
+
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Swords className="size-4 text-indigo-500" />
+                        Live Duels Workspace
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                        Participate in daily learning wars
+                      </p>
                     </div>
+                  </div>
 
-                    {/* Active battles list */}
-                    {activeTab === "active" && (
-                      <div className="w-full">
-                        <DashboardDuelCard className="shadow-none border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-950/20" />
-                      </div>
-                    )}
+                  {/* Toggle Content rendering */}
+                  <div className="flex-1 flex flex-col h-full justify-between">
+                    <div className="space-y-5">
 
-                    {/* Classmate roster listings */}
-                    {activeTab === "roster" && (
-                      <div className="space-y-4">
-                        <div className="relative w-full">
-                          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
-                          <input
-                            type="text"
-                            placeholder="Search classmate..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-semibold"
-                          />
+                      {/* Action controllers */}
+                      <div className="flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded-2xl border border-slate-200/10">
+                        <div className="flex items-center gap-2">
+                          <ActiveViewIcon className="size-4 text-indigo-500" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                            {activeView.title}
+                          </span>
                         </div>
 
-                        <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
-                          {classesAndClassmates.map((group) => {
-                            const isExpanded = expandedClasses[group.class_id] !== false;
-                            const filtered = group.classmates.filter(
-                              (c) =>
-                                c.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                c.register_number.toLowerCase().includes(searchQuery.toLowerCase())
-                            );
+                        <div className="flex items-center gap-2">
+                          {activeTab === "active" && (
+                            <button
+                              onClick={syncScores}
+                              className="rounded-xl border border-slate-200/50 bg-white/50 dark:bg-slate-900/50 px-3 py-1.5 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 shadow-sm transition-colors hover:bg-slate-100"
+                            >
+                              Sync Scores
+                            </button>
+                          )}
 
-                            if (searchQuery && filtered.length === 0) return null;
-
-                            return (
-                              <div key={group.class_id} className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-white/20 overflow-hidden">
-                                <button
-                                  onClick={() => toggleClass(group.class_id)}
-                                  className="w-full flex items-center justify-between bg-slate-50 dark:bg-slate-950/20 py-2 px-3 border-b border-slate-100 dark:border-slate-850"
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white dark:bg-slate-950 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-50">
+                                <SlidersHorizontal className="size-3" />
+                                <span>{activeView.label}</span>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 border border-slate-100 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900">
+                              {viewOptions.map((opt) => (
+                                <DropdownMenuItem
+                                  key={opt.key}
+                                  onClick={() => setActiveTab(opt.key)}
+                                  className={cn(
+                                    "flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-[10px] font-black uppercase tracking-wider",
+                                    activeTab === opt.key && "bg-indigo-500/10 text-indigo-500"
+                                  )}
                                 >
-                                  <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-300">
-                                    {group.class_name} [{group.course_code}]
+                                  <div className="flex items-center gap-2">
+                                    <opt.icon className="size-3.5" />
+                                    <span>{opt.label}</span>
+                                  </div>
+                                  <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[9px]">
+                                    {opt.count}
                                   </span>
-                                  {isExpanded ? <ChevronDown className="size-3 text-slate-400" /> : <ChevronRight className="size-3 text-slate-400" />}
-                                </button>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
 
-                                {isExpanded && (
-                                  <div className="divide-y divide-slate-50 dark:divide-slate-800/40">
-                                    {filtered.map((classmate) => {
-                                      const duelStatus = getDuelStatusWithPeer(classmate.student_id, classmate.class_id);
+                      {/* Active battles list */}
+                      {activeTab === "active" && (
+                        <div className="w-full">
+                          <DashboardDuelCard className="shadow-none border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-950/20" />
+                        </div>
+                      )}
 
-                                      return (
-                                        <div key={`${classmate.class_id}-${classmate.student_id}`} className="flex items-center justify-between p-3.5 hover:bg-slate-50/50">
-                                          <div className="flex items-center gap-3">
-                                            <Avatar className="size-8">
-                                              <AvatarImage src={classmate.profile_image} />
-                                              <AvatarFallback className="bg-indigo-600 text-white font-black text-[9px]">
-                                                {getInitials(classmate.student_name)}
-                                              </AvatarFallback>
-                                            </Avatar>
+                      {/* Classmate roster listings */}
+                      {activeTab === "roster" && (
+                        <div className="space-y-4">
+                          <div className="relative w-full">
+                            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Search classmate..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 dark:border-slate-800 dark:bg-slate-900 dark:text-white font-semibold"
+                            />
+                          </div>
+
+                          <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
+                            {classesAndClassmates.map((group) => {
+                              const isExpanded = expandedClasses[group.class_id] !== false;
+                              const filtered = group.classmates.filter(
+                                (c) =>
+                                  c.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  c.register_number.toLowerCase().includes(searchQuery.toLowerCase())
+                              );
+
+                              if (searchQuery && filtered.length === 0) return null;
+
+                              return (
+                                <div key={group.class_id} className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-white/20 overflow-hidden">
+                                  <button
+                                    onClick={() => toggleClass(group.class_id)}
+                                    className="w-full flex items-center justify-between bg-slate-50 dark:bg-slate-950/20 py-2 px-3 border-b border-slate-100 dark:border-slate-850"
+                                  >
+                                    <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-300">
+                                      {group.class_name} [{group.course_code}]
+                                    </span>
+                                    {isExpanded ? <ChevronDown className="size-3 text-slate-400" /> : <ChevronRight className="size-3 text-slate-400" />}
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/40">
+                                      {filtered.map((classmate) => {
+                                        const duelStatus = getDuelStatusWithPeer(classmate.student_id, classmate.class_id);
+
+                                        return (
+                                          <div key={`${classmate.class_id}-${classmate.student_id}`} className="flex items-center justify-between p-3.5 hover:bg-slate-50/50">
+                                            <div className="flex items-center gap-3">
+                                              <Avatar className="size-8">
+                                                <AvatarImage src={classmate.profile_image} />
+                                                <AvatarFallback className="bg-indigo-600 text-white font-black text-[9px]">
+                                                  {getInitials(classmate.student_name)}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <div>
+                                                <h5 className="text-xs font-black text-slate-800 dark:text-slate-200">{classmate.student_name}</h5>
+                                                <p className="text-[8px] font-bold text-slate-400">Reg: {classmate.register_number}</p>
+                                              </div>
+                                            </div>
+
                                             <div>
-                                              <h5 className="text-xs font-black text-slate-800 dark:text-slate-200">{classmate.student_name}</h5>
-                                              <p className="text-[8px] font-bold text-slate-400">Reg: {classmate.register_number}</p>
+                                              {duelStatus === "active" ? (
+                                                <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[8px] font-black uppercase text-emerald-600">
+                                                  Dueling
+                                                </span>
+                                              ) : duelStatus === "pending" ? (
+                                                <span className="inline-flex items-center rounded-xl bg-amber-500/10 px-3 py-1.5 text-[8px] font-black uppercase text-amber-600">
+                                                  Pending
+                                                </span>
+                                              ) : (
+                                                <button
+                                                  onClick={() => challengeClassmate(classmate.student_id, classmate.class_id)}
+                                                  className="rounded-xl bg-indigo-600 px-3 py-1.5 text-[9px] font-black text-white uppercase tracking-wider active:scale-95"
+                                                >
+                                                  Duel
+                                                </button>
+                                              )}
                                             </div>
                                           </div>
-
-                                          <div>
-                                            {duelStatus === "active" ? (
-                                              <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[8px] font-black uppercase text-emerald-600">
-                                                Dueling
-                                              </span>
-                                            ) : duelStatus === "pending" ? (
-                                              <span className="inline-flex items-center rounded-xl bg-amber-500/10 px-3 py-1.5 text-[8px] font-black uppercase text-amber-600">
-                                                Pending
-                                              </span>
-                                            ) : (
-                                              <button
-                                                onClick={() => challengeClassmate(classmate.student_id, classmate.class_id)}
-                                                className="rounded-xl bg-indigo-600 px-3 py-1.5 text-[9px] font-black text-white uppercase tracking-wider active:scale-95"
-                                              >
-                                                Duel
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Pending Invites */}
-                    {activeTab === "invites" && (
-                      <div className="space-y-3">
-                        {pendingDuels.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Inbox className="mb-2 size-10 animate-pulse text-slate-300" />
-                            <p className="text-xs font-bold text-slate-500">No pending duel invitations</p>
-                          </div>
-                        ) : (
-                          pendingDuels.map((duel) => {
-                            const isReceived = duel.defender_id === user?.id;
-                            const opponentName = isReceived ? duel.challenger_name : duel.defender_name;
-                            const opponentAvatar = isReceived ? duel.challenger_avatar : duel.defender_avatar;
-
-                            return (
-                              <div key={duel.id} className="flex items-center justify-between p-3.5 bg-white border border-slate-100 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="size-9">
-                                    <AvatarImage src={opponentAvatar} />
-                                    <AvatarFallback className="bg-indigo-600 text-white font-black text-[9px]">
-                                      {getInitials(opponentName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest block">
-                                      {duel.class_name || duel.course_code}
-                                    </span>
-                                    <h4 className="text-xs font-black text-slate-800 dark:text-white">
-                                      {isReceived ? `${opponentName} challenged you` : `Challenged ${opponentName}`}
-                                    </h4>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-1.5">
-                                  {isReceived ? (
-                                    <>
-                                      <button
-                                        onClick={() => declineChallenge(duel.id)}
-                                        className="size-7 bg-rose-500/10 text-rose-600 rounded-xl flex items-center justify-center border border-rose-500/20 active:scale-95"
-                                      >
-                                        <X className="size-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => acceptChallenge(duel.id)}
-                                        className="size-7 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md active:scale-95"
-                                      >
-                                        <Check className="size-4" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
-                                      Pending
-                                    </span>
+                                        );
+                                      })}
+                                    </div>
                                   )}
                                 </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-
-                    {/* History logs */}
-                    {activeTab === "history" && (
-                      <div className="space-y-3">
-                        {pastDuels.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Trophy className="mb-2 size-10 animate-pulse text-slate-300" />
-                            <p className="text-xs font-bold text-slate-500">No previous outcomes found</p>
+                              );
+                            })}
                           </div>
-                        ) : (
-                          pastDuels.map((duel) => {
-                            const isChallenger = duel.challenger_id === user?.id;
-                            const myScore = isChallenger ? duel.challenger_score : duel.defender_score;
-                            const oppScore = isChallenger ? duel.defender_score : duel.challenger_score;
-                            const opponentName = isChallenger ? duel.defender_name : duel.challenger_name;
+                        </div>
+                      )}
 
-                            if (duel.status === "rejected") {
+                      {/* Pending Invites */}
+                      {activeTab === "invites" && (
+                        <div className="space-y-3">
+                          {pendingDuels.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                              <Inbox className="mb-2 size-10 animate-pulse text-slate-300" />
+                              <p className="text-xs font-bold text-slate-500">No pending duel invitations</p>
+                            </div>
+                          ) : (
+                            pendingDuels.map((duel) => {
+                              const isReceived = duel.defender_id === user?.id;
+                              const opponentName = isReceived ? duel.challenger_name : duel.defender_name;
+                              const opponentAvatar = isReceived ? duel.challenger_avatar : duel.defender_avatar;
+
                               return (
-                                <div key={duel.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl opacity-60 text-xs font-bold text-slate-500">
-                                  Challenge with {opponentName} was rejected or expired.
+                                <div key={duel.id} className="flex items-center justify-between p-3.5 bg-white border border-slate-100 rounded-xl">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="size-9">
+                                      <AvatarImage src={opponentAvatar} />
+                                      <AvatarFallback className="bg-indigo-600 text-white font-black text-[9px]">
+                                        {getInitials(opponentName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest block">
+                                        {duel.class_name || duel.course_code}
+                                      </span>
+                                      <h4 className="text-xs font-black text-slate-800 dark:text-white">
+                                        {isReceived ? `${opponentName} challenged you` : `Challenged ${opponentName}`}
+                                      </h4>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5">
+                                    {isReceived ? (
+                                      <>
+                                        <button
+                                          onClick={() => declineChallenge(duel.id)}
+                                          className="size-7 bg-rose-500/10 text-rose-600 rounded-xl flex items-center justify-center border border-rose-500/20 active:scale-95"
+                                        >
+                                          <X className="size-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => acceptChallenge(duel.id)}
+                                          className="size-7 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md active:scale-95"
+                                        >
+                                          <Check className="size-4" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               );
-                            }
+                            })
+                          )}
+                        </div>
+                      )}
 
-                            const isIWon = duel.winner_id === user?.id;
-                            const isTie = duel.winner_id === null;
+                      {/* History logs */}
+                      {activeTab === "history" && (
+                        <div className="space-y-3">
+                          {pastDuels.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                              <Trophy className="mb-2 size-10 animate-pulse text-slate-300" />
+                              <p className="text-xs font-bold text-slate-500">No previous outcomes found</p>
+                            </div>
+                          ) : (
+                            pastDuels.map((duel) => {
+                              const isChallenger = duel.challenger_id === user?.id;
+                              const myScore = isChallenger ? duel.challenger_score : duel.defender_score;
+                              const oppScore = isChallenger ? duel.defender_score : duel.challenger_score;
+                              const opponentName = isChallenger ? duel.defender_name : duel.challenger_name;
 
-                            return (
-                              <div
-                                key={duel.id}
-                                className={cn(
-                                  "flex items-center justify-between p-3.5 border rounded-xl cursor-pointer transition-shadow",
-                                  isIWon ? "border-emerald-500/25 bg-emerald-500/5" : isTie ? "border-slate-200 bg-slate-50/10" : "border-rose-500/25 bg-rose-500/5"
-                                )}
-                                onClick={() => {
-                                  if (isIWon) triggerConfetti("victory");
-                                  else if (isTie) triggerConfetti("tie");
-                                }}
-                              >
-                                <div>
-                                  <h4 className="text-xs font-black text-slate-800 dark:text-white">
-                                    Duel vs {opponentName} {isIWon && "⭐"}
-                                  </h4>
-                                  <p className="text-[9px] font-bold text-slate-500 mt-0.5">
-                                    Score: {myScore} vs {oppScore} days
-                                  </p>
+                              if (duel.status === "rejected") {
+                                return (
+                                  <div key={duel.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl opacity-60 text-xs font-bold text-slate-500">
+                                    Challenge with {opponentName} was rejected or expired.
+                                  </div>
+                                );
+                              }
+
+                              const isIWon = duel.winner_id === user?.id;
+                              const isTie = duel.winner_id === null;
+
+                              return (
+                                <div
+                                  key={duel.id}
+                                  className={cn(
+                                    "flex items-center justify-between p-3.5 border rounded-xl cursor-pointer transition-shadow",
+                                    isIWon ? "border-emerald-500/25 bg-emerald-500/5" : isTie ? "border-slate-200 bg-slate-50/10" : "border-rose-500/25 bg-rose-500/5"
+                                  )}
+                                  onClick={() => {
+                                    if (isIWon) triggerConfetti("victory");
+                                    else if (isTie) triggerConfetti("tie");
+                                  }}
+                                >
+                                  <div>
+                                    <h4 className="text-xs font-black text-slate-800 dark:text-white">
+                                      Duel vs {opponentName} {isIWon && "⭐"}
+                                    </h4>
+                                    <p className="text-[9px] font-bold text-slate-500 mt-0.5">
+                                      Score: {myScore} vs {oppScore} days
+                                    </p>
+                                  </div>
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shadow-sm",
+                                    isIWon ? "bg-emerald-500 border-emerald-600 text-white" : isTie ? "bg-slate-200 border-slate-300 text-slate-700" : "bg-rose-500 border-rose-600 text-white"
+                                  )}>
+                                    {isIWon ? "Victory" : isTie ? "Tie" : "Defeat"}
+                                  </span>
                                 </div>
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shadow-sm",
-                                  isIWon ? "bg-emerald-500 border-emerald-600 text-white" : isTie ? "bg-slate-200 border-slate-300 text-slate-700" : "bg-rose-500 border-rose-600 text-white"
-                                )}>
-                                  {isIWon ? "Victory" : isTie ? "Tie" : "Defeat"}
-                                </span>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
 
+                    </div>
                   </div>
+                </div>
+
               </div>
             </div>
 
+            {/* Right Column (xl:col-span-1) - Side Panels */}
+            <div className="xl:col-span-1 space-y-6">
+
+              {/* Climb the Ranks Sidebar */}
+              <RanksPodium
+                classmates={classesAndClassmates[0]?.classmates || []}
+                userStreak={currentStreakVal}
+                onViewLeaderboard={() => setArenaMode("leaderboard")}
+              />
+
+            </div>
+
           </div>
-        </div>
 
-        {/* Right Column (xl:col-span-1) - Side Panels */}
-        <div className="xl:col-span-1 space-y-6">
-          
-          {/* Climb the Ranks Sidebar */}
-          <RanksPodium 
-            classmates={classesAndClassmates[0]?.classmates || []} 
-            userStreak={currentStreakVal} 
-            onViewLeaderboard={() => setArenaMode("leaderboard")} 
-          />
-
-        </div>
-
-      </div>
-
-      {/* Full-width Achievement Badges Area */}
-      <div className="mt-2">
-        <DuelAchievementBadgesCard />
-      </div>
-      </>
+          {/* Full-width Achievement Badges Area */}
+          <div className="mt-2">
+            <DuelAchievementBadgesCard />
+          </div>
+        </>
       )}
 
     </div>

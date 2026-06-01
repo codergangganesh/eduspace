@@ -82,76 +82,86 @@ export const getStreakHeat = (days: number): StreakHeat => {
     }
 };
 
-export const BADGE_DETAILS: Record<BadgeType, { name: string; description: string; color: string; level: number; icon: string }> = {
+export const BADGE_DETAILS: Record<BadgeType, { name: string; description: string; color: string; level: number; icon: string; imageUrl?: string }> = {
     novice: {
         name: 'Novice Learner',
         description: '🎯 The journey of a thousand miles begins with 3 days.',
         color: '#94A3B8',
         level: 3,
-        icon: 'Target'
+        icon: 'Target',
+        imageUrl: '/streak_novice.png'
     },
     learner: {
         name: 'Consistent Learner',
         description: '🥈 7 days of dedication. You are building a powerful habit.',
         color: '#CD7F32',
         level: 7,
-        icon: 'Award'
+        icon: 'Award',
+        imageUrl: '/streak_learner.png'
     },
     scholar: {
         name: 'Dedicated Scholar',
         description: '🥇 14 days! Your academic discipline is truly showing.',
         color: '#F59E0B',
         level: 14,
-        icon: 'Medal'
+        icon: 'Medal',
+        imageUrl: '/streak_scholar.png'
     },
     prodigy: {
         name: 'Academic Prodigy',
         description: '🎓 21 days! Your brilliance is shining brighter every day.',
         color: '#10B981',
         level: 21,
-        icon: 'GraduationCap'
+        icon: 'GraduationCap',
+        imageUrl: '/streak_prodigy.png'
     },
     warrior: {
         name: 'Academic Warrior',
         description: '⚡ 30 days of excellence. A full month of peak performance.',
         color: '#06B6D4',
         level: 30,
-        icon: 'Zap'
+        icon: 'Zap',
+        imageUrl: '/streak_warrior.png'
     },
     elite: {
         name: 'Eduspace Elite',
         description: '🛡️ 60 days! You are among the top 1% of consistent students.',
         color: '#8B5CF6',
         level: 60,
-        icon: 'Shield'
+        icon: 'Shield',
+        imageUrl: '/streak_elite.png'
     },
     master: {
         name: 'Academic Master',
         description: '🏆 100 days of absolute consistency. A true master of your craft.',
         color: '#EF4444',
         level: 100,
-        icon: 'Trophy'
+        icon: 'Trophy',
+        imageUrl: '/streak_master.png'
     },
     grandmaster: {
         name: 'Grandmaster',
         description: '⚔️ 180 days! Half a year of relentless academic pursuit.',
         color: '#6366F1',
         level: 180,
-        icon: 'Sword'
+        icon: 'Sword',
+        imageUrl: '/streak_grandmaster.png'
     },
     titan: {
         name: 'Yearling Titan',
         description: '💎 365 days of Eduspace! A whole year of transformation.',
         color: '#FBBF24',
         level: 365,
-        icon: 'Gem'
+        icon: 'Gem',
+        imageUrl: '/streak_titan.png'
     },
     immortal: {
         name: 'Academic Immortal',
         description: '🌌 730 days. 2 years of perfection. You are now academic legend.',
         color: '#10B981',
         level: 730,
-        icon: 'Infinity'
+        icon: 'Infinity',
+        imageUrl: '/streak_immortal.png'
     }
 };
 

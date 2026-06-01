@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { Plus, Minus, HelpCircle, Square, Triangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RainbowButton } from "@/components/ui/rainbow-borders-button";
 
 const faqs = [
     {
@@ -26,21 +27,64 @@ const faqs = [
     }
 ];
 
-export function FAQSection() {
+interface FAQSectionProps {
+    onContactSupport?: () => void;
+}
+
+export function FAQSection({ onContactSupport }: FAQSectionProps = {}) {
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
     return (
         <section id="faq" className="py-24 lg:py-40 relative bg-slate-950 overflow-hidden">
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .faq-rainbow-card {
+                  position: relative;
+                  background: transparent;
+                }
+                .faq-rainbow-card::before,
+                .faq-rainbow-card::after {
+                  content: '';
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  border-radius: 16px;
+                  background: linear-gradient(90deg, #fb0094, #0000ff, #00ff00, #ffff00, #ff0000, #fb0094);
+                  background-size: 200% auto;
+                  width: 100%;
+                  height: 100%;
+                  z-index: -1;
+                  animation: rainbow-flow 6s linear infinite;
+                  opacity: 0.15;
+                  transition: opacity 0.3s;
+                }
+                .faq-rainbow-card::after {
+                  filter: blur(15px);
+                  opacity: 0.05;
+                }
+                .faq-rainbow-card:hover::before,
+                .faq-rainbow-card.is-open::before {
+                  opacity: 0.90;
+                }
+                .faq-rainbow-card:hover::after,
+                .faq-rainbow-card.is-open::after {
+                  opacity: 0.60;
+                }
+                @keyframes rainbow-flow {
+                  0% { background-position: 0% center; }
+                  100% { background-position: 200% center; }
+                }
+            `}} />
             {/* Background Decorations matching landing page */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
-                <motion.div 
+                <motion.div
                     animate={{ rotate: 360, y: [0, -20, 0] }}
                     transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
                     className="absolute top-[10%] -left-20 text-blue-500/5"
                 >
                     <Square size={400} strokeWidth={1} />
                 </motion.div>
-                <motion.div 
+                <motion.div
                     animate={{ rotate: -360, y: [0, 20, 0] }}
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="absolute bottom-[20%] -right-20 text-indigo-500/5"
@@ -51,7 +95,7 @@ export function FAQSection() {
 
             <div className="max-w-[1200px] mx-auto px-6">
                 <div className="text-center space-y-4 mb-24">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
@@ -59,7 +103,7 @@ export function FAQSection() {
                     >
                         FAQ
                     </motion.div>
-                    <motion.h2 
+                    <motion.h2
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -82,46 +126,51 @@ export function FAQSection() {
 
                 <div className="grid gap-6 max-w-4xl mx-auto pb-20">
                     {faqs.map((faq, index) => (
-                        <FAQStackCard 
-                            key={index} 
-                            faq={faq} 
-                            index={index} 
+                        <FAQStackCard
+                            key={index}
+                            faq={faq}
+                            index={index}
                             isOpen={activeIndex === index}
                             onToggle={() => setActiveIndex(activeIndex === index ? null : index)}
                         />
                     ))}
+                </div>
+
+                {/* Reusable Rainbow Button CTA block at the bottom */}
+                <div className="flex flex-col items-center justify-center pt-10 text-center space-y-4 relative z-10">
+                    <p className="text-slate-400 text-sm font-medium">Still have questions?</p>
+                    <RainbowButton onClick={onContactSupport}>
+                        Contact Support
+                    </RainbowButton>
                 </div>
             </div>
         </section>
     );
 }
 
-function FAQStackCard({ 
-    faq, 
-    index, 
-    isOpen, 
-    onToggle 
-}: { 
-    faq: typeof faqs[0]; 
-    index: number; 
+function FAQStackCard({
+    faq,
+    index,
+    isOpen,
+    onToggle
+}: {
+    faq: typeof faqs[0];
+    index: number;
     isOpen: boolean;
     onToggle: () => void;
 }) {
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.1 }}
-            className="w-full"
+            className={cn(
+                "w-full rounded-2xl faq-rainbow-card p-[1px] transition-all duration-300",
+                isOpen ? "is-open shadow-lg shadow-blue-500/10" : "shadow-md"
+            )}
         >
-            <div
-                className={cn(
-                    "w-full rounded-2xl border transition-all duration-300 overflow-hidden",
-                    "bg-slate-900/40 backdrop-blur-xl",
-                    isOpen ? "border-blue-500/40 shadow-lg shadow-blue-500/10" : "border-white/5 hover:border-white/10"
-                )}
-            >
+            <div className="w-full rounded-[15px] overflow-hidden bg-slate-950/95 backdrop-blur-xl">
                 <button
                     onClick={onToggle}
                     className="w-full flex items-center justify-between p-6 lg:p-8 text-left outline-none group"
@@ -148,7 +197,7 @@ function FAQStackCard({
                         {isOpen ? <Minus className="size-5" /> : <Plus className="size-5" />}
                     </div>
                 </button>
-                    
+
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div

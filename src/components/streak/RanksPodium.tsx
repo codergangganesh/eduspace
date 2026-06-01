@@ -212,38 +212,40 @@ export function RanksPodium({ classmates = [], userStreak = 0, onViewLeaderboard
           ))
         )}
 
-        {/* Highlighted Current User Row (Always visible below Top 3) */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 flex items-center justify-between gap-3 shadow-md shadow-emerald-500/5">
-          <div className="absolute -top-10 -right-10 size-20 rounded-full bg-emerald-500/5 blur-xl pointer-events-none" />
-          
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <Avatar className="size-10 border-2 border-emerald-400 shadow-sm">
-                <AvatarImage src={myAvatar || undefined} />
-                <AvatarFallback className="bg-emerald-600 font-black text-white text-[10px]">
-                  {myInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-505 border border-white dark:border-slate-900 flex items-center justify-center font-black text-[8px] text-white bg-emerald-500">
-                #{myRank}
-              </div>
-            </div>
+        {/* Highlighted Current User Row (Visible only if user is NOT in the Top 3 list) */}
+        {!isLoading && !top3Rankers.some((ranker) => ranker.isUser) && (
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 flex items-center justify-between gap-3 shadow-md shadow-emerald-500/5">
+            <div className="absolute -top-10 -right-10 size-20 rounded-full bg-emerald-500/5 blur-xl pointer-events-none" />
             
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 truncate max-w-[90px]">{myName}</h4>
-                <span className="text-[8px] font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider">YOU</span>
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <Avatar className="size-10 border-2 border-emerald-400 shadow-sm">
+                  <AvatarImage src={myAvatar || undefined} />
+                  <AvatarFallback className="bg-emerald-600 font-black text-white text-[10px]">
+                    {myInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-505 border border-white dark:border-slate-900 flex items-center justify-center font-black text-[8px] text-white bg-emerald-500">
+                  #{myRank}
+                </div>
               </div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Your Rank: #{myRank}</p>
+              
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 truncate max-w-[90px]">{myName}</h4>
+                  <span className="text-[8px] font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider">YOU</span>
+                </div>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Your Rank: #{myRank}</p>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 py-1 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                <Swords className="size-3" /> {myWins} {myWins === 1 ? 'Win' : 'Wins'}
+              </span>
             </div>
           </div>
-
-          <div className="text-right shrink-0">
-            <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 py-1 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider">
-              <Swords className="size-3" /> {myWins} {myWins === 1 ? 'Win' : 'Wins'}
-            </span>
-          </div>
-        </div>
+        )}
       </div>
 
       <button 

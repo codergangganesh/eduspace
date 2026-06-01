@@ -223,7 +223,8 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.3 }}
-                                            className="text-base sm:text-xl lg:text-2xl font-black text-[#d4af37] drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                                            className="text-base sm:text-xl lg:text-2xl font-black drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                                            style={{ color: details.imageUrl ? '#FBBF24' : details.color }}
                                         >
                                             {details.level} Days Academic Streak!
                                         </motion.p>
@@ -280,8 +281,13 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
 
                                                     {/* Metallic Border Overlay */}
                                                     <div
-                                                        className="absolute inset-[-4px] bg-gradient-to-tr from-slate-400 via-white to-slate-400 opacity-90 p-[4px]"
-                                                        style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}
+                                                        className="absolute inset-[-4px] opacity-90 p-[4px]"
+                                                        style={{
+                                                            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                                                            background: details.imageUrl 
+                                                                ? 'linear-gradient(135deg, #FBBF24, #FFFFFF, #D97706)' 
+                                                                : `linear-gradient(135deg, ${details.color}, #ffffff, ${details.color})`
+                                                        }}
                                                     >
                                                         <div
                                                             className="w-full h-full bg-[#121212]"
@@ -309,12 +315,20 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
                                                             <span className="text-[10px] sm:text-xs font-black tracking-[0.5em] text-white/80 uppercase">DAYS</span>
                                                         </div>
 
-                                                        {/* Dynamic Icon */}
-                                                        <div className="mt-2 sm:mt-4 p-2 sm:p-3 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10">
-                                                            <IconComponent
-                                                                className="size-6 sm:size-10 lg:size-12"
-                                                                style={{ color: details.color }}
-                                                            />
+                                                        {/* Dynamic Icon / Image */}
+                                                        <div className="mt-2 sm:mt-4 p-2 sm:p-3 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center overflow-hidden">
+                                                            {details.imageUrl ? (
+                                                                <img
+                                                                    src={details.imageUrl}
+                                                                    alt={details.name}
+                                                                    className="size-6 sm:size-10 lg:size-12 object-cover rounded-full"
+                                                                />
+                                                            ) : (
+                                                                <IconComponent
+                                                                    className="size-6 sm:size-10 lg:size-12"
+                                                                    style={{ color: details.color }}
+                                                                />
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -345,8 +359,13 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
 
                                                     {/* Metallic Border Overlay */}
                                                     <div
-                                                        className="absolute inset-[-4px] bg-gradient-to-tr from-slate-500 via-slate-200 to-slate-500 opacity-90 p-[4px]"
-                                                        style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}
+                                                        className="absolute inset-[-4px] opacity-90 p-[4px]"
+                                                        style={{
+                                                            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                                                            background: details.imageUrl 
+                                                                ? 'linear-gradient(135deg, #FBBF24, #FFFFFF, #D97706)' 
+                                                                : `linear-gradient(135deg, ${details.color}, #ffffff, ${details.color})`
+                                                        }}
                                                     >
                                                         <div
                                                             className="w-full h-full bg-[#121212]"
@@ -520,14 +539,14 @@ export const StreakBadgeDetailModal: React.FC<StreakBadgeDetailModalProps> = ({
                                             />
 
                                             <div className="absolute inset-0 flex flex-col items-center justify-center space-y-1">
-                                                <span className="text-[9px] font-black tracking-[0.4em] text-cyan-400 uppercase text-center px-4 leading-tight">{details.name}</span>
+                                                <span className="text-[9px] font-black tracking-[0.4em] uppercase text-center px-4 leading-tight" style={{ color: details.imageUrl ? '#FBBF24' : details.color }}>{details.name}</span>
                                                 <span className="text-7xl sm:text-8xl font-black text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
                                                     {details.level}
                                                 </span>
                                                 <span className="text-[9px] font-black tracking-[0.4em] text-white/50 uppercase">DAYS</span>
 
-                                                {/* Cyan Glow Line at bottom */}
-                                                <div className="h-1 shadow-[0_0_15px_#22d3ee] w-12 bg-cyan-400 rounded-full mt-2" />
+                                                {/* Dynamic Glow Line at bottom */}
+                                                <div className="h-1 w-12 rounded-full mt-2" style={{ backgroundColor: details.imageUrl ? '#FBBF24' : details.color, boxShadow: `0 0 15px ${details.imageUrl ? '#FBBF24' : details.color}` }} />
                                             </div>
                                         </div>
                                     </div>

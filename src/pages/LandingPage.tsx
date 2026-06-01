@@ -356,15 +356,35 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                                 Support
                             </button>
 
+
                             <div className="h-6 w-px bg-white/10 mx-2" />
 
                             <ThemeToggle />
 
                             <Button
                                 onClick={() => setShowRoleDialog(true)}
-                                className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 font-black uppercase tracking-widest text-[11px] h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.2)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.3)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
+                                className="relative bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 font-black uppercase tracking-widest text-[11px] h-10 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.2)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.3)] active:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 transition-all overflow-hidden"
                             >
-                                Get Started
+                                <div
+                                    className="absolute -inset-px pointer-events-none rounded-[inherit] border-2 border-transparent border-inset [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]"
+                                >
+                                    <motion.div
+                                        className="absolute aspect-square bg-gradient-to-r from-transparent via-white to-blue-200"
+                                        animate={{
+                                            offsetDistance: ["0%", "100%"],
+                                        }}
+                                        style={{
+                                            width: 25,
+                                            offsetPath: "rect(0 auto auto 0 round 12px)",
+                                        }}
+                                        transition={{
+                                            repeat: Number.POSITIVE_INFINITY,
+                                            duration: 4,
+                                            ease: "linear",
+                                        }}
+                                    />
+                                </div>
+                                <span className="relative z-10">Get Started</span>
                             </Button>
                         </div>
                     </div>
@@ -430,6 +450,7 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                     <StudentSection />
                 </Suspense>
 
+
                 <Suspense fallback={<LoadingFallback />}>
                     <LecturerSection />
                 </Suspense>
@@ -451,7 +472,7 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>
-                    <FAQSection />
+                    <FAQSection onContactSupport={() => setShowContact(true)} />
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>
@@ -470,4 +491,3 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
         </div>
     );
 }
-
