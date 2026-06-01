@@ -83,7 +83,7 @@ export function useLecturerAssignments() {
         try {
             setLoading(true);
 
-            // Fetch Raw Assignments (No Join)
+            // Fetch Raw Assignments
             const { data, error } = await supabase
                 .from("assignments")
                 .select("*")
@@ -91,7 +91,29 @@ export function useLecturerAssignments() {
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
-            setRawAssignments(data || []);
+            const rawData = data || [];
+
+            // Batch-fetch submission counts for all assignments
+            if (rawData.length > 0) {
+                const ids = rawData.map((a: any) => a.id);
+                const { data: submissionCounts } = await supabase
+                    .from("assignment_submissions")
+                    .select("assignment_id")
+                    .in("assignment_id", ids);
+
+                // Build count map
+                const countMap = new Map<string, number>();
+                (submissionCounts || []).forEach((s: any) => {
+                    countMap.set(s.assignment_id, (countMap.get(s.assignment_id) || 0) + 1);
+                });
+
+                setRawAssignments(rawData.map((a: any) => ({
+                    ...a,
+                    submission_count: countMap.get(a.id) || 0,
+                })));
+            } else {
+                setRawAssignments([]);
+            }
 
         } catch (error: any) {
             console.error("Error fetching assignments:", error);

@@ -548,10 +548,10 @@ export default function AllStudents() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Student</TableHead>
-                                        <TableHead>Register #</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Department</TableHead>
-                                        <TableHead>Year</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Register #</TableHead>
+                                        <TableHead className="hidden md:table-cell">Email</TableHead>
+                                        <TableHead className="hidden lg:table-cell">Department</TableHead>
+                                        <TableHead className="hidden lg:table-cell">Year</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -567,29 +567,32 @@ export default function AllStudents() {
                                             <TableRow key={student.id}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="relative">
-                                                            <Avatar className="size-10">
-                                                                <AvatarImage src={imageUrl || undefined} />
-                                                                <AvatarFallback className="bg-primary/10 text-primary">
-                                                                    {student.student_name.slice(0, 2).toUpperCase()}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="absolute -bottom-1 -right-1">
-                                                                <ImageUploadButton
-                                                                    currentImageUrl={student.student_image_url}
-                                                                    onImageUpload={(url) => handleImageUpload(student.id, url)}
-                                                                    onImageRemove={() => handleImageRemove(student.id)}
-                                                                    size="sm"
-                                                                />
-                                                            </div>
+                                                        <Avatar 
+                                                            className="size-10 cursor-pointer hover:opacity-85 transition-opacity"
+                                                            onClick={() => navigate(`/classes/${classId}/students/${student.id}`)}
+                                                        >
+                                                            <AvatarImage src={imageUrl || undefined} />
+                                                            <AvatarFallback className="bg-primary/10 text-primary">
+                                                                {student.student_name.slice(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <span 
+                                                                className="font-medium cursor-pointer hover:text-primary transition-colors hover:underline"
+                                                                onClick={() => navigate(`/classes/${classId}/students/${student.id}`)}
+                                                            >
+                                                                {student.student_name}
+                                                            </span>
+                                                            <span className="text-[10px] text-muted-foreground font-mono sm:hidden">
+                                                                {student.register_number}
+                                                            </span>
                                                         </div>
-                                                        <span className="font-medium">{student.student_name}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-mono text-sm">{student.register_number}</TableCell>
-                                                <TableCell className="text-sm">{student.email}</TableCell>
-                                                <TableCell>{student.department || "-"}</TableCell>
-                                                <TableCell>{student.year || "-"}</TableCell>
+                                                <TableCell className="hidden sm:table-cell font-mono text-sm">{student.register_number}</TableCell>
+                                                <TableCell className="hidden md:table-cell text-sm">{student.email}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{student.department || "-"}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{student.year || "-"}</TableCell>
                                                 <TableCell>{getStatusBadge(status)}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -657,6 +660,8 @@ export default function AllStudents() {
                 onOpenChange={setShowEditModal}
                 student={selectedStudent}
                 onSave={handleSaveStudent}
+                onImageUpload={handleImageUpload}
+                onImageRemove={handleImageRemove}
             />
 
             {/* Delete Confirmation */}
@@ -681,17 +686,6 @@ export default function AllStudents() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Mobile FAB for Add Student */}
-            <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <Button
-                    onClick={() => setShowAddStudentModal(true)}
-                    size="icon"
-                    className="size-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all active:scale-95 border-4 border-background text-primary-foreground"
-                    title="Add Student"
-                >
-                    <Plus className="size-8 text-white" />
-                </Button>
-            </div>
             {/* Mobile FAB Menu */}
             <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <DropdownMenu>

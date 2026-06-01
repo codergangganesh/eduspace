@@ -58,6 +58,13 @@ export default function AssignmentSubmissionsPage() {
     // Review Modal State
     const [selectedSubmission, setSelectedSubmission] = useState<AssignmentSubmissionDetail | null>(null);
     const [isReviewOpen, setIsReviewOpen] = useState(false);
+    const [reviewIndex, setReviewIndex] = useState(0);
+
+    // Only submitted students are reviewable
+    const reviewableSubmissions = useMemo(() =>
+        filteredSubmissions.filter(s => s.status !== 'pending'),
+        [filteredSubmissions]
+    );
 
     // Reset to page 1 when search or filter changes
     useEffect(() => {
@@ -128,8 +135,18 @@ export default function AssignmentSubmissionsPage() {
     const endIndex = Math.min(startIndex + itemsPerPage, filteredSubmissions.length);
 
     const handleReviewClick = (submission: AssignmentSubmissionDetail) => {
+        const idx = reviewableSubmissions.findIndex(s => s.student_id === submission.student_id);
+        setReviewIndex(idx >= 0 ? idx : 0);
         setSelectedSubmission(submission);
         setIsReviewOpen(true);
+    };
+
+    const navigateReview = (direction: 'prev' | 'next') => {
+        const newIndex = direction === 'prev'
+            ? Math.max(0, reviewIndex - 1)
+            : Math.min(reviewableSubmissions.length - 1, reviewIndex + 1);
+        setReviewIndex(newIndex);
+        setSelectedSubmission(reviewableSubmissions[newIndex]);
     };
 
     /**
@@ -448,7 +465,7 @@ export default function AssignmentSubmissionsPage() {
                                                             </p>
                                                             {student.submission_text && !student.file_url && (
                                                                 <p className="text-[9px] text-muted-foreground/60 italic truncate mt-0.5 leading-none">
-                                                                    "{student.submission_text.substring(0, 40)}..."
+                                                                    {student.submission_text.substring(0, 40)}...
                                                                 </p>
                                                             )}
                                                             {student.file_url && (
@@ -734,7 +751,28 @@ export default function AssignmentSubmissionsPage() {
                                 <FileText className="size-16 md:size-20 rotate-12" />
                             </div>
                             <h2 className="text-lg md:text-xl font-black tracking-tight truncate pr-16">{selectedSubmission?.student_name}</h2>
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-70 mt-0.5">Submission Details</p>
+                            <div className="flex items-center gap-3 mt-0.5">
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-70">Submission Details</p>
+                                <span className="text-[9px] font-black opacity-50">•</span>
+                                <p className="text-[9px] font-black opacity-70">{reviewIndex + 1} / {reviewableSubmissions.length}</p>
+                            </div>
+                            {/* Prev/Next navigation */}
+                            <div className="absolute right-4 bottom-3 flex items-center gap-1">
+                                <button
+                                    onClick={() => navigateReview('prev')}
+                                    disabled={reviewIndex === 0}
+                                    className="size-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center disabled:opacity-30 transition-all"
+                                >
+                                    <ChevronLeft className="size-4" />
+                                </button>
+                                <button
+                                    onClick={() => navigateReview('next')}
+                                    disabled={reviewIndex >= reviewableSubmissions.length - 1}
+                                    className="size-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center disabled:opacity-30 transition-all"
+                                >
+                                    <ChevronRight className="size-4" />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="p-5 md:p-6 space-y-5">

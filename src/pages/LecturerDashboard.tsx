@@ -1,5 +1,5 @@
 // Imports
-import { Users, FileText, TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight, Megaphone, Heart, Send, ClipboardList } from "lucide-react";
+import { Users, FileText, TrendingUp, MapPin, CheckCircle, AlertCircle, Calendar, Loader2, UserPlus, ArrowRight, BookOpen, GraduationCap, ChevronRight, Megaphone, Heart, Send, ClipboardList, PenLine } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,8 +19,13 @@ import { LecturerSlidingHero } from "@/components/dashboard/LecturerSlidingHero"
 
 export default function LecturerDashboard() {
   const { profile, updateProfile } = useAuth();
-  const { stats: dataStats, upcomingClasses, loading } = useLecturerData();
+  const { stats: dataStats, upcomingClasses, recentSubmissions, loading } = useLecturerData();
   const navigate = useNavigate();
+
+  // Count submitted-but-ungraded assignments from recent activity feed
+  const needsGradingCount = recentSubmissions.filter(
+    act => act.type === 'assignment' && (act.status === 'pending' || act.status === 'submitted')
+  ).length;
 
   // Listen for real-time rejection notifications
   useRealtimeRejections();
@@ -53,7 +58,7 @@ export default function LecturerDashboard() {
         <LecturerSlidingHero title={title} />
 
         {/* Stats Grid - Premium Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
           <PremiumStatsCard
             title="TOTAL STUDENTS"
             value={dataStats.enrolledStudents}
@@ -77,7 +82,15 @@ export default function LecturerDashboard() {
             icon={AlertCircle}
             backgroundColor="bg-gradient-to-br from-amber-400 via-orange-500 to-rose-600"
             iconBackgroundColor="bg-white/10"
-            className="col-span-2 lg:col-span-1"
+          />
+          <PremiumStatsCard
+            title="NEEDS GRADING"
+            value={needsGradingCount}
+            subtitle="Awaiting your review"
+            icon={PenLine}
+            backgroundColor="bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-700"
+            iconBackgroundColor="bg-white/10"
+            className={needsGradingCount > 0 ? "ring-2 ring-violet-400/40" : ""}
           />
         </div>
 
@@ -178,7 +191,7 @@ export default function LecturerDashboard() {
                             <h4 className="font-semibold text-sm text-foreground line-clamp-1 mb-1 group-hover:text-primary transition-colors">{classItem.title}</h4>
 
                             <div className="flex items-center text-xs text-muted-foreground gap-1">
-                              <Clock className="size-3" />
+                              <MapPin className="size-3" />
                               <span>{classItem.room}</span>
                             </div>
                           </div>

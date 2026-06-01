@@ -107,6 +107,32 @@ export function useAttendance(classId: string) {
     },
   });
 
+  // Delete a session
+  const deleteSession = useMutation({
+    mutationFn: async (sessionId: string) => {
+      // Delete records first (in case there's no cascade)
+      await supabase
+        .from('attendance_records')
+        .delete()
+        .eq('session_id', sessionId);
+
+      const { error } = await supabase
+        .from('attendance_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance_sessions', classId] });
+      queryClient.invalidateQueries({ queryKey: ['class_attendance_stats', classId] });
+      toast.success('Session deleted successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete session: ' + error.message);
+    },
+  });
+
   // Fetch students and their records for a specific session
   const fetchSessionRecords = async (sessionId: string) => {
     // 1. Fetch all students in the class
@@ -182,6 +208,7 @@ export function useAttendance(classId: string) {
     sessionsLoading,
     createSession,
     updateSession,
+    deleteSession,
     fetchSessionRecords,
     saveAttendance,
     refetchSessions,

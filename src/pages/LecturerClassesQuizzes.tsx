@@ -11,10 +11,12 @@ import {
     Bot,
     Brain,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SectionClassCard } from '@/components/common/SectionClassCard';
 import { Badge } from '@/components/ui/badge';
 import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 import {
     Dialog,
@@ -30,8 +32,22 @@ export default function LecturerClassesQuizzes() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { classes, loading } = useClasses();
+    const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [isClassSelectOpen, setIsClassSelectOpen] = useState(false);
+    const [activeQuizCount, setActiveQuizCount] = useState<number | null>(null);
+
+    // Fetch active (published) quiz count across all lecturer's classes
+    useEffect(() => {
+        if (!classes.length) return;
+        const classIds = classes.map(c => c.id);
+        supabase
+            .from('quizzes')
+            .select('id', { count: 'exact', head: true })
+            .in('class_id', classIds)
+            .eq('status', 'published')
+            .then(({ count }) => setActiveQuizCount(count ?? 0));
+    }, [classes]);
 
     const isAICreateMode = searchParams.get('mode') === 'create-ai';
 
@@ -127,7 +143,9 @@ export default function LecturerClassesQuizzes() {
                                 <p className="text-[10px] sm:text-sm text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
                                     Active Quizzes
                                 </p>
-                                <p className="text-xl sm:text-3xl font-black text-white">Live View</p>
+                                <p className="text-xl sm:text-3xl font-black text-white">
+                                    {activeQuizCount === null ? '—' : activeQuizCount}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

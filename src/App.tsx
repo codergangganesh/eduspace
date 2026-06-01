@@ -78,6 +78,7 @@ const StudentAttendance = lazy(() => import("./pages/StudentAttendance"));
 const LecturerClassesAttendance = lazy(() => import("./pages/LecturerClassesAttendance"));
 const LecturerAttendance = lazy(() => import("./pages/LecturerAttendance"));
 const VoiceTutor = lazy(() => import("./pages/VoiceTutor"));
+const StudentProfileView = lazy(() => import("./pages/StudentProfileView"));
 
 const LoadingFallback = () => {
   useEffect(() => {
@@ -207,6 +208,7 @@ const AnimatedRoutes = () => {
           <Route path="/lecturer-dashboard" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerDashboard /></ProtectedRoute>} />
           <Route path="/all-students" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><CreateClass /></ProtectedRoute>} />
           <Route path="/classes/:classId/students" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><AllStudents /></ProtectedRoute>} />
+          <Route path="/classes/:classId/students/:enrollmentId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><StudentProfileView /></ProtectedRoute>} />
           <Route path="/lecturer/timetable" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerTimeTable /></ProtectedRoute>} />
           <Route path="/lecturer/assignments" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><LecturerClassesAssignments /></ProtectedRoute>} />
           <Route path="/lecturer/assignments/:classId" element={<ProtectedRoute allowedRoles={["lecturer", "admin"]}><ClassAssignmentsView /></ProtectedRoute>} />

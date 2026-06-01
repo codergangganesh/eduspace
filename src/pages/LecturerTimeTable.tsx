@@ -15,17 +15,30 @@ import {
     Clock,
     MapPin,
     Calendar as CalendarIcon,
-    Plus
+    Plus,
+    Edit2,
+    Trash2
 } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TimeTableSkeleton } from "@/components/skeletons/TimeTableSkeleton";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSchedule } from "@/hooks/useSchedule";
+import { useSchedule, Schedule } from "@/hooks/useSchedule";
 import { useClasses } from "@/hooks/useClasses";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { CreateEventDialog } from "@/components/lecturer/CreateEventDialog";
+import { toast } from "sonner";
 
 const TIME_COLUMN_WIDTH = 56;
 
@@ -43,7 +56,22 @@ export default function LecturerTimeTable() {
         return () => clearInterval(timer);
     }, []);
 
-    const { schedules, loading } = useSchedule(undefined);
+    const { schedules, loading, deleteSchedule } = useSchedule(undefined);
+    const [eventToDelete, setEventToDelete] = useState<Schedule | null>(null);
+    const [deletingEvent, setDeletingEvent] = useState(false);
+
+    const handleDeleteEvent = async () => {
+        if (!eventToDelete) return;
+        setDeletingEvent(true);
+        const result = await deleteSchedule(eventToDelete.id);
+        setDeletingEvent(false);
+        if (result.success) {
+            toast.success('Event deleted');
+        } else {
+            toast.error('Failed to delete event');
+        }
+        setEventToDelete(null);
+    };
 
     const displayWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -338,7 +366,7 @@ export default function LecturerTimeTable() {
                                                             <TooltipTrigger asChild>
                                                                 <div
                                                                     className={cn(
-                                                                        "absolute left-0.5 right-0.5 rounded px-1.5 py-1 text-[10px] border-l-[3px] shadow-sm hover:shadow-md transition-shadow cursor-default overflow-hidden",
+                                                                        "absolute left-0.5 right-0.5 rounded px-1.5 py-1 text-[10px] border-l-[3px] shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden group/event",
                                                                         colorClass
                                                                     )}
                                                                     style={style}
@@ -348,6 +376,16 @@ export default function LecturerTimeTable() {
                                                                     </div>
                                                                     <div className="font-semibold truncate leading-tight line-clamp-2">
                                                                         {event.title}
+                                                                    </div>
+                                                                    {/* Hover action buttons */}
+                                                                    <div className="absolute top-0.5 right-0.5 hidden group-hover/event:flex items-center gap-0.5">
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); setEventToDelete(event); }}
+                                                                            className="size-5 rounded flex items-center justify-center bg-black/10 hover:bg-red-500 hover:text-white transition-all"
+                                                                            title="Delete event"
+                                                                        >
+                                                                            <Trash2 className="size-3" />
+                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                             </TooltipTrigger>
@@ -393,6 +431,29 @@ export default function LecturerTimeTable() {
                     open={isCreateEventOpen}
                     onOpenChange={setIsCreateEventOpen}
                 />
+
+                {/* Delete Event Confirmation */}
+                <AlertDialog open={!!eventToDelete} onOpenChange={open => !open && setEventToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Event?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently remove <strong>{eventToDelete?.title}</strong> from the schedule. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDeleteEvent}
+                                disabled={deletingEvent}
+                                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                            >
+                                {deletingEvent && <Loader2 className="size-4 mr-2 animate-spin" />}
+                                Delete Event
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
 
                 {/* Mobile FAB */}
                 <div className="fixed bottom-6 right-6 sm:hidden z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">

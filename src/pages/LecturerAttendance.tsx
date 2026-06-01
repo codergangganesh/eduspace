@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -30,7 +29,8 @@ import {
   LayoutGrid,
   ListFilter,
   ArrowUpDown,
-  FileDown
+  FileDown,
+  Trash2
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -44,8 +44,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function LecturerAttendance() {
   const { classId } = useParams<{ classId: string }>();
@@ -57,7 +68,8 @@ export default function LecturerAttendance() {
     sessions, 
     sessionsLoading, 
     createSession, 
-    updateSession, 
+    updateSession,
+    deleteSession,
     fetchSessionRecords,
     saveAttendance 
   } = useAttendance(classId || '');
@@ -127,6 +139,7 @@ export default function LecturerAttendance() {
   const [isMarkingDialogOpen, setIsMarkingDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<AttendanceSession | null>(null);
   const [activeTab, setActiveTab] = useState('sessions');
+  const [sessionToDelete, setSessionToDelete] = useState<AttendanceSession | null>(null);
 
   // Statistics Calculation
   const totalSessions = sessions?.length || 0;
@@ -168,6 +181,13 @@ export default function LecturerAttendance() {
     }
     setIsSessionDialogOpen(false);
     setSelectedSession(null);
+  };
+
+  const handleDeleteSession = async () => {
+    if (sessionToDelete) {
+      await deleteSession.mutateAsync(sessionToDelete.id);
+      setSessionToDelete(null);
+    }
   };
 
   return (
@@ -378,21 +398,41 @@ export default function LecturerAttendance() {
                             </div>
                             
                             <div className="flex flex-col gap-1.5">
-                               <Button 
-                                 onClick={() => handleMarkAttendance(session)}
-                                 className="size-8 md:size-10 rounded-lg md:rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm border border-primary/20 shrink-0"
-                               >
-                                 <CheckCircle2 className="size-4 md:size-5" />
-                               </Button>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="size-8 md:size-10 rounded-lg md:rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-muted-foreground shrink-0"
-                                 onClick={() => handleEditSession(session)}
-                               >
-                                 <MoreVertical className="size-4 md:size-5" />
-                               </Button>
-                            </div>
+                                 <Button 
+                                   onClick={() => handleMarkAttendance(session)}
+                                   className="size-8 md:size-10 rounded-lg md:rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm border border-primary/20 shrink-0"
+                                 >
+                                   <CheckCircle2 className="size-4 md:size-5" />
+                                 </Button>
+                                 <DropdownMenu>
+                                   <DropdownMenuTrigger asChild>
+                                     <Button 
+                                       variant="ghost" 
+                                       size="icon" 
+                                       className="size-8 md:size-10 rounded-lg md:rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-muted-foreground shrink-0"
+                                     >
+                                       <MoreVertical className="size-4 md:size-5" />
+                                     </Button>
+                                   </DropdownMenuTrigger>
+                                   <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
+                                     <DropdownMenuItem
+                                       onClick={() => handleEditSession(session)}
+                                       className="rounded-lg gap-2 cursor-pointer"
+                                     >
+                                       <Calendar className="size-4" />
+                                       Edit Session
+                                     </DropdownMenuItem>
+                                     <DropdownMenuSeparator />
+                                     <DropdownMenuItem
+                                       onClick={() => setSessionToDelete(session)}
+                                       className="rounded-lg gap-2 cursor-pointer text-rose-600 focus:text-rose-700 focus:bg-rose-50 dark:focus:bg-rose-950/20"
+                                     >
+                                       <Trash2 className="size-4" />
+                                       Delete Session
+                                     </DropdownMenuItem>
+                                   </DropdownMenuContent>
+                                 </DropdownMenu>
+                             </div>
                           </div>
 
                           {session.note && (
@@ -586,6 +626,25 @@ export default function LecturerAttendance() {
           }
         }}
       />
+      <AlertDialog open={!!sessionToDelete} onOpenChange={(open) => !open && setSessionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{sessionToDelete?.title || 'this session'}</strong> and all its attendance records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Delete Session
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
