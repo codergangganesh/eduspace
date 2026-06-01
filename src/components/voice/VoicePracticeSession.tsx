@@ -1263,7 +1263,7 @@ Be specific and constructive.`;
                         <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Difficulty</label>
                         <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-600">Mode</span>
                       </div>
-                      <p className="text-[12px] font-semibold text-on-surface">Beginner</p>
+                      <p className="text-[12px] font-semibold text-on-surface capitalize">{profile.difficulty}</p>
                       <div className="relative">
                         <select
                           className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"

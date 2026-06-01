@@ -567,7 +567,7 @@ export default function AllStudents() {
                                             <TableRow key={student.id}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar 
+                                                        <Avatar
                                                             className="size-10 cursor-pointer hover:opacity-85 transition-opacity"
                                                             onClick={() => navigate(`/classes/${classId}/students/${student.id}`)}
                                                         >
@@ -577,7 +577,7 @@ export default function AllStudents() {
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className="flex flex-col">
-                                                            <span 
+                                                            <span
                                                                 className="font-medium cursor-pointer hover:text-primary transition-colors hover:underline"
                                                                 onClick={() => navigate(`/classes/${classId}/students/${student.id}`)}
                                                             >
