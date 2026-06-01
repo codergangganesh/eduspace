@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 import { StreakService, BadgeType, UserStreak, UserBadge, BADGE_DETAILS } from '@/services/streakService';
 import { supabase } from '@/integrations/supabase/client';
-import { StreakCelebrationModal } from '@/components/streak/StreakCelebrationModal';
+import { CelebrationOverlay } from '@/components/streak/CelebrationOverlay';
 import confetti from 'canvas-confetti';
 import { StreakUpdateModal } from '@/components/streak/StreakUpdateModal';
 import { format, subDays } from 'date-fns';
@@ -264,13 +264,25 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setGuideCompleted, // Add this to the provider value
         }}>
             {children}
-            {isStudent && showCelebration && unlockedBadge && (
-                <StreakCelebrationModal
-                    badgeType={unlockedBadge}
-                    streakCount={streak?.current_streak || 0}
-                    onClose={() => setShowCelebration(false)}
-                />
-            )}
+            {isStudent && showCelebration && unlockedBadge && (() => {
+                const details = BADGE_DETAILS[unlockedBadge];
+                const badgeXp = BADGE_XP_VALUES[unlockedBadge] || 0;
+                return (
+                    <CelebrationOverlay
+                        title="STREAK MILESTONE MET!"
+                        subtitle="Your dedication has unlocked a new rank"
+                        badgeName={details.name}
+                        badgeDescription={details.description}
+                        imageUrl={details.imageUrl}
+                        iconName={details.icon}
+                        color={details.color}
+                        xpReward={badgeXp}
+                        streakCount={streak?.current_streak || details.level}
+                        showXp={false}
+                        onClose={() => setShowCelebration(false)}
+                    />
+                );
+            })()}
             {isStudent && showStreakUpdate && (
                 <StreakUpdateModal
                     streakCount={currentStreakCount}

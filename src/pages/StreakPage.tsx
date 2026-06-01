@@ -141,6 +141,7 @@ export default function StreakPage() {
                                         </>
                                     )}
                                 </div>
+
                             </div>
 
                             {/* Main Stats Card - More Compact on Desktop Side */}

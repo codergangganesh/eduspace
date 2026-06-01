@@ -17,8 +17,8 @@ import {
   Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DuelBadgeType, DUEL_BADGE_DETAILS, DuelBadgeDetail, DuelBadgeDetailModal } from "./DuelBadgeDetailModal";
-import { DuelCelebrationModal } from "./DuelCelebrationModal";
+import { DuelBadgeType, DUEL_BADGE_DETAILS, DuelBadgeDetailModal } from "./DuelBadgeDetailModal";
+import { CelebrationOverlay } from "./CelebrationOverlay";
 
 const IconMap: Record<string, React.ElementType> = {
   Trophy,
@@ -550,13 +550,24 @@ export function DuelAchievementBadgesCard() {
       />
 
       {/* Celebration popup for newly unlocked badges */}
-      {newlyUnlockedBadge && (
-        <DuelCelebrationModal
-          badgeType={newlyUnlockedBadge}
-          winsCount={winsCount}
-          onClose={() => setNewlyUnlockedBadge(null)}
-        />
-      )}
+      {newlyUnlockedBadge && (() => {
+        const details = DUEL_BADGE_DETAILS[newlyUnlockedBadge];
+        const xpAmount = parseInt(details.reward.replace(/[^0-9]/g, "")) || 200;
+        return (
+          <CelebrationOverlay
+            title="DUEL CHAMPION ASCENDED!"
+            subtitle="Your arena domination has earned you a badge!"
+            badgeName={details.name}
+            badgeDescription={details.description}
+            imageUrl={details.imageUrl}
+            iconName={details.icon}
+            color={details.color}
+            xpReward={xpAmount}
+            streakCount={newlyUnlockedBadge === 'unbeaten-streak' ? longestUnbeatenStreak : winsCount}
+            onClose={() => setNewlyUnlockedBadge(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

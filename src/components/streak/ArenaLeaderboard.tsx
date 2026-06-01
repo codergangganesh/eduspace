@@ -7,7 +7,6 @@ import { Trophy, Search, Award, Flame, ChevronRight, ChevronLeft, Star } from "l
 import { cn } from "@/lib/utils";
 import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import GlowingSearchBar from "@/components/ui/animated-glowing-search-bar";
 
 // ─── Types ──────────────────────────────────────────────────
 interface ArenaLeaderboardProps {
