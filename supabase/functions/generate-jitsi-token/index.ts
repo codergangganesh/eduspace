@@ -54,10 +54,11 @@ serve(async (req: Request) => {
         }
 
         // Import the private key
-        // We need to handle the PEM format. The user provided the base64 part.
-        const pemHeader = "-----BEGIN PRIVATE KEY-----";
-        const pemFooter = "-----END PRIVATE KEY-----";
-        const pemContents = privateKeyPem.replace(/\s+/g, "");
+        // Support full PEM with headers/footers or raw base64 string, cleaning all whitespace.
+        const pemContents = privateKeyPem
+            .replace("-----BEGIN PRIVATE KEY-----", "")
+            .replace("-----END PRIVATE KEY-----", "")
+            .replace(/\s+/g, "");
         const binaryDerString = atob(pemContents);
         const binaryDer = new Uint8Array(binaryDerString.length);
         for (let i = 0; i < binaryDerString.length; i++) {
