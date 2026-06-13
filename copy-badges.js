@@ -17,6 +17,27 @@ const files = [
   { src: 'streak_immortal_1780301933198.png', dest: 'streak_immortal.png' }
 ];
 
+function copyFileSyncWithRetry(srcPath, destPath, maxAttempts = 5, delayMs = 150) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      fs.copyFileSync(srcPath, destPath);
+      return;
+    } catch (err) {
+      const isLastAttempt = attempt === maxAttempts;
+      if ((err.code === 'EBUSY' || err.code === 'EACCES') && !isLastAttempt) {
+        console.warn(`[Warning] File busy/locked: ${path.basename(srcPath)}. Retrying attempt ${attempt}/${maxAttempts} in ${delayMs}ms...`);
+        // Synchronous sleep
+        const end = Date.now() + delayMs;
+        while (Date.now() < end) {
+          // busy wait
+        }
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 console.log('Starting Streak Achievement badge copy process...');
 
 if (!fs.existsSync(destDir)) {
@@ -30,7 +51,7 @@ files.forEach(f => {
   const destPath = path.join(destDir, f.dest);
   try {
     if (fs.existsSync(srcPath)) {
-      fs.copyFileSync(srcPath, destPath);
+      copyFileSyncWithRetry(srcPath, destPath);
       console.log(`Successfully copied ${f.src} -> ${f.dest}`);
       successCount++;
     } else {

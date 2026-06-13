@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Diamond } from 'lucide-react';
+import { Flame, Diamond, Shield } from 'lucide-react';
 import { useStreak } from '@/contexts/StreakContext';
 import { format, startOfWeek, addDays, isSameDay, differenceInCalendarDays, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { BadgeType, getStreakHeat } from '@/services/streakService';
+import { BadgeType, getStreakHeat, STREAK_GUARDS_PER_MONTH } from '@/services/streakService';
 
 interface DashboardStreakWeeklyProps {
     streak?: any;
@@ -16,7 +16,6 @@ export const DashboardStreakWeekly = ({ streak: propStreak, badges: propBadges }
     
     const streak = propStreak || contextStreak;
     const badges = propBadges || contextBadges || [];
-
     // Generate current week days
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start on Monday
@@ -35,6 +34,11 @@ export const DashboardStreakWeekly = ({ streak: propStreak, badges: propBadges }
     ];
 
     const currentStreak = streak?.current_streak || 0;
+    const guardsRemaining = Math.min(
+        STREAK_GUARDS_PER_MONTH,
+        Math.max(0, streak?.streak_guards_remaining ?? STREAK_GUARDS_PER_MONTH)
+    );
+    const guardsUsed = STREAK_GUARDS_PER_MONTH - guardsRemaining;
     const lastActionDate = streak?.last_action_date ? parseISO(streak.last_action_date) : null;
 
     return (
@@ -47,43 +51,50 @@ export const DashboardStreakWeekly = ({ streak: propStreak, badges: propBadges }
 
             <div className="relative z-10">
                 {/* Header Info */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="space-y-0.5">
-                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <span
-                                className="size-1.5 rounded-full animate-pulse"
-                                style={{ backgroundColor: getStreakHeat(currentStreak).color }}
-                            />
-                            Momentum: {getStreakHeat(currentStreak).label}
-                        </h3>
-                        <div className="flex items-baseline gap-1">
+                <div className="mb-6">
+                    <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap text-slate-500 dark:text-slate-400">
+                            <h3 className="min-w-0 truncate text-[9px] sm:text-[10px] font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] flex items-center gap-1.5">
+                                <span
+                                    className="size-1.5 shrink-0 rounded-full animate-pulse"
+                                    style={{ backgroundColor: getStreakHeat(currentStreak).color }}
+                                />
+                                Momentum: {getStreakHeat(currentStreak).label}
+                            </h3>
+                            <span className="h-3 w-px shrink-0 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
+                            <Shield className="size-3 shrink-0 fill-current" />
+                            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider">
+                                {guardsUsed} Used ({guardsRemaining} Left)
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
                             <span className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{currentStreak}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Day Streak</span>
                         </div>
-                    </div>
+                        <div className="hidden sm:flex items-center gap-1 pt-1">
+                            {badgeIcons.map((badgeIcon) => {
+                                const isUnlocked = badges.some(badge => badge.badge_type === badgeIcon.type);
 
-                    <div className="flex items-center gap-3">
-                        {/* Badge Mini Gallery */}
-                        <div className="flex -space-x-3 hover:space-x-1 transition-all duration-300">
-                            {badgeIcons.map((bi) => {
-                                const isUnlocked = badges.some(b => b.badge_type === bi.type);
                                 return (
-                                    <div key={bi.type} className={cn(
-                                        "size-9 rounded-lg rotate-12 flex items-center justify-center border-2 transition-all duration-500",
-                                        isUnlocked
-                                            ? "opacity-100 scale-100 z-10 border-white/20 dark:border-white/20 shadow-xl shadow-slate-200 dark:shadow-black/40 rotate-0"
-                                            : "opacity-20 scale-90 grayscale border-transparent"
-                                    )}
+                                    <div
+                                        key={badgeIcon.type}
+                                        className={cn(
+                                            "size-5 flex items-center justify-center transition-all duration-300",
+                                            isUnlocked ? "opacity-100 shadow-sm" : "opacity-20 grayscale"
+                                        )}
                                         style={{
-                                            background: `linear-gradient(135deg, ${bi.color} 0%, ${bi.color}CC 100%)`,
+                                            background: `linear-gradient(135deg, ${badgeIcon.color} 0%, ${badgeIcon.color}CC 100%)`,
                                             clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
-                                        }}>
-                                        <span className="text-[8px] font-black text-white">{bi.label}</span>
+                                        }}
+                                        title={badgeIcon.type}
+                                    >
+                                        <span className="text-[5px] font-black text-white">{badgeIcon.label}</span>
                                     </div>
                                 );
                             })}
                         </div>
                     </div>
+
                 </div>
 
                 {/* Centered Flame Visualizer */}

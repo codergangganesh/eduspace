@@ -30,11 +30,13 @@ import { useStreak } from '@/contexts/StreakContext';
 import { StreakCalendar } from '@/components/streak/StreakCalendar';
 import { StreakBadge } from '@/components/streak/StreakBadge';
 import { StreakBadgeDetailModal } from '@/components/streak/StreakBadgeDetailModal';
-import { BadgeType, STREAK_LEVELS, BADGE_DETAILS, getStreakHeat } from '@/services/streakService';
+import { StreakUpdateModal } from '@/components/streak/StreakUpdateModal';
+import { BadgeType, STREAK_LEVELS, BADGE_DETAILS, getStreakHeat, STREAK_GUARDS_PER_MONTH } from '@/services/streakService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { format } from 'date-fns';
 
 import { StreakDuelsManager } from '@/components/streak/StreakDuelsManager';
 
@@ -86,6 +88,11 @@ export default function StreakPage() {
     const currentStreak = streak?.current_streak || 0;
     const longestStreak = streak?.longest_streak || 0;
     const totalDays = streak?.total_days || 0;
+    const guardsRemaining = Math.min(
+        STREAK_GUARDS_PER_MONTH,
+        Math.max(0, streak?.streak_guards_remaining ?? STREAK_GUARDS_PER_MONTH)
+    );
+    const guardsUsed = STREAK_GUARDS_PER_MONTH - guardsRemaining;
 
     // Motivation logic
     const getMotivationalMessage = () => {
@@ -167,6 +174,24 @@ export default function StreakPage() {
                                                 <div className="flex items-end gap-2 text-6xl font-black text-white leading-none">
                                                     {currentStreak}
                                                     <span className="text-sm pb-1 text-white/60 uppercase tracking-widest font-black">Days</span>
+                                                </div>
+                                                <div className="pt-3 space-y-1.5">
+                                                    <div className="flex items-center gap-1.5" aria-label={`${guardsUsed} of ${STREAK_GUARDS_PER_MONTH} streak guards used`}>
+                                                        {Array.from({ length: STREAK_GUARDS_PER_MONTH }).map((_, index) => (
+                                                            <Shield
+                                                                key={index}
+                                                                className={cn(
+                                                                    "size-4 transition-all",
+                                                                    index < guardsRemaining
+                                                                        ? "text-white fill-white drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]"
+                                                                        : "text-white/30"
+                                                                )}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <p className="text-[9px] font-black uppercase tracking-wider text-white/70">
+                                                        {guardsUsed} of {STREAK_GUARDS_PER_MONTH} used ({guardsRemaining} remaining)
+                                                    </p>
                                                 </div>
                                             </div>
 
@@ -428,6 +453,8 @@ export default function StreakPage() {
                                         </div>
                                     </Card>
 
+
+
                                 </div>
 
                             {/* Back Face: Live Streak Duel */}
@@ -457,6 +484,7 @@ export default function StreakPage() {
                     isOpen={!!selectedBadge}
                     onClose={() => setSelectedBadge(null)}
                 />
+
             </div>
         </DashboardLayout>
     );

@@ -384,7 +384,7 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
 
           {/* Silver Pedestal (Rank 2) */}
           {secondRank && (
-            <div className="flex flex-col items-center order-1 group w-full">
+            <div className="flex flex-col items-center order-1 group w-full col-start-1">
               <div className="relative mb-2 md:mb-4 flex flex-col items-center">
                 <div className="relative">
                   <Avatar className="size-14 md:size-24 border-[3px] md:border-4 border-slate-300/80 shadow-2xl relative transition-transform duration-500 group-hover:scale-105 shrink-0">
@@ -414,7 +414,7 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
 
           {/* Gold Pedestal (Rank 1 - Taller and Centered) */}
           {firstRank && (
-            <div className="flex flex-col items-center order-2 group z-10 -translate-y-3 md:-translate-y-4 w-full">
+            <div className="flex flex-col items-center order-2 group z-10 -translate-y-3 md:-translate-y-4 w-full col-start-2">
               <div className="relative mb-2 md:mb-4 flex flex-col items-center">
                 <div className="absolute -top-4 md:-top-6 text-yellow-400 fill-yellow-400 animate-bounce">
                   <Star className="size-4 md:size-6 fill-yellow-400 text-yellow-400" />
@@ -449,7 +449,7 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
 
           {/* Bronze Pedestal (Rank 3) */}
           {thirdRank && (
-            <div className="flex flex-col items-center order-3 group w-full">
+            <div className="flex flex-col items-center order-3 group w-full col-start-3">
               <div className="relative mb-2 md:mb-4 flex flex-col items-center">
                 <div className="relative">
                   <Avatar className="size-14 md:size-24 border-[3px] md:border-4 border-amber-600/80 shadow-2xl relative transition-transform duration-500 group-hover:scale-105 shrink-0">
@@ -503,7 +503,7 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                <th className="py-3 px-2 md:py-4 md:px-4 w-10 md:w-16">Rank</th>
+                <th className="py-3 px-2 md:py-4 md:px-4 w-10 md:w-16 text-center">Rank</th>
                 <th className="py-3 px-2 md:py-4 md:px-4">Player</th>
                 <th className="py-3 px-2 md:py-4 md:px-4 text-center">Win Rate</th>
               </tr>
@@ -518,8 +518,8 @@ export function ArenaLeaderboard({ classmates = [], pastDuels = [] }: ArenaLeade
                   )}
                 >
                   {/* Rank Column */}
-                  <td className="py-3 px-2 md:py-4 md:px-4 font-black text-slate-800 dark:text-white">
-                    <div className="flex items-center gap-1">
+                  <td className="py-3 px-2 md:py-4 md:px-4 font-black text-slate-800 dark:text-white text-center">
+                    <div className="flex items-center justify-center gap-1">
                       <span>{player.rank}</span>
                       {player.isUser && (
                         <span className="text-[9px] text-indigo-500 animate-pulse">▲</span>

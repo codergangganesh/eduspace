@@ -2205,6 +2205,8 @@ export type Database = {
           longest_streak: number | null
           total_days: number | null
           last_action_date: string | null
+          streak_guards_remaining: number | null
+          last_guard_reset_month: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2213,6 +2215,8 @@ export type Database = {
           longest_streak?: number | null
           total_days?: number | null
           last_action_date?: string | null
+          streak_guards_remaining?: number | null
+          last_guard_reset_month?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2221,6 +2225,8 @@ export type Database = {
           longest_streak?: number | null
           total_days?: number | null
           last_action_date?: string | null
+          streak_guards_remaining?: number | null
+          last_guard_reset_month?: string | null
           updated_at?: string | null
         }
         Relationships: [

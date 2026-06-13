@@ -1,22 +1,26 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
-  server: {
-    host: "0.0.0.0",
-    port: 8080,
-    allowedHosts: true,
-    strictPort: false,
-    hmr: {
-      overlay: true,
+export default defineConfig(({ mode }) => {
+  const isSsl = mode === "ssl";
+  return {
+    server: {
+      host: "0.0.0.0",
+      port: 8080,
+      allowedHosts: true,
+      strictPort: false,
+      hmr: {
+        overlay: true,
+      },
     },
-  },
-  plugins: [
-    react(),
+    plugins: [
+      react(),
+      ...(isSsl ? [basicSsl()] : []),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -125,4 +129,8 @@ export default defineConfig(() => ({
       },
     },
   },
-}));
+};
+});
+
+
+

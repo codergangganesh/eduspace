@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 
 export type BadgeType = 'novice' | 'learner' | 'scholar' | 'prodigy' | 'warrior' | 'elite' | 'master' | 'grandmaster' | 'titan' | 'immortal';
 
@@ -9,8 +9,12 @@ export interface UserStreak {
     longest_streak: number;
     total_days: number;
     last_action_date: string | null;
+    streak_guards_remaining: number;
+    last_guard_reset_month: string | null;
     updated_at: string;
 }
+
+export const STREAK_GUARDS_PER_MONTH = 3;
 
 export interface UserBadge {
     id: string;
@@ -175,8 +179,11 @@ export class StreakService {
         newStreak: number;
         unlockedBadge?: BadgeType;
         isNewDay: boolean;
+        guardsUsedToday?: number;
+        guardsRemaining?: number;
     }> {
         const today = format(new Date(), 'yyyy-MM-dd');
+        const currentMonth = format(new Date(), 'yyyy-MM');
 
         // 1. Get current streak data
         const { data: streak, error: fetchError } = await (supabase as any)
@@ -190,10 +197,47 @@ export class StreakService {
             return { updated: false, newStreak: 0, isNewDay: false };
         }
 
+        let streakGuardsRemaining = streak?.streak_guards_remaining ?? STREAK_GUARDS_PER_MONTH;
+        let lastGuardResetMonth = streak?.last_guard_reset_month ?? currentMonth;
+        let guardsUsedToday = 0;
+        const shouldResetGuards = streak?.last_guard_reset_month !== currentMonth;
+
+        if (shouldResetGuards) {
+            streakGuardsRemaining = STREAK_GUARDS_PER_MONTH;
+            lastGuardResetMonth = currentMonth;
+        }
+
         // 2. Determine if we should update
         if (streak && streak.last_action_date === today) {
+            if (shouldResetGuards) {
+                const { error: resetError } = await (supabase as any)
+                    .from('user_streaks')
+                    .update({
+                        streak_guards_remaining: streakGuardsRemaining,
+                        last_guard_reset_month: lastGuardResetMonth,
+                    })
+                    .eq('user_id', userId);
+
+                if (resetError) {
+                    console.error('Error resetting streak guards:', resetError);
+                    return {
+                        updated: false,
+                        newStreak: streak.current_streak,
+                        isNewDay: false,
+                        guardsUsedToday,
+                        guardsRemaining: streakGuardsRemaining,
+                    };
+                }
+            }
+
             // Already recorded an action today
-            return { updated: false, newStreak: streak.current_streak, isNewDay: false };
+            return {
+                updated: shouldResetGuards,
+                newStreak: streak.current_streak,
+                isNewDay: false,
+                guardsUsedToday,
+                guardsRemaining: streakGuardsRemaining,
+            };
         }
 
         let newCurrentStreak = 1;
@@ -201,14 +245,19 @@ export class StreakService {
         let newLongestStreak = streak?.longest_streak || 0;
 
         if (streak && streak.last_action_date) {
-            const lastDate = new Date(streak.last_action_date);
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayFormatted = format(yesterday, 'yyyy-MM-dd');
+            const diffDays = differenceInCalendarDays(parseISO(today), parseISO(streak.last_action_date));
 
-            if (streak.last_action_date === yesterdayFormatted) {
+            if (diffDays === 1) {
                 // Continuous streak
                 newCurrentStreak = streak.current_streak + 1;
+            } else if (diffDays > 1) {
+                const missedDays = diffDays - 1;
+
+                if (missedDays <= streakGuardsRemaining) {
+                    guardsUsedToday = missedDays;
+                    streakGuardsRemaining -= missedDays;
+                    newCurrentStreak = streak.current_streak + 1;
+                }
             } else {
                 // Streak broken
                 newCurrentStreak = 1;
@@ -226,6 +275,8 @@ export class StreakService {
             longest_streak: newLongestStreak,
             total_days: newTotalDays,
             last_action_date: today,
+            streak_guards_remaining: streakGuardsRemaining,
+            last_guard_reset_month: lastGuardResetMonth,
         };
 
         const { error: upsertError } = await (supabase as any)
@@ -277,7 +328,9 @@ export class StreakService {
             updated: true,
             newStreak: newCurrentStreak,
             unlockedBadge,
-            isNewDay: true
+            isNewDay: true,
+            guardsUsedToday,
+            guardsRemaining: streakGuardsRemaining,
         };
     }
 

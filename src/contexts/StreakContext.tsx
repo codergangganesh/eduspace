@@ -49,8 +49,16 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [showCelebration, setShowCelebration] = useState(false);
     const [showStreakUpdate, setShowStreakUpdate] = useState(false);
     const [currentStreakCount, setCurrentStreakCount] = useState(0);
+    const [guardsUsedToday, setGuardsUsedToday] = useState(0);
+    const [guardsRemaining, setGuardsRemaining] = useState(3);
     const [isGuideCompleted, setIsGuideCompleted] = useState(false); // Track if guide has been shown/completed
-    const [pendingStreakData, setPendingStreakData] = useState<{ unlockedBadge?: BadgeType; newStreak?: number; isNewDay?: boolean } | null>(null); // Store pending streak data
+    const [pendingStreakData, setPendingStreakData] = useState<{
+        unlockedBadge?: BadgeType;
+        newStreak?: number;
+        isNewDay?: boolean;
+        guardsUsedToday?: number;
+        guardsRemaining?: number;
+    } | null>(null); // Store pending streak data
 
     const isStudent = role === 'student';
 
@@ -214,7 +222,9 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         setPendingStreakData({
                             unlockedBadge: result.unlockedBadge,
                             newStreak: result.newStreak,
-                            isNewDay: result.isNewDay
+                            isNewDay: result.isNewDay,
+                            guardsUsedToday: result.guardsUsedToday,
+                            guardsRemaining: result.guardsRemaining,
                         });
                     }
                 } else {
@@ -224,6 +234,8 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         setShowCelebration(true);
                     } else if (result.isNewDay) {
                         setCurrentStreakCount(result.newStreak);
+                        setGuardsUsedToday(result.guardsUsedToday ?? 0);
+                        setGuardsRemaining(result.guardsRemaining ?? 3);
                         setShowStreakUpdate(true);
                     }
                 }
@@ -245,6 +257,8 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 setShowCelebration(true);
             } else if (pendingStreakData.isNewDay && pendingStreakData.newStreak) {
                 setCurrentStreakCount(pendingStreakData.newStreak);
+                setGuardsUsedToday(pendingStreakData.guardsUsedToday ?? 0);
+                setGuardsRemaining(pendingStreakData.guardsRemaining ?? 3);
                 setShowStreakUpdate(true);
             }
             // Clear pending data after showing
@@ -286,6 +300,9 @@ export const StreakProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             {isStudent && showStreakUpdate && (
                 <StreakUpdateModal
                     streakCount={currentStreakCount}
+                    guardsUsed={guardsUsedToday}
+                    guardsRemaining={guardsRemaining}
+                    lastActionDate={streak?.last_action_date ?? format(new Date(), 'yyyy-MM-dd')}
                     onClose={() => setShowStreakUpdate(false)}
                 />
             )}

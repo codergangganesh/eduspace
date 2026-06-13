@@ -11,6 +11,7 @@ export function PWAInstallPrompt() {
     const [isIOS, setIsIOS] = useState(false);
     const [isStandalone, setIsStandalone] = useState(false);
     const isMobile = useIsMobile();
+    const [imageError, setImageError] = useState(false);
 
     useEffect(() => {
         // Check if running as standalone
@@ -146,13 +147,16 @@ export function PWAInstallPrompt() {
 
                     <div className="flex items-start gap-3 relative z-10">
                         <div className="bg-emerald-500/10 dark:bg-emerald-500/20 p-2 rounded-xl shrink-0 border border-emerald-500/20">
-                            <img
-                                src="/pwa-192x192.png"
-                                alt="App Icon"
-                                className="w-8 h-8 object-contain"
-                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                            />
-                            <MonitorSmartphone className="w-8 h-8 text-emerald-600 hidden peer-onError:block" />
+                            {!imageError ? (
+                                <img
+                                    src="/pwa-192x192.png"
+                                    alt="App Icon"
+                                    className="w-8 h-8 object-contain"
+                                    onError={() => setImageError(true)}
+                                />
+                            ) : (
+                                <MonitorSmartphone className="w-8 h-8 text-emerald-600" />
+                            )}
                         </div>
                         <div className="flex-1 min-w-0 pt-0.5">
                             <div className="flex items-center gap-1.5">
