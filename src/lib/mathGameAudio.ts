@@ -174,6 +174,73 @@ class MathGameAudio {
       console.warn('Audio Context failed to play bomb sound:', e);
     }
   }
+
+  playFreeze() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.initCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1500, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.45);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(now + 0.45);
+    } catch (e) {
+      console.warn('Audio Context failed to play freeze sound:', e);
+    }
+  }
+
+  playGoldMiner() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.initCtx();
+      const now = ctx.currentTime;
+      const notes = [659.25, 987.77, 1318.51]; // E5 -> B5 -> E6
+      notes.forEach((freq, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + index * 0.05);
+        gain.gain.setValueAtTime(0, now + index * 0.05);
+        gain.gain.linearRampToValueAtTime(0.1, now + index * 0.05 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.05 + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + index * 0.05);
+        osc.stop(now + index * 0.05 + 0.3);
+      });
+    } catch (e) {
+      console.warn('Audio Context failed to play gold miner sound:', e);
+    }
+  }
+
+  playShuffle() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.initCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(1000, now + 0.3);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(now + 0.3);
+    } catch (e) {
+      console.warn('Audio Context failed to play shuffle sound:', e);
+    }
+  }
 }
 
 export const mathGameAudio = new MathGameAudio();
+

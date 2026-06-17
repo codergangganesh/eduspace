@@ -24,7 +24,7 @@ interface Cell {
   val: number;
   row: number;
   col: number;
-  effect?: 'multiplier' | 'time' | 'bomb' | null;
+  effect?: 'multiplier' | 'time' | 'bomb' | 'freeze' | 'gold_miner' | 'shuffle' | null;
 }
 
 interface MathPathGameProps {
@@ -64,6 +64,8 @@ export function MathPathGame({
   const [targetSum, setTargetSum] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(mode === 'time' ? 60 : 0);
+  const [freezeTimeLeft, setFreezeTimeLeft] = useState<number>(0);
+  const [goldMinerTurns, setGoldMinerTurns] = useState<number>(0);
   const [dailyCompleted, setDailyCompleted] = useState<boolean>(false);
   const [shakeCells, setShakeCells] = useState<boolean>(false);
   const [isPressed, setIsPressed] = useState<boolean>(false);
@@ -97,11 +99,26 @@ export function MathPathGame({
 
     const cellSpacingX = canvas.width / GRID_SIZE;
     const cellSpacingY = canvas.height / GRID_SIZE;
-    const colors = ['#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b'];
 
     cells.forEach((cell) => {
       const centerX = (cell.col + 0.5) * cellSpacingX;
       const centerY = (cell.row + 0.5) * cellSpacingY;
+
+      // Determine palette based on active effect
+      let palette = ['#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b']; // default
+      if (cell.effect === 'multiplier') {
+        palette = ['#f59e0b', '#fbbf24', '#f59e0b', '#fffbeb'];
+      } else if (cell.effect === 'time') {
+        palette = ['#0284c7', '#38bdf8', '#7dd3fc', '#f0f9ff'];
+      } else if (cell.effect === 'freeze') {
+        palette = ['#06b6d4', '#22d3ee', '#67e8f9', '#ecfeff'];
+      } else if (cell.effect === 'gold_miner') {
+        palette = ['#eab308', '#facc15', '#fef08a', '#fef9c3'];
+      } else if (cell.effect === 'shuffle') {
+        palette = ['#d946ef', '#f0abfc', '#fae8ff', '#a21caf'];
+      } else if (cell.effect === 'bomb') {
+        palette = ['#ef4444', '#f87171', '#fca5a5', '#b91c1c'];
+      }
 
       for (let i = 0; i < 15; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -111,7 +128,7 @@ export function MathPathGame({
           y: centerY,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          color: colors[Math.floor(Math.random() * colors.length)],
+          color: palette[Math.floor(Math.random() * palette.length)],
           size: Math.random() * 3 + 2,
           alpha: 1,
           life: 0,
@@ -192,14 +209,20 @@ export function MathPathGame({
 
   // Generate a random cell
   const createCell = (row: number, col: number): Cell => {
-    let effect: 'multiplier' | 'time' | 'bomb' | null = null;
-    // 12% chance of special tile
-    if (Math.random() < 0.12) {
+    let effect: 'multiplier' | 'time' | 'bomb' | 'freeze' | 'gold_miner' | 'shuffle' | null = null;
+    // 16% chance of special tile
+    if (Math.random() < 0.16) {
       const rand = Math.random();
-      if (rand < 0.4) {
+      if (rand < 0.25) {
         effect = 'multiplier';
-      } else if (rand < 0.75 && mode === 'time') {
+      } else if (rand < 0.45 && mode === 'time') {
         effect = 'time';
+      } else if (rand < 0.60 && mode === 'time') {
+        effect = 'freeze';
+      } else if (rand < 0.75) {
+        effect = 'gold_miner';
+      } else if (rand < 0.90) {
+        effect = 'shuffle';
       } else {
         effect = 'bomb';
       }
@@ -230,6 +253,19 @@ export function MathPathGame({
     };
   };
 
+  const shuffleBoardNonSelected = (currentPath: Cell[]) => {
+    const pathIds = new Set(currentPath.map(c => c.id));
+    const nextBoard = board.map((row) =>
+      row.map((cell) => {
+        if (pathIds.has(cell.id)) {
+          return cell;
+        }
+        return createCell(cell.row, cell.col);
+      })
+    );
+    setBoard(nextBoard);
+  };
+
   // Initialize board
   const initializeBoard = (keepScore = false) => {
     const newBoard: Cell[][] = [];
@@ -243,8 +279,11 @@ export function MathPathGame({
     setBoard(newBoard);
     generateNewTarget(newBoard);
     setSelectedPath([]);
+    setDailyCompleted(false);
     if (!keepScore) {
       setScore(0);
+      setFreezeTimeLeft(0);
+      setGoldMinerTurns(0);
       if (mode === 'time') {
         setTimeLeft(60);
       }
@@ -306,7 +345,7 @@ export function MathPathGame({
   // Start board on load / difficulty change
   useEffect(() => {
     initializeBoard();
-  }, [difficulty]);
+  }, [difficulty, mode]);
 
   // Auto-validate path connections instantly
   useEffect(() => {
@@ -324,6 +363,10 @@ export function MathPathGame({
   useEffect(() => {
     if (mode !== 'time' || timeLeft <= 0) return;
     const timer = setInterval(() => {
+      if (freezeTimeLeft > 0) {
+        setFreezeTimeLeft((prevFreeze) => prevFreeze - 1);
+        return;
+      }
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
@@ -334,7 +377,7 @@ export function MathPathGame({
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, mode]);
+  }, [timeLeft, mode, freezeTimeLeft]);
 
   const handleTimeOver = () => {
     confetti({
@@ -375,7 +418,16 @@ export function MathPathGame({
     if (selectedPath.length === 0) {
       setSelectedPath([cell]);
       setIsPressed(true);
-      mathGameAudio.playSelect(1);
+      if (cell.effect === 'shuffle') {
+        shuffleBoardNonSelected([cell]);
+        mathGameAudio.playShuffle();
+        toast.info('🌀 Board Shuffled!', {
+          description: 'Remaining grid scrambled. Path intact!',
+          duration: 1500
+        });
+      } else {
+        mathGameAudio.playSelect(1);
+      }
       return;
     }
 
@@ -392,10 +444,28 @@ export function MathPathGame({
     if (isAdjacent(lastCell, cell)) {
       const nextPath = [...selectedPath, cell];
       setSelectedPath(nextPath);
-      mathGameAudio.playSelect(nextPath.length);
+      if (cell.effect === 'shuffle') {
+        shuffleBoardNonSelected(nextPath);
+        mathGameAudio.playShuffle();
+        toast.info('🌀 Board Shuffled!', {
+          description: 'Remaining grid scrambled. Path intact!',
+          duration: 1500
+        });
+      } else {
+        mathGameAudio.playSelect(nextPath.length);
+      }
     } else {
       setSelectedPath([cell]);
-      mathGameAudio.playSelect(1);
+      if (cell.effect === 'shuffle') {
+        shuffleBoardNonSelected([cell]);
+        mathGameAudio.playShuffle();
+        toast.info('🌀 Board Shuffled!', {
+          description: 'Remaining grid scrambled. Path intact!',
+          duration: 1500
+        });
+      } else {
+        mathGameAudio.playSelect(1);
+      }
     }
   };
 
@@ -416,7 +486,16 @@ export function MathPathGame({
     if (isAdjacent(lastCell, cell)) {
       const nextPath = [...selectedPath, cell];
       setSelectedPath(nextPath);
-      mathGameAudio.playSelect(nextPath.length);
+      if (cell.effect === 'shuffle') {
+        shuffleBoardNonSelected(nextPath);
+        mathGameAudio.playShuffle();
+        toast.info('🌀 Board Shuffled!', {
+          description: 'Remaining grid scrambled. Path intact!',
+          duration: 1500
+        });
+      } else {
+        mathGameAudio.playSelect(nextPath.length);
+      }
     }
   };
 
@@ -452,17 +531,40 @@ export function MathPathGame({
     const multiplierCount = selectedPath.filter(c => c.effect === 'multiplier').length;
     const timeBonusCount = selectedPath.filter(c => c.effect === 'time').length;
     const hasBomb = selectedPath.some(c => c.effect === 'bomb');
+    const hasFreeze = selectedPath.some(c => c.effect === 'freeze');
+    const goldMinerCount = selectedPath.filter(c => c.effect === 'gold_miner').length;
 
+    const isGoldMinerActive = goldMinerTurns > 0;
     const scoreMultiplier = Math.pow(2, multiplierCount);
+    const goldMultiplier = isGoldMinerActive ? 2 : 1;
     const basePoints = selectedPath.length * 10;
-    const pointsAwarded = basePoints * scoreMultiplier;
+    const pointsAwarded = basePoints * scoreMultiplier * goldMultiplier;
     const newScore = score + pointsAwarded;
     setScore(newScore);
+
+    // Apply turns decrement if gold miner was active
+    if (goldMinerTurns > 0) {
+      setGoldMinerTurns((prev) => prev - 1);
+    }
+
+    // Add freeze seconds
+    if (hasFreeze) {
+      setFreezeTimeLeft((prev) => prev + 5);
+    }
+
+    // Add gold miner turns
+    if (goldMinerCount > 0) {
+      setGoldMinerTurns((prev) => prev + (goldMinerCount * 3));
+    }
 
     triggerParticles(selectedPath);
 
     if (hasBomb) {
       mathGameAudio.playBomb();
+    } else if (hasFreeze) {
+      mathGameAudio.playFreeze();
+    } else if (goldMinerCount > 0) {
+      mathGameAudio.playGoldMiner();
     } else {
       mathGameAudio.playSuccess();
     }
@@ -477,9 +579,21 @@ export function MathPathGame({
       if (hasBomb) {
         let bonusDesc = `+${pointsAwarded} pts! +${totalTimeBonus}s time bonus`;
         if (multiplierCount > 0) bonusDesc += ` (${scoreMultiplier}x Score!)`;
+        if (isGoldMinerActive) bonusDesc += ` (Gold Miner Double!)`;
 
         toast.success('💥 Bomb Cleared!', {
           description: bonusDesc,
+          duration: 2000
+        });
+      } else {
+        let matchDesc = `+${pointsAwarded} pts! +${totalTimeBonus}s time bonus`;
+        if (multiplierCount > 0) matchDesc += ` (${scoreMultiplier}x Score!)`;
+        if (isGoldMinerActive) matchDesc += ` (Gold Double!)`;
+        if (hasFreeze) matchDesc += ` ❄️ Time frozen for 5s!`;
+        if (goldMinerCount > 0) matchDesc += ` 🪙 Gold Miner Active!`;
+
+        toast.success('🎉 Target Matched!', {
+          description: matchDesc,
           duration: 2000
         });
       }
@@ -487,9 +601,20 @@ export function MathPathGame({
       if (hasBomb) {
         let matchDesc = `+${pointsAwarded} points`;
         if (multiplierCount > 0) matchDesc += ` (${scoreMultiplier}x Multiplier!)`;
+        if (isGoldMinerActive) matchDesc += ` (Gold Miner Double!)`;
         matchDesc = '💥 Bomb exploded & shuffled board! ' + matchDesc;
 
         toast.success('💥 Bomb Cleared!', {
+          description: matchDesc,
+          duration: 2000
+        });
+      } else {
+        let matchDesc = `+${pointsAwarded} points`;
+        if (multiplierCount > 0) matchDesc += ` (${scoreMultiplier}x Multiplier!)`;
+        if (isGoldMinerActive) matchDesc += ` (Gold Double!)`;
+        if (goldMinerCount > 0) matchDesc += ` 🪙 Gold Miner Active!`;
+
+        toast.success('🎉 Target Matched!', {
           description: matchDesc,
           duration: 2000
         });
@@ -564,6 +689,14 @@ export function MathPathGame({
 
   const clearSelection = () => {
     setSelectedPath([]);
+  };
+
+  const handleExitAndReset = () => {
+    setDailyCompleted(false);
+    setFreezeTimeLeft(0);
+    setGoldMinerTurns(0);
+    initializeBoard(false);
+    onExit();
   };
 
   // Render connecting lines between selected cells
@@ -653,7 +786,16 @@ export function MathPathGame({
       {/* Center/Left Section: Gameplay Board */}
       <div className="xl:col-span-2 flex flex-col items-center space-y-6 w-full">
         {/* Mockup CURRENT TARGET Panel */}
-        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 text-center relative flex flex-col justify-center min-h-[140px] select-none transition-colors">
+        <div className={`w-full bg-white dark:bg-slate-900 border shadow-md rounded-[2rem] p-6 text-center relative flex flex-col justify-center min-h-[140px] select-none transition-all duration-300 ${
+          freezeTimeLeft > 0 
+            ? 'border-cyan-400 dark:border-cyan-500/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]' 
+            : 'border-slate-200/60 dark:border-slate-800/60'
+        }`}>
+          {freezeTimeLeft > 0 && (
+            <div className="absolute top-4 right-6 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200/50 px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-wider animate-pulse flex items-center gap-1">
+              <span>❄️ Frozen: {freezeTimeLeft}s</span>
+            </div>
+          )}
           <div className="text-[11px] font-black tracking-widest text-[#0B57D0] dark:text-blue-400 uppercase">
             Current Target
           </div>
@@ -661,7 +803,32 @@ export function MathPathGame({
         </div>
 
         {/* Circular Grid Board Canvas Wrapper */}
-        <div
+        <motion.div
+          animate={
+            shakeCells
+              ? {
+                  x: [-6, 6, -6, 6, -4, 4, 0],
+                  borderColor: ["rgba(226, 232, 240, 0.6)", "#ef4444", "#ef4444", "rgba(226, 232, 240, 0.6)"],
+                  boxShadow: "0 0 25px 5px rgba(239, 68, 68, 0.35)",
+                }
+              : freezeTimeLeft > 0
+              ? {
+                  borderColor: ["#22d3ee", "#06b6d4", "#22d3ee"],
+                  boxShadow: [
+                    "0 0 15px 2px rgba(34, 211, 238, 0.2)",
+                    "0 0 25px 6px rgba(34, 211, 238, 0.5)",
+                    "0 0 15px 2px rgba(34, 211, 238, 0.2)"
+                  ],
+                }
+              : {}
+          }
+          transition={
+            shakeCells
+              ? { duration: 0.5 }
+              : freezeTimeLeft > 0
+              ? { repeat: Infinity, duration: 2, ease: "easeInOut" }
+              : {}
+          }
           className="w-full bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 relative flex items-center justify-center transition-colors"
           onMouseDown={() => setIsPressed(true)}
           onMouseUp={validateSelection}
@@ -694,6 +861,12 @@ export function MathPathGame({
                       cellClass = 'bg-[#FFF7ED] dark:bg-amber-950/20 border border-[#FFEDD5] dark:border-amber-900/30 text-[#C2410C] dark:text-amber-400 hover:scale-[1.03] transition-all rounded-full aspect-square flex items-center justify-center';
                     } else if (cell.effect === 'time') {
                       cellClass = 'bg-[#F0F9FF] dark:bg-sky-950/20 border border-[#E0F2FE] dark:border-sky-900/30 text-[#0369A1] dark:text-sky-400 hover:scale-[1.03] transition-all rounded-full aspect-square flex items-center justify-center';
+                    } else if (cell.effect === 'freeze') {
+                      cellClass = 'bg-[#ECFEFF] dark:bg-cyan-950/20 border border-[#CFFAFE] dark:border-cyan-900/30 text-[#0891B2] dark:text-cyan-400 hover:scale-[1.03] transition-all rounded-full aspect-square flex items-center justify-center relative';
+                    } else if (cell.effect === 'gold_miner') {
+                      cellClass = 'bg-[#FEF9C3] dark:bg-yellow-950/20 border border-[#FEF08A] dark:border-yellow-900/30 text-[#CA8A04] dark:text-yellow-400 hover:scale-[1.03] transition-all rounded-full aspect-square flex items-center justify-center relative';
+                    } else if (cell.effect === 'shuffle') {
+                      cellClass = 'bg-[#FAE8FF] dark:bg-fuchsia-950/20 border border-[#F5D0FE] dark:border-fuchsia-900/30 text-[#C084FC] dark:text-fuchsia-400 hover:scale-[1.03] transition-all rounded-full aspect-square flex items-center justify-center relative';
                     } else {
                       cellClass = getCircleClass(theme.cellDefault);
                     }
@@ -755,6 +928,21 @@ export function MathPathGame({
                                 +5s
                               </span>
                             )}
+                            {cell.effect === 'freeze' && (
+                              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#CFFAFE] border border-[#A5F3FC] text-[#0891B2] text-[8px] font-extrabold px-2 py-0.5 rounded-full leading-none select-none uppercase tracking-tighter z-30 shadow-sm whitespace-nowrap">
+                                ❄️ Freeze
+                              </span>
+                            )}
+                            {cell.effect === 'gold_miner' && (
+                              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#FEF08A] border border-[#FDE047] text-[#CA8A04] text-[8px] font-extrabold px-2 py-0.5 rounded-full leading-none select-none uppercase tracking-tighter z-30 shadow-sm whitespace-nowrap">
+                                🪙 Gold
+                              </span>
+                            )}
+                            {cell.effect === 'shuffle' && (
+                              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#F5D0FE] border border-[#F0ABFC] text-[#A21CAF] text-[8px] font-extrabold px-2 py-0.5 rounded-full leading-none select-none uppercase tracking-tighter z-30 shadow-sm whitespace-nowrap">
+                                🌀 Shuffle
+                              </span>
+                            )}
                             {cell.effect === 'bomb' && (
                               <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50 animate-pulse z-30" />
                             )}
@@ -767,18 +955,30 @@ export function MathPathGame({
               </AnimatePresence>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Mockup centered Equation display pill */}
         <div className="w-full flex justify-center">
-          <div className={`w-full max-w-[450px] min-h-[50px] flex items-center justify-center px-6 py-3.5 rounded-full border transition-all ${shakeCells
-            ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-250 dark:border-rose-900/30 text-rose-500 animate-pulse'
-            : currentSum === targetSum
-              ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/30 text-emerald-500'
-              : selectedPath.length > 0
-                ? 'bg-[#E2EDF8] dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30 text-[#0B57D0] dark:text-blue-400 shadow-sm'
-                : 'bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-400 dark:text-slate-500 shadow-sm border-dashed'
-            }`}>
+          <motion.div
+            animate={
+              shakeCells
+                ? {
+                    x: [-4, 4, -4, 4, 0],
+                    boxShadow: "0 0 15px rgba(239, 68, 68, 0.35)",
+                    borderColor: "#ef4444"
+                  }
+                : {}
+            }
+            transition={{ duration: 0.5 }}
+            className={`w-full max-w-[450px] min-h-[50px] flex items-center justify-center px-6 py-3.5 rounded-full border transition-all ${shakeCells
+              ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-250 dark:border-rose-900/30 text-rose-500 animate-pulse'
+              : currentSum === targetSum
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/30 text-emerald-500'
+                : selectedPath.length > 0
+                  ? 'bg-[#E2EDF8] dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30 text-[#0B57D0] dark:text-blue-400 shadow-sm'
+                  : 'bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-400 dark:text-slate-500 shadow-sm border-dashed'
+              }`}
+          >
             {selectedPath.length > 0 ? (
               <div className="flex items-center gap-2 font-black text-sm">
                 <span className="text-slate-700 dark:text-slate-300">
@@ -797,7 +997,7 @@ export function MathPathGame({
             ) : (
               <span className="text-xs font-bold italic text-slate-400 dark:text-slate-500">Drag or click numbers to write an equation</span>
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* Daily Challenge Complete overlay */}
@@ -817,7 +1017,7 @@ export function MathPathGame({
                   You reached {score} points and secured your daily study progress.
                 </p>
               </div>
-              <Button onClick={onExit} className="w-full bg-emerald-600 dark:bg-emerald-750 hover:bg-emerald-500 dark:hover:bg-emerald-700 text-white rounded-2xl py-6 font-bold shadow-lg shadow-emerald-600/25 border-none">
+              <Button onClick={handleExitAndReset} className="w-full bg-emerald-600 dark:bg-emerald-750 hover:bg-emerald-500 dark:hover:bg-emerald-700 text-white rounded-2xl py-6 font-bold shadow-lg shadow-emerald-600/25 border-none">
                 Back to Playground
               </Button>
             </motion.div>
@@ -855,10 +1055,10 @@ export function MathPathGame({
           </div>
         )}
       </div>
- 
+
       {/* Right Column Section: Stats, Controls & Banners */}
       <div className="flex flex-col gap-6 w-full select-none">
- 
+
         {/* Prominent New Challenge Button */}
         {onNewChallenge && (
           <Button
@@ -868,18 +1068,30 @@ export function MathPathGame({
             New Challenge
           </Button>
         )}
- 
+
         {/* Mockup Stats Panel */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 space-y-4 transition-colors">
           <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight">Stats</h3>
- 
+
           <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {/* Score */}
             <div className="flex items-center justify-between py-3">
               <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Current Score</span>
               <span className="text-sm font-extrabold text-[#0B57D0] dark:text-blue-400">{score.toLocaleString()}</span>
             </div>
- 
+
+            {goldMinerTurns > 0 && (
+              <div className="flex items-center justify-between py-3">
+                <span className="text-xs font-bold text-yellow-600 dark:text-yellow-500 flex items-center gap-1.5 animate-pulse">
+                  <span className="size-2 rounded-full bg-yellow-500 shadow-sm shadow-yellow-500/50" />
+                  Gold Multiplier Active
+                </span>
+                <span className="text-xs font-black bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full text-yellow-600 dark:text-yellow-500">
+                  2x Score ({goldMinerTurns} matches)
+                </span>
+              </div>
+            )}
+
             {/* Daily Goal Progress */}
             <div className="py-3 space-y-2">
               <div className="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-400">
@@ -895,11 +1107,11 @@ export function MathPathGame({
             </div>
           </div>
         </div>
- 
+
         {/* Mockup Controls Panel */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 transition-colors">
           <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight mb-4">Controls</h3>
- 
+
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={undoLastSelection}
@@ -918,15 +1130,14 @@ export function MathPathGame({
           </div>
 
           <div
-            className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider transition-all mt-4 border text-center select-none ${
-              selectedPath.length === 0
+            className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider transition-all mt-4 border text-center select-none ${selectedPath.length === 0
                 ? "bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800/80 text-slate-400 dark:text-slate-500"
                 : currentSum === targetSum
                   ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400"
                   : currentSum > targetSum
                     ? "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400"
                     : "bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-[#0B57D0] dark:text-blue-400"
-            }`}
+              }`}
           >
             {selectedPath.length === 0 && (
               <>
