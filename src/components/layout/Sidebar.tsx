@@ -21,6 +21,7 @@ import {
   Sparkles,
   Mic,
   Shield,
+  Gamepad2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -54,12 +55,10 @@ const studentNavItems = [
   { id: "tour-nav-ai", icon: Bot, imageUrl: "/ai-icon.png", label: "Eduspace AI", path: "/ai-chat" },
   { id: "tour-nav-voice", icon: Mic, imageUrl: "/ai-tutor.png", label: "AI Voice Tutor", path: "/student/voice-tutor" },
   { id: "tour-nav-streak", icon: Flame, imageUrl: "/streak-icon.png", label: "Academic Streak", path: "/streak" },
+  { id: "tour-nav-puzzle", icon: Gamepad2, imageUrl: "/puzzle-icon.png", label: "Maths Playground", path: "/student/puzzle" },
   { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/student/attendance" },
   { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
-
-
 ];
-
 
 const lecturerNavItems = [
   { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/lecturer-dashboard" },
@@ -73,8 +72,6 @@ const lecturerNavItems = [
   { id: "tour-nav-ai-gen", icon: Brain, imageUrl: "/ai-quiz-gen-icon.png", label: "AI Quiz Generator", path: "/lecturer/create-ai-quiz" },
   { id: "tour-nav-attendance", icon: ClipboardList, imageUrl: "/attendance-icon.png", label: "Attendance", path: "/lecturer/attendance" },
   { id: "tour-nav-messages", icon: MessageSquare, imageUrl: "/messages-icon.png", label: "Messages", path: "/messages" },
-
-
 ];
 
 const bottomNavItems = [

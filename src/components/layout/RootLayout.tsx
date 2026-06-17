@@ -102,17 +102,21 @@ export function RootLayout() {
     return (
         <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
             <CommandPalette />
-            <Sidebar
-                mode={sidebarMode}
-                setMode={setSidebarMode}
-                isCollapsed={isCollapsed}
-                onHoverChange={setIsHovered}
-            />
-            <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+            {!options.hideSidebar && (
+                <>
+                    <Sidebar
+                        mode={sidebarMode}
+                        setMode={setSidebarMode}
+                        isCollapsed={isCollapsed}
+                        onHoverChange={setIsHovered}
+                    />
+                    <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+                </>
+            )}
 
             <div className={cn(
                 "flex-1 flex flex-col min-h-0 w-full transition-all duration-300",
-                isCollapsed ? "lg:pl-20" : "lg:pl-72"
+                options.hideSidebar ? "lg:pl-0" : (isCollapsed ? "lg:pl-20" : "lg:pl-72")
             )}>
                 {/* Header visibility logic - Show only on dashboard page (both mobile and desktop), hide on other pages (both mobile and desktop). */}
                 {!globalHideDashboardHeader && (

@@ -18,6 +18,7 @@ export const SHELL_IMAGE_ASSETS = [
   "/students-icon.png",
   "/timetable-icon.png",
   "/ai-quiz-gen-icon.png",
+  "/puzzle-icon.png",
 ] as const;
 
 type CachedImageStatus = "loaded" | "error";

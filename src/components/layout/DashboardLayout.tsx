@@ -6,6 +6,7 @@ interface DashboardLayoutProps {
   actions?: ReactNode;
   fullHeight?: boolean;
   hideHeaderOnMobile?: boolean;
+  hideSidebar?: boolean;
 }
 
 /**
@@ -16,13 +17,13 @@ interface DashboardLayoutProps {
  * 2. Configure layout options (fullHeight, etc.).
  * 3. Render the page content.
  */
-export function DashboardLayout({ children, actions, fullHeight = false, hideHeaderOnMobile = false }: DashboardLayoutProps) {
+export function DashboardLayout({ children, actions, fullHeight = false, hideHeaderOnMobile = false, hideSidebar = false }: DashboardLayoutProps) {
   const { setActions, setOptions } = useLayout();
 
   useEffect(() => {
     // Mount: Set actions and options
     setActions(actions);
-    setOptions({ fullHeight, hideHeaderOnMobile });
+    setOptions({ fullHeight, hideHeaderOnMobile, hideSidebar });
 
     // Unmount: Cleanup (Optional, but good practice if we want generic header when no layout)
     // However, since we navigate to another page that likely sets its own actions immediately, 

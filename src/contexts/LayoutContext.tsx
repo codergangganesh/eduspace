@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 interface LayoutOptions {
     fullHeight?: boolean;
     hideHeaderOnMobile?: boolean;
+    hideSidebar?: boolean;
 }
 
 interface LayoutContextType {

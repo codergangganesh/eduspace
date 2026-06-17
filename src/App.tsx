@@ -73,6 +73,7 @@ const AIChat = lazy(() => import("./pages/AIChat"));
 const AIAgent = lazy(() => import("./pages/AIAgent"));
 const CallHistory = lazy(() => import("./pages/CallHistory"));
 const StreakPage = lazy(() => import("./pages/StreakPage"));
+const MathsPuzzle = lazy(() => import("./pages/MathsPuzzle")); // Maths Playground game portal
 const KnowledgeMap = lazy(() => import("./pages/KnowledgeMap"));
 const StudentAttendance = lazy(() => import("./pages/StudentAttendance"));
 const LecturerClassesAttendance = lazy(() => import("./pages/LecturerClassesAttendance"));
@@ -197,6 +198,7 @@ const AnimatedRoutes = () => {
       }>
         <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student", "admin"]}><Dashboard /></ProtectedRoute>} />
         <Route path="/streak" element={<ProtectedRoute allowedRoles={["student"]}><StreakPage /></ProtectedRoute>} />
+        <Route path="/student/puzzle" element={<ProtectedRoute allowedRoles={["student", "admin"]}><MathsPuzzle /></ProtectedRoute>} />
         <Route path="/achievements" element={<Navigate to="/streak" replace />} />
         <Route path="/student/assignments" element={<ProtectedRoute allowedRoles={["student", "admin"]}><StudentAssignments /></ProtectedRoute>} />
         <Route path="/student/assignments/:id" element={<ProtectedRoute allowedRoles={["student", "admin"]}><StudentAssignmentDetail /></ProtectedRoute>} />
