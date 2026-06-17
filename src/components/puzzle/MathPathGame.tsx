@@ -35,6 +35,8 @@ interface MathPathGameProps {
   onRecordStreak: () => Promise<void>;
   onTimerTick?: (timeLeft: number) => void;
   onNewChallenge?: () => void; // Prop to switch modes via modal
+  mathOperation?: 'addition' | 'multiplication';
+  compact?: boolean;
 }
 
 export function MathPathGame({
@@ -44,7 +46,9 @@ export function MathPathGame({
   onExit,
   onRecordStreak,
   onTimerTick,
-  onNewChallenge
+  onNewChallenge,
+  mathOperation = 'addition',
+  compact = false
 }: MathPathGameProps) {
   const DAILY_TARGET_SCORE = 100;
 
@@ -229,6 +233,19 @@ export function MathPathGame({
     }
 
     const generateRandomVal = () => {
+      if (mathOperation === 'multiplication') {
+        if (difficulty === 'hard') {
+          if (Math.random() < 0.20) { // 20% chance of negative values
+            return -(Math.floor(Math.random() * 3) + 1); // -1 to -3
+          }
+          return Math.floor(Math.random() * 8) + 1; // 1 to 8
+        }
+        if (difficulty === 'medium') {
+          return Math.floor(Math.random() * 6) + 1; // 1 to 6
+        }
+        return Math.floor(Math.random() * 4) + 1; // 1 to 4 (Easy)
+      }
+
       if (difficulty === 'hard') {
         if (Math.random() < 0.35) { // 35% chance of negative values
           return -(Math.floor(Math.random() * 9) + 1); // -1 to -9
@@ -304,12 +321,12 @@ export function MathPathGame({
       pathLen = Math.floor(Math.random() * 4) + 4; // 4 to 7 numbers
     }
 
-    let sum = 0;
+    let calculatedTarget = 0;
 
     // Start at a random cell and make a walk
     let r = Math.floor(Math.random() * GRID_SIZE);
     let c = Math.floor(Math.random() * GRID_SIZE);
-    sum += currentBoard[r][c].val;
+    calculatedTarget = currentBoard[r][c].val;
 
     const visited = new Set<string>([`${r},${c}`]);
 
@@ -327,19 +344,36 @@ export function MathPathGame({
       }
       if (neighbors.length === 0) break;
       const [nextR, nextC] = neighbors[Math.floor(Math.random() * neighbors.length)];
-      sum += currentBoard[nextR][nextC].val;
+      const nextVal = currentBoard[nextR][nextC].val;
+
+      if (mathOperation === 'multiplication') {
+        calculatedTarget *= nextVal;
+      } else {
+        calculatedTarget += nextVal;
+      }
+
       visited.add(`${nextR},${nextC}`);
       r = nextR;
       c = nextC;
     }
 
-    const minTarget = difficulty === 'hard' ? 15 : difficulty === 'medium' ? 10 : 5;
-    if (sum < minTarget) {
-      generateNewTarget(currentBoard);
-      return;
+    // Bounds checking
+    if (mathOperation === 'multiplication') {
+      const maxProduct = difficulty === 'hard' ? 200 : difficulty === 'medium' ? 100 : 36;
+      const minProduct = difficulty === 'hard' ? 12 : difficulty === 'medium' ? 6 : 2;
+      if (calculatedTarget < minProduct || calculatedTarget > maxProduct || Math.abs(calculatedTarget) <= 1) {
+        generateNewTarget(currentBoard);
+        return;
+      }
+    } else {
+      const minTarget = difficulty === 'hard' ? 15 : difficulty === 'medium' ? 10 : 5;
+      if (calculatedTarget < minTarget) {
+        generateNewTarget(currentBoard);
+        return;
+      }
     }
 
-    setTargetSum(sum);
+    setTargetSum(calculatedTarget);
   };
 
   // Start board on load / difficulty change
@@ -347,17 +381,36 @@ export function MathPathGame({
     initializeBoard();
   }, [difficulty, mode]);
 
+  const currentPathVal = useMemo(() => {
+    if (selectedPath.length === 0) return 0;
+    if (mathOperation === 'multiplication') {
+      return selectedPath.reduce((acc, cell) => acc * cell.val, 1);
+    }
+    return selectedPath.reduce((acc, cell) => acc + cell.val, 0);
+  }, [selectedPath, mathOperation]);
+
+  const currentSum = currentPathVal;
+
+  const isOverTarget = useMemo(() => {
+    if (selectedPath.length === 0) return false;
+    if (mathOperation === 'multiplication') {
+      const isPositiveOnly = selectedPath.every(c => c.val > 0) && targetSum > 0;
+      if (isPositiveOnly) return currentPathVal > targetSum;
+      return Math.abs(currentPathVal) > Math.abs(targetSum) * 2;
+    }
+    return currentPathVal > targetSum;
+  }, [selectedPath, targetSum, currentPathVal, mathOperation]);
+
   // Auto-validate path connections instantly
   useEffect(() => {
     if (selectedPath.length === 0) return;
-    const pathSum = selectedPath.reduce((acc, cell) => acc + cell.val, 0);
-    if (pathSum === targetSum) {
+    if (currentPathVal === targetSum) {
       handleMatchSuccess();
-    } else if (pathSum > targetSum) {
+    } else if (isOverTarget) {
       handleMatchFailure();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPath, targetSum]);
+  }, [selectedPath, targetSum, currentPathVal, isOverTarget]);
 
   // Time Attack Timer
   useEffect(() => {
@@ -398,11 +451,6 @@ export function MathPathGame({
       });
     }
   };
-
-  // Calculate current sum of selected path
-  const currentSum = useMemo(() => {
-    return selectedPath.reduce((acc, cell) => acc + cell.val, 0);
-  }, [selectedPath]);
 
   // Check adjacency
   const isAdjacent = (cellA: Cell, cellB: Cell) => {
@@ -781,23 +829,28 @@ export function MathPathGame({
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full max-w-6xl mx-auto h-full items-start">
+    <div className={compact
+      ? "flex flex-col items-center gap-4 w-full h-full"
+      : "grid grid-cols-1 xl:grid-cols-3 gap-6 xl:gap-8 w-full max-w-6xl mx-auto h-full items-start lg:gap-4"
+    }>
 
       {/* Center/Left Section: Gameplay Board */}
-      <div className="xl:col-span-2 flex flex-col items-center space-y-6 w-full">
+      <div className={compact
+        ? "flex flex-col items-center space-y-4 w-full max-w-[420px]"
+        : "xl:col-span-2 flex flex-col items-center space-y-6 lg:space-y-4 w-full"
+      }>
         {/* Mockup CURRENT TARGET Panel */}
-        <div className={`w-full bg-white dark:bg-slate-900 border shadow-md rounded-[2rem] p-6 text-center relative flex flex-col justify-center min-h-[140px] select-none transition-all duration-300 ${
-          freezeTimeLeft > 0 
-            ? 'border-cyan-400 dark:border-cyan-500/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]' 
+        <div className={`w-full bg-white dark:bg-slate-900 border shadow-md rounded-[2rem] p-6 lg:p-4 text-center relative flex flex-col justify-center min-h-[140px] lg:min-h-[110px] select-none transition-all duration-300 ${freezeTimeLeft > 0
+            ? 'border-cyan-400 dark:border-cyan-500/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]'
             : 'border-slate-200/60 dark:border-slate-800/60'
-        }`}>
+          }`}>
           {freezeTimeLeft > 0 && (
             <div className="absolute top-4 right-6 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200/50 px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-wider animate-pulse flex items-center gap-1">
               <span>❄️ Frozen: {freezeTimeLeft}s</span>
             </div>
           )}
           <div className="text-[11px] font-black tracking-widest text-[#0B57D0] dark:text-blue-400 uppercase">
-            Current Target
+            {mathOperation === 'multiplication' ? 'Target Product' : 'Current Target'}
           </div>
           <h2 className="text-5xl sm:text-6xl font-black text-[#0B57D0] dark:text-blue-400 tracking-tight mt-1 transition-colors">{targetSum}</h2>
         </div>
@@ -807,12 +860,12 @@ export function MathPathGame({
           animate={
             shakeCells
               ? {
-                  x: [-6, 6, -6, 6, -4, 4, 0],
-                  borderColor: ["rgba(226, 232, 240, 0.6)", "#ef4444", "#ef4444", "rgba(226, 232, 240, 0.6)"],
-                  boxShadow: "0 0 25px 5px rgba(239, 68, 68, 0.35)",
-                }
+                x: [-6, 6, -6, 6, -4, 4, 0],
+                borderColor: ["rgba(226, 232, 240, 0.6)", "#ef4444", "#ef4444", "rgba(226, 232, 240, 0.6)"],
+                boxShadow: "0 0 25px 5px rgba(239, 68, 68, 0.35)",
+              }
               : freezeTimeLeft > 0
-              ? {
+                ? {
                   borderColor: ["#22d3ee", "#06b6d4", "#22d3ee"],
                   boxShadow: [
                     "0 0 15px 2px rgba(34, 211, 238, 0.2)",
@@ -820,14 +873,14 @@ export function MathPathGame({
                     "0 0 15px 2px rgba(34, 211, 238, 0.2)"
                   ],
                 }
-              : {}
+                : {}
           }
           transition={
             shakeCells
               ? { duration: 0.5 }
               : freezeTimeLeft > 0
-              ? { repeat: Infinity, duration: 2, ease: "easeInOut" }
-              : {}
+                ? { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                : {}
           }
           className="w-full bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 relative flex items-center justify-center transition-colors"
           onMouseDown={() => setIsPressed(true)}
@@ -963,10 +1016,10 @@ export function MathPathGame({
             animate={
               shakeCells
                 ? {
-                    x: [-4, 4, -4, 4, 0],
-                    boxShadow: "0 0 15px rgba(239, 68, 68, 0.35)",
-                    borderColor: "#ef4444"
-                  }
+                  x: [-4, 4, -4, 4, 0],
+                  boxShadow: "0 0 15px rgba(239, 68, 68, 0.35)",
+                  borderColor: "#ef4444"
+                }
                 : {}
             }
             transition={{ duration: 0.5 }}
@@ -984,15 +1037,21 @@ export function MathPathGame({
                 <span className="text-slate-700 dark:text-slate-300">
                   {selectedPath
                     .map((c) => c.val)
-                    .map((v, i) => i === 0 ? v.toString() : (v >= 0 ? `+ ${v}` : `- ${Math.abs(v)}`))
+                    .map((v, i) => {
+                      if (i === 0) return v.toString();
+                      if (mathOperation === 'multiplication') {
+                        return `× ${v >= 0 ? v : `(${v})`}`;
+                      }
+                      return v >= 0 ? `+ ${v}` : `- ${Math.abs(v)}`;
+                    })
                     .join(' ')}
                 </span>
                 <span className="text-[#0B57D0]/60 dark:text-blue-400/60 font-medium">=</span>
-                <span className={`text-base font-black ${currentSum === targetSum ? 'text-emerald-500' : currentSum > targetSum ? 'text-rose-500' : 'text-[#0B57D0] dark:text-blue-400'}`}>
+                <span className={`text-base font-black ${currentSum === targetSum ? 'text-emerald-500' : isOverTarget ? 'text-rose-500' : 'text-[#0B57D0] dark:text-blue-400'}`}>
                   {currentSum}
                 </span>
                 {currentSum === targetSum && <CheckCircle2 className="size-4 text-emerald-500" />}
-                {currentSum > targetSum && <AlertCircle className="size-4 text-[#D93025]" />}
+                {isOverTarget && <AlertCircle className="size-4 text-[#D93025]" />}
               </div>
             ) : (
               <span className="text-xs font-bold italic text-slate-400 dark:text-slate-500">Drag or click numbers to write an equation</span>
@@ -1057,20 +1116,24 @@ export function MathPathGame({
       </div>
 
       {/* Right Column Section: Stats, Controls & Banners */}
-      <div className="flex flex-col gap-6 w-full select-none">
+      <div className={compact
+        ? "grid grid-cols-1 md:grid-cols-2 gap-4 w-full select-none mt-2"
+        : "flex flex-col gap-6 lg:gap-4 w-full select-none"
+      }>
 
-        {/* Prominent New Challenge Button */}
-        {onNewChallenge && (
+        {/* Prominent New Challenge Button - Mobile Only */}
+        {onNewChallenge && compact && (
           <Button
             onClick={onNewChallenge}
-            className="w-full bg-[#0B57D0] dark:bg-blue-600 hover:bg-[#0845A4] dark:hover:bg-blue-700 text-white py-6 rounded-2xl text-xs font-black tracking-wider uppercase shadow-md shadow-blue-500/10 dark:shadow-blue-500/5 transition-all border-none"
+            className="w-full bg-[#0B57D0] dark:bg-blue-600 hover:bg-[#0845A4] dark:hover:bg-blue-700 text-white py-6 rounded-2xl text-xs font-black tracking-wider uppercase shadow-md shadow-blue-500/10 dark:shadow-blue-500/5 transition-all border-none md:col-span-2"
           >
             New Challenge
           </Button>
         )}
 
         {/* Mockup Stats Panel */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 space-y-4 transition-colors">
+        <div className={`bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 lg:p-4 lg:space-y-3 transition-colors ${compact ? 'p-4 rounded-3xl space-y-2' : ''
+          }`}>
           <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight">Stats</h3>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -1109,7 +1172,8 @@ export function MathPathGame({
         </div>
 
         {/* Mockup Controls Panel */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 transition-colors">
+        <div className={`bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[2rem] p-6 lg:p-4 transition-colors ${compact ? 'p-4 rounded-3xl' : ''
+          }`}>
           <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight mb-4">Controls</h3>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1131,12 +1195,12 @@ export function MathPathGame({
 
           <div
             className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider transition-all mt-4 border text-center select-none ${selectedPath.length === 0
-                ? "bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800/80 text-slate-400 dark:text-slate-500"
-                : currentSum === targetSum
-                  ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                  : currentSum > targetSum
-                    ? "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400"
-                    : "bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-[#0B57D0] dark:text-blue-400"
+              ? "bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800/80 text-slate-400 dark:text-slate-500"
+              : currentSum === targetSum
+                ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                : isOverTarget
+                  ? "bg-rose-50 dark:bg-rose-950/20 border-rose-250 dark:border-rose-900/30 text-rose-600 dark:text-rose-400"
+                  : "bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-[#0B57D0] dark:text-blue-400"
               }`}
           >
             {selectedPath.length === 0 && (
@@ -1145,10 +1209,15 @@ export function MathPathGame({
                 <span>Auto-Check Active</span>
               </>
             )}
-            {selectedPath.length > 0 && currentSum < targetSum && (
+            {selectedPath.length > 0 && !isOverTarget && currentSum !== targetSum && (
               <>
                 <HelpCircle className="size-4 animate-pulse" />
-                <span>Need {targetSum - currentSum} More</span>
+                <span>
+                  {mathOperation === 'multiplication'
+                    ? `Goal: ${targetSum} (Current: ${currentSum})`
+                    : `Need ${targetSum - currentSum} More`
+                  }
+                </span>
               </>
             )}
             {selectedPath.length > 0 && currentSum === targetSum && (
@@ -1157,7 +1226,7 @@ export function MathPathGame({
                 <span>Target Reached!</span>
               </>
             )}
-            {selectedPath.length > 0 && currentSum > targetSum && (
+            {selectedPath.length > 0 && isOverTarget && (
               <>
                 <AlertCircle className="size-4" />
                 <span>Too High!</span>

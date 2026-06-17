@@ -23,6 +23,44 @@ import { MathPlaygroundSettings } from '../components/puzzle/MathPlaygroundSetti
 import { MathTheme } from '../lib/mathGameTheme';
 import { mathGameAudio } from '../lib/mathGameAudio';
 
+const getFloatingToggleStyle = (themeId: MathTheme['id']) => {
+  switch (themeId) {
+    case 'retro':
+      return {
+        container: 'bg-black border-2 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] font-mono',
+        itemActiveAddition: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]',
+        itemActiveMultiplication: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]',
+        itemActiveText: 'text-black',
+        itemInactive: 'text-emerald-500/60 hover:text-emerald-400 font-bold',
+      };
+    case 'sunset':
+      return {
+        container: 'bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-orange-200/50 dark:border-zinc-800/80 shadow-[0_8px_30px_rgba(249,115,22,0.15)]',
+        itemActiveAddition: 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg shadow-orange-500/20',
+        itemActiveMultiplication: 'bg-gradient-to-r from-orange-600 to-rose-600 shadow-lg shadow-rose-500/20',
+        itemActiveText: 'text-white',
+        itemInactive: 'text-orange-950/60 dark:text-amber-100/60 hover:text-orange-600 dark:hover:text-orange-400 font-bold',
+      };
+    case 'nordic':
+      return {
+        container: 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-sky-100/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(14,165,233,0.15)]',
+        itemActiveAddition: 'bg-sky-600 shadow-lg shadow-sky-600/20',
+        itemActiveMultiplication: 'bg-indigo-600 shadow-lg shadow-indigo-600/20',
+        itemActiveText: 'text-white',
+        itemInactive: 'text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 font-bold',
+      };
+    case 'cyber':
+    default:
+      return {
+        container: 'bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 shadow-[0_12px_40px_rgba(0,0,0,0.15)]',
+        itemActiveAddition: 'bg-blue-600 shadow-lg shadow-blue-500/20',
+        itemActiveMultiplication: 'bg-yellow-600 shadow-lg shadow-yellow-500/20',
+        itemActiveText: 'text-white',
+        itemInactive: 'text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-yellow-600 font-bold',
+      };
+  }
+};
+
 export default function MathsPuzzle() {
   const { streak, recordAcademicAction } = useStreak();
   const { profile } = useAuth();
@@ -39,6 +77,17 @@ export default function MathsPuzzle() {
 
   const [highScores, setHighScores] = useState<{ easy: number; medium: number; hard: number }>({ easy: 0, medium: 0, hard: 0 });
   const [dailyCompletedToday, setDailyCompletedToday] = useState<boolean>(false);
+  const [activeBoard, setActiveBoard] = useState<'addition' | 'multiplication'>('addition');
+  const [isCompact, setIsCompact] = useState<boolean>(true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsCompact(window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Custom Settings & Custom Theme States
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -169,6 +218,8 @@ export default function MathsPuzzle() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const toggleStyle = getFloatingToggleStyle(activeTheme);
+
   return (
     <DashboardLayout fullHeight>
       <div className="flex flex-col h-full w-full bg-[#F8FAFC] dark:bg-slate-950 overflow-hidden text-[#1E293B] dark:text-slate-100 font-sans antialiased">
@@ -187,14 +238,23 @@ export default function MathsPuzzle() {
             </Button>
             <span className="text-sm sm:text-base font-black text-[#0B57D0] dark:text-blue-400 tracking-tight">MathPath</span>
             <div className="hidden md:block h-4 w-[1px] bg-slate-300 dark:bg-slate-700 mx-3" />
-            <span className="hidden md:inline-block text-[#0B57D0] dark:text-blue-400 font-bold text-xs truncate max-w-[200px]">
-              {activeMode === 'daily' && 'Target Sums (Daily Challenge)'}
-              {activeMode === 'time' && 'Target Sums (Time Attack)'}
-              {activeMode === 'zen' && 'Target Sums (Zen Practice)'}
+            <span className="hidden md:inline-block text-[#0B57D0] dark:text-blue-400 font-bold text-xs truncate max-w-[250px]">
+              {activeMode === 'daily' && 'Dual Playground (Daily Challenge)'}
+              {activeMode === 'time' && 'Dual Playground (Time Attack)'}
+              {activeMode === 'zen' && 'Dual Playground (Zen Practice)'}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* New Challenge Button (Desktop only) */}
+            <Button
+              onClick={openChallengeSelector}
+              className="hidden lg:flex items-center justify-center gap-1.5 bg-[#0B57D0]/10 dark:bg-blue-500/10 hover:bg-[#0B57D0]/20 dark:hover:bg-blue-500/20 text-[#0B57D0] dark:text-blue-400 px-4 py-2 h-9 rounded-xl text-xs font-black border-none shrink-0 transition-all active:scale-95"
+            >
+              <Zap className="size-3.5 fill-current" />
+              <span>New Challenge</span>
+            </Button>
+
             {/* Timer Pill */}
             <div className="bg-[#EEF2F6] dark:bg-slate-800 px-2 py-1 sm:px-3.5 sm:py-1.5 rounded-xl flex items-center gap-1 text-[#0B57D0] dark:text-blue-400">
               <Clock className="size-3 sm:size-3.5" />
@@ -223,16 +283,119 @@ export default function MathsPuzzle() {
         </header>
 
         {/* Central Scrollable Dashboard Views */}
-        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-slate-950 p-6 md:p-8">
-          <MathPathGame 
-            mode={activeMode || 'daily'} 
-            difficulty={activeDifficulty}
-            themeId={activeTheme}
-            onExit={handleExitGame} 
-            onRecordStreak={handleRecordStreak}
-            onTimerTick={(t) => setActiveGameTime(t)}
-            onNewChallenge={openChallengeSelector}
-          />
+        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-slate-950 p-4 md:p-8 lg:p-6 custom-scrollbar">
+          <div className={`${
+            isCompact ? 'max-w-xl pb-24' : 'max-w-5xl xl:max-w-6xl pb-12 lg:pb-6'
+          } mx-auto w-full`}>
+            
+            {/* Desktop Center Toggle Switch */}
+            <div className="hidden lg:flex justify-center mb-6 select-none">
+              <div className={`flex p-1.5 rounded-full ${toggleStyle.container} transition-all duration-300`}>
+                <button
+                  onClick={() => {
+                    if (activeBoard !== 'addition') {
+                      setActiveBoard('addition');
+                      mathGameAudio.playShuffle();
+                    }
+                  }}
+                  className={`relative px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+                    activeBoard === 'addition'
+                      ? toggleStyle.itemActiveText
+                      : toggleStyle.itemInactive
+                  }`}
+                >
+                  {activeBoard === 'addition' && (
+                    <motion.div
+                      layoutId="activeDesktopTab"
+                      className={`absolute inset-0 rounded-full -z-10 ${toggleStyle.itemActiveAddition}`}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span>➕ Sums</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (activeBoard !== 'multiplication') {
+                      setActiveBoard('multiplication');
+                      mathGameAudio.playShuffle();
+                    }
+                  }}
+                  className={`relative px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+                    activeBoard === 'multiplication'
+                      ? toggleStyle.itemActiveText
+                      : toggleStyle.itemInactive
+                  }`}
+                >
+                  {activeBoard === 'multiplication' && (
+                    <motion.div
+                      layoutId="activeDesktopTab"
+                      className={`absolute inset-0 rounded-full -z-10 ${toggleStyle.itemActiveMultiplication}`}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span>✖️ Products</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Left Column: Addition Game */}
+            <div className={`flex-col relative overflow-hidden transition-all duration-300 ${
+              isCompact 
+                ? 'w-full p-0 bg-transparent border-none shadow-none' 
+                : 'bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] p-6 shadow-md hover:shadow-lg'
+            } ${
+              activeBoard === 'addition' ? 'flex' : 'hidden'
+            }`}>
+              {!isCompact && (
+                <div className="text-center mb-4 border-b border-slate-100 dark:border-slate-800/60 pb-3">
+                  <h3 className="text-lg font-black text-[#0B57D0] dark:text-blue-400 tracking-tight flex items-center justify-center gap-1.5">
+                    <span>➕ Target Sums (Addition)</span>
+                  </h3>
+                </div>
+              )}
+              <MathPathGame 
+                mode={activeMode || 'daily'} 
+                difficulty={activeDifficulty}
+                themeId={activeTheme}
+                mathOperation="addition"
+                onExit={handleExitGame} 
+                onRecordStreak={handleRecordStreak}
+                onTimerTick={(t) => setActiveGameTime(t)}
+                onNewChallenge={openChallengeSelector}
+                compact={isCompact}
+              />
+            </div>
+
+            {/* Right Column: Multiplication Game */}
+            <div className={`flex-col relative overflow-hidden transition-all duration-300 ${
+              isCompact 
+                ? 'w-full p-0 bg-transparent border-none shadow-none' 
+                : 'bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] p-6 shadow-md hover:shadow-lg'
+            } ${
+              activeBoard === 'multiplication' ? 'flex' : 'hidden'
+            }`}>
+              {!isCompact && (
+                <div className="text-center mb-4 border-b border-slate-100 dark:border-slate-800/60 pb-3">
+                  <h3 className="text-lg font-black text-yellow-600 dark:text-yellow-400 tracking-tight flex items-center justify-center gap-1.5">
+                    <span>✖️ Target Products (Multiplication)</span>
+                  </h3>
+                </div>
+              )}
+              <MathPathGame 
+                mode={activeMode || 'daily'} 
+                difficulty={activeDifficulty}
+                themeId={activeTheme}
+                mathOperation="multiplication"
+                onExit={handleExitGame} 
+                onRecordStreak={async () => {
+                  await handleRecordStreak();
+                }} 
+                onNewChallenge={openChallengeSelector}
+                compact={isCompact}
+              />
+            </div>
+
+          </div>
         </main>
       </div>
 
@@ -442,6 +605,56 @@ export default function MathsPuzzle() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Floating Mobile Toggle Switch */}
+      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 select-none">
+        <div className={`flex p-1.5 rounded-full ${toggleStyle.container} transition-all duration-300`}>
+          <button
+            onClick={() => {
+              if (activeBoard !== 'addition') {
+                setActiveBoard('addition');
+                mathGameAudio.playShuffle();
+              }
+            }}
+            className={`relative px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+              activeBoard === 'addition'
+                ? toggleStyle.itemActiveText
+                : toggleStyle.itemInactive
+            }`}
+          >
+            {activeBoard === 'addition' && (
+              <motion.div
+                layoutId="activeFloatingTab"
+                className={`absolute inset-0 rounded-full -z-10 ${toggleStyle.itemActiveAddition}`}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+            <span>➕ Sums</span>
+          </button>
+          <button
+            onClick={() => {
+              if (activeBoard !== 'multiplication') {
+                setActiveBoard('multiplication');
+                mathGameAudio.playShuffle();
+              }
+            }}
+            className={`relative px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+              activeBoard === 'multiplication'
+                ? toggleStyle.itemActiveText
+                : toggleStyle.itemInactive
+            }`}
+          >
+            {activeBoard === 'multiplication' && (
+              <motion.div
+                layoutId="activeFloatingTab"
+                className={`absolute inset-0 rounded-full -z-10 ${toggleStyle.itemActiveMultiplication}`}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+            <span>✖️ Products</span>
+          </button>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }
