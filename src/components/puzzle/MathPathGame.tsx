@@ -39,6 +39,20 @@ interface MathPathGameProps {
   compact?: boolean;
 }
 
+const getActivePillStyle = (themeId: MathTheme['id']) => {
+  switch (themeId) {
+    case 'retro':
+      return 'bg-emerald-950/30 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)] font-mono';
+    case 'sunset':
+      return 'bg-orange-500/10 dark:bg-orange-950/20 border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-sm';
+    case 'nordic':
+      return 'bg-sky-500/10 dark:bg-sky-950/20 border-sky-500/30 text-sky-600 dark:text-sky-400 shadow-sm';
+    case 'cyber':
+    default:
+      return 'bg-blue-500/10 dark:bg-blue-950/20 border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-sm';
+  }
+};
+
 export function MathPathGame({
   mode,
   difficulty,
@@ -616,6 +630,7 @@ export function MathPathGame({
     } else {
       mathGameAudio.playSuccess();
     }
+    mathGameAudio.playWaterDrop();
 
     if (mode === 'time') {
       const standardTimeBonus = selectedPath.length * 2;
@@ -840,19 +855,19 @@ export function MathPathGame({
         : "xl:col-span-2 flex flex-col items-center space-y-6 lg:space-y-4 w-full"
       }>
         {/* Mockup CURRENT TARGET Panel */}
-        <div className={`w-full bg-white dark:bg-slate-900 border shadow-md rounded-[2rem] p-6 lg:p-4 text-center relative flex flex-col justify-center min-h-[140px] lg:min-h-[110px] select-none transition-all duration-300 ${freezeTimeLeft > 0
-            ? 'border-cyan-400 dark:border-cyan-500/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]'
-            : 'border-slate-200/60 dark:border-slate-800/60'
+        <div className={`w-full relative flex flex-col justify-center items-center text-center p-6 lg:p-4 min-h-[140px] lg:min-h-[110px] select-none transition-all duration-300 ${theme.targetCardBg} ${freezeTimeLeft > 0
+          ? 'border-cyan-400 dark:border-cyan-500/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]'
+          : ''
           }`}>
           {freezeTimeLeft > 0 && (
-            <div className="absolute top-4 right-6 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200/50 px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-wider animate-pulse flex items-center gap-1">
+            <div className="absolute top-4 right-6 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200/50 px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-wider animate-pulse flex items-center gap-1 z-10">
               <span>❄️ Frozen: {freezeTimeLeft}s</span>
             </div>
           )}
-          <div className="text-[11px] font-black tracking-widest text-[#0B57D0] dark:text-blue-400 uppercase">
+          <div className={theme.targetLabel}>
             {mathOperation === 'multiplication' ? 'Target Product' : 'Current Target'}
           </div>
-          <h2 className="text-5xl sm:text-6xl font-black text-[#0B57D0] dark:text-blue-400 tracking-tight mt-1 transition-colors">{targetSum}</h2>
+          <h2 className={`${theme.targetText} mt-5 transition-colors`}>{targetSum}</h2>
         </div>
 
         {/* Circular Grid Board Canvas Wrapper */}
@@ -1028,13 +1043,13 @@ export function MathPathGame({
               : currentSum === targetSum
                 ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/30 text-emerald-500'
                 : selectedPath.length > 0
-                  ? 'bg-[#E2EDF8] dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30 text-[#0B57D0] dark:text-blue-400 shadow-sm'
+                  ? getActivePillStyle(themeId)
                   : 'bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-400 dark:text-slate-500 shadow-sm border-dashed'
               }`}
           >
             {selectedPath.length > 0 ? (
               <div className="flex items-center gap-2 font-black text-sm">
-                <span className="text-slate-700 dark:text-slate-300">
+                <span className={themeId === 'retro' ? "text-emerald-400/90 font-mono" : "text-slate-700 dark:text-slate-300"}>
                   {selectedPath
                     .map((c) => c.val)
                     .map((v, i) => {
@@ -1047,7 +1062,19 @@ export function MathPathGame({
                     .join(' ')}
                 </span>
                 <span className="text-[#0B57D0]/60 dark:text-blue-400/60 font-medium">=</span>
-                <span className={`text-base font-black ${currentSum === targetSum ? 'text-emerald-500' : isOverTarget ? 'text-rose-500' : 'text-[#0B57D0] dark:text-blue-400'}`}>
+                <span className={`text-base font-black ${
+                  currentSum === targetSum 
+                    ? 'text-emerald-500' 
+                    : isOverTarget 
+                      ? 'text-rose-500' 
+                      : themeId === 'retro' 
+                        ? 'text-emerald-450' 
+                        : themeId === 'sunset' 
+                          ? 'text-orange-600 dark:text-orange-400' 
+                          : themeId === 'nordic' 
+                            ? 'text-sky-600 dark:text-sky-400' 
+                            : 'text-blue-600 dark:text-blue-400'
+                }`}>
                   {currentSum}
                 </span>
                 {currentSum === targetSum && <CheckCircle2 className="size-4 text-emerald-500" />}
@@ -1200,7 +1227,13 @@ export function MathPathGame({
                 ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400"
                 : isOverTarget
                   ? "bg-rose-50 dark:bg-rose-950/20 border-rose-250 dark:border-rose-900/30 text-rose-600 dark:text-rose-400"
-                  : "bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-[#0B57D0] dark:text-blue-400"
+                  : themeId === 'retro'
+                    ? "bg-black border-emerald-500/20 text-emerald-400"
+                    : themeId === 'sunset'
+                      ? "bg-orange-500/5 dark:bg-orange-950/5 border-orange-500/20 text-orange-600 dark:text-orange-400"
+                      : themeId === 'nordic'
+                        ? "bg-sky-500/5 dark:bg-sky-950/5 border-sky-500/20 text-sky-600 dark:text-sky-400"
+                        : "bg-[#EEF2F6] dark:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-[#0B57D0] dark:text-blue-400"
               }`}
           >
             {selectedPath.length === 0 && (
