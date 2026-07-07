@@ -78,7 +78,7 @@ const MOBILE_START_Y = 126;
 const BASE_SPAWN_MS = 2300;
 const MIN_SPAWN_MS = 1100;
 const SEA_HEIGHT_DESKTOP = 80;
-const SEA_HEIGHT_MOBILE = 190;
+const SEA_HEIGHT_MOBILE = 240;
 
 function Cloud({ className = "" }: { className?: string }) {
   return (
@@ -156,10 +156,21 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
   const [difficulty, setDifficulty] = useState<DropletDifficulty>("easy");
   const [droplets, setDroplets] = useState<ActiveDroplet[]>([]);
   const [answer, setAnswer] = useState("");
+  const [inputError, setInputError] = useState(false);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(MAX_LIVES);
   const [isMobile, setIsMobile] = useState(false);
   const [flash, setFlash] = useState<"good" | "bad" | null>(null);
+
+  const isPrefixOfAnyAnswer = (val: string, activeDroplets: ActiveDroplet[]) => {
+    if (val === "" || val === "-") return true;
+    const num = Number.parseInt(val, 10);
+    if (Number.isNaN(num)) return false;
+    return activeDroplets.some((droplet) => {
+      const ansStr = droplet.answer.toString();
+      return ansStr.startsWith(val);
+    });
+  };
 
   const boardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -294,8 +305,14 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
 
   const handleAnswerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value.replace(/[^\d-]/g, "");
-    setAnswer(value);
-    checkAnswer(value);
+    if (isPrefixOfAnyAnswer(value, dropletsRef.current)) {
+      setAnswer(value);
+      checkAnswer(value);
+    } else {
+      setInputError(true);
+      mathGameAudio.playError();
+      window.setTimeout(() => setInputError(false), 200);
+    }
   };
 
   const handleKeypad = (key: string) => {
@@ -310,8 +327,20 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
       nextValue = `${answer}${key}`;
     }
 
-    setAnswer(nextValue);
-    checkAnswer(nextValue);
+    if (isPrefixOfAnyAnswer(nextValue, dropletsRef.current)) {
+      setAnswer(nextValue);
+      checkAnswer(nextValue);
+    } else {
+      setInputError(true);
+      mathGameAudio.playError();
+      window.setTimeout(() => setInputError(false), 200);
+    }
+  };
+
+  const handleBoardClick = () => {
+    if (gameState === "playing" && !isMobile) {
+      inputRef.current?.focus();
+    }
   };
 
   const gameLoop = useCallback((timestamp: number) => {
@@ -497,10 +526,25 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
   return (
     <div
       ref={boardRef}
+      onClick={handleBoardClick}
       className={`relative h-full min-h-[560px] w-full overflow-hidden bg-[#C7E6FA] ${
         flash === "good" ? "ring-4 ring-emerald-400/50" : flash === "bad" ? "ring-4 ring-rose-400/50" : ""
       }`}
     >
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes shake {
+          0%, 100% { transform: translate(0, 0); }
+          15% { transform: translate(-4px, 0); }
+          30% { transform: translate(4px, 0); }
+          45% { transform: translate(-4px, 0); }
+          60% { transform: translate(4px, 0); }
+          75% { transform: translate(-2px, 0); }
+          90% { transform: translate(2px, 0); }
+        }
+        .animate-shake {
+          animation: shake 0.2s ease-in-out;
+        }
+      `}} />
       <Cloud className="absolute left-[11%] top-[6%]" />
       <Cloud className="absolute left-[31%] top-[14%] scale-110" />
       <Cloud className="absolute right-[36%] top-[9%] scale-90" />
@@ -531,7 +575,7 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
           ))}
         </div>
 
-        {/* Right Side: Score & Settings */}
+        {/* Right Side: Score, Settings, and Pause */}
         <div className="flex items-center gap-2">
           <div className="bg-white/90 dark:bg-slate-900/90 border border-white/20 dark:border-slate-800/30 rounded-full px-4 py-2.5 text-xs sm:text-sm font-black uppercase text-slate-750 dark:text-slate-200 shadow-md flex items-center gap-1">
             <span>Score:</span>
@@ -547,6 +591,16 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
           >
             <Settings className="size-5" />
           </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={gameState === "paused" ? resumeGame : pauseGame}
+            className="rounded-full bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-white/20 dark:border-slate-800/30 shadow-md hover:bg-white dark:hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+            title={gameState === "paused" ? "Resume game" : "Pause game"}
+          >
+            {gameState === "paused" ? <Play className="size-5" /> : <Pause className="size-5" />}
+          </Button>
         </div>
       </div>
 
@@ -561,20 +615,17 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
               inputMode="numeric"
               disabled={gameState !== "playing" || isMobile}
               placeholder="Type answer..."
-              className={`h-14 w-[280px] rounded-2xl border-0 bg-white dark:bg-slate-900 text-slate-850 dark:text-white px-6 text-center text-xl font-black shadow-lg outline-none placeholder:text-slate-400 focus:ring-2 transition-all ${getThemeFocusRing(themeId)}`}
+              className={`h-14 w-[280px] rounded-2xl border bg-white dark:bg-slate-900 text-slate-850 dark:text-white px-6 text-center text-xl font-black shadow-lg outline-none placeholder:text-slate-400 focus:ring-2 transition-all ${
+                inputError
+                  ? "border-rose-500 bg-rose-50 dark:bg-rose-950/20 focus:ring-rose-500 animate-shake"
+                  : `${getThemeFocusRing(themeId)} border-transparent`
+              }`}
             />
           </div>
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={gameState === "paused" ? resumeGame : pauseGame}
-        className="absolute right-5 top-24 z-40 hidden rounded-lg bg-white/80 p-3 text-slate-700 shadow-md backdrop-blur transition hover:bg-white md:block"
-        aria-label={gameState === "paused" ? "Resume game" : "Pause game"}
-      >
-        {gameState === "paused" ? <Play className="size-5" /> : <Pause className="size-5" />}
-      </button>
+      {/* Pause button is now in the header next to settings */}
 
       <AnimatePresence>
         {droplets.map((droplet) => (
@@ -627,23 +678,35 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
 
       <div
         className={`absolute inset-x-0 bottom-0 z-20 bg-[#238ED4] ${
-          isMobile ? "h-[190px] px-5 pb-4 pt-3" : "h-20"
+          isMobile ? "h-[240px] px-5 pb-4 pt-3" : "h-20"
         }`}
       >
         {isMobile && (
-          <div className="mx-auto grid max-w-xs grid-cols-3 gap-2">
-            {["7", "8", "9", "4", "5", "6", "1", "2", "3", "-", "0", "delete"].map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => handleKeypad(key)}
-                className={`flex h-9 items-center justify-center rounded-xl border border-white/20 text-sm font-black text-white shadow-sm transition active:scale-95 ${
-                  key === "delete" ? "bg-rose-500" : "bg-white/20"
-                }`}
-              >
-                {key === "delete" ? <Delete className="size-4" /> : key}
-              </button>
-            ))}
+          <div className="mx-auto flex flex-col gap-3 max-w-xs pointer-events-auto">
+            {/* Mobile Answer Display */}
+            <div className={`h-11 w-full rounded-xl flex items-center justify-center text-xl font-black shadow-inner tracking-wider transition-all duration-150 ${
+              inputError
+                ? "bg-rose-500/30 border border-rose-500 text-rose-200 animate-shake"
+                : "bg-white/20 border border-white/30 text-white"
+            }`}>
+              {answer || <span className="text-white/40 text-sm font-bold">Type answer...</span>}
+            </div>
+
+            {/* Keypad Grid */}
+            <div className="grid grid-cols-3 gap-2">
+              {["7", "8", "9", "4", "5", "6", "1", "2", "3", "-", "0", "delete"].map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleKeypad(key)}
+                  className={`flex h-9 items-center justify-center rounded-xl border border-white/20 text-sm font-black text-white shadow-sm transition active:scale-95 ${
+                    key === "delete" ? "bg-rose-500" : "bg-white/20"
+                  }`}
+                >
+                  {key === "delete" ? <Delete className="size-4" /> : key}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

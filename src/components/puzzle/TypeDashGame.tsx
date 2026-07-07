@@ -50,7 +50,7 @@ const MIN_SPAWN_MS = 1200;
 
 // Sea heights based on mobile/desktop
 const SEA_HEIGHT_DESKTOP = 80;
-const SEA_HEIGHT_MOBILE = 210;
+const SEA_HEIGHT_MOBILE = 250;
 
 export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGameProps) {
   const [gameState, setGameState] = useState<GameState>("select");
@@ -391,9 +391,25 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           mathGameAudio.playKeyClick();
         }
       } else {
-        // Typo made
-        setTypoActive(true);
-        mathGameAudio.playError();
+        // Typo made - check if key matches the first letter of another active word to switch targets
+        const otherMatches = dropletsRef.current
+          .filter((d) => d.id !== target.id && d.word.toLowerCase().startsWith(key))
+          .sort((a, b) => b.y - a.y); // prioritize closest to sea level
+
+        if (otherMatches.length > 0) {
+          const newTarget = otherMatches[0];
+          setActiveTargetId(newTarget.id);
+          activeTargetIdRef.current = newTarget.id;
+          setTypedLength(1);
+          typedLengthRef.current = 1;
+          setTypoActive(false);
+          correctKeysPressedRef.current += 1;
+          mathGameAudio.playKeyClick();
+          aimLaserTurret(newTarget, boardWidth, boardHeight, seaHeight);
+        } else {
+          setTypoActive(true);
+          mathGameAudio.playError();
+        }
       }
     }
 
@@ -555,7 +571,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
   const MOBILE_KEYBOARD = [
     ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
     ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-    ["z", "x", "c", "v", "b", "n", "m"]
+    ["z", "x", "c", "v", "b", "n", "m", "clear"]
   ];
 
   if (gameState === "select") {
@@ -836,6 +852,16 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           >
             <Settings className="size-5" />
           </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={gameState === "paused" ? resumeGame : pauseGame}
+            className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+            title={gameState === "paused" ? "Resume game" : "Pause game"}
+          >
+            {gameState === "paused" ? <Play className="size-5" /> : <Pause className="size-5" />}
+          </Button>
         </div>
       </div>
 
@@ -879,15 +905,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
         </div>
       )}
 
-      {/* Pause Button */}
-      <button
-        type="button"
-        onClick={pauseGame}
-        className="absolute right-5 top-20 z-40 hidden rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-slate-200 shadow-md backdrop-blur transition hover:bg-slate-800 md:block"
-        aria-label="Pause game"
-      >
-        <Pause className="size-5" />
-      </button>
+      {/* Pause button is now in the header next to settings */}
 
       {/* ─── Particles Explosion Layer ─── */}
       {particles.map((p) => (
@@ -1064,7 +1082,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       {/* ─── Sea Level & SVG Laser Blaster Gun ─── */}
       <div
         className={`absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-indigo-950/95 to-slate-900/80 backdrop-blur-[2px] border-t border-slate-800 ${
-          isMobile ? "h-[210px] px-2.5 pb-3.5 pt-6" : "h-20"
+          isMobile ? "h-[250px] px-2.5 pb-3.5 pt-4" : "h-20"
         }`}
       >
         {/* SVG Laser Gun Blaster Turret */}
@@ -1120,16 +1138,55 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
         {/* Mobile virtual keyboard layout view */}
         {isMobile && (
           <div className="mx-auto flex flex-col gap-2 max-w-md pointer-events-auto">
+            {/* Target Display */}
+            <div className="w-full px-1 animate-in fade-in">
+              <div className={`h-9 w-full rounded-xl bg-slate-900/90 border flex items-center justify-center text-xs font-black shadow-inner tracking-wide transition-all ${
+                activeTargetId ? "border-cyan-500/40 text-cyan-300" : "border-slate-800 text-slate-500"
+              }`}>
+                {activeTargetId ? (
+                  (() => {
+                    const target = droplets.find((d) => d.id === activeTargetId);
+                    if (!target) return null;
+                    const typed = target.word.substring(0, typedLength);
+                    const untyped = target.word.substring(typedLength);
+                    return (
+                      <span>
+                        <span className="text-emerald-400 font-extrabold">{typed}</span>
+                        <span className="text-cyan-400 font-normal">|</span>
+                        <span className={typoActive ? "text-rose-555 underline decoration-rose-555 font-extrabold" : ""}>{untyped}</span>
+                      </span>
+                    );
+                  })()
+                ) : (
+                  <span>No Target Locked</span>
+                )}
+              </div>
+            </div>
+
             {MOBILE_KEYBOARD.map((row, rIdx) => (
-              <div key={rIdx} className="flex justify-center gap-1.5">
+              <div key={rIdx} className="flex justify-center gap-1.5 w-full">
                 {row.map((char) => (
                   <button
                     key={char}
                     type="button"
-                    onClick={() => processKeyStroke(char)}
-                    className="flex-1 max-w-[40px] h-11 flex items-center justify-center rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-slate-800 active:scale-95 transition text-base font-black text-white shadow-md active:bg-indigo-650"
+                    onClick={() => {
+                      if (char === "clear") {
+                        setActiveTargetId(null);
+                        activeTargetIdRef.current = null;
+                        setTypedLength(0);
+                        typedLengthRef.current = 0;
+                        setTypoActive(false);
+                      } else {
+                        processKeyStroke(char);
+                      }
+                    }}
+                    className={`h-11 flex items-center justify-center rounded-xl active:scale-95 transition text-sm font-black shadow-md ${
+                      char === "clear"
+                        ? "flex-2 max-w-[80px] px-3.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-250 active:bg-rose-900"
+                        : "flex-1 max-w-[40px] bg-slate-900/90 hover:bg-slate-850 border border-slate-800 text-white"
+                    }`}
                   >
-                    {char.toUpperCase()}
+                    {char === "clear" ? "CLR" : char.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -1137,6 +1194,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           </div>
         )}
       </div>
+
 
       {/* ─── Pause Overlay Modal ─── */}
       {gameState === "paused" && (

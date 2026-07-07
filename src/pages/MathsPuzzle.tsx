@@ -418,7 +418,7 @@ export default function MathsPuzzle() {
                           setActiveGame('mathpath');
                           mathGameAudio.playShuffle();
                         }}
-                        className="rounded-2xl px-6 py-5 bg-indigo-650 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20 active:scale-95 border-none"
+                        className="rounded-2xl px-6 py-5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20 active:scale-95 border-none"
                       >
                         Play Now
                       </Button>
