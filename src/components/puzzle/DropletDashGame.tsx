@@ -258,6 +258,7 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
     const previous = Number.parseInt(localStorage.getItem(key) || "0", 10);
     if (scoreRef.current > previous) {
       localStorage.setItem(key, String(scoreRef.current));
+      window.dispatchEvent(new CustomEvent('eduspace-score-updated'));
     }
   }, []);
 

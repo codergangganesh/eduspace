@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useStreak } from '../../contexts/StreakContext';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
@@ -447,19 +448,26 @@ export function MathPathGame({
   }, [timeLeft, mode, freezeTimeLeft]);
 
   const handleTimeOver = () => {
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      colors: ['#3b82f6', '#10b981', '#f59e0b']
-    });
     const scoreKey = `eduspace_math_time_attack_highscore_${difficulty}`;
     const savedHighScore = localStorage.getItem(scoreKey) || '0';
     if (score > parseInt(savedHighScore, 10)) {
       localStorage.setItem(scoreKey, score.toString());
+      window.dispatchEvent(new CustomEvent('eduspace-score-updated'));
+      confetti({
+        particleCount: 130,
+        spread: 95,
+        origin: { y: 0.5 },
+        colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981', '#f59e0b']
+      });
       toast.success('🏆 New High Score!', {
         description: `You set a new record of ${score} points on ${difficulty}!`,
       });
     } else {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        colors: ['#3b82f6', '#10b981', '#f59e0b']
+      });
       toast.info('Game Over!', {
         description: `You scored ${score} points. Try again to beat your high score of ${savedHighScore} on ${difficulty}!`,
       });
@@ -945,6 +953,7 @@ export function MathPathGame({
                         key={cell.id}
                         onClick={() => handleCellSelect(cell)}
                         onMouseEnter={() => handleCellMouseEnter(cell)}
+                        aria-label={`Grid number ${cell.val} at row ${cell.row + 1}, column ${cell.col + 1}${cell.effect ? `, effect ${cell.effect}` : ''}`}
                         onTouchMove={(e) => {
                           const touch = e.touches[0];
                           const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -1202,22 +1211,37 @@ export function MathPathGame({
           }`}>
           <h3 className="text-lg font-black text-slate-800 dark:text-white tracking-tight mb-4">Controls</h3>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={undoLastSelection}
-              className="flex flex-col items-center justify-center gap-1.5 bg-[#EEF2F6] dark:bg-slate-800 hover:bg-[#E2EDF8] dark:hover:bg-slate-800 text-[#0B57D0] dark:text-blue-400 p-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-wider shadow-sm"
-            >
-              <RotateCcw className="size-4" />
-              <span>Undo</span>
-            </button>
-            <button
-              onClick={clearSelection}
-              className="flex flex-col items-center justify-center gap-1.5 bg-[#EEF2F6] dark:bg-slate-800 hover:bg-[#E2EDF8] dark:hover:bg-slate-800 text-[#0B57D0] dark:text-blue-400 p-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-wider shadow-sm"
-            >
-              <RotateCcw className="size-4 rotate-180" />
-              <span>Reset</span>
-            </button>
-          </div>
+          <TooltipProvider>
+            <div className="grid grid-cols-2 gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={undoLastSelection}
+                    aria-label="Undo Last Selection"
+                    className="flex flex-col items-center justify-center gap-1.5 bg-[#EEF2F6] dark:bg-slate-800 hover:bg-[#E2EDF8] dark:hover:bg-slate-800 text-[#0B57D0] dark:text-blue-400 p-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-wider shadow-sm"
+                  >
+                    <RotateCcw className="size-4" />
+                    <span>Undo</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Undo last number</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={clearSelection}
+                    aria-label="Reset Path Selection"
+                    className="flex flex-col items-center justify-center gap-1.5 bg-[#EEF2F6] dark:bg-slate-800 hover:bg-[#E2EDF8] dark:hover:bg-slate-800 text-[#0B57D0] dark:text-blue-400 p-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-wider shadow-sm"
+                  >
+                    <RotateCcw className="size-4 rotate-180" />
+                    <span>Reset</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Clear selected path</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
 
           <div
             className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider transition-all mt-4 border text-center select-none ${selectedPath.length === 0

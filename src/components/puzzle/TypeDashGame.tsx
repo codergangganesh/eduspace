@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Delete, Heart, Pause, Play, RotateCcw, Settings, Zap } from "lucide-react";
+import confetti from "canvas-confetti";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { mathGameAudio } from "../../lib/mathGameAudio";
 import { MathTheme } from "../../lib/mathGameTheme";
 import { getRandomWord, getDifficultyInfo, type WordDifficulty } from "../../lib/typeDashWords";
@@ -216,6 +218,13 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
     const previous = Number.parseInt(localStorage.getItem(key) || "0", 10);
     if (scoreRef.current > previous) {
       localStorage.setItem(key, String(scoreRef.current));
+      window.dispatchEvent(new CustomEvent('eduspace-score-updated'));
+      confetti({
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.5 },
+        colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'],
+      });
     }
   }, []);
 
@@ -817,78 +826,100 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       <div className="planet-orbit2 absolute top-40 right-[10%] size-20 rounded-full bg-gradient-to-tr from-cyan-600 to-emerald-500 opacity-20 filter blur-[1px] border border-cyan-400/20 shadow-lg pointer-events-none" />
 
       {/* Sleek transparent game header */}
-      <div className="absolute inset-x-0 top-0 z-40 px-5 py-4 flex items-center justify-between">
-        {/* Left: Back Arrow */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onExit}
-          className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
-          title="Exit to Dashboard"
-        >
-          <ArrowLeft className="size-5" />
-        </Button>
+      <TooltipProvider>
+        <div className="absolute inset-x-0 top-0 z-40 px-5 py-4 flex items-center justify-between">
+          {/* Left: Back Arrow */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onExit}
+                aria-label="Exit to Dashboard"
+                className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+                title="Exit to Dashboard"
+              >
+                <ArrowLeft className="size-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Exit to Dashboard</TooltipContent>
+          </Tooltip>
 
-        {/* Center: Lives */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-full px-4 py-2 flex items-center gap-1.5 shadow-lg">
-          {Array.from({ length: MAX_LIVES }).map((_, index) => (
-            <Heart
-              key={index}
-              className={`size-5 sm:size-6 transition-all duration-300 ${index < lives ? "fill-rose-500 text-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]" : "text-slate-800 scale-95"
-                }`}
-            />
-          ))}
-        </div>
-
-        {/* Right Side: Score, WPM, and Settings */}
-        <div className="flex items-center gap-2">
-          {/* Streak pill */}
-          {streak > 0 && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full px-3 py-1.5 text-xs font-black shadow-md flex items-center gap-1"
-            >
-              <span>🔥 {streak}</span>
-            </motion.div>
-          )}
-
-          <div className="bg-slate-900/90 border border-slate-800 rounded-full px-4 py-2.5 text-xs sm:text-sm font-black uppercase text-slate-200 shadow-lg flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <span className="text-slate-500">Score:</span>
-              <span className="text-indigo-400 font-extrabold">{score}</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-1 border-l border-slate-800 pl-4">
-              <span className="text-slate-500">WPM:</span>
-              <span className="text-cyan-400 font-extrabold">{wpm}</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-1 border-l border-slate-800 pl-4">
-              <span className="text-slate-500">ACC:</span>
-              <span className="text-emerald-400 font-extrabold">{accuracy}%</span>
-            </div>
+          {/* Center: Lives */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-full px-4 py-2 flex items-center gap-1.5 shadow-lg">
+            {Array.from({ length: MAX_LIVES }).map((_, index) => (
+              <Heart
+                key={index}
+                className={`size-5 sm:size-6 transition-all duration-300 ${index < lives ? "fill-rose-500 text-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]" : "text-slate-800 scale-95"
+                  }`}
+              />
+            ))}
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenSettings}
-            className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
-            title="Settings"
-          >
-            <Settings className="size-5" />
-          </Button>
+          {/* Right Side: Score, WPM, and Settings */}
+          <div className="flex items-center gap-2">
+            {/* Streak pill */}
+            {streak > 0 && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full px-3 py-1.5 text-xs font-black shadow-md flex items-center gap-1"
+              >
+                <span>🔥 {streak}</span>
+              </motion.div>
+            )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={gameState === "paused" ? resumeGame : pauseGame}
-            className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
-            title={gameState === "paused" ? "Resume game" : "Pause game"}
-          >
-            {gameState === "paused" ? <Play className="size-5" /> : <Pause className="size-5" />}
-          </Button>
+            <div className="bg-slate-900/90 border border-slate-800 rounded-full px-4 py-2.5 text-xs sm:text-sm font-black uppercase text-slate-200 shadow-lg flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <span className="text-slate-500">Score:</span>
+                <span className="text-indigo-400 font-extrabold">{score}</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-1 border-l border-slate-800 pl-4">
+                <span className="text-slate-500">WPM:</span>
+                <span className="text-cyan-400 font-extrabold">{wpm}</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-1 border-l border-slate-800 pl-4">
+                <span className="text-slate-500">ACC:</span>
+                <span className="text-emerald-400 font-extrabold">{accuracy}%</span>
+              </div>
+            </div>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onOpenSettings}
+                  aria-label="Open Game Settings"
+                  className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+                  title="Settings"
+                >
+                  <Settings className="size-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Settings</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={gameState === "paused" ? resumeGame : pauseGame}
+                  aria-label={gameState === "paused" ? "Resume Game" : "Pause Game"}
+                  className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+                  title={gameState === "paused" ? "Resume game" : "Pause game"}
+                >
+                  {gameState === "paused" ? <Play className="size-5" /> : <Pause className="size-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {gameState === "paused" ? "Resume Game" : "Pause Game"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
 
       {/* Floating mini stats for mobile */}
       {isMobile && (
@@ -1284,6 +1315,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
                 {/* HOME Button (Blue with yellow border) */}
                 <button
                   onClick={onExit}
+                  aria-label="Exit to Dashboard"
                   className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-700 text-black border-4 border-yellow-400 px-4 py-3 rounded-full shadow-lg hover:brightness-110 active:scale-95 transition-all font-black italic text-xs tracking-wider cursor-pointer"
                 >
                   <svg className="size-4 fill-current stroke-current" viewBox="0 0 24 24">
@@ -1295,6 +1327,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
                 {/* RETRY Button (Yellow/Orange with red border) */}
                 <button
                   onClick={() => startGame(difficulty)}
+                  aria-label="Retry Challenge"
                   className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-500 text-emerald-800 border-4 border-orange-600 px-4 py-3 rounded-full shadow-lg hover:brightness-110 active:scale-95 transition-all font-black italic text-xs tracking-wider cursor-pointer"
                 >
                   <svg className="size-4 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
