@@ -781,15 +781,6 @@ export default function MathsPuzzle() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-3">
-              {/* Mobile Leaderboard Button (Top Right Side Corner) */}
-              <Button
-                onClick={() => setIsMobileLeaderboardOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-black px-2.5 sm:px-3 py-1.5 h-8 sm:h-9 rounded-full text-xs shadow-md border border-white/20 active:scale-95 transition-all shrink-0"
-              >
-                <Trophy className="size-3.5 text-amber-300 shrink-0" />
-                <span className="text-[11px] sm:text-xs font-extrabold tracking-tight">Leaderboard</span>
-              </Button>
-
               {/* MathPath-specific header controls */}
               {activeGame === 'mathpath' && (
                 <>
@@ -863,9 +854,18 @@ export default function MathsPuzzle() {
                     Brain Training Academy
                   </div>
                   <div>
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                      Train Your <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Brain</span>
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                        Train Your <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Brain</span>
+                      </h1>
+                      <Button
+                        onClick={() => setIsMobileLeaderboardOpen(true)}
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-black px-3 py-1.5 h-8 rounded-full text-xs shadow-md border border-white/20 active:scale-95 transition-all shrink-0"
+                      >
+                        <Trophy className="size-3.5 text-amber-300 shrink-0" />
+                        <span className="text-[11px] sm:text-xs font-extrabold tracking-tight">Leaderboard</span>
+                      </Button>
+                    </div>
                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
                       Improve arithmetic speed, logical reasoning, and keyboard agility with immersive daily workouts.
                     </p>
