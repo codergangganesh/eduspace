@@ -1062,19 +1062,18 @@ export function MathPathGame({
                     .join(' ')}
                 </span>
                 <span className="text-[#0B57D0]/60 dark:text-blue-400/60 font-medium">=</span>
-                <span className={`text-base font-black ${
-                  currentSum === targetSum 
-                    ? 'text-emerald-500' 
-                    : isOverTarget 
-                      ? 'text-rose-500' 
-                      : themeId === 'retro' 
-                        ? 'text-emerald-450' 
-                        : themeId === 'sunset' 
-                          ? 'text-orange-600 dark:text-orange-400' 
-                          : themeId === 'nordic' 
-                            ? 'text-sky-600 dark:text-sky-400' 
+                <span className={`text-base font-black ${currentSum === targetSum
+                    ? 'text-emerald-500'
+                    : isOverTarget
+                      ? 'text-rose-500'
+                      : themeId === 'retro'
+                        ? 'text-emerald-450'
+                        : themeId === 'sunset'
+                          ? 'text-orange-600 dark:text-orange-400'
+                          : themeId === 'nordic'
+                            ? 'text-sky-600 dark:text-sky-400'
                             : 'text-blue-600 dark:text-blue-400'
-                }`}>
+                  }`}>
                   {currentSum}
                 </span>
                 {currentSum === targetSum && <CheckCircle2 className="size-4 text-emerald-500" />}

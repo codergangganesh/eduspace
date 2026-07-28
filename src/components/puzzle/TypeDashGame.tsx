@@ -19,7 +19,9 @@ interface ActiveWordDroplet {
   y: number; // vertical pixel coordinate
   word: string;
   speed: number;
-  size: number;
+  size: number; // pill height
+  width: number;
+  fontSize: number;
 }
 
 interface Particle {
@@ -82,7 +84,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
   const lastSpawnRef = useRef(0);
-  
+
   // Audio state values to track keystrokes
   const totalKeysPressedRef = useRef(0);
   const correctKeysPressedRef = useRef(0);
@@ -114,20 +116,42 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
   // Generate word droplet
   const createDroplet = useCallback((): ActiveWordDroplet => {
     const word = getRandomWord(difficultyRef.current);
+    const boardWidth = boardRef.current?.clientWidth || window.innerWidth || 800;
+    const mobileSideSafeSpace = isMobile ? Math.min(56, Math.max(34, boardWidth * 0.1)) : 10;
+    const pillHeight = isMobile ? 38 : 44;
+    const horizontalPadding = isMobile ? 28 : 36;
+    const maxPillWidth = isMobile ? Math.max(112, boardWidth - mobileSideSafeSpace * 2) : Number.POSITIVE_INFINITY;
+    const maxFontSize = isMobile ? 13 : 15;
+    const minFontSize = isMobile ? 10 : 15;
+    const estimatedTextFactor = 0.66;
+    const fittedFontSize = Math.max(
+      minFontSize,
+      Math.min(maxFontSize, (maxPillWidth - horizontalPadding - 8) / (word.length * estimatedTextFactor))
+    );
+    const pillWidth = Math.min(
+      maxPillWidth,
+      Math.ceil(word.length * fittedFontSize * estimatedTextFactor + horizontalPadding + 8)
+    );
+    const edgePaddingPercent = Math.min(
+      46,
+      Math.max(isMobile ? 18 : 8, ((pillWidth / 2 + mobileSideSafeSpace) / boardWidth) * 100)
+    );
     const usedX = dropletsRef.current.map((d) => d.x);
-    let x = 15 + Math.random() * 70;
+    const minX = Math.max(isMobile ? 18 : 12, edgePaddingPercent);
+    const maxX = Math.min(isMobile ? 82 : 88, 100 - edgePaddingPercent);
+    let x = minX + Math.random() * (maxX - minX);
 
     // Avoid spawn overlaps
     for (let attempt = 0; attempt < 15; attempt++) {
       if (!usedX.some((val) => Math.abs(val - x) < 18)) break;
-      x = 15 + Math.random() * 70;
+      x = minX + Math.random() * (maxX - minX);
     }
 
     const speedBoost = Math.min(scoreRef.current / 300, 1.8);
-    const baseSpeed = difficultyRef.current === "easy" ? 0.65 
-                      : difficultyRef.current === "medium" ? 0.85 
-                      : difficultyRef.current === "hard" ? 1.05 
-                      : 1.25;
+    const baseSpeed = difficultyRef.current === "easy" ? 0.65
+      : difficultyRef.current === "medium" ? 0.85
+        : difficultyRef.current === "hard" ? 1.05
+          : 1.25;
 
     return {
       id: `word-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -135,9 +159,11 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       y: 120, // starts below headers
       word,
       speed: baseSpeed + speedBoost + Math.random() * 0.2,
-      size: Math.max(90, word.length * 10 + 35), // dynamically size bubbles
+      size: pillHeight,
+      width: pillWidth,
+      fontSize: fittedFontSize,
     };
-  }, []);
+  }, [isMobile]);
 
   const spawnDroplet = useCallback(() => {
     if (dropletsRef.current.length >= MAX_DROPLETS) return;
@@ -156,7 +182,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
     setAccuracy(100);
     setStreak(0);
     streakRef.current = 0;
-    
+
     totalKeysPressedRef.current = 0;
     correctKeysPressedRef.current = 0;
     startTimeRef.current = Date.now();
@@ -170,7 +196,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
     syncDroplets([]);
     setParticles([]);
     setLaser({ startX: 0, startY: 0, endX: 0, endY: 0, active: false });
-    
+
     lastFrameRef.current = null;
     lastSpawnRef.current = 0;
     setGameState("playing");
@@ -198,10 +224,10 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
     const nextLives = livesRef.current - 1;
     livesRef.current = nextLives;
     setLives(nextLives);
-    
+
     setStreak(0);
     streakRef.current = 0;
-    
+
     // reset current typing lock if lost life
     setActiveTargetId(null);
     activeTargetIdRef.current = null;
@@ -211,7 +237,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
 
     setFlash("bad");
     window.setTimeout(() => setFlash(null), 180);
-    
+
     // Trigger screen shake on damage
     setIsShaking(true);
     window.setTimeout(() => setIsShaking(false), 250);
@@ -238,19 +264,19 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
     // Angle of gun turret: 0 deg is right, -90 is up
     const angleRad = Math.atan2(dy, dx);
     const angleDeg = angleRad * (180 / Math.PI) + 90; // Adjust so 0 deg is straight up
-    
+
     setGunAngle(angleDeg);
   }, []);
 
   // Process key stroke entry
   const processKeyStroke = useCallback((char: string) => {
     if (stateRef.current !== "playing") return;
-    
+
     const key = char.toLowerCase();
     if (!/^[a-z]$/.test(key)) return; // Only process alphabetical keys
 
     totalKeysPressedRef.current += 1;
-    
+
     const boardWidth = boardRef.current?.clientWidth || 800;
     const boardHeight = boardRef.current?.clientHeight || 600;
     const seaHeight = isMobile ? SEA_HEIGHT_MOBILE : SEA_HEIGHT_DESKTOP;
@@ -272,7 +298,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
         setTypoActive(false);
         correctKeysPressedRef.current += 1;
         mathGameAudio.playKeyClick();
-        
+
         // Aim the gun turret towards target
         aimLaserTurret(target, boardWidth, boardHeight, seaHeight);
       } else {
@@ -281,7 +307,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
         window.setTimeout(() => setFlash(null), 120);
         mathGameAudio.playError();
       }
-    } 
+    }
     // Case 2: Target is active, match next key
     else {
       const target = dropletsRef.current.find((d) => d.id === activeTargetIdRef.current);
@@ -346,7 +372,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
               y: targetPxY,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed - 1, // slight upward float
-              color: i % 2 === 0 
+              color: i % 2 === 0
                 ? (themeId === "retro" ? "#10B981" : themeId === "sunset" ? "#F97316" : themeId === "nordic" ? "#38bdf8" : "#a855f7")
                 : "#ffffff", // white spark highlights
               size: Math.random() * 5 + 3,
@@ -447,7 +473,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
     const boardHeight = boardRef.current?.clientHeight || 640;
     const seaHeight = isMobile ? SEA_HEIGHT_MOBILE : SEA_HEIGHT_DESKTOP;
     const groundY = boardHeight - seaHeight - 30;
-    
+
     let missedCount = 0;
 
     // 1. Move droplets
@@ -581,9 +607,10 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       <div className="flex h-full min-h-[560px] w-full items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden">
         {/* Neon cosmic background effect */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08)_0%,transparent_70%)] pointer-events-none" />
-        
+
         {/* Custom scroll star CSS */}
-        <style dangerouslySetInnerHTML={{__html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .stars-bg {
             background-image: 
               radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
@@ -682,14 +709,13 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
   return (
     <div
       ref={boardRef}
-      className={`relative h-full min-h-[560px] w-full overflow-hidden bg-slate-950 select-none transition-all duration-150 ${
-        isShaking ? "animate-shake" : ""
-      } ${
-        flash === "good" ? "ring-4 ring-emerald-500/40" : flash === "bad" ? "ring-4 ring-rose-500/40" : ""
-      }`}
+      className={`relative h-full min-h-[560px] w-full overflow-hidden bg-slate-950 select-none transition-all duration-150 ${isShaking ? "animate-shake" : ""
+        } ${flash === "good" ? "ring-4 ring-emerald-500/40" : flash === "bad" ? "ring-4 ring-rose-500/40" : ""
+        }`}
     >
       {/* ─── Scrolling animated Starfield background + Parallax Nebulae ─── */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .space-stars {
           position: absolute;
           inset: 0;
@@ -781,7 +807,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           100% { transform: translateX(0); }
         }
       `}} />
-      
+
       <div className="space-stars" />
       <div className="space-stars-layer2" />
       <div className="space-nebula" />
@@ -789,7 +815,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       {/* Floating cartoon planet decoration */}
       <div className="planet-orbit1 absolute top-28 left-[8%] size-16 rounded-full bg-gradient-to-tr from-indigo-600 to-pink-500 opacity-20 filter blur-[1px] border border-pink-400/20 shadow-lg pointer-events-none" />
       <div className="planet-orbit2 absolute top-40 right-[10%] size-20 rounded-full bg-gradient-to-tr from-cyan-600 to-emerald-500 opacity-20 filter blur-[1px] border border-cyan-400/20 shadow-lg pointer-events-none" />
-      
+
       {/* Sleek transparent game header */}
       <div className="absolute inset-x-0 top-0 z-40 px-5 py-4 flex items-center justify-between">
         {/* Left: Back Arrow */}
@@ -808,9 +834,8 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           {Array.from({ length: MAX_LIVES }).map((_, index) => (
             <Heart
               key={index}
-              className={`size-5 sm:size-6 transition-all duration-300 ${
-                index < lives ? "fill-rose-500 text-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]" : "text-slate-800 scale-95"
-              }`}
+              className={`size-5 sm:size-6 transition-all duration-300 ${index < lives ? "fill-rose-500 text-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]" : "text-slate-800 scale-95"
+                }`}
             />
           ))}
         </div>
@@ -877,9 +902,8 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       {!isMobile && (
         <div className="absolute inset-x-0 top-24 z-40 flex justify-center pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-2">
-            <div className={`h-12 px-6 rounded-2xl border bg-slate-900/95 backdrop-blur text-white flex items-center justify-center text-sm font-black shadow-lg transition-all duration-350 ${
-              activeTargetId ? "border-cyan-500/50 shadow-cyan-900/15" : "border-slate-800/70"
-            }`}>
+            <div className={`h-12 px-6 rounded-2xl border bg-slate-900/95 backdrop-blur text-white flex items-center justify-center text-sm font-black shadow-lg transition-all duration-350 ${activeTargetId ? "border-cyan-500/50 shadow-cyan-900/15" : "border-slate-800/70"
+              }`}>
               {activeTargetId ? (
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-500 uppercase tracking-widest mr-1.5">Targeting:</span>
@@ -979,7 +1003,8 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           const isActive = activeTargetId === d.id;
           const typed = d.word.substring(0, typedLength);
           const untyped = d.word.substring(typedLength);
-          
+          const mobileCenterInset = Math.ceil(d.width / 2 + 12);
+
           return (
             <motion.div
               key={d.id}
@@ -988,72 +1013,37 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
               exit={{ opacity: 0, scale: 0.5 }}
               className="absolute z-25 -translate-x-1/2 pointer-events-none"
               style={{
-                left: `${d.x}%`,
+                left: isMobile
+                  ? `clamp(${mobileCenterInset}px, ${d.x}%, calc(100% - ${mobileCenterInset}px))`
+                  : `${d.x}%`,
                 top: d.y,
-                width: d.size,
+                width: d.width,
                 height: d.size,
               }}
             >
-              {/* Spinning target crosshair overlay when bubble is active */}
+              {/* Target outline when bubble is active */}
               {isActive && (
-                <div className="absolute -inset-4 size-[calc(100%+32px)] pointer-events-none z-10">
-                  <svg className="size-full animate-spin" style={{ animationDuration: '7s' }} viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="#22d3ee" strokeWidth="1.5" strokeDasharray="10 8" opacity="0.8" />
-                    <line x1="60" y1="4" x2="60" y2="16" stroke="#22d3ee" strokeWidth="2.5" />
-                    <line x1="60" y1="104" x2="60" y2="116" stroke="#22d3ee" strokeWidth="2.5" />
-                    <line x1="4" y1="60" x2="16" y2="60" stroke="#22d3ee" strokeWidth="2.5" />
-                    <line x1="104" y1="60" x2="116" y2="60" stroke="#22d3ee" strokeWidth="2.5" />
-                  </svg>
-                </div>
+                <div className="absolute -inset-1.5 rounded-full border border-cyan-300/70 shadow-[0_0_16px_rgba(34,211,238,0.35)] pointer-events-none z-10" />
               )}
 
-              <svg viewBox="0 0 100 100" className="absolute inset-0 size-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.6)]">
-                <defs>
-                  <radialGradient id={`bubbleGrad-${d.id}`} cx="35%" cy="35%" r="65%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity={isActive ? "0.3" : "0.15"} />
-                    <stop offset="55%" stopColor={isActive ? "#0ea5e9" : "#4338ca"} stopOpacity={isActive ? "0.35" : "0.22"} />
-                    <stop offset="100%" stopColor={isActive ? "#0284c7" : "#1e1b4b"} stopOpacity={isActive ? "0.75" : "0.65"} />
-                  </radialGradient>
-                  {/* Glowing border filter */}
-                  <filter id="neonBorderGlow">
-                    <feGaussianBlur stdDeviation="3.5" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-                {/* Main reflective sphere body */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill={`url(#bubbleGrad-${d.id})`}
-                  stroke={isActive ? "#22d3ee" : "#6366f1"}
-                  strokeWidth={isActive ? "3" : "1.8"}
-                  filter={isActive ? "url(#neonBorderGlow)" : undefined}
-                  opacity="0.9"
-                />
-                {/* Specular gloss reflections */}
-                <path
-                  d="M 18 25 A 32 32 0 0 1 82 25 A 32 26 0 0 0 18 25 Z"
-                  fill="#ffffff"
-                  opacity={isActive ? "0.4" : "0.25"}
-                />
-                <circle cx="32" cy="32" r="5" fill="#ffffff" opacity="0.45" />
-                <circle cx="70" cy="70" r="3" fill="#ffffff" opacity="0.25" />
-              </svg>
-              
-              {/* Word text rendering inside bubble */}
-              <div className="absolute inset-2 flex items-center justify-center text-center">
-                <span className="font-sans text-xs sm:text-sm font-black tracking-wide text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] max-w-full px-1 truncate">
+              <div
+                className={`absolute inset-0 flex items-center justify-center rounded-full border text-center shadow-[0_6px_18px_rgba(0,0,0,0.38)] backdrop-blur-sm ${isActive
+                  ? "border-cyan-300/80 bg-cyan-950/80"
+                  : "border-indigo-300/35 bg-indigo-950/75"
+                  } ${isMobile ? "px-3.5" : "px-4"}`}
+              >
+                <div className="pointer-events-none absolute inset-x-3 top-1 h-2 rounded-full bg-white/15" />
+                <span
+                  className="relative z-10 block max-w-full whitespace-nowrap font-sans font-semibold leading-none tracking-normal text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]"
+                  style={{ fontSize: d.fontSize }}
+                >
                   {isActive ? (
                     <>
-                      <span className="text-emerald-400 font-extrabold drop-shadow-[0_0_8px_rgba(52,211,153,0.95)]">
+                      <span className="text-emerald-400 font-semibold drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]">
                         {typed}
                       </span>
                       <span className="text-cyan-400 font-normal animate-pulse">|</span>
-                      <span className={typoActive ? "text-rose-500 underline decoration-rose-500 font-extrabold" : "text-white"}>
+                      <span className={typoActive ? "text-rose-500 underline decoration-rose-500 font-semibold" : "text-white"}>
                         {untyped}
                       </span>
                     </>
@@ -1081,9 +1071,8 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
 
       {/* ─── Sea Level & SVG Laser Blaster Gun ─── */}
       <div
-        className={`absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-indigo-950/95 to-slate-900/80 backdrop-blur-[2px] border-t border-slate-800 ${
-          isMobile ? "h-[250px] px-2.5 pb-3.5 pt-4" : "h-20"
-        }`}
+        className={`absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-indigo-950/95 to-slate-900/80 backdrop-blur-[2px] border-t border-slate-800 ${isMobile ? "h-[250px] px-2.5 pb-3.5 pt-4" : "h-20"
+          }`}
       >
         {/* SVG Laser Gun Blaster Turret */}
         <div
@@ -1112,12 +1101,12 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
               {/* Gun Barrel Cannon */}
               <rect x="44" y="28" width="12" height="40" rx="3.5" fill="#1e293b" stroke="#6366f1" strokeWidth="2.5" />
               <rect x="46" y="32" width="8" height="32" fill="#0f172a" />
-              
+
               {/* Neon power coils wrapping around cannon */}
               <line x1="45" y1="36" x2="55" y2="36" stroke="#22d3ee" strokeWidth="2.5" />
               <line x1="45" y1="46" x2="55" y2="46" stroke="#22d3ee" strokeWidth="2.5" />
               <line x1="45" y1="56" x2="55" y2="56" stroke="#22d3ee" strokeWidth="2.5" />
-              
+
               {/* Laser Nozzle Core Cap */}
               <rect x="42" y="20" width="16" height="8" rx="2.5" fill="#312e81" stroke="#22d3ee" strokeWidth="1.5" />
               <ellipse cx="50" cy="20" rx="6" ry="2" fill="#ffffff" />
@@ -1140,9 +1129,8 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
           <div className="mx-auto flex flex-col gap-2 max-w-md pointer-events-auto">
             {/* Target Display */}
             <div className="w-full px-1 animate-in fade-in">
-              <div className={`h-9 w-full rounded-xl bg-slate-900/90 border flex items-center justify-center text-xs font-black shadow-inner tracking-wide transition-all ${
-                activeTargetId ? "border-cyan-500/40 text-cyan-300" : "border-slate-800 text-slate-500"
-              }`}>
+              <div className={`h-9 w-full rounded-xl bg-slate-900/90 border flex items-center justify-center text-xs font-black shadow-inner tracking-wide transition-all ${activeTargetId ? "border-cyan-500/40 text-cyan-300" : "border-slate-800 text-slate-500"
+                }`}>
                 {activeTargetId ? (
                   (() => {
                     const target = droplets.find((d) => d.id === activeTargetId);
@@ -1180,11 +1168,10 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
                         processKeyStroke(char);
                       }
                     }}
-                    className={`h-11 flex items-center justify-center rounded-xl active:scale-95 transition text-sm font-black shadow-md ${
-                      char === "clear"
-                        ? "flex-2 max-w-[80px] px-3.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-250 active:bg-rose-900"
-                        : "flex-1 max-w-[40px] bg-slate-900/90 hover:bg-slate-850 border border-slate-800 text-white"
-                    }`}
+                    className={`h-11 flex items-center justify-center rounded-xl active:scale-95 transition text-sm font-black shadow-md ${char === "clear"
+                      ? "flex-2 max-w-[80px] px-3.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-250 active:bg-rose-900"
+                      : "flex-1 max-w-[40px] bg-slate-900/90 hover:bg-slate-850 border border-slate-800 text-white"
+                      }`}
                   >
                     {char === "clear" ? "CLR" : char.toUpperCase()}
                   </button>
@@ -1209,7 +1196,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
                 <div className="mx-auto flex size-14 items-center justify-center rounded-3xl bg-indigo-950/40 text-indigo-400 border border-indigo-900/20">
                   <Pause className="size-6" />
                 </div>
-                
+
                 <div className="space-y-1">
                   <h3 className="text-2xl font-black text-white tracking-tight">Game Paused</h3>
                   <p className="text-xs text-slate-400 font-bold">
@@ -1218,17 +1205,17 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
                 </div>
 
                 <div className="space-y-2">
-                  <Button 
-                    className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 border-none shadow-md shadow-indigo-600/20" 
+                  <Button
+                    className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 border-none shadow-md shadow-indigo-600/20"
                     onClick={resumeGame}
                   >
                     <Play className="mr-2 size-4 fill-current" />
                     Resume Game
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full rounded-2xl py-6 font-bold border-slate-800 text-slate-400 hover:text-white bg-transparent hover:bg-slate-800/40" 
+
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-2xl py-6 font-bold border-slate-800 text-slate-400 hover:text-white bg-transparent hover:bg-slate-800/40"
                     onClick={exitToSelect}
                   >
                     Exit to Difficulty Select
@@ -1249,7 +1236,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
             className="w-full max-w-[340px]"
           >
             {/* The Wooden Board */}
-            <div 
+            <div
               className="p-6 pb-8 flex flex-col items-center text-center shadow-[0_12px_30px_rgba(0,0,0,0.7)] select-none relative overflow-hidden"
               style={{
                 backgroundColor: "#E5C39E",
@@ -1266,9 +1253,9 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
                 <span className="absolute top-5 right-0 text-emerald-400 text-sm rotate-45">●</span>
                 <span className="absolute -bottom-3 left-8 text-pink-500 text-sm">●</span>
                 <span className="absolute -bottom-2 right-8 text-cyan-400 text-lg">★</span>
-                
+
                 {/* Glitch styled Game Over Title */}
-                <h2 
+                <h2
                   className="text-5xl font-black tracking-tighter text-black leading-none text-center"
                   style={{
                     fontFamily: "Impact, 'Arial Black', sans-serif",
@@ -1281,7 +1268,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
 
               {/* LCD Monospaced Score */}
               <div className="mt-4 mb-6 text-center">
-                <span 
+                <span
                   className="text-2xl font-bold tracking-widest text-black"
                   style={{ fontFamily: "'Courier New', Courier, monospace" }}
                 >

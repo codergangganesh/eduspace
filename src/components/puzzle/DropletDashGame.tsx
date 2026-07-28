@@ -100,7 +100,7 @@ function DifficultyButton({
   onClick: () => void;
 }) {
   const info = getDifficultyInfo(difficulty);
-  
+
   const themes = {
     easy: {
       border: "hover:border-emerald-550 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10",
@@ -527,11 +527,11 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
     <div
       ref={boardRef}
       onClick={handleBoardClick}
-      className={`relative h-full min-h-[560px] w-full overflow-hidden bg-[#C7E6FA] ${
-        flash === "good" ? "ring-4 ring-emerald-400/50" : flash === "bad" ? "ring-4 ring-rose-400/50" : ""
-      }`}
+      className={`relative h-full min-h-[560px] w-full overflow-hidden bg-[#C7E6FA] ${flash === "good" ? "ring-4 ring-emerald-400/50" : flash === "bad" ? "ring-4 ring-rose-400/50" : ""
+        }`}
     >
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes shake {
           0%, 100% { transform: translate(0, 0); }
           15% { transform: translate(-4px, 0); }
@@ -568,9 +568,8 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
           {Array.from({ length: MAX_LIVES }).map((_, index) => (
             <Heart
               key={index}
-              className={`size-5 sm:size-6 transition-all duration-300 ${
-                index < lives ? "fill-rose-500 text-rose-500 scale-100" : "text-slate-300 dark:text-slate-700 scale-95"
-              }`}
+              className={`size-5 sm:size-6 transition-all duration-300 ${index < lives ? "fill-rose-500 text-rose-500 scale-100" : "text-slate-300 dark:text-slate-700 scale-95"
+                }`}
             />
           ))}
         </div>
@@ -615,11 +614,10 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
               inputMode="numeric"
               disabled={gameState !== "playing" || isMobile}
               placeholder="Type answer..."
-              className={`h-14 w-[280px] rounded-2xl border bg-white dark:bg-slate-900 text-slate-850 dark:text-white px-6 text-center text-xl font-black shadow-lg outline-none placeholder:text-slate-400 focus:ring-2 transition-all ${
-                inputError
-                  ? "border-rose-500 bg-rose-50 dark:bg-rose-950/20 focus:ring-rose-500 animate-shake"
-                  : `${getThemeFocusRing(themeId)} border-transparent`
-              }`}
+              className={`h-14 w-[280px] rounded-2xl border bg-white dark:bg-slate-900 text-slate-850 dark:text-white px-6 text-center text-xl font-black shadow-lg outline-none placeholder:text-slate-400 focus:ring-2 transition-all ${inputError
+                ? "border-rose-500 bg-rose-50 dark:bg-rose-950/20 focus:ring-rose-500 animate-shake"
+                : `${getThemeFocusRing(themeId)} border-transparent`
+                }`}
             />
           </div>
         </div>
@@ -667,9 +665,8 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
               {/* Gloss specular reflection */}
               <ellipse cx="26" cy="48" rx="6" ry="10" fill="white" opacity="0.4" transform="rotate(-15 26 48)" />
             </svg>
-            <span className={`absolute inset-x-2 top-[56%] z-10 -translate-y-1/2 text-center text-[12px] font-black leading-tight drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] ${
-              themeId === "retro" ? "font-mono text-emerald-100" : "font-sans text-white"
-            }`}>
+            <span className={`absolute inset-x-2 top-[56%] z-10 -translate-y-1/2 text-center text-[12px] font-black leading-tight drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] ${themeId === "retro" ? "font-mono text-emerald-100" : "font-sans text-white"
+              }`}>
               {droplet.expression}
             </span>
           </motion.div>
@@ -677,18 +674,16 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
       </AnimatePresence>
 
       <div
-        className={`absolute inset-x-0 bottom-0 z-20 bg-[#238ED4] ${
-          isMobile ? "h-[240px] px-5 pb-4 pt-3" : "h-20"
-        }`}
+        className={`absolute inset-x-0 bottom-0 z-20 bg-[#238ED4] ${isMobile ? "h-[240px] px-5 pb-4 pt-3" : "h-20"
+          }`}
       >
         {isMobile && (
           <div className="mx-auto flex flex-col gap-3 max-w-xs pointer-events-auto">
             {/* Mobile Answer Display */}
-            <div className={`h-11 w-full rounded-xl flex items-center justify-center text-xl font-black shadow-inner tracking-wider transition-all duration-150 ${
-              inputError
-                ? "bg-rose-500/30 border border-rose-500 text-rose-200 animate-shake"
-                : "bg-white/20 border border-white/30 text-white"
-            }`}>
+            <div className={`h-11 w-full rounded-xl flex items-center justify-center text-xl font-black shadow-inner tracking-wider transition-all duration-150 ${inputError
+              ? "bg-rose-500/30 border border-rose-500 text-rose-200 animate-shake"
+              : "bg-white/20 border border-white/30 text-white"
+              }`}>
               {answer || <span className="text-white/40 text-sm font-bold">Type answer...</span>}
             </div>
 
@@ -699,9 +694,8 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
                   key={key}
                   type="button"
                   onClick={() => handleKeypad(key)}
-                  className={`flex h-9 items-center justify-center rounded-xl border border-white/20 text-sm font-black text-white shadow-sm transition active:scale-95 ${
-                    key === "delete" ? "bg-rose-500" : "bg-white/20"
-                  }`}
+                  className={`flex h-9 items-center justify-center rounded-xl border border-white/20 text-sm font-black text-white shadow-sm transition active:scale-95 ${key === "delete" ? "bg-rose-500" : "bg-white/20"
+                    }`}
                 >
                   {key === "delete" ? <Delete className="size-4" /> : key}
                 </button>
@@ -723,7 +717,7 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
                 <div className="mx-auto flex size-14 items-center justify-center rounded-3xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-100/50 dark:border-sky-900/20">
                   <Pause className="size-6" />
                 </div>
-                
+
                 <div className="space-y-1">
                   <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Game Paused</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-450 font-bold">
@@ -732,17 +726,17 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
                 </div>
 
                 <div className="space-y-2">
-                  <Button 
-                    className="w-full rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-black py-6 border-none shadow-md shadow-sky-600/20" 
+                  <Button
+                    className="w-full rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-black py-6 border-none shadow-md shadow-sky-600/20"
                     onClick={resumeGame}
                   >
                     <Play className="mr-2 size-4 fill-current" />
                     Resume Game
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full rounded-2xl py-6 font-bold border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-250 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40" 
+
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-2xl py-6 font-bold border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-250 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40"
                     onClick={onExit}
                   >
                     Exit to Dashboard

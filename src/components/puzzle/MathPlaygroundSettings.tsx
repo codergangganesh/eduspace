@@ -33,16 +33,16 @@ export function MathPlaygroundSettings({
 
   const renderSettingsList = () => (
     <div className="space-y-6">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <span>Playground Settings</span>
         </h3>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onClose} 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
           className="rounded-xl size-8 border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <X className="size-4" />
@@ -52,14 +52,13 @@ export function MathPlaygroundSettings({
       {/* Sound Setting */}
       <div className="space-y-2">
         <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Sound & Audio</span>
-        <button 
+        <button
           onClick={onToggleMute}
           className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left bg-white dark:bg-slate-900"
         >
           <div className="flex items-center gap-3">
-            <div className={`size-10 rounded-xl flex items-center justify-center ${
-              isMuted ? 'bg-rose-500/10 text-rose-500' : 'bg-indigo-500/10 text-indigo-500'
-            }`}>
+            <div className={`size-10 rounded-xl flex items-center justify-center ${isMuted ? 'bg-rose-500/10 text-rose-500' : 'bg-indigo-500/10 text-indigo-500'
+              }`}>
               {isMuted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
             </div>
             <div>
@@ -67,12 +66,10 @@ export function MathPlaygroundSettings({
               <span className="text-xs text-slate-400 font-semibold">Procedural arcade game sounds</span>
             </div>
           </div>
-          <div className={`w-12 h-6 rounded-full p-1 transition-colors ${
-            isMuted ? 'bg-slate-200 dark:bg-slate-800' : 'bg-indigo-600'
-          }`}>
-            <div className={`bg-white size-4 rounded-full shadow-md transition-transform ${
-              isMuted ? 'translate-x-0' : 'translate-x-6'
-            }`} />
+          <div className={`w-12 h-6 rounded-full p-1 transition-colors ${isMuted ? 'bg-slate-200 dark:bg-slate-800' : 'bg-indigo-600'
+            }`}>
+            <div className={`bg-white size-4 rounded-full shadow-md transition-transform ${isMuted ? 'translate-x-0' : 'translate-x-6'
+              }`} />
           </div>
         </button>
       </div>
@@ -88,32 +85,28 @@ export function MathPlaygroundSettings({
               <button
                 key={themeId}
                 onClick={() => onChangeTheme(themeId)}
-                className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 transition-all bg-white dark:bg-slate-900 ${
-                  isSelected 
-                    ? 'border-indigo-500 bg-indigo-50/10 dark:bg-indigo-950/15'
-                    : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                }`}
+                className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 transition-all bg-white dark:bg-slate-900 ${isSelected
+                  ? 'border-indigo-500 bg-indigo-50/10 dark:bg-indigo-950/15'
+                  : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                  }`}
               >
-                <span className={`text-xs font-black ${
-                  themeId === 'cyber' ? 'text-indigo-500' :
+                <span className={`text-xs font-black ${themeId === 'cyber' ? 'text-indigo-500' :
                   themeId === 'retro' ? 'text-emerald-500' :
-                  themeId === 'sunset' ? 'text-orange-500' :
-                  'text-sky-500'
-                }`}>{t.name}</span>
-                
+                    themeId === 'sunset' ? 'text-orange-500' :
+                      'text-sky-500'
+                  }`}>{t.name}</span>
+
                 <div className="flex gap-1.5 items-center">
-                  <div className={`size-3 rounded-full ${
-                    themeId === 'cyber' ? 'bg-indigo-500' :
+                  <div className={`size-3 rounded-full ${themeId === 'cyber' ? 'bg-indigo-500' :
                     themeId === 'retro' ? 'bg-emerald-500' :
-                    themeId === 'sunset' ? 'bg-orange-500' :
-                    'bg-sky-500'
-                  }`} />
-                  <div className={`size-3 rounded-full ${
-                    themeId === 'cyber' ? 'bg-pink-500' :
+                      themeId === 'sunset' ? 'bg-orange-500' :
+                        'bg-sky-500'
+                    }`} />
+                  <div className={`size-3 rounded-full ${themeId === 'cyber' ? 'bg-pink-500' :
                     themeId === 'retro' ? 'bg-black border border-emerald-500' :
-                    themeId === 'sunset' ? 'bg-rose-500' :
-                    'bg-indigo-500'
-                  }`} />
+                      themeId === 'sunset' ? 'bg-rose-500' :
+                        'bg-indigo-500'
+                    }`} />
                   {isSelected && (
                     <span className="text-[9px] font-black text-indigo-500 uppercase tracking-wide ml-auto">Active</span>
                   )}
@@ -128,16 +121,16 @@ export function MathPlaygroundSettings({
       <div className="space-y-2 pt-2">
         <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Actions</span>
         <div className="grid grid-cols-2 gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={onResetTutorial}
             className="rounded-2xl py-5 border-slate-200 dark:border-slate-800 text-xs font-bold bg-white dark:bg-slate-900"
           >
             <HelpCircle className="size-4 mr-1.5 text-slate-400" />
             Show Tutorial
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={onResetHighScores}
             className="rounded-2xl py-5 border-slate-200 dark:border-slate-800 text-xs font-bold hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/20 bg-white dark:bg-slate-900"
           >
@@ -150,8 +143,8 @@ export function MathPlaygroundSettings({
   );
 
   const renderFooter = () => (
-    <Button 
-      onClick={onClose} 
+    <Button
+      onClick={onClose}
       className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 text-white rounded-2xl py-6 font-bold border-none"
     >
       Save & Apply

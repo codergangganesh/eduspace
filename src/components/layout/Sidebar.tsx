@@ -288,7 +288,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                 "flex items-center w-full gap-3 p-2 rounded-xl border border-transparent hover:bg-muted/50 transition-all duration-300 group outline-none",
                 isCollapsed ? "justify-center px-0" : "px-3"
               )}>
-                  <Avatar className={cn(
+                <Avatar className={cn(
                   "border border-border/50 shadow-sm transition-transform duration-300 group-hover:scale-105",
                   isCollapsed ? "size-10" : "size-9"
                 )}>
@@ -300,7 +300,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
 
                 {!isCollapsed && (
                   <div className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-black tracking-tight text-foreground/90 truncate group-hover:text-foreground transition-colors">
+                    <p className="text-sm font-black tracking-tight text-foreground/90 truncate group-hover:text-foreground transition-colors">
                       {displayName}
                     </p>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 truncate">
@@ -355,3 +355,4 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
     </aside>
   );
 }
+

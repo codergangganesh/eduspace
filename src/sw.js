@@ -119,7 +119,7 @@ async function handlePushEvent(data) {
 
   // ── Build Native Mobile Notification Format ────────────────────────────────
   const title = data.title || 'EduSpace';
-  
+
   // Requirement: App name + Branded icon + Title + Message preview
   const options = {
     body: data.body || 'You have a new notification',

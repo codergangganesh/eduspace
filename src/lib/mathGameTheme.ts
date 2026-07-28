@@ -1,7 +1,8 @@
 // Visual Theme Definitions for MathPath Game
 export interface MathTheme {
-  id: 'cyber' | 'retro' | 'sunset' | 'nordic';
+  id: 'cyber' | 'retro' | 'sunset' | 'nordic' | 'cricket';
   name: string;
+
   gridBg: string;         // Game board grid container wrapper style
   cellDefault: string;    // Idle cell style
   cellSelected: string;   // Selected cell within the path (not head)
@@ -80,5 +81,22 @@ export const MATH_THEMES: Record<MathTheme['id'], MathTheme> = {
     btnSecondary: 'border-sky-200/80 dark:border-slate-800/80 text-sky-700 dark:text-sky-400 hover:bg-sky-50/25 dark:hover:bg-slate-800/25',
     accentColor: 'text-sky-500',
     fontClass: 'font-sans'
+  },
+  cricket: {
+    id: 'cricket',
+    name: 'Cricket Stadium 3D',
+    gridBg: 'bg-slate-950/80 backdrop-blur-xl border border-amber-500/30 p-2.5 rounded-[2.5rem] shadow-2xl relative aspect-square select-none touch-none overflow-hidden',
+    cellDefault: 'bg-slate-900/80 backdrop-blur-md border border-amber-500/20 text-amber-100 hover:border-amber-400 hover:scale-[1.03] shadow-md',
+    cellSelected: 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold',
+    cellLastSelected: 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/40',
+    targetCardBg: 'w-full border border-amber-500/30 shadow-2xl rounded-[2rem] overflow-hidden bg-slate-950/85 backdrop-blur-xl text-amber-400 mb-6',
+    targetText: 'text-6xl font-black tracking-tight bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-200 bg-clip-text text-transparent',
+    targetLabel: 'absolute top-3 left-3 bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider text-amber-300',
+    textColor: 'text-amber-100/90 font-medium',
+    btnPrimary: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition-all',
+    btnSecondary: 'border-amber-500/40 bg-slate-900/80 backdrop-blur-md text-amber-300 hover:bg-slate-800',
+    accentColor: 'text-amber-400',
+    fontClass: 'font-sans'
   }
 };
+
