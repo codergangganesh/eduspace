@@ -50,7 +50,6 @@ import {
   Loader2,
   Upload,
   Trash2,
-  QrCode,
   Share2,
   Linkedin,
   Github,
@@ -89,7 +88,6 @@ export default function Profile() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [showPublicProfile, setShowPublicProfile] = useState(false);
-  const [showQRCode, setShowQRCode] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -617,20 +615,36 @@ export default function Profile() {
 
                 {/* User Info & Actions */}
                 <div className="flex-1 w-full pt-2 flex flex-col items-center sm:items-start min-w-0">
+                  <div className="min-w-0 w-full mb-3 sm:mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center sm:justify-start gap-2 truncate">
+                      {formData.full_name || "User"}
+                      {profile?.verified && (
+                        <CheckCircle className="size-5 text-primary fill-primary/10 shrink-0" />
+                      )}
+                    </h1>
+                    <p className="text-muted-foreground truncate">
+                      {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
+                    </p>
+                  </div>
+
+                  {/* Progress Bar & Actions Row */}
                   <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 w-full">
-                    <div className="min-w-0 flex-1">
-                      <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center sm:justify-start gap-2 truncate">
-                        {formData.full_name || "User"}
-                        {profile?.verified && (
-                          <CheckCircle className="size-5 text-primary fill-primary/10 shrink-0" />
-                        )}
-                      </h1>
-                      <p className="text-muted-foreground truncate">
-                        {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
-                      </p>
+                    {/* Profile Completeness Tracker */}
+                    <div className="space-y-1.5 w-full sm:max-w-md flex-1">
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
+                        <span className="text-muted-foreground font-medium uppercase tracking-widest">Completeness</span>
+                        <span className="text-primary font-black">{completeness}%</span>
+                      </div>
+                      <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden shadow-inner border border-border/30">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-1000 ease-out rounded-full shadow-[0_0_8px_rgba(var(--primary),0.3)]"
+                          style={{ width: `${completeness}%` }}
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0 shrink-0">
+                    {/* Action Buttons (Right side of Progress Bar) */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar shrink-0 justify-center sm:justify-end pb-1 sm:pb-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -643,34 +657,11 @@ export default function Profile() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => setShowQRCode(true)}
-                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
-                        title="Digital Business Card"
-                      >
-                        <QrCode className="size-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
                         className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
                         onClick={() => handleShare()}
                       >
                         <Share2 className="size-4" />
                       </Button>
-                    </div>
-                  </div>
-
-                  {/* Profile Completeness Tracker */}
-                  <div className="mt-4 sm:mt-2 space-y-1.5 w-full sm:max-w-md">
-                    <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                      <span className="text-muted-foreground font-medium uppercase tracking-widest">Completeness</span>
-                      <span className="text-primary font-black">{completeness}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden shadow-inner border border-border/30">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-1000 ease-out rounded-full shadow-[0_0_8px_rgba(var(--primary),0.3)]"
-                        style={{ width: `${completeness}%` }}
-                      />
                     </div>
                   </div>
                 </div>
@@ -1523,76 +1514,6 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
-        <DialogContent className="max-w-[320px] rounded-[2rem] overflow-hidden p-0 border-none bg-transparent shadow-2xl [&>button]:hidden">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Academic Identity</DialogTitle>
-            <DialogDescription>
-              Scan this QR code to connect with your academic profile.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-slate-50 dark:bg-[#050b14] p-6 text-center relative overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-[2rem]">
-            {/* Professional Accents */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-primary/40" />
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Shield className="size-16 text-primary rotate-12" />
-            </div>
-            
-            {/* Subtle Grid Pattern */}
-            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02] pointer-events-none" 
-                 style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="mb-5">
-                <div className="size-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center mb-3 mx-auto shadow-sm border border-slate-100 dark:border-white/5">
-                  <QrCode className="size-7 text-primary" strokeWidth={1.5} />
-                </div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Academic ID</h2>
-                <div className="flex items-center justify-center gap-1.5 mt-1">
-                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Verified Profile</p>
-                </div>
-              </div>
-
-              {/* QR Code Container - Glass Look */}
-              <div className="relative p-4 bg-white dark:bg-slate-900/50 rounded-[1.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-white/10 mb-6 group transition-all">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity" />
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://eduspaceacademy.online/p/${user?.id}`)}`}
-                  alt="QR Code"
-                  className="size-36 object-contain relative z-10 dark:invert-[0.05]"
-                />
-              </div>
-
-              <div className="w-full space-y-2.5">
-                <Button
-                  className="w-full rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-lg shadow-slate-950/10 h-11 text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
-                  onClick={() => {
-                    const profileUrl = `https://eduspaceacademy.online/p/${user?.id}`;
-                    navigator.clipboard.writeText(profileUrl);
-                    toast.success("Profile link copied!");
-                  }}
-                >
-                  <Copy className="size-3.5 mr-2" />
-                  Copy Profile Link
-                </Button>
-                <button
-                  onClick={() => setShowQRCode(false)}
-                  className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors py-2"
-                >
-                  Dismiss
-                </button>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-white/5 w-full flex items-center justify-center gap-2">
-                <div className="px-2 py-0.5 rounded bg-primary/10 text-[9px] font-bold text-primary uppercase tracking-tighter">
-                  Eduspace Digital
-                </div>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Mobile Bottom Navigation for Profile Tabs */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border xl:hidden pb-safe">
