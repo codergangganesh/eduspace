@@ -9,10 +9,19 @@ import { mathGameAudio } from "../../lib/mathGameAudio";
 import { MathTheme } from "../../lib/mathGameTheme";
 import { getRandomWord, getDifficultyInfo, type WordDifficulty } from "../../lib/typeDashWords";
 
+import {
+  AnimatedBackgroundEnvironment,
+  BackgroundEvent,
+  GraphicsQuality,
+  WeatherPreset,
+} from "./AnimatedBackgroundEnvironment";
+
 interface TypeDashGameProps {
   themeId: MathTheme["id"];
   onExit: () => void;
   onOpenSettings: () => void;
+  quality?: GraphicsQuality;
+  weatherPreset?: WeatherPreset;
 }
 
 interface ActiveWordDroplet {
@@ -56,8 +65,19 @@ const MIN_SPAWN_MS = 1200;
 const SEA_HEIGHT_DESKTOP = 80;
 const SEA_HEIGHT_MOBILE = 250;
 
-export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGameProps) {
+export function TypeDashGame({
+  themeId,
+  onExit,
+  onOpenSettings,
+  quality = "high",
+  weatherPreset = "auto",
+}: TypeDashGameProps) {
   const [gameState, setGameState] = useState<GameState>("select");
+  const [bgEvent, setBgEvent] = useState<BackgroundEvent | null>(null);
+
+  const triggerBgEvent = useCallback((event: BackgroundEvent) => {
+    setBgEvent({ ...event, id: `${event.type}-${Date.now()}-${Math.random()}` });
+  }, []);
   const [difficulty, setDifficulty] = useState<WordDifficulty>("easy");
   const [droplets, setDroplets] = useState<ActiveWordDroplet[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -313,6 +333,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
       } else {
         // No match at all
         setFlash("bad");
+        triggerBgEvent({ type: "miss", intensity: 0.5 });
         window.setTimeout(() => setFlash(null), 120);
         mathGameAudio.playError();
       }
@@ -358,6 +379,8 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
             endY: targetPxY,
             active: true
           });
+
+          triggerBgEvent({ type: "laser", intensity: 0.95 });
 
           // Muzzle flare animation
           setMuzzleFlash(true);
@@ -614,26 +637,12 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
 
     return (
       <div className="flex h-full min-h-[560px] w-full items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden">
-        {/* Neon cosmic background effect */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08)_0%,transparent_70%)] pointer-events-none" />
-
-        {/* Custom scroll star CSS */}
-        <style dangerouslySetInnerHTML={{
-          __html: `
-          .stars-bg {
-            background-image: 
-              radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
-              radial-gradient(2px 2px at 150px 100px, #a855f7, rgba(0,0,0,0)),
-              radial-gradient(3px 3px at 80px 220px, #60a5fa, rgba(0,0,0,0));
-            background-size: 300px 300px;
-            animation: scrollStars 60s linear infinite;
-          }
-          @keyframes scrollStars {
-            from { background-position: 0 0; }
-            to { background-position: 300px 600px; }
-          }
-        `}} />
-        <div className="absolute inset-0 stars-bg opacity-40 pointer-events-none" />
+        <AnimatedBackgroundEnvironment
+          themeId={themeId}
+          quality={quality}
+          weatherPreset={weatherPreset}
+          eventTrigger={bgEvent}
+        />
 
         {/* Back and Settings buttons */}
         <div className="absolute inset-x-0 top-0 z-40 px-5 py-4 flex items-center justify-between">
@@ -641,7 +650,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
             variant="ghost"
             size="icon"
             onClick={onExit}
-            className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+            className="rounded-full bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-white/20 dark:border-slate-800/30 shadow-md hover:bg-white dark:hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
             title="Exit to Dashboard"
           >
             <ArrowLeft className="size-5" />
@@ -651,7 +660,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
             variant="ghost"
             size="icon"
             onClick={onOpenSettings}
-            className="rounded-full bg-slate-900/90 text-slate-200 border border-slate-800 shadow-md hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
+            className="rounded-full bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-white/20 dark:border-slate-800/30 shadow-md hover:bg-white dark:hover:bg-slate-800 size-10 flex items-center justify-center transition-all active:scale-95 shrink-0"
             title="Settings"
           >
             <Settings className="size-5" />
@@ -661,16 +670,16 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md z-10"
+          className="w-full max-w-md relative z-10"
         >
-          <Card className="border-slate-800 shadow-2xl rounded-[2.5rem] overflow-hidden bg-slate-900/95 backdrop-blur-md">
+          <Card className="border-slate-200/60 dark:border-slate-800/80 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
             <CardContent className="space-y-6 p-8">
               <div className="text-center space-y-2">
-                <div className="mx-auto mb-1 flex size-14 items-center justify-center rounded-3xl bg-indigo-950/40 text-indigo-400 shadow-lg border border-indigo-900/30">
-                  <Zap className="size-8 fill-indigo-400/20" />
+                <div className="mx-auto mb-1 flex size-14 items-center justify-center rounded-3xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100/50 dark:border-indigo-900/20">
+                  <Zap className="size-8 fill-indigo-500/20" />
                 </div>
-                <h2 className="text-3xl font-black tracking-tight text-white">Type Dash</h2>
-                <p className="text-indigo-300 font-bold text-xs max-w-xs mx-auto">
+                <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Type Dash</h2>
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-xs max-w-xs mx-auto">
                   Aim your laser blaster and blast the falling words before they splash the ocean!
                 </p>
               </div>
@@ -678,28 +687,47 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
               <div className="space-y-3">
                 {difficulties.map((item) => {
                   const info = getDifficultyInfo(item);
-                  const themes = {
-                    easy: "hover:border-emerald-500/50 hover:bg-emerald-950/20 border-slate-800 text-emerald-400",
-                    medium: "hover:border-indigo-500/50 hover:bg-indigo-950/20 border-slate-800 text-indigo-400",
-                    hard: "hover:border-orange-500/50 hover:bg-orange-950/20 border-slate-800 text-orange-400",
-                    extreme: "hover:border-rose-500/50 hover:bg-rose-950/20 border-slate-800 text-rose-400"
+                  const themeStyles = {
+                    easy: {
+                      button: "hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/70",
+                      title: "text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400",
+                      badge: "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40 font-black"
+                    },
+                    medium: {
+                      button: "hover:border-indigo-500 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/70",
+                      title: "text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400",
+                      badge: "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/40 font-black"
+                    },
+                    hard: {
+                      button: "hover:border-orange-500 hover:bg-orange-50/40 dark:hover:bg-orange-950/20 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/70",
+                      title: "text-slate-800 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400",
+                      badge: "bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-900/40 font-black"
+                    },
+                    extreme: {
+                      button: "hover:border-rose-500 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/70",
+                      title: "text-slate-800 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400",
+                      badge: "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40 font-black"
+                    }
                   };
+
+                  const style = themeStyles[item];
+
                   return (
                     <button
                       key={item}
                       type="button"
                       onClick={() => startGame(item)}
-                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group bg-slate-950/65 ${themes[item]}`}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group shadow-sm ${style.button}`}
                     >
                       <div>
-                        <h4 className="font-extrabold text-sm text-slate-100 group-hover:text-white transition-colors">
+                        <h4 className={`font-extrabold text-sm transition-colors ${style.title}`}>
                           {info.label}
                         </h4>
-                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                           {info.description}
                         </p>
                       </div>
-                      <span className="text-[9px] font-bold px-2.5 py-1 rounded-full bg-slate-900">
+                      <span className={`text-[9px] px-2.5 py-1 rounded-full uppercase tracking-wider ${style.badge}`}>
                         {item.toUpperCase()}
                       </span>
                     </button>
@@ -817,13 +845,13 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
         }
       `}} />
 
-      <div className="space-stars" />
-      <div className="space-stars-layer2" />
-      <div className="space-nebula" />
-
-      {/* Floating cartoon planet decoration */}
-      <div className="planet-orbit1 absolute top-28 left-[8%] size-16 rounded-full bg-gradient-to-tr from-indigo-600 to-pink-500 opacity-20 filter blur-[1px] border border-pink-400/20 shadow-lg pointer-events-none" />
-      <div className="planet-orbit2 absolute top-40 right-[10%] size-20 rounded-full bg-gradient-to-tr from-cyan-600 to-emerald-500 opacity-20 filter blur-[1px] border border-cyan-400/20 shadow-lg pointer-events-none" />
+      <AnimatedBackgroundEnvironment
+        themeId={themeId}
+        quality={quality}
+        weatherPreset={weatherPreset}
+        eventTrigger={bgEvent}
+        isPaused={gameState === "paused"}
+      />
 
       {/* Sleek transparent game header */}
       <TooltipProvider>
@@ -923,7 +951,7 @@ export function TypeDashGame({ themeId, onExit, onOpenSettings }: TypeDashGamePr
 
       {/* Floating mini stats for mobile */}
       {isMobile && (
-        <div className="absolute left-5 top-20 z-40 bg-slate-900/80 border border-slate-800/80 rounded-xl p-2.5 flex flex-col gap-1 text-[10px] font-black text-slate-350 shadow-md">
+        <div className="absolute left-5 top-20 z-40 bg-slate-900/80 border border-slate-800/80 rounded-xl p-2.5 flex flex-col gap-1 text-[10px] font-black text-slate-300 shadow-md">
           <div>WPM: <span className="text-cyan-400">{wpm}</span></div>
           <div>ACCURACY: <span className="text-emerald-400">{accuracy}%</span></div>
         </div>

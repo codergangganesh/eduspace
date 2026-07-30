@@ -11,10 +11,19 @@ import {
   type DropletDifficulty,
 } from "../../lib/dropletDashQuestion";
 
+import {
+  AnimatedBackgroundEnvironment,
+  BackgroundEvent,
+  GraphicsQuality,
+  WeatherPreset,
+} from "./AnimatedBackgroundEnvironment";
+
 interface DropletDashGameProps {
   themeId: MathTheme["id"];
   onExit: () => void;
   onOpenSettings: () => void;
+  quality?: GraphicsQuality;
+  weatherPreset?: WeatherPreset;
 }
 
 interface ActiveDroplet {
@@ -103,27 +112,27 @@ function DifficultyButton({
 
   const themes = {
     easy: {
-      border: "hover:border-emerald-550 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10",
+      border: "hover:border-emerald-500 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10",
       text: "group-hover:text-emerald-500",
       badge: "bg-emerald-100/30 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400",
       tag: "Warm-up"
     },
     medium: {
       border: "hover:border-indigo-500/50 hover:bg-indigo-50/20 dark:hover:bg-indigo-950/10",
-      text: "group-hover:text-indigo-550",
-      badge: "bg-indigo-100/30 dark:bg-indigo-950/30 text-indigo-650 dark:text-indigo-450",
+      text: "group-hover:text-indigo-500",
+      badge: "bg-indigo-100/30 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400",
       tag: "Standard"
     },
     hard: {
       border: "hover:border-orange-500/50 hover:bg-orange-50/20 dark:hover:bg-orange-950/10",
-      text: "group-hover:text-orange-550",
+      text: "group-hover:text-orange-500",
       badge: "bg-orange-100/30 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400",
       tag: "Advanced"
     },
     extreme: {
       border: "hover:border-rose-500/50 hover:bg-rose-50/20 dark:hover:bg-rose-950/10",
-      text: "group-hover:text-rose-550",
-      badge: "bg-rose-100/30 dark:bg-rose-950/30 text-rose-650 dark:text-rose-450",
+      text: "group-hover:text-rose-500",
+      badge: "bg-rose-100/30 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400",
       tag: "Expert"
     }
   };
@@ -151,8 +160,19 @@ function DifficultyButton({
   );
 }
 
-export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDashGameProps) {
+export function DropletDashGame({
+  themeId,
+  onExit,
+  onOpenSettings,
+  quality = "high",
+  weatherPreset = "auto",
+}: DropletDashGameProps) {
   const [gameState, setGameState] = useState<GameState>("select");
+  const [bgEvent, setBgEvent] = useState<BackgroundEvent | null>(null);
+
+  const triggerBgEvent = useCallback((event: BackgroundEvent) => {
+    setBgEvent({ ...event, id: `${event.type}-${Date.now()}-${Math.random()}` });
+  }, []);
   const [difficulty, setDifficulty] = useState<DropletDifficulty>("easy");
   const [droplets, setDroplets] = useState<ActiveDroplet[]>([]);
   const [answer, setAnswer] = useState("");
@@ -268,14 +288,16 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
     setLives(nextLives);
     streakRef.current = 0;
     setFlash("bad");
+    triggerBgEvent({ type: "miss", intensity: 0.8 });
     window.setTimeout(() => setFlash(null), 180);
     mathGameAudio.playWaterSplash();
 
     if (nextLives <= 0) {
+      triggerBgEvent({ type: "gameover", intensity: 1.0 });
       mathGameAudio.playGameOver();
       endGame();
     }
-  }, [endGame]);
+  }, [endGame, triggerBgEvent]);
 
   const checkAnswer = useCallback((value: string) => {
     const numericValue = Number.parseInt(value, 10);
@@ -296,6 +318,7 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
     setScore(nextScore);
     setAnswer("");
     setFlash("good");
+    triggerBgEvent({ type: "pop", intensity: 0.9 });
     window.setTimeout(() => setFlash(null), 180);
     mathGameAudio.playWaterDrop();
 
@@ -435,7 +458,13 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
     const difficulties: DropletDifficulty[] = ["easy", "medium", "hard", "extreme"];
 
     return (
-      <div className="flex h-full min-h-[560px] w-full items-center justify-center bg-[#C7E6FA] dark:bg-slate-950 px-4 py-8 relative">
+      <div className="flex h-full min-h-[560px] w-full items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden">
+        <AnimatedBackgroundEnvironment
+          themeId={themeId}
+          quality={quality}
+          weatherPreset={weatherPreset}
+          eventTrigger={bgEvent}
+        />
         {/* Top Header Bar with clean Back arrow in top-left */}
         <div className="absolute inset-x-0 top-0 z-40 px-5 py-4 flex items-center justify-between">
           <Button
@@ -462,16 +491,16 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md relative z-10"
         >
-          <Card className="border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white dark:bg-slate-900/95">
+          <Card className="border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
             <CardContent className="space-y-6 p-8">
               <div className="text-center space-y-2">
                 <div className="mx-auto mb-1 flex size-14 items-center justify-center rounded-3xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 shadow-sm border border-sky-100/50 dark:border-sky-900/20">
                   <Droplets className="size-8" />
                 </div>
                 <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Droplet Dash</h2>
-                <p className="text-slate-500 dark:text-slate-450 font-bold text-xs max-w-xs mx-auto">
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-xs max-w-xs mx-auto">
                   Type the answer before the water droplets reach the sea.
                 </p>
               </div>
@@ -494,15 +523,21 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
 
   if (gameState === "gameover") {
     return (
-      <div className="flex h-full min-h-[560px] w-full items-center justify-center bg-[#C7E6FA] dark:bg-slate-950 px-4 py-8">
-        <Card className="w-full max-w-sm overflow-hidden rounded-[2.5rem] border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-900 shadow-2xl">
+      <div className="flex h-full min-h-[560px] w-full items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden">
+        <AnimatedBackgroundEnvironment
+          themeId={themeId}
+          quality={quality}
+          weatherPreset={weatherPreset}
+          eventTrigger={bgEvent}
+        />
+        <Card className="w-full max-w-sm overflow-hidden rounded-[2.5rem] border-slate-200/50 dark:border-slate-800/50 bg-white/95 dark:bg-slate-900/95 shadow-2xl relative z-10 backdrop-blur-md">
           <CardContent className="space-y-5 p-8 text-center">
             <div className="mx-auto flex size-14 items-center justify-center rounded-3xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-100/50 dark:border-sky-900/20">
               <Droplets className="size-8" />
             </div>
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white">Game Over</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-455">
+              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
                 Score <span className="text-yellow-600 dark:text-yellow-400 font-extrabold">{score}</span> • Best streak <span className="text-sky-500 font-black">{streakRef.current}</span>
               </p>
             </div>
@@ -528,7 +563,7 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
     <div
       ref={boardRef}
       onClick={handleBoardClick}
-      className={`relative h-full min-h-[560px] w-full overflow-hidden bg-[#C7E6FA] ${flash === "good" ? "ring-4 ring-emerald-400/50" : flash === "bad" ? "ring-4 ring-rose-400/50" : ""
+      className={`relative h-full min-h-[560px] w-full overflow-hidden bg-[#C7E6FA] dark:bg-slate-950 ${flash === "good" ? "ring-4 ring-emerald-400/50" : flash === "bad" ? "ring-4 ring-rose-400/50" : ""
         }`}
     >
       <style dangerouslySetInnerHTML={{
@@ -546,10 +581,13 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
           animation: shake 0.2s ease-in-out;
         }
       `}} />
-      <Cloud className="absolute left-[11%] top-[6%]" />
-      <Cloud className="absolute left-[31%] top-[14%] scale-110" />
-      <Cloud className="absolute right-[36%] top-[9%] scale-90" />
-      <Cloud className="absolute right-[14%] top-[7%] scale-105" />
+      <AnimatedBackgroundEnvironment
+        themeId={themeId}
+        quality={quality}
+        weatherPreset={weatherPreset}
+        eventTrigger={bgEvent}
+        isPaused={gameState === "paused"}
+      />
 
       {/* Sleek transparent game header */}
       <div className="absolute inset-x-0 top-0 z-40 px-5 py-4 flex items-center justify-between">
@@ -577,7 +615,7 @@ export function DropletDashGame({ themeId, onExit, onOpenSettings }: DropletDash
 
         {/* Right Side: Score, Settings, and Pause */}
         <div className="flex items-center gap-2">
-          <div className="bg-white/90 dark:bg-slate-900/90 border border-white/20 dark:border-slate-800/30 rounded-full px-4 py-2.5 text-xs sm:text-sm font-black uppercase text-slate-750 dark:text-slate-200 shadow-md flex items-center gap-1">
+          <div className="bg-white/90 dark:bg-slate-900/90 border border-white/20 dark:border-slate-800/30 rounded-full px-4 py-2.5 text-xs sm:text-sm font-black uppercase text-slate-700 dark:text-slate-200 shadow-md flex items-center gap-1">
             <span>Score:</span>
             <span className={`font-extrabold ${getThemeTextColor(themeId)}`}>{score}</span>
           </div>

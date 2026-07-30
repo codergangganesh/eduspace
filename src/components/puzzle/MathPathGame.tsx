@@ -20,6 +20,13 @@ import { toast } from 'sonner';
 import { mathGameAudio } from '../../lib/mathGameAudio';
 import { MATH_THEMES, MathTheme } from '../../lib/mathGameTheme';
 
+import {
+  AnimatedBackgroundEnvironment,
+  BackgroundEvent,
+  GraphicsQuality,
+  WeatherPreset,
+} from './AnimatedBackgroundEnvironment';
+
 interface Cell {
   id: string;
   val: number;
@@ -38,6 +45,8 @@ interface MathPathGameProps {
   onNewChallenge?: () => void; // Prop to switch modes via modal
   mathOperation?: 'addition' | 'multiplication';
   compact?: boolean;
+  quality?: GraphicsQuality;
+  weatherPreset?: WeatherPreset;
 }
 
 const getActivePillStyle = (themeId: MathTheme['id']) => {
@@ -63,8 +72,16 @@ export function MathPathGame({
   onTimerTick,
   onNewChallenge,
   mathOperation = 'addition',
-  compact = false
+  compact = false,
+  quality = 'high',
+  weatherPreset = 'auto',
 }: MathPathGameProps) {
+  const [bgEvent, setBgEvent] = useState<BackgroundEvent | null>(null);
+
+  const triggerBgEvent = (event: BackgroundEvent) => {
+    setBgEvent({ ...event, id: `${event.type}-${Date.now()}-${Math.random()}` });
+  };
+
   const DAILY_TARGET_SCORE = 100;
 
   // GRID_SIZE is dynamic based on difficulty
@@ -598,6 +615,7 @@ export function MathPathGame({
 
   const handleMatchSuccess = () => {
     setIsPressed(false);
+    triggerBgEvent({ type: 'hit', intensity: 0.9 });
     const multiplierCount = selectedPath.filter(c => c.effect === 'multiplier').length;
     const timeBonusCount = selectedPath.filter(c => c.effect === 'time').length;
     const hasBomb = selectedPath.some(c => c.effect === 'bomb');
@@ -744,6 +762,7 @@ export function MathPathGame({
   const handleMatchFailure = () => {
     setIsPressed(false);
     setShakeCells(true);
+    triggerBgEvent({ type: 'miss', intensity: 0.7 });
     mathGameAudio.playError();
     setTimeout(() => {
       setShakeCells(false);
@@ -1111,7 +1130,7 @@ export function MathPathGame({
                   You reached {score} points and secured your daily study progress.
                 </p>
               </div>
-              <Button onClick={handleExitAndReset} className="w-full bg-emerald-600 dark:bg-emerald-750 hover:bg-emerald-500 dark:hover:bg-emerald-700 text-white rounded-2xl py-6 font-bold shadow-lg shadow-emerald-600/25 border-none">
+              <Button onClick={handleExitAndReset} className="w-full bg-emerald-600 dark:bg-emerald-700 hover:bg-emerald-500 dark:hover:bg-emerald-700 text-white rounded-2xl py-6 font-bold shadow-lg shadow-emerald-600/25 border-none">
                 Back to Playground
               </Button>
             </motion.div>
@@ -1140,7 +1159,7 @@ export function MathPathGame({
                   <Button onClick={() => initializeBoard(false)} className="w-full rounded-2xl py-6 font-bold bg-[#0B57D0] dark:bg-blue-600 hover:bg-[#0845A4] dark:hover:bg-blue-700 text-white border-none">
                     Play Again
                   </Button>
-                  <Button variant="outline" onClick={onExit} className="w-full rounded-2xl py-6 font-bold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350">
+                  <Button variant="outline" onClick={onExit} className="w-full rounded-2xl py-6 font-bold border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
                     Exit to Playground
                   </Button>
                 </div>

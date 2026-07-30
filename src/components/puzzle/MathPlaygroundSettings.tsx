@@ -8,6 +8,8 @@ import { Button } from '../ui/button';
 import { MATH_THEMES, MathTheme } from '../../lib/mathGameTheme';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../ui/sheet';
 
+import { GraphicsQuality, WeatherPreset } from './AnimatedBackgroundEnvironment';
+
 interface MathPlaygroundSettingsProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +19,10 @@ interface MathPlaygroundSettingsProps {
   onChangeTheme: (themeId: MathTheme['id']) => void;
   onResetHighScores: () => void;
   onResetTutorial: () => void;
+  quality?: GraphicsQuality;
+  onChangeQuality?: (quality: GraphicsQuality) => void;
+  weatherPreset?: WeatherPreset;
+  onChangeWeatherPreset?: (preset: WeatherPreset) => void;
 }
 
 export function MathPlaygroundSettings({
@@ -27,7 +33,11 @@ export function MathPlaygroundSettings({
   activeThemeId,
   onChangeTheme,
   onResetHighScores,
-  onResetTutorial
+  onResetTutorial,
+  quality = 'high',
+  onChangeQuality,
+  weatherPreset = 'auto',
+  onChangeWeatherPreset,
 }: MathPlaygroundSettingsProps) {
   const isMobile = useIsMobile();
 
@@ -117,28 +127,59 @@ export function MathPlaygroundSettings({
         </div>
       </div>
 
-      {/* Reset Actions */}
-      <div className="space-y-2 pt-2">
-        <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Actions</span>
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            onClick={onResetTutorial}
-            className="rounded-2xl py-5 border-slate-200 dark:border-slate-800 text-xs font-bold bg-white dark:bg-slate-900"
-          >
-            <HelpCircle className="size-4 mr-1.5 text-slate-400" />
-            Show Tutorial
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onResetHighScores}
-            className="rounded-2xl py-5 border-slate-200 dark:border-slate-800 text-xs font-bold hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/20 bg-white dark:bg-slate-900"
-          >
-            <Trophy className="size-4 mr-1.5 text-rose-500" />
-            Reset Scores
-          </Button>
+      {/* Graphics Quality */}
+      {onChangeQuality && (
+        <div className="space-y-2">
+          <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Background Graphics (60 FPS)</span>
+          <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+            {(['low', 'medium', 'high', 'ultra'] as GraphicsQuality[]).map((q) => (
+              <button
+                key={q}
+                onClick={() => onChangeQuality(q)}
+                className={`py-2 rounded-xl text-xs font-black capitalize transition-all ${quality === q
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Weather Preset */}
+      {onChangeWeatherPreset && (
+        <div className="space-y-2">
+          <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Atmosphere & Weather</span>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { id: 'auto', label: 'Dynamic' },
+                { id: 'sunny', label: 'Sunny Sky' },
+                { id: 'sunset', label: 'Sunset' },
+                { id: 'rain', label: 'Rainstorm' },
+                { id: 'snow', label: 'Snowfall' },
+                { id: 'cyberstorm', label: 'Cyber Storm' },
+              ] as { id: WeatherPreset; label: string }[]
+            ).map((w) => (
+              <button
+                key={w.id}
+                onClick={() => onChangeWeatherPreset(w.id)}
+                className={`py-2 px-2.5 rounded-xl border text-xs font-extrabold transition-all text-center ${weatherPreset === w.id
+                  ? 'border-indigo-500 bg-indigo-50/20 text-indigo-600 dark:text-indigo-400'
+                  : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                  }`}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reset Actions */}
+
     </div>
   );
 

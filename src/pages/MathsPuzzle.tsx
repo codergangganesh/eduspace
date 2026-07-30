@@ -26,6 +26,7 @@ import { useStreak } from '../contexts/StreakContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { MathPlaygroundSettings } from '../components/puzzle/MathPlaygroundSettings';
+import { AnimatedBackgroundEnvironment, GraphicsQuality, WeatherPreset } from '../components/puzzle/AnimatedBackgroundEnvironment';
 import { MathTheme } from '../lib/mathGameTheme';
 import { mathGameAudio } from '../lib/mathGameAudio';
 import { supabase } from '@/integrations/supabase/client';
@@ -149,6 +150,18 @@ export default function MathsPuzzle() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [activeTheme, setActiveTheme] = useState<MathTheme['id']>('cyber');
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [bgQuality, setBgQuality] = useState<GraphicsQuality>('high');
+  const [weatherPreset, setWeatherPreset] = useState<WeatherPreset>('auto');
+
+  const handleChangeQuality = (q: GraphicsQuality) => {
+    setBgQuality(q);
+    localStorage.setItem('eduspace_math_quality', q);
+  };
+
+  const handleChangeWeatherPreset = (w: WeatherPreset) => {
+    setWeatherPreset(w);
+    localStorage.setItem('eduspace_math_weather', w);
+  };
 
   // Synced timer from active game
   const [activeGameTime, setActiveGameTime] = useState<number | null>(null);
@@ -176,6 +189,16 @@ export default function MathsPuzzle() {
     const savedTheme = localStorage.getItem('eduspace_math_theme') as MathTheme['id'];
     if (savedTheme && ['cyber', 'retro', 'sunset', 'nordic'].includes(savedTheme)) {
       setActiveTheme(savedTheme);
+    }
+
+    // Load quality & weather settings
+    const savedQuality = localStorage.getItem('eduspace_math_quality') as GraphicsQuality;
+    if (savedQuality && ['low', 'medium', 'high', 'ultra'].includes(savedQuality)) {
+      setBgQuality(savedQuality);
+    }
+    const savedWeather = localStorage.getItem('eduspace_math_weather') as WeatherPreset;
+    if (savedWeather) {
+      setWeatherPreset(savedWeather);
     }
 
     // Check if daily is completed today
@@ -544,7 +567,7 @@ export default function MathsPuzzle() {
   };
 
   const renderLeaderboardContent = (isDrawer = false) => (
-    <div className={`space-y-3.5 flex flex-col justify-between h-full ${isDrawer ? 'p-5 bg-slate-900 text-white overflow-y-auto' : ''}`}>
+    <div className={`space-y-3.5 flex flex-col justify-between h-full ${isDrawer ? 'p-5 sm:p-6 bg-white dark:bg-slate-900 text-slate-900 dark:text-white overflow-y-auto' : ''}`}>
       {/* Header and Title */}
       <div className="space-y-3 shrink-0">
         <div className="flex justify-between items-center">
@@ -553,12 +576,12 @@ export default function MathsPuzzle() {
               <Trophy className="size-5 text-amber-500 shrink-0" />
               <span>Leaderboard</span>
             </h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
               Realtime Global Rankings
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[9px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-500/30 flex items-center gap-1.5 shadow-2xs">
+            <span className="text-[9px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-500/30 flex items-center gap-1.5 shadow-2xs">
               <span className="size-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
               Live
             </span>
@@ -567,7 +590,7 @@ export default function MathsPuzzle() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsMobileLeaderboardOpen(false)}
-                className="size-8 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+                className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700"
               >
                 <X className="size-4" />
               </Button>
@@ -576,14 +599,14 @@ export default function MathsPuzzle() {
         </div>
 
         {/* Time filter pills */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 overflow-x-auto no-scrollbar">
           {(['Day', 'Week', 'Month', 'All Time'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setLeaderboardTime(t)}
               className={`flex-1 min-w-[60px] py-1.5 px-2 rounded-lg text-[10px] sm:text-[11px] font-black transition-all duration-200 text-center whitespace-nowrap ${leaderboardTime === t
-                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm border border-slate-200/60 dark:border-slate-600/60 scale-[1.02]'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm border border-slate-200 dark:border-slate-600 scale-[1.02]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
             >
               {t}
@@ -598,8 +621,8 @@ export default function MathsPuzzle() {
               key={g}
               onClick={() => setLeaderboardGame(g)}
               className={`px-2.5 py-1 rounded-lg transition-all duration-200 ${leaderboardGame === g
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-105'
-                : 'bg-slate-100 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-700'
+                ? 'bg-indigo-600 text-white shadow-md scale-105'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700/60'
                 }`}
             >
               {g}
@@ -615,7 +638,7 @@ export default function MathsPuzzle() {
         const rank3 = leaderboardData.find((p) => p.rank === 3);
 
         return (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 items-end min-h-[160px] shrink-0 my-2">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3 border-t border-slate-200 dark:border-slate-800/80 items-end min-h-[160px] shrink-0 my-2">
             {/* Rank 2 */}
             <div className="flex flex-col items-center group min-w-0 w-full">
               <div className="relative mb-1">
@@ -633,10 +656,10 @@ export default function MathsPuzzle() {
               <div className="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-200 text-center truncate w-full px-0.5">
                 {rank2?.name || 'Player 2'}
               </div>
-              <div className="text-[9px] sm:text-[10px] font-black text-slate-500 dark:text-slate-400 my-1">
+              <div className="text-[9px] sm:text-[10px] font-black text-slate-600 dark:text-slate-400 my-1">
                 {rank2?.score ? rank2.score.toLocaleString() : '0'}
               </div>
-              <div className="w-full bg-slate-100/90 dark:bg-slate-800/60 border-t-2 border-slate-300 dark:border-slate-500 rounded-t-xl h-14 sm:h-16 flex items-center justify-center transition-all duration-300 group-hover:bg-slate-200/70 dark:group-hover:bg-slate-800/90 shadow-2xs">
+              <div className="w-full bg-slate-200/70 dark:bg-slate-800/60 border-t-2 border-slate-400 dark:border-slate-500 rounded-t-xl h-14 sm:h-16 flex items-center justify-center transition-all duration-300 group-hover:bg-slate-300/70 dark:group-hover:bg-slate-800/90 shadow-2xs">
                 <span className="text-xl sm:text-2xl">🥈</span>
               </div>
             </div>
@@ -644,7 +667,7 @@ export default function MathsPuzzle() {
             {/* Rank 1 */}
             <div className="flex flex-col items-center group min-w-0 w-full">
               <div className="relative mb-1">
-                <div className="size-11 sm:size-12 rounded-full flex items-center justify-center font-bold text-xs shadow-lg border-2 border-amber-400 dark:border-amber-300 overflow-hidden bg-amber-100/50 dark:bg-amber-950/50 ring-2 ring-amber-400/30 shrink-0">
+                <div className="size-11 sm:size-12 rounded-full flex items-center justify-center font-bold text-xs shadow-lg border-2 border-amber-500 dark:border-amber-300 overflow-hidden bg-amber-100/50 dark:bg-amber-950/50 ring-2 ring-amber-400/30 shrink-0">
                   {rank1?.avatarUrl ? (
                     <img src={rank1.avatarUrl} alt={rank1.name} className="size-full object-cover rounded-full" />
                   ) : (
@@ -655,13 +678,13 @@ export default function MathsPuzzle() {
                   1
                 </div>
               </div>
-              <div className="text-[10px] sm:text-[11px] font-black text-amber-600 dark:text-amber-300 text-center truncate w-full px-0.5">
+              <div className="text-[10px] sm:text-[11px] font-black text-amber-700 dark:text-amber-300 text-center truncate w-full px-0.5">
                 {rank1?.name || 'Player 1'}
               </div>
-              <div className="text-[9px] sm:text-[10px] font-black text-amber-500 dark:text-amber-400 my-1 animate-pulse">
+              <div className="text-[9px] sm:text-[10px] font-black text-amber-600 dark:text-amber-400 my-1 animate-pulse">
                 {rank1?.score ? rank1.score.toLocaleString() : '0'}
               </div>
-              <div className="w-full bg-gradient-to-b from-amber-500/15 to-amber-500/5 dark:from-amber-500/20 dark:to-amber-500/5 border-t-2 border-amber-400 dark:border-amber-400 rounded-t-xl h-20 sm:h-24 flex items-center justify-center transition-all duration-300 group-hover:from-amber-500/25 dark:group-hover:from-amber-500/30 shadow-[0_-6px_20px_-5px_rgba(245,158,11,0.2)]">
+              <div className="w-full bg-gradient-to-b from-amber-400/20 via-amber-400/10 to-amber-500/5 dark:from-amber-500/20 dark:to-amber-500/5 border-t-2 border-amber-400 dark:border-amber-400 rounded-t-xl h-20 sm:h-24 flex items-center justify-center transition-all duration-300 group-hover:from-amber-500/30 dark:group-hover:from-amber-500/30 shadow-[0_-6px_20px_-5px_rgba(245,158,11,0.25)]">
                 <span className="text-2xl sm:text-3xl drop-shadow-md animate-bounce duration-1000">👑</span>
               </div>
             </div>
@@ -680,13 +703,13 @@ export default function MathsPuzzle() {
                   3
                 </div>
               </div>
-              <div className="text-[10px] sm:text-[11px] font-black text-slate-800 dark:text-slate-200 text-center truncate w-full px-0.5">
+              <div className="text-[10px] sm:text-[11px] font-black text-amber-800 dark:text-amber-200 text-center truncate w-full px-0.5">
                 {rank3?.name || 'Player 3'}
               </div>
-              <div className="text-[9px] sm:text-[10px] font-black text-orange-500 dark:text-orange-400 my-1">
+              <div className="text-[9px] sm:text-[10px] font-black text-amber-700 dark:text-amber-400 my-1">
                 {rank3?.score ? rank3.score.toLocaleString() : '0'}
               </div>
-              <div className="w-full bg-orange-100/30 dark:bg-orange-950/30 border-t-2 border-orange-400 dark:border-orange-700/80 rounded-t-xl h-11 sm:h-13 flex items-center justify-center transition-all duration-300 group-hover:bg-orange-100/40 dark:group-hover:bg-orange-950/40 shadow-2xs">
+              <div className="w-full bg-amber-100/60 dark:bg-amber-950/30 border-t-2 border-amber-600/80 dark:border-amber-700/80 rounded-t-xl h-11 sm:h-13 flex items-center justify-center transition-all duration-300 group-hover:bg-amber-200/60 dark:group-hover:bg-amber-950/40 shadow-2xs">
                 <span className="text-base sm:text-lg">🥉</span>
               </div>
             </div>
@@ -700,15 +723,15 @@ export default function MathsPuzzle() {
           <div
             key={player.id}
             className={`p-2.5 sm:p-3 rounded-xl flex justify-between items-center text-xs transition-all duration-200 ${player.isUser
-              ? 'bg-gradient-to-r from-indigo-500/20 via-blue-500/15 to-indigo-500/20 border border-indigo-500/40 dark:border-indigo-500/35 text-indigo-800 dark:text-indigo-200 font-black shadow-sm ring-1 ring-indigo-500/20'
-              : 'bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/70 text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/80'
+              ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-500/40 text-indigo-900 dark:text-indigo-200 font-black shadow-sm ring-1 ring-indigo-500/30'
+              : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800/70 text-slate-800 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 shadow-2xs'
               }`}
           >
             <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
               <span
                 className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${player.isUser
                   ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
                   }`}
               >
                 #{player.rank}
@@ -720,13 +743,13 @@ export default function MathsPuzzle() {
                   player.avatar || player.name.charAt(0)
                 )}
               </div>
-              <span className="font-extrabold truncate text-xs text-slate-800 dark:text-slate-100">
+              <span className="font-extrabold truncate text-xs text-slate-900 dark:text-slate-100">
                 {player.name}
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {player.isUser && (
-                <span className="text-[8px] font-black bg-indigo-500/20 px-1.5 py-0.5 rounded-md text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">
+                <span className="text-[8px] font-black bg-indigo-500/20 px-1.5 py-0.5 rounded-md text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
                   YOU
                 </span>
               )}
@@ -828,6 +851,8 @@ export default function MathsPuzzle() {
           <div className="flex-1 w-full h-full relative overflow-hidden bg-[#BEE3F8]">
             <DropletDashGame
               themeId={activeTheme}
+              quality={bgQuality}
+              weatherPreset={weatherPreset}
               onExit={handleExitGame}
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
@@ -836,214 +861,20 @@ export default function MathsPuzzle() {
           <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-950">
             <TypeDashGame
               themeId={activeTheme}
+              quality={bgQuality}
+              weatherPreset={weatherPreset}
               onExit={handleExitGame}
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
           </div>
-        ) : (
-          <main className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-slate-950 p-3 sm:p-4 md:p-6 flex flex-col custom-scrollbar">
-
-            {/* ═══ Game Selector Dashboard ═══ */}
-            {activeGame === 'dashboard' && (
-              <div className="max-w-6xl mx-auto w-full h-auto lg:h-full flex flex-col justify-between space-y-6 lg:space-y-4 pb-8 lg:pb-2 pt-1 min-h-0">
-
-                {/* Header section with compact spacing */}
-                <div className="relative space-y-1 shrink-0">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-655 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider">
-                    <span className="size-1.5 rounded-full bg-indigo-550 dark:bg-indigo-400 animate-pulse" />
-                    Brain Training Academy
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                        Train Your <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Brain</span>
-                      </h1>
-                      <Button
-                        onClick={() => setIsMobileLeaderboardOpen(true)}
-                        className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-black px-3 py-1.5 h-8 rounded-full text-xs shadow-md border border-white/20 active:scale-95 transition-all shrink-0"
-                      >
-                        <Trophy className="size-3.5 text-amber-300 shrink-0" />
-                        <span className="text-[11px] sm:text-xs font-extrabold tracking-tight">Leaderboard</span>
-                      </Button>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
-                      Improve arithmetic speed, logical reasoning, and keyboard agility with immersive daily workouts.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch flex-1 min-h-0">
-
-                  {/* Game Cards Grid */}
-                  <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 min-h-0">
-
-                    {/* Game 1: MathPath */}
-                    <motion.div
-                      whileHover={{ y: -6, scale: 1.015 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      className="group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 shadow-md hover:shadow-[0_20px_40px_rgba(99,102,241,0.12)] hover:border-indigo-500/40 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 min-h-[220px]"
-                    >
-                      {/* Background glow orbs */}
-                      <div className="absolute -top-20 -right-20 size-48 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
-
-                      {/* Background decoration SVG */}
-                      <div className="absolute right-2 top-2 translate-x-6 -translate-y-6 opacity-[0.03] dark:opacity-[0.02] text-slate-900 dark:text-white select-none pointer-events-none group-hover:rotate-6 transition-transform duration-500">
-                        <Grid3X3 className="size-56" />
-                      </div>
-
-                      <div className="flex justify-between items-start z-10">
-                        <span className="px-3 py-1 bg-indigo-550/5 dark:bg-indigo-950/60 border border-indigo-150/40 dark:border-indigo-900/40 text-indigo-655 dark:text-indigo-400 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          Logic & Grid
-                        </span>
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-full text-[10px] font-extrabold text-slate-700 dark:text-slate-300 shadow-sm">
-                          ⚡ <span className="font-black text-indigo-600 dark:text-indigo-400">{Math.max(highScores.easy, highScores.medium, highScores.hard)}</span>
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5 z-10">
-                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">MathPath Quest</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[240px]">
-                          Connect adjacent numbers in a grid to match target products or sums.
-                        </p>
-                      </div>
-
-                      <div className="flex justify-between items-center mt-1 z-10">
-                        <div className="size-10 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                          <Grid3X3 className="size-4" />
-                        </div>
-                        <Button
-                          onClick={() => {
-                            setActiveGame('mathpath');
-                            mathGameAudio.playShuffle();
-                          }}
-                          className="rounded-xl px-5 py-4 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20 active:scale-95 border-none h-9"
-                        >
-                          Play Now
-                        </Button>
-                      </div>
-                    </motion.div>
-
-                    {/* Game 2: Droplet Dash */}
-                    <motion.div
-                      whileHover={{ y: -6, scale: 1.015 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      className="group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 shadow-md hover:shadow-[0_20px_40px_rgba(14,165,233,0.12)] hover:border-sky-500/40 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 min-h-[220px]"
-                    >
-                      {/* Background glow orbs */}
-                      <div className="absolute -top-20 -right-20 size-48 rounded-full bg-sky-500/10 dark:bg-sky-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
-
-                      {/* Background decoration SVG */}
-                      <div className="absolute right-2 top-2 translate-x-6 -translate-y-6 opacity-[0.03] dark:opacity-[0.02] text-slate-900 dark:text-white select-none pointer-events-none group-hover:rotate-6 transition-transform duration-500">
-                        <Droplets className="size-56" />
-                      </div>
-
-                      <div className="flex justify-between items-start z-10">
-                        <span className="px-3 py-1 bg-sky-50 dark:bg-sky-950/60 border border-sky-150/40 dark:border-sky-900/40 text-sky-655 dark:text-sky-450 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          Math & Speed
-                        </span>
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-full text-[10px] font-extrabold text-slate-700 dark:text-slate-300 shadow-sm">
-                          ⚡ <span className="font-black text-sky-600 dark:text-sky-400">
-                            {(() => {
-                              const easy = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_easy') || '0', 10);
-                              const medium = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_medium') || '0', 10);
-                              const hard = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_hard') || '0', 10);
-                              const extreme = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_extreme') || '0', 10);
-                              return Math.max(easy, medium, hard, extreme);
-                            })()}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5 z-10">
-                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">Droplet Dash</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[240px]">
-                          Catch water droplets holding the correct answer to math equations.
-                        </p>
-                      </div>
-
-                      <div className="flex justify-between items-center mt-1 z-10">
-                        <div className="size-10 bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/40 rounded-xl flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                          <Droplets className="size-4" />
-                        </div>
-                        <Button
-                          onClick={() => {
-                            setActiveGame('droplet-dash');
-                            mathGameAudio.playShuffle();
-                          }}
-                          className="rounded-xl px-5 py-4 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-bold text-xs transition-all shadow-md shadow-sky-600/20 active:scale-95 border-none h-9"
-                        >
-                          Play Now
-                        </Button>
-                      </div>
-                    </motion.div>
-
-                    {/* Game 3: Type Dash */}
-                    <motion.div
-                      whileHover={{ y: -6, scale: 1.015 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      className="group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 shadow-md hover:shadow-[0_20px_40px_rgba(168,85,247,0.12)] hover:border-purple-500/40 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 min-h-[220px]"
-                    >
-                      {/* Background glow orbs */}
-                      <div className="absolute -top-20 -right-20 size-48 rounded-full bg-purple-500/10 dark:bg-purple-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
-
-                      {/* Background decoration text */}
-                      <div className="absolute -right-4 -top-4 translate-x-4 -translate-y-4 opacity-[0.03] dark:opacity-[0.02] text-slate-950 dark:text-white select-none pointer-events-none font-mono text-9xl font-black tracking-tighter group-hover:rotate-3 transition-transform duration-500">
-                        Aa
-                      </div>
-
-                      <div className="flex justify-between items-start z-10">
-                        <span className="px-3 py-1 bg-purple-50 dark:bg-purple-950/60 border border-purple-150/40 dark:border-purple-900/40 text-purple-650 dark:text-purple-400 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          Typing Speed
-                        </span>
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-full text-[10px] font-extrabold text-slate-700 dark:text-slate-300 shadow-sm">
-                          ⚡ <span className="font-black text-purple-600 dark:text-purple-400">
-                            {(() => {
-                              const easy = parseInt(localStorage.getItem('eduspace_type_dash_highscore_easy') || '0', 10);
-                              const medium = parseInt(localStorage.getItem('eduspace_type_dash_highscore_medium') || '0', 10);
-                              const hard = parseInt(localStorage.getItem('eduspace_type_dash_highscore_hard') || '0', 10);
-                              const extreme = parseInt(localStorage.getItem('eduspace_type_dash_highscore_extreme') || '0', 10);
-                              return Math.max(easy, medium, hard, extreme);
-                            })()}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5 z-10">
-                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Type Dash</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[240px]">
-                          Type words to aim laser blaster and pop falling droplets before they splash!
-                        </p>
-                      </div>
-
-                      <div className="flex justify-between items-center mt-1 z-10">
-                        <div className="size-10 bg-purple-50 dark:bg-purple-950/60 border border-purple-100 dark:border-purple-900/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shadow-sm group-hover:scale-110 transition-transform duration-300 text-sm">
-                          ⌨️
-                        </div>
-                        <Button
-                          onClick={() => {
-                            setActiveGame('type-dash');
-                            mathGameAudio.playShuffle();
-                          }}
-                          className="rounded-xl px-5 py-4 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-md shadow-purple-600/20 active:scale-95 border-none h-9"
-                        >
-                          Play Now
-                        </Button>
-                      </div>
-                    </motion.div>
-
-                  </div>
-
-                  {/* Leaderboard Section (Visible on Desktop lg screens; accessed via floating button drawer on mobile/responsive views) */}
-                  <div className="hidden lg:flex lg:col-span-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xl rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-6 relative overflow-hidden flex-col justify-between h-full min-h-[440px]">
-                    {renderLeaderboardContent(false)}
-                  </div>
-
-                </div>
-              </div>
-            )}
-
-            {/* ═══ MathPath Game (Existing — Untouched) ═══ */}
-            {activeGame === 'mathpath' && (
+        ) : activeGame === 'mathpath' ? (
+          <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-950 flex flex-col">
+            <AnimatedBackgroundEnvironment
+              themeId={activeTheme}
+              quality={bgQuality}
+              weatherPreset={weatherPreset}
+            />
+            <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 flex flex-col custom-scrollbar relative z-10">
               <div className={`${isCompact ? 'max-w-xl pb-24' : 'max-w-5xl xl:max-w-6xl pb-12 lg:pb-6'
                 } mx-auto w-full`}>
 
@@ -1098,7 +929,7 @@ export default function MathsPuzzle() {
                 {/* Left Column: Addition Game */}
                 <div className={`flex-col relative overflow-hidden transition-all duration-300 ${isCompact
                   ? 'w-full p-0 bg-transparent border-none shadow-none'
-                  : 'bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] p-6 shadow-md hover:shadow-lg'
+                  : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] p-6 shadow-xl'
                   } ${activeBoard === 'addition' ? 'flex' : 'hidden'
                   }`}>
                   {!isCompact && (
@@ -1112,6 +943,8 @@ export default function MathsPuzzle() {
                     mode={activeMode || 'daily'}
                     difficulty={activeDifficulty}
                     themeId={activeTheme}
+                    quality={bgQuality}
+                    weatherPreset={weatherPreset}
                     mathOperation="addition"
                     onExit={handleExitGame}
                     onRecordStreak={handleRecordStreak}
@@ -1124,7 +957,7 @@ export default function MathsPuzzle() {
                 {/* Right Column: Multiplication Game */}
                 <div className={`flex-col relative overflow-hidden transition-all duration-300 ${isCompact
                   ? 'w-full p-0 bg-transparent border-none shadow-none'
-                  : 'bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] p-6 shadow-md hover:shadow-lg'
+                  : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] p-6 shadow-xl'
                   } ${activeBoard === 'multiplication' ? 'flex' : 'hidden'
                   }`}>
                   {!isCompact && (
@@ -1138,6 +971,8 @@ export default function MathsPuzzle() {
                     mode={activeMode || 'daily'}
                     difficulty={activeDifficulty}
                     themeId={activeTheme}
+                    quality={bgQuality}
+                    weatherPreset={weatherPreset}
                     mathOperation="multiplication"
                     onExit={handleExitGame}
                     onRecordStreak={async () => {
@@ -1148,6 +983,208 @@ export default function MathsPuzzle() {
                   />
                 </div>
 
+              </div>
+            </main>
+          </div>
+        ) : (
+          <main className="flex-1 overflow-y-auto bg-[#F8FAFC] dark:bg-slate-950 p-3 sm:p-4 md:p-6 flex flex-col custom-scrollbar">
+
+            {/* ═══ Game Selector Dashboard ═══ */}
+            {activeGame === 'dashboard' && (
+              <div className="max-w-6xl mx-auto w-full h-auto lg:h-full flex flex-col justify-between space-y-6 lg:space-y-4 pb-8 lg:pb-2 pt-1 min-h-0">
+
+                {/* Header section with compact spacing */}
+                <div className="relative space-y-1 shrink-0">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider">
+                    <span className="size-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
+                    Brain Training Academy
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                        Train Your <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Brain</span>
+                      </h1>
+                      <Button
+                        onClick={() => setIsMobileLeaderboardOpen(true)}
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-black px-3 py-1.5 h-8 rounded-full text-xs shadow-md border border-white/20 active:scale-95 transition-all shrink-0"
+                      >
+                        <Trophy className="size-3.5 text-amber-300 shrink-0" />
+                        <span className="text-[11px] sm:text-xs font-extrabold tracking-tight">Leaderboard</span>
+                      </Button>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                      Improve arithmetic speed, logical reasoning, and keyboard agility with immersive daily workouts.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch flex-1 min-h-0">
+
+                  {/* Game Cards Grid */}
+                  <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 min-h-0">
+
+                    {/* Game 1: MathPath */}
+                    <motion.div
+                      whileHover={{ y: -6, scale: 1.015 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      className="group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 shadow-md hover:shadow-[0_20px_40px_rgba(99,102,241,0.12)] hover:border-indigo-500/40 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 min-h-[220px]"
+                    >
+                      {/* Background glow orbs */}
+                      <div className="absolute -top-20 -right-20 size-48 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+
+                      {/* Background decoration SVG */}
+                      <div className="absolute right-2 top-2 translate-x-6 -translate-y-6 opacity-[0.03] dark:opacity-[0.02] text-slate-900 dark:text-white select-none pointer-events-none group-hover:rotate-6 transition-transform duration-500">
+                        <Grid3X3 className="size-56" />
+                      </div>
+
+                      <div className="flex justify-between items-start z-10">
+                        <span className="px-3 py-1 bg-indigo-500/10 dark:bg-indigo-950/60 border border-indigo-200/40 dark:border-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full text-[9px] font-black uppercase tracking-wider">
+                          Logic & Grid
+                        </span>
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-full text-[10px] font-extrabold text-slate-700 dark:text-slate-300 shadow-sm">
+                          ⚡ <span className="font-black text-indigo-600 dark:text-indigo-400">{Math.max(highScores.easy, highScores.medium, highScores.hard)}</span>
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 z-10">
+                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">MathPath Quest</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[240px]">
+                          Connect adjacent numbers in a grid to match target products or sums.
+                        </p>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-1 z-10">
+                        <div className="size-10 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                          <Grid3X3 className="size-4" />
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setActiveGame('mathpath');
+                            mathGameAudio.playShuffle();
+                          }}
+                          className="rounded-xl px-5 py-4 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20 active:scale-95 border-none h-9"
+                        >
+                          Play Now
+                        </Button>
+                      </div>
+                    </motion.div>
+
+                    {/* Game 2: Droplet Dash */}
+                    <motion.div
+                      whileHover={{ y: -6, scale: 1.015 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      className="group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 shadow-md hover:shadow-[0_20px_40px_rgba(14,165,233,0.12)] hover:border-sky-500/40 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 min-h-[220px]"
+                    >
+                      {/* Background glow orbs */}
+                      <div className="absolute -top-20 -right-20 size-48 rounded-full bg-sky-500/10 dark:bg-sky-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+
+                      {/* Background decoration SVG */}
+                      <div className="absolute right-2 top-2 translate-x-6 -translate-y-6 opacity-[0.03] dark:opacity-[0.02] text-slate-900 dark:text-white select-none pointer-events-none group-hover:rotate-6 transition-transform duration-500">
+                        <Droplets className="size-56" />
+                      </div>
+
+                      <div className="flex justify-between items-start z-10">
+                        <span className="px-3 py-1 bg-sky-50 dark:bg-sky-950/60 border border-sky-200/40 dark:border-sky-900/40 text-sky-600 dark:text-sky-400 rounded-full text-[9px] font-black uppercase tracking-wider">
+                          Math & Speed
+                        </span>
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-full text-[10px] font-extrabold text-slate-700 dark:text-slate-300 shadow-sm">
+                          ⚡ <span className="font-black text-sky-600 dark:text-sky-400">
+                            {(() => {
+                              const easy = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_easy') || '0', 10);
+                              const medium = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_medium') || '0', 10);
+                              const hard = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_hard') || '0', 10);
+                              const extreme = parseInt(localStorage.getItem('eduspace_droplet_dash_highscore_extreme') || '0', 10);
+                              return Math.max(easy, medium, hard, extreme);
+                            })()}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 z-10">
+                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">Droplet Dash</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[240px]">
+                          Catch water droplets holding the correct answer to math equations.
+                        </p>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-1 z-10">
+                        <div className="size-10 bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/40 rounded-xl flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                          <Droplets className="size-4" />
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setActiveGame('droplet-dash');
+                            mathGameAudio.playShuffle();
+                          }}
+                          className="rounded-xl px-5 py-4 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-bold text-xs transition-all shadow-md shadow-sky-600/20 active:scale-95 border-none h-9"
+                        >
+                          Play Now
+                        </Button>
+                      </div>
+                    </motion.div>
+
+                    {/* Game 3: Type Dash */}
+                    <motion.div
+                      whileHover={{ y: -6, scale: 1.015 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      className="group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 shadow-md hover:shadow-[0_20px_40px_rgba(168,85,247,0.12)] hover:border-purple-500/40 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 min-h-[220px]"
+                    >
+                      {/* Background glow orbs */}
+                      <div className="absolute -top-20 -right-20 size-48 rounded-full bg-purple-500/10 dark:bg-purple-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+
+                      {/* Background decoration text */}
+                      <div className="absolute -right-4 -top-4 translate-x-4 -translate-y-4 opacity-[0.03] dark:opacity-[0.02] text-slate-950 dark:text-white select-none pointer-events-none font-mono text-9xl font-black tracking-tighter group-hover:rotate-3 transition-transform duration-500">
+                        Aa
+                      </div>
+
+                      <div className="flex justify-between items-start z-10">
+                        <span className="px-3 py-1 bg-purple-50 dark:bg-purple-950/60 border border-purple-200/40 dark:border-purple-900/40 text-purple-600 dark:text-purple-400 rounded-full text-[9px] font-black uppercase tracking-wider">
+                          Typing Speed
+                        </span>
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 rounded-full text-[10px] font-extrabold text-slate-700 dark:text-slate-300 shadow-sm">
+                          ⚡ <span className="font-black text-purple-600 dark:text-purple-400">
+                            {(() => {
+                              const easy = parseInt(localStorage.getItem('eduspace_type_dash_highscore_easy') || '0', 10);
+                              const medium = parseInt(localStorage.getItem('eduspace_type_dash_highscore_medium') || '0', 10);
+                              const hard = parseInt(localStorage.getItem('eduspace_type_dash_highscore_hard') || '0', 10);
+                              const extreme = parseInt(localStorage.getItem('eduspace_type_dash_highscore_extreme') || '0', 10);
+                              return Math.max(easy, medium, hard, extreme);
+                            })()}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 z-10">
+                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Type Dash</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[240px]">
+                          Type words to aim laser blaster and pop falling droplets before they splash!
+                        </p>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-1 z-10">
+                        <div className="size-10 bg-purple-50 dark:bg-purple-950/60 border border-purple-100 dark:border-purple-900/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shadow-sm group-hover:scale-110 transition-transform duration-300 text-sm">
+                          ⌨️
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setActiveGame('type-dash');
+                            mathGameAudio.playShuffle();
+                          }}
+                          className="rounded-xl px-5 py-4 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-md shadow-purple-600/20 active:scale-95 border-none h-9"
+                        >
+                          Play Now
+                        </Button>
+                      </div>
+                    </motion.div>
+
+                  </div>
+
+                  {/* Leaderboard Section (Visible on Desktop lg screens; accessed via floating button drawer on mobile/responsive views) */}
+                  <div className="hidden lg:flex lg:col-span-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xl rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-6 relative overflow-hidden flex-col justify-between h-full min-h-[440px]">
+                    {renderLeaderboardContent(false)}
+                  </div>
+
+                </div>
               </div>
             )}
           </main>
@@ -1315,6 +1352,10 @@ export default function MathsPuzzle() {
         onChangeTheme={handleChangeTheme}
         onResetHighScores={handleResetHighScores}
         onResetTutorial={handleResetTutorial}
+        quality={bgQuality}
+        onChangeQuality={handleChangeQuality}
+        weatherPreset={weatherPreset}
+        onChangeWeatherPreset={handleChangeWeatherPreset}
       />
 
       {/* Tutorial Popup Modal */}
@@ -1413,7 +1454,7 @@ export default function MathsPuzzle() {
 
     {/* Mobile Leaderboard Sheet Drawer Modal */}
     <Sheet open={isMobileLeaderboardOpen} onOpenChange={setIsMobileLeaderboardOpen}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 border-none bg-slate-900 text-white shadow-2xl flex flex-col z-[10001] [&>button]:hidden">
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 border-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xl flex flex-col z-[10001] [&>button]:hidden">
         <SheetTitle className="sr-only">Math Playground Leaderboard</SheetTitle>
         <SheetDescription className="sr-only">Realtime Global Rankings</SheetDescription>
         {renderLeaderboardContent(true)}
