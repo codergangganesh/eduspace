@@ -49,7 +49,7 @@ import {
 const studentNavItems = [
   { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/dashboard" },
   { id: "tour-nav-feed", icon: Megaphone, imageUrl: "/feed-icon.png", label: "Class Feed", path: "/class-feed" },
-  { id: "tour-nav-contests", icon: Trophy, label: "Coding Contests", path: "/contests" },
+  { id: "tour-nav-contests", icon: Trophy, imageUrl: "/contest.png", label: "Coding Contests", path: "/contests" },
   { id: "tour-nav-schedule", icon: Calendar, imageUrl: "/schedule-icon.png", label: "Schedule", path: "/schedule" },
   { id: "tour-nav-assignments", icon: ClipboardList, imageUrl: "/assignment-icon.png", label: "Assignments", path: "/student/assignments" },
   { id: "tour-nav-quizzes", icon: FileCheck, imageUrl: "/quiz-icon.png", label: "Quizzes", path: "/student/quizzes" },
@@ -65,7 +65,7 @@ const studentNavItems = [
 const lecturerNavItems = [
   { id: "tour-nav-dashboard", icon: LayoutDashboard, imageUrl: "/dashboard-icon.png", label: "Dashboard", path: "/lecturer-dashboard" },
   { id: "tour-nav-feed", icon: Megaphone, imageUrl: "/feed-icon.png", label: "Class Feed", path: "/class-feed" },
-  { id: "tour-nav-contests", icon: Trophy, label: "Coding Contests", path: "/contests" },
+
   { id: "tour-nav-students", icon: Users, imageUrl: "/students-icon.png", label: "All Students", path: "/all-students" },
   { id: "tour-nav-timetable", icon: Table, imageUrl: "/timetable-icon.png", label: "Time Table", path: "/lecturer/timetable" },
   { id: "tour-nav-schedule", icon: Calendar, imageUrl: "/schedule-icon.png", label: "Schedule", path: "/schedule" },
@@ -210,14 +210,19 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                     )}
                   >
                     {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        loading="eager"
-                        fetchPriority="high"
-                        decoding="async"
-                        className={cn("size-6 shrink-0 rounded-full object-cover transition-transform duration-200", !isActive && "group-hover:scale-110")}
-                        alt={item.label}
-                      />
+                      <div
+                        className={cn("size-6 shrink-0 rounded-full overflow-hidden transition-transform duration-200", !isActive && "group-hover:scale-110")}
+                        style={{ clipPath: 'circle(50%)', boxShadow: '0 0 0 1px rgba(0,0,0,0.08)' }}
+                      >
+                        <img
+                          src={item.imageUrl}
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="async"
+                          className="size-full object-cover"
+                          alt={item.label}
+                        />
+                      </div>
                     ) : (
                       <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
                     )}

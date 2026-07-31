@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, ExternalLink, Calendar, Clock, ArrowRight, RefreshCw, Zap } from 'lucide-react';
+import { Trophy, Calendar, Clock, RefreshCw, Zap, ChevronRight } from 'lucide-react';
 import { Contest, PlatformName } from '@/types/contest';
 import { fetchUpcomingContests, formatDuration, generateGoogleCalendarUrl } from '@/services/contestService';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const PLATFORM_COLORS: Record<PlatformName, { bg: string; text: string; border: string }> = {
-  LeetCode: { bg: 'bg-amber-500/10 dark:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/30' },
-  Codeforces: { bg: 'bg-blue-500/10 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/30' },
-  CodeChef: { bg: 'bg-amber-700/10 dark:bg-amber-700/20', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-700/30' },
-  AtCoder: { bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/30' },
-  HackerRank: { bg: 'bg-green-500/10 dark:bg-green-500/20', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/30' },
-  HackerEarth: { bg: 'bg-indigo-500/10 dark:bg-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-500/30' },
-  Kaggle: { bg: 'bg-cyan-500/10 dark:bg-cyan-500/20', text: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-500/30' },
-  Other: { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' },
+const PLATFORM_COLORS: Record<PlatformName, { bg: string; text: string }> = {
+  LeetCode: { bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-700 dark:text-amber-300' },
+  Codeforces: { bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-300' },
+  CodeChef: { bg: 'bg-orange-50 dark:bg-orange-950/40', text: 'text-orange-700 dark:text-orange-300' },
+  AtCoder: { bg: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-700 dark:text-emerald-300' },
+  HackerRank: { bg: 'bg-green-50 dark:bg-green-950/40', text: 'text-green-700 dark:text-green-300' },
+  HackerEarth: { bg: 'bg-indigo-50 dark:bg-indigo-950/40', text: 'text-indigo-700 dark:text-indigo-300' },
+  Kaggle: { bg: 'bg-cyan-50 dark:bg-cyan-950/40', text: 'text-cyan-700 dark:text-cyan-300' },
+  Other: { bg: 'bg-slate-50 dark:bg-slate-900/60', text: 'text-slate-600 dark:text-slate-400' },
 };
 
 export function UpcomingContestsWidget() {
@@ -27,11 +25,10 @@ export function UpcomingContestsWidget() {
   const loadData = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
     else setLoading(true);
-
     try {
       sessionStorage.removeItem('eduspace_upcoming_contests_cache');
       const data = await fetchUpcomingContests();
-      setContests(data.slice(0, 4)); // Get top 4 upcoming contests
+      setContests(data.slice(0, 4));
     } catch (e) {
       console.error('Failed to load contests widget data:', e);
     } finally {
@@ -40,143 +37,136 @@ export function UpcomingContestsWidget() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   return (
-    <Card className="relative overflow-hidden border-border/60 bg-gradient-to-br from-card via-card to-primary/5 shadow-md hover:shadow-lg transition-all duration-300">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Trophy className="size-4 text-amber-500 animate-pulse" />
-            Upcoming Coding Contests
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Live competitive programming schedules
-          </CardDescription>
+    <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="relative flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/70">
+            <Trophy className="size-5 text-amber-600 dark:text-amber-300" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none">
+              Upcoming Contests
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+              Live competitive schedules
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground hover:text-foreground"
+          <button
             onClick={() => loadData(true)}
             disabled={loading || refreshing}
-            title="Refresh Contests"
+            title="Refresh"
+            className="size-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors disabled:opacity-40 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button variant="ghost" size="sm" asChild className="text-xs gap-1 h-7 px-2 font-medium">
-            <Link to="/contests">
-              View All <ArrowRight className="size-3" />
-            </Link>
-          </Button>
-        </div>
-      </CardHeader>
+          </button>
 
-      <CardContent className="space-y-3 pt-0">
+          <Link
+            to="/contests"
+            className="flex items-center gap-0.5 h-8 px-3 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+          >
+            View All <ChevronRight className="size-3 ml-0.5" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="relative px-5 pb-5 space-y-2">
         {loading ? (
           <div className="space-y-2.5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-2.5 rounded-lg border border-border/40">
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800">
                 <div className="space-y-1.5 flex-1">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3.5 w-3/4 rounded-full" />
+                  <Skeleton className="h-2.5 w-1/2 rounded-full" />
                 </div>
-                <Skeleton className="h-7 w-20 rounded-md" />
+                <Skeleton className="h-7 w-14 rounded-lg ml-3" />
               </div>
             ))}
           </div>
         ) : contests.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground text-sm space-y-1">
-            <p>No upcoming contests found right now.</p>
-            <Button variant="link" size="sm" onClick={() => loadData(true)}>
+          <div className="text-center py-8 space-y-2">
+            <p className="text-sm text-muted-foreground font-medium">
+              No upcoming contests right now.
+            </p>
+            <Button variant="link" size="sm" onClick={() => loadData(true)} className="text-primary">
               Check again
             </Button>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {contests.map((contest) => {
-              const platformStyle = PLATFORM_COLORS[contest.platform] || PLATFORM_COLORS.Other;
+              const p = PLATFORM_COLORS[contest.platform] || PLATFORM_COLORS.Other;
               const startDate = new Date(contest.startTime);
               const formattedDate = startDate.toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
               });
 
               return (
                 <div
                   key={contest.id}
-                  className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-border/50 bg-background/60 hover:bg-accent/40 transition-all duration-200"
+                  className="group flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-slate-900/30 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all duration-200"
                 >
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${platformStyle.bg} ${platformStyle.text} ${platformStyle.border}`}
-                      >
-                        {contest.platform}
+                  <span className={`shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-current/10 ${p.bg} ${p.text}`}>
+                    {contest.platform}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate transition-colors">
+                        {contest.name}
                       </span>
                       {contest.status === 'CODING' && (
-                        <Badge variant="default" className="text-[10px] bg-emerald-500 hover:bg-emerald-600 text-white animate-pulse">
-                          <Zap className="size-2.5 mr-0.5 fill-current" /> Live Now
-                        </Badge>
+                        <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-900/70 flex items-center gap-0.5">
+                          <Zap className="size-2.5 fill-current" /> Live
+                        </span>
                       )}
                       {contest.in24Hours && contest.status !== 'CODING' && (
-                        <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">
-                          Starting Soon
-                        </Badge>
+                        <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-900/70">
+                          Soon
+                        </span>
                       )}
                     </div>
-
-                    <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                      {contest.name}
-                    </h4>
-
-                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="size-3 text-muted-foreground/70" />
-                        {formattedDate}
+                    <div className="flex items-center gap-2.5 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                      <span className="flex items-center gap-0.5">
+                        <Calendar className="size-2.5" /> {formattedDate}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3 text-muted-foreground/70" />
-                        {formatDuration(contest.durationSeconds)}
+                      <span className="flex items-center gap-0.5">
+                        <Clock className="size-2.5" /> {formatDuration(contest.durationSeconds)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
-                      asChild
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={generateGoogleCalendarUrl(contest)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       title="Add to Google Calendar"
+                      className="size-7 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
-                      <a href={generateGoogleCalendarUrl(contest)} target="_blank" rel="noopener noreferrer">
-                        <Calendar className="size-3.5" />
-                      </a>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1 font-medium bg-background hover:bg-primary hover:text-primary-foreground transition-all"
-                      asChild
+                      <Calendar className="size-3.5" />
+                    </a>
+
+                    <a
+                      href={contest.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-7 px-3 rounded-lg text-xs font-semibold text-white flex items-center bg-primary hover:bg-primary-hover transition-colors"
                     >
-                      <a href={contest.url} target="_blank" rel="noopener noreferrer">
-                        Join <ExternalLink className="size-3" />
-                      </a>
-                    </Button>
+                      Join
+                    </a>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
