@@ -58,6 +58,10 @@ import {
   Link as LinkIcon,
   ExternalLink,
   Download,
+  Code2,
+  Terminal,
+  Cpu,
+  AudioWaveform,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -68,6 +72,129 @@ import { ProfileNotificationSettings } from "@/components/ProfileNotificationSet
 import SEO from "@/components/SEO";
 import imageCompression from "browser-image-compression";
 import DOMPurify from "dompurify";
+
+const LeetCodeIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M16.102 17.93a4.522 4.522 0 0 1-1.396 2.372 4.47 4.47 0 0 1-2.991 1.139 4.468 4.468 0 0 1-3.21-1.332L3.109 14.71a4.52 4.52 0 0 1-.954-1.639 4.444 4.444 0 0 1-.035-2.88 4.502 4.502 0 0 1 1.002-1.584l5.378-5.378a4.498 4.498 0 0 1 3.197-1.334c1.201 0 2.331.47 3.178 1.321l.006.006.918.918a.747.747 0 0 1-1.056 1.056l-.918-.918a3.003 3.003 0 0 0-2.128-.885 3.002 3.002 0 0 0-2.134.891L4.21 9.77a3.002 3.002 0 0 0-.668 1.056 2.96 2.96 0 0 0 .023 1.92 3.013 3.013 0 0 0 .637 1.093l5.395 5.397a2.98 2.98 0 0 0 2.14.888 2.98 2.98 0 0 0 1.994-.76 3.015 3.015 0 0 0 .931-1.581.75.75 0 1 1 1.47.337zm2.493-4.577a.75.75 0 0 1-.53-.22L13.111 8.18a.75.75 0 1 1 1.06-1.06l4.954 4.953a.75.75 0 0 1-.53 1.28z" />
+  </svg>
+);
+
+const CodeforcesIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4.5 7.5a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 3 0V9A1.5 1.5 0 0 0 4.5 7.5zm7.5-4.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 3 0V4.5A1.5 1.5 0 0 0 12 3zm7.5 7.5a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 3 0V12a1.5 1.5 0 0 0-1.5-1.5z" />
+  </svg>
+);
+
+const HackerRankIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0L1.608 6v12L12 24l10.392-6V6L12 0zm5.127 16.03h-2.146v-3.791H9.019v3.791H6.873V7.97h2.146v3.79h5.962V7.97h2.146v8.06z" />
+  </svg>
+);
+
+const CodeChefIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.5h-2v-2h2v2zm0-4h-2V7h2v5.5z" />
+  </svg>
+);
+
+const KaggleIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.825 23.859h-3.411l-5.341-7.228-2.658 2.658v4.57H4.517V.141h2.898v13.567l7.562-7.562h3.693l-6.31 6.31 6.465 11.403z" />
+  </svg>
+);
+
+const CodolioIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm1 14.5a1.5 1.5 0 0 1-2.25 1.3l-4.5-3a1.5 1.5 0 0 1 0-2.6l4.5-3A1.5 1.5 0 0 1 13 10.5v6zm4-3a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 1 0-3h2z" />
+  </svg>
+);
+
+const BRAND_ICON_URLS: Record<string, string> = {
+  leetcode: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/leetcode/leetcode-original.svg",
+  codeforces: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codeforces/codeforces-original.svg",
+  hackerrank: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/hackerrank/hackerrank-original.svg",
+  codechef: "https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/codechef.svg",
+  codolio: "https://codolio.com/codolio_assets/codolio.svg",
+  linkedin: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/linkedin/linkedin-original.svg",
+  github: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg",
+  kaggle: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kaggle/kaggle-original.svg",
+  twitter: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/twitter/twitter-original.svg",
+};
+
+const RealBrandIcon = ({
+  id,
+  label,
+  fallback: FallbackIcon,
+  className = "size-4 object-contain"
+}: {
+  id: string;
+  label: string;
+  fallback: React.ComponentType<{ className?: string }>;
+  className?: string;
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const src = BRAND_ICON_URLS[id];
+
+  if (!src || hasError) {
+    return <FallbackIcon className={className} />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={label}
+      className={cn(className, "transition-transform duration-200 object-contain")}
+      onError={() => setHasError(true)}
+      loading="lazy"
+    />
+  );
+};
+
+const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'kaggle', 'codolio'];
+
+interface SocialPlatformItem {
+  id: string;
+  label: string;
+  url?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  bg: string;
+  border: string;
+  text: string;
+  shadow: string;
+}
+
+const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = false): SocialPlatformItem[] => {
+  const allPlatforms: SocialPlatformItem[] = [
+    { id: 'linkedin', label: 'LinkedIn', url: data.linkedin_url, icon: Linkedin, bg: 'bg-[#0077b5]/10 hover:bg-[#0077b5]/20', border: 'border-[#0077b5]/30', text: 'text-[#0077b5]', shadow: 'hover:shadow-[0_0_12px_rgba(0,119,181,0.35)]' },
+    { id: 'github', label: 'GitHub', url: data.github_url, icon: Github, bg: 'bg-slate-500/10 hover:bg-slate-500/20', border: 'border-slate-500/30', text: 'text-foreground dark:text-white', shadow: 'hover:shadow-[0_0_12px_rgba(100,116,139,0.35)]' },
+    { id: 'leetcode', label: 'LeetCode', url: data.leetcode_url, icon: LeetCodeIcon, bg: 'bg-[#FFA116]/10 hover:bg-[#FFA116]/20', border: 'border-[#FFA116]/30', text: 'text-[#FFA116]', shadow: 'hover:shadow-[0_0_12px_rgba(255,161,22,0.35)]' },
+    { id: 'codeforces', label: 'Codeforces', url: data.codeforces_url, icon: CodeforcesIcon, bg: 'bg-[#1F8ACB]/10 hover:bg-[#1F8ACB]/20', border: 'border-[#1F8ACB]/30', text: 'text-[#1F8ACB]', shadow: 'hover:shadow-[0_0_12px_rgba(31,138,203,0.35)]' },
+    { id: 'hackerrank', label: 'HackerRank', url: data.hackerrank_url, icon: HackerRankIcon, bg: 'bg-[#2EC4B6]/10 hover:bg-[#2EC4B6]/20', border: 'border-[#2EC4B6]/30', text: 'text-[#2EC4B6]', shadow: 'hover:shadow-[0_0_12px_rgba(46,196,182,0.35)]' },
+    { id: 'codechef', label: 'CodeChef', url: data.codechef_url, icon: CodeChefIcon, bg: 'bg-[#5B4638]/15 hover:bg-[#5B4638]/30', border: 'border-[#5B4638]/40', text: 'text-[#d97706]', shadow: 'hover:shadow-[0_0_12px_rgba(217,119,6,0.35)]' },
+    { id: 'kaggle', label: 'Kaggle', url: data.kaggle_url, icon: KaggleIcon, bg: 'bg-[#20BEFF]/10 hover:bg-[#20BEFF]/20', border: 'border-[#20BEFF]/30', text: 'text-[#20BEFF]', shadow: 'hover:shadow-[0_0_12px_rgba(32,190,255,0.35)]' },
+    { id: 'codolio', label: 'Codolio', url: data.codolio_url, icon: CodolioIcon, bg: 'bg-[#FF5722]/10 hover:bg-[#FF5722]/20', border: 'border-[#FF5722]/30', text: 'text-[#FF5722]', shadow: 'hover:shadow-[0_0_12px_rgba(255,87,34,0.35)]' },
+    { id: 'twitter', label: 'Twitter / X', url: data.twitter_url, icon: Twitter, bg: 'bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20', border: 'border-[#1DA1F2]/30', text: 'text-[#1DA1F2]', shadow: 'hover:shadow-[0_0_12px_rgba(29,161,242,0.35)]' },
+    { id: 'portfolio', label: 'Portfolio', url: data.portfolio_url, icon: Globe, bg: 'bg-purple-500/10 hover:bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-500', shadow: 'hover:shadow-[0_0_12px_rgba(139,92,246,0.35)]' },
+  ];
+
+  const active = allPlatforms.filter(p => Boolean(p.url));
+
+  if (isViewOnly) {
+    return active.slice(0, 8);
+  }
+
+  if (active.length >= 8) {
+    return active.slice(0, 8);
+  }
+
+  const activeIds = new Set(active.map(a => a.id));
+  const remainingSlotsNeeded = 8 - active.length;
+  const defaultsToInclude = allPlatforms
+    .filter(p => DEFAULT_CORE_PLATFORMS.includes(p.id) && !activeIds.has(p.id))
+    .slice(0, remainingSlotsNeeded);
+
+  return [...active, ...defaultsToInclude];
+};
 
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
@@ -92,6 +219,12 @@ export default function Profile() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  const isLecturer = role === "lecturer" || profile?.role === "lecturer";
+  const isStudent = !isLecturer;
+  const visibleProfileTabs = profileTabs.filter(
+    (tab) => tab.id !== "social" || isStudent
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -124,11 +257,17 @@ export default function Profile() {
     theme: "system",
     batch: "",
     hod_name: "",
-    // Social
+    // Social & Coding
     linkedin_url: "",
     github_url: "",
     twitter_url: "",
     portfolio_url: "",
+    leetcode_url: "",
+    codeforces_url: "",
+    hackerrank_url: "",
+    codechef_url: "",
+    kaggle_url: "",
+    codolio_url: "",
   });
 
   // Password change state
@@ -176,6 +315,12 @@ export default function Profile() {
         github_url: profile.github_url || "",
         twitter_url: profile.twitter_url || "",
         portfolio_url: profile.portfolio_url || "",
+        leetcode_url: profile.leetcode_url || "",
+        codeforces_url: profile.codeforces_url || "",
+        hackerrank_url: profile.hackerrank_url || "",
+        codechef_url: profile.codechef_url || "",
+        kaggle_url: profile.kaggle_url || "",
+        codolio_url: profile.codolio_url || "",
       });
     }
   }, [profile]);
@@ -235,7 +380,7 @@ export default function Profile() {
     } catch (error: any) {
       console.error('Error uploading image:', error);
       setAvatarPreview(null); // Revert preview on failure
-      const errorMessage = error.message === "Failed to fetch" 
+      const errorMessage = error.message === "Failed to fetch"
         ? "Network error. Please check your internet connection."
         : error.message || 'Failed to upload image';
       toast.error(errorMessage, { id: uploadToast });
@@ -284,7 +429,7 @@ export default function Profile() {
       toast.loading('Finishing upload...', { id: uploadToast });
       const uploaded = await uploadToCloudinary(compressedFile);
       console.log('Banner uploaded to Cloudinary:', uploaded.url);
-      
+
       const result = await updateProfile({ cover_url: uploaded.url } as Partial<ProfileType>);
 
       if (result.success) {
@@ -295,7 +440,7 @@ export default function Profile() {
     } catch (error: any) {
       console.error('Error uploading banner:', error);
       setBannerPreview(null); // Revert preview on failure
-      const errorMessage = error.message === "Failed to fetch" 
+      const errorMessage = error.message === "Failed to fetch"
         ? "Network error. Please check your internet connection."
         : error.message || 'Failed to upload banner';
       toast.error(errorMessage, { id: uploadToast });
@@ -361,16 +506,16 @@ export default function Profile() {
   const handleSave = async () => {
     // Basic validation to prevent payload bloat before sanitization
     if (formData.full_name && formData.full_name.length > 100) {
-        toast.error("Full name cannot exceed 100 characters");
-        return;
+      toast.error("Full name cannot exceed 100 characters");
+      return;
     }
     if (formData.bio && formData.bio.length > 500) {
-        toast.error("Bio cannot exceed 500 characters");
-        return;
+      toast.error("Bio cannot exceed 500 characters");
+      return;
     }
 
     setIsSaving(true);
-    
+
     // Sanitize all text inputs to prevent XSS payloads
     const result = await updateProfile({
       full_name: DOMPurify.sanitize(formData.full_name.trim()),
@@ -403,6 +548,12 @@ export default function Profile() {
       github_url: DOMPurify.sanitize(formData.github_url.trim()),
       twitter_url: DOMPurify.sanitize(formData.twitter_url.trim()),
       portfolio_url: DOMPurify.sanitize(formData.portfolio_url.trim()),
+      leetcode_url: DOMPurify.sanitize(formData.leetcode_url.trim()),
+      codeforces_url: DOMPurify.sanitize(formData.codeforces_url.trim()),
+      hackerrank_url: DOMPurify.sanitize(formData.hackerrank_url.trim()),
+      codechef_url: DOMPurify.sanitize(formData.codechef_url.trim()),
+      kaggle_url: DOMPurify.sanitize(formData.kaggle_url.trim()),
+      codolio_url: DOMPurify.sanitize(formData.codolio_url.trim()),
     } as Partial<ProfileType>);
 
     if (result.success) {
@@ -521,7 +672,7 @@ export default function Profile() {
 
             {/* Navigation Tabs */}
             <nav className="flex flex-col gap-1">
-              {profileTabs.map((tab) => (
+              {visibleProfileTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
@@ -615,16 +766,62 @@ export default function Profile() {
 
                 {/* User Info & Actions */}
                 <div className="flex-1 w-full pt-2 flex flex-col items-center sm:items-start min-w-0">
-                  <div className="min-w-0 w-full mb-3 sm:mb-2">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center sm:justify-start gap-2 truncate">
-                      {formData.full_name || "User"}
-                      {profile?.verified && (
-                        <CheckCircle className="size-5 text-primary fill-primary/10 shrink-0" />
-                      )}
-                    </h1>
-                    <p className="text-muted-foreground truncate">
-                      {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
-                    </p>
+                  <div className="min-w-0 w-full mb-3 sm:mb-2 flex flex-col sm:flex-row items-center sm:items-start justify-center sm:justify-start gap-2 sm:gap-4">
+                    <div className="min-w-0 flex flex-col items-center sm:items-start">
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2 truncate">
+                          {formData.full_name || "User"}
+                          {profile?.verified && (
+                            <CheckCircle className="size-5 text-primary fill-primary/10 shrink-0" />
+                          )}
+                        </h1>
+
+                        {/* 8 Profile Icons Bar (Right Side of Profile Name - Students Only) */}
+                        {isStudent && (
+                          <div className="flex items-center gap-1 shrink-0 flex-wrap">
+                            <div className="hidden sm:block h-4 w-[1px] bg-border/60 mx-1" />
+                            {getHeaderProfileIcons(formData).map((platform) => {
+                              const isFilled = Boolean(platform.url);
+                              return isFilled ? (
+                                <a
+                                  key={platform.id}
+                                  href={platform.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`${platform.label} Profile`}
+                                  className={cn(
+                                    "size-6.5 rounded-full flex items-center justify-center border transition-all duration-300 hover:scale-110 backdrop-blur-md p-1",
+                                    platform.bg,
+                                    platform.border,
+                                    platform.text,
+                                    platform.shadow
+                                  )}
+                                >
+                                  <RealBrandIcon id={platform.id} label={platform.label} fallback={platform.icon} className="size-3.5 object-contain" />
+                                </a>
+                              ) : (
+                                <button
+                                  key={platform.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTab("social");
+                                    setIsEditing(true);
+                                  }}
+                                  title={`Add ${platform.label} Link`}
+                                  className="size-6.5 rounded-full flex items-center justify-center border border-dashed border-muted-foreground/30 bg-muted/20 text-muted-foreground/50 hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 hover:scale-105 p-1"
+                                >
+                                  <RealBrandIcon id={platform.id} label={platform.label} fallback={platform.icon} className="size-3.5 object-contain opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all" />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-muted-foreground truncate mt-1 sm:mt-0">
+                        {formData.program || "No program set"} {formData.year && `• ${formData.year}`}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Progress Bar & Actions Row */}
@@ -833,8 +1030,8 @@ export default function Profile() {
             </>
           )}
 
-          {/* Social Links Section */}
-          {activeTab === "social" && (
+          {/* Social Links Section (Students Only) */}
+          {isStudent && activeTab === "social" && (
             <div className="bg-surface border border-border rounded-xl p-4 sm:p-6 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -880,6 +1077,96 @@ export default function Profile() {
                   />
                 </div>
 
+                {/* LeetCode */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <RealBrandIcon id="leetcode" label="LeetCode" fallback={LeetCodeIcon} className="size-4 object-contain" />
+                    LeetCode Profile
+                  </label>
+                  <Input
+                    placeholder="https://leetcode.com/u/username"
+                    value={formData.leetcode_url}
+                    onChange={(e) => handleInputChange("leetcode_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* Codeforces */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <RealBrandIcon id="codeforces" label="Codeforces" fallback={CodeforcesIcon} className="size-4 object-contain" />
+                    Codeforces Profile
+                  </label>
+                  <Input
+                    placeholder="https://codeforces.com/profile/handle"
+                    value={formData.codeforces_url}
+                    onChange={(e) => handleInputChange("codeforces_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* HackerRank */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <RealBrandIcon id="hackerrank" label="HackerRank" fallback={HackerRankIcon} className="size-4 object-contain" />
+                    HackerRank Profile
+                  </label>
+                  <Input
+                    placeholder="https://hackerrank.com/profile/username"
+                    value={formData.hackerrank_url}
+                    onChange={(e) => handleInputChange("hackerrank_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* CodeChef */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <RealBrandIcon id="codechef" label="CodeChef" fallback={CodeChefIcon} className="size-4 object-contain" />
+                    CodeChef Profile
+                  </label>
+                  <Input
+                    placeholder="https://codechef.com/users/username"
+                    value={formData.codechef_url}
+                    onChange={(e) => handleInputChange("codechef_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* Kaggle */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <RealBrandIcon id="kaggle" label="Kaggle" fallback={KaggleIcon} className="size-4 object-contain" />
+                    Kaggle Profile
+                  </label>
+                  <Input
+                    placeholder="https://kaggle.com/username"
+                    value={formData.kaggle_url}
+                    onChange={(e) => handleInputChange("kaggle_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* Codolio */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <RealBrandIcon id="codolio" label="Codolio" fallback={CodolioIcon} className="size-4 object-contain" />
+                    Codolio Profile
+                  </label>
+                  <Input
+                    placeholder="https://codolio.com/profile/username"
+                    value={formData.codolio_url}
+                    onChange={(e) => handleInputChange("codolio_url", e.target.value)}
+                    disabled={!isEditing}
+                    className="bg-surface/50 transition-all focus:ring-primary/20"
+                  />
+                </div>
+
                 {/* Twitter / X */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -918,31 +1205,86 @@ export default function Profile() {
                   <div className="flex flex-wrap gap-3">
                     {formData.linkedin_url && (
                       <a href={formData.linkedin_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all text-sm font-medium text-primary backdrop-blur-sm">
-                        <Linkedin className="size-4" /> LinkedIn
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#0077b5]/10 hover:bg-[#0077b5]/20 border border-[#0077b5]/20 transition-all text-sm font-medium text-[#0077b5] backdrop-blur-sm group" title="LinkedIn Profile">
+                        <RealBrandIcon id="linkedin" label="LinkedIn" fallback={Linkedin} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">LinkedIn</span>
                       </a>
                     )}
                     {formData.github_url && (
                       <a href={formData.github_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-500/5 hover:bg-slate-500/10 border border-slate-500/10 transition-all text-sm font-medium text-foreground backdrop-blur-sm">
-                        <Github className="size-4" /> GitHub
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/20 transition-all text-sm font-medium text-foreground backdrop-blur-sm group" title="GitHub Profile">
+                        <RealBrandIcon id="github" label="GitHub" fallback={Github} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">GitHub</span>
+                      </a>
+                    )}
+                    {formData.leetcode_url && (
+                      <a href={formData.leetcode_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#FFA116]/10 hover:bg-[#FFA116]/20 border border-[#FFA116]/20 transition-all text-sm font-medium text-[#FFA116] backdrop-blur-sm group" title="LeetCode Profile">
+                        <RealBrandIcon id="leetcode" label="LeetCode" fallback={LeetCodeIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">LeetCode</span>
+                      </a>
+                    )}
+                    {formData.codeforces_url && (
+                      <a href={formData.codeforces_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#1F8ACB]/10 hover:bg-[#1F8ACB]/20 border border-[#1F8ACB]/20 transition-all text-sm font-medium text-[#1F8ACB] backdrop-blur-sm group" title="Codeforces Profile">
+                        <RealBrandIcon id="codeforces" label="Codeforces" fallback={CodeforcesIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Codeforces</span>
+                      </a>
+                    )}
+                    {formData.hackerrank_url && (
+                      <a href={formData.hackerrank_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#2EC4B6]/10 hover:bg-[#2EC4B6]/20 border border-[#2EC4B6]/20 transition-all text-sm font-medium text-[#2EC4B6] backdrop-blur-sm group" title="HackerRank Profile">
+                        <RealBrandIcon id="hackerrank" label="HackerRank" fallback={HackerRankIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">HackerRank</span>
+                      </a>
+                    )}
+                    {formData.codechef_url && (
+                      <a href={formData.codechef_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#5B4638]/20 hover:bg-[#5B4638]/30 border border-[#5B4638]/30 transition-all text-sm font-medium text-[#d97706] backdrop-blur-sm group" title="CodeChef Profile">
+                        <RealBrandIcon id="codechef" label="CodeChef" fallback={CodeChefIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">CodeChef</span>
+                      </a>
+                    )}
+                    {formData.kaggle_url && (
+                      <a href={formData.kaggle_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#20BEFF]/10 hover:bg-[#20BEFF]/20 border border-[#20BEFF]/20 transition-all text-sm font-medium text-[#20BEFF] backdrop-blur-sm group" title="Kaggle Profile">
+                        <RealBrandIcon id="kaggle" label="Kaggle" fallback={KaggleIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Kaggle</span>
+                      </a>
+                    )}
+                    {formData.codolio_url && (
+                      <a href={formData.codolio_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#FF5722]/10 hover:bg-[#FF5722]/20 border border-[#FF5722]/20 transition-all text-sm font-medium text-[#FF5722] backdrop-blur-sm group" title="Codolio Profile">
+                        <RealBrandIcon id="codolio" label="Codolio" fallback={CodolioIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Codolio</span>
                       </a>
                     )}
                     {formData.twitter_url && (
                       <a href={formData.twitter_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-400/5 hover:bg-blue-400/10 border border-blue-400/10 transition-all text-sm font-medium text-[#1DA1F2] backdrop-blur-sm">
-                        <Twitter className="size-4" /> Twitter
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 border border-[#1DA1F2]/20 transition-all text-sm font-medium text-[#1DA1F2] backdrop-blur-sm group" title="Twitter / X Profile">
+                        <RealBrandIcon id="twitter" label="Twitter / X" fallback={Twitter} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Twitter / X</span>
                       </a>
                     )}
                     {formData.portfolio_url && (
                       <a href={formData.portfolio_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all text-sm font-medium text-primary backdrop-blur-sm">
-                        <Globe className="size-4" /> Portfolio
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-all text-sm font-medium text-primary backdrop-blur-sm group" title="Portfolio">
+                        <Globe className="size-4 group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Portfolio</span>
                       </a>
                     )}
-                    {!formData.linkedin_url && !formData.github_url && !formData.twitter_url && !formData.portfolio_url && (
-                      <p className="text-xs text-muted-foreground italic">No social links added yet.</p>
-                    )}
+                    {!formData.linkedin_url &&
+                      !formData.github_url &&
+                      !formData.leetcode_url &&
+                      !formData.codeforces_url &&
+                      !formData.hackerrank_url &&
+                      !formData.codechef_url &&
+                      !formData.kaggle_url &&
+                      !formData.codolio_url &&
+                      !formData.twitter_url &&
+                      !formData.portfolio_url && (
+                        <p className="text-xs text-muted-foreground italic">No social or coding links added yet.</p>
+                      )}
                   </div>
                 </div>
               )}
@@ -1249,7 +1591,7 @@ export default function Profile() {
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                       Hide Dashboard Header
+                      Hide Dashboard Header
                     </label>
                     <p className="text-xs text-muted-foreground">
                       Remove the top navigation bar from your dashboard interface.
@@ -1290,8 +1632,8 @@ export default function Profile() {
 
       {/* Public Profile Modal */}
       <Dialog open={showPublicProfile} onOpenChange={setShowPublicProfile}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader className="pb-4 border-b">
+        <DialogContent className="max-w-md sm:max-w-[460px] p-4 sm:p-5 overflow-hidden">
+          <DialogHeader className="pb-3 border-b">
             <DialogTitle>Public Profile View</DialogTitle>
             <DialogDescription className="sr-only">
               Preview of your public academic profile.
@@ -1299,7 +1641,7 @@ export default function Profile() {
           </DialogHeader>
 
           {/* Academic Profile Preview */}
-          <div className="bg-slate-50 dark:bg-[#050b14] text-slate-900 dark:text-white rounded-xl overflow-hidden shadow-2xl font-sans selection:bg-blue-500/30 transition-colors duration-300">
+          <div className="bg-slate-50 dark:bg-[#050b14] text-slate-900 dark:text-white rounded-xl overflow-y-auto max-h-[80vh] shadow-2xl font-sans selection:bg-blue-500/30 transition-colors duration-300">
 
             {/* Top Header */}
             <div className="pt-8 pb-4 text-center">
@@ -1326,10 +1668,36 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* Name */}
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-3">
-                  {formData.full_name || "User Name"}
-                </h1>
+                {/* Name & 6 Profile Icons */}
+                <div className="flex flex-wrap items-center justify-center gap-2.5 mb-3">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {formData.full_name || "User Name"}
+                  </h1>
+                  {isStudent && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {getHeaderProfileIcons(formData, true).map((platform) => {
+                        return (
+                          <a
+                            key={platform.id}
+                            href={platform.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`${platform.label} Profile`}
+                            className={cn(
+                              "size-6 rounded-full flex items-center justify-center border transition-all duration-300 hover:scale-110 backdrop-blur-md p-1",
+                              platform.bg,
+                              platform.border,
+                              platform.text,
+                              platform.shadow
+                            )}
+                          >
+                            <RealBrandIcon id={platform.id} label={platform.label} fallback={platform.icon} className="size-3 object-contain" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
                 {/* Badges */}
                 <div className="flex flex-wrap justify-center gap-2 mb-6 items-center">
@@ -1383,7 +1751,6 @@ export default function Profile() {
                     </p>
                   </div>
                 )}
-
                 {/* Connectivity */}
                 <div className="w-full text-left mb-8">
                   <div className="flex items-center gap-2 mb-4">
@@ -1426,7 +1793,7 @@ export default function Profile() {
                   )}
 
                   {/* Social Presence Links */}
-                  {(formData.linkedin_url || formData.github_url || formData.twitter_url) && (
+                  {isStudent && (formData.linkedin_url || formData.github_url || formData.leetcode_url || formData.codeforces_url || formData.hackerrank_url || formData.codechef_url || formData.kaggle_url || formData.codolio_url || formData.twitter_url) && (
                     <div className="flex flex-wrap gap-2">
                       {formData.linkedin_url && (
                         <a
@@ -1435,7 +1802,7 @@ export default function Profile() {
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
                         >
-                          <Linkedin className="size-3.5 text-[#0077b5] group-hover/social:scale-110 transition-transform" />
+                          <RealBrandIcon id="linkedin" label="LinkedIn" fallback={Linkedin} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">LinkedIn</span>
                         </a>
                       )}
@@ -1446,8 +1813,74 @@ export default function Profile() {
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
                         >
-                          <Github className="size-3.5 text-slate-900 dark:text-white group-hover/social:scale-110 transition-transform" />
+                          <RealBrandIcon id="github" label="GitHub" fallback={Github} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">GitHub</span>
+                        </a>
+                      )}
+                      {formData.leetcode_url && (
+                        <a
+                          href={formData.leetcode_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <RealBrandIcon id="leetcode" label="LeetCode" fallback={LeetCodeIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">LeetCode</span>
+                        </a>
+                      )}
+                      {formData.codeforces_url && (
+                        <a
+                          href={formData.codeforces_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <RealBrandIcon id="codeforces" label="Codeforces" fallback={CodeforcesIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Codeforces</span>
+                        </a>
+                      )}
+                      {formData.hackerrank_url && (
+                        <a
+                          href={formData.hackerrank_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <RealBrandIcon id="hackerrank" label="HackerRank" fallback={HackerRankIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">HackerRank</span>
+                        </a>
+                      )}
+                      {formData.codechef_url && (
+                        <a
+                          href={formData.codechef_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <RealBrandIcon id="codechef" label="CodeChef" fallback={CodeChefIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">CodeChef</span>
+                        </a>
+                      )}
+                      {formData.kaggle_url && (
+                        <a
+                          href={formData.kaggle_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <RealBrandIcon id="kaggle" label="Kaggle" fallback={KaggleIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Kaggle</span>
+                        </a>
+                      )}
+                      {formData.codolio_url && (
+                        <a
+                          href={formData.codolio_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
+                        >
+                          <RealBrandIcon id="codolio" label="Codolio" fallback={CodolioIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Codolio</span>
                         </a>
                       )}
                       {formData.twitter_url && (
@@ -1457,7 +1890,7 @@ export default function Profile() {
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
                         >
-                          <Twitter className="size-3.5 text-[#1DA1F2] group-hover/social:scale-110 transition-transform" />
+                          <RealBrandIcon id="twitter" label="Twitter / X" fallback={Twitter} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">X</span>
                         </a>
                       )}
@@ -1465,21 +1898,7 @@ export default function Profile() {
                   )}
                 </div>
 
-                {/* Footer E-Record Card */}
-                <div className="w-full bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between shadow-xl shadow-slate-200/50 dark:shadow-blue-900/5">
-                  <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-full border-2 border-blue-500/20 flex items-center justify-center bg-blue-500/5 text-blue-500">
-                      <Shield className="size-5" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] font-bold text-slate-900 dark:text-white leading-tight mb-0.5">Official Academic E-Record</p>
-                      <p className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">ID: PREVIEW-MODE</p>
-                    </div>
-                  </div>
-                  <div className="bg-blue-600 text-[8px] font-black px-3 py-1.5 rounded-lg text-white tracking-wider">
-                    VERIFIED
-                  </div>
-                </div>
+
 
                 <div className="mt-6 w-full pb-2 flex justify-center">
                   <Button
@@ -1518,7 +1937,7 @@ export default function Profile() {
       {/* Mobile Bottom Navigation for Profile Tabs */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border xl:hidden pb-safe">
         <nav className="flex items-center justify-around h-16 px-2 overflow-x-auto no-scrollbar">
-          {profileTabs.map((tab) => (
+          {visibleProfileTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => {

@@ -43,6 +43,16 @@ export interface Profile {
   github_url: string | null;
   twitter_url: string | null;
   portfolio_url: string | null;
+  leetcode_url?: string | null;
+  codeforces_url?: string | null;
+  hackerrank_url?: string | null;
+  codechef_url?: string | null;
+  kaggle_url?: string | null;
+  codolio_url?: string | null;
+  voice_bio_url?: string | null;
+  voice_bio_transcript?: string | null;
+  voice_bio_tags?: string[] | null;
+  role?: string | null;
   verified: boolean | null;
   fcm_token: string | null; // Added
   email_notifications: boolean | null;
@@ -148,6 +158,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const profileData = data as any as Profile | null;
+      if (profileData?.user_id) {
+        const storedVoiceBio = JSON.parse(localStorage.getItem(`eduspace_voice_bio_${profileData.user_id}`) || '{}');
+        const storedSocial = JSON.parse(localStorage.getItem(`eduspace_social_extra_${profileData.user_id}`) || '{}');
+        if (storedVoiceBio) {
+          profileData.voice_bio_url = storedVoiceBio.voice_bio_url ?? profileData.voice_bio_url ?? null;
+          profileData.voice_bio_transcript = storedVoiceBio.voice_bio_transcript ?? profileData.voice_bio_transcript ?? null;
+          profileData.voice_bio_tags = storedVoiceBio.voice_bio_tags ?? profileData.voice_bio_tags ?? [];
+        }
+        if (storedSocial) {
+          profileData.leetcode_url = storedSocial.leetcode_url ?? profileData.leetcode_url ?? null;
+          profileData.codeforces_url = storedSocial.codeforces_url ?? profileData.codeforces_url ?? null;
+          profileData.hackerrank_url = storedSocial.hackerrank_url ?? profileData.hackerrank_url ?? null;
+          profileData.codechef_url = storedSocial.codechef_url ?? profileData.codechef_url ?? null;
+          profileData.kaggle_url = storedSocial.kaggle_url ?? profileData.kaggle_url ?? null;
+          profileData.codolio_url = storedSocial.codolio_url ?? profileData.codolio_url ?? null;
+        }
+      }
+
       if (profileData?.avatar_url) {
         void preloadImage(profileData.avatar_url, "high");
       }
@@ -499,13 +527,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update(data)
-        .eq("user_id", user.id);
+      // Separate non-DB fields (voice_bio and social_coding) to prevent schema cache errors
+      const {
+        voice_bio_url,
+        voice_bio_transcript,
+        voice_bio_tags,
+        leetcode_url,
+        codeforces_url,
+        hackerrank_url,
+        codechef_url,
+        kaggle_url,
+        codolio_url,
+        ...dbData
+      } = data as any;
 
-      if (error) {
-        return { success: false, error: error.message };
+      const storedSocial = JSON.parse(localStorage.getItem(`eduspace_social_extra_${user.id}`) || '{}');
+      const updatedSocial = {
+        leetcode_url: leetcode_url !== undefined ? leetcode_url : storedSocial.leetcode_url,
+        codeforces_url: codeforces_url !== undefined ? codeforces_url : storedSocial.codeforces_url,
+        hackerrank_url: hackerrank_url !== undefined ? hackerrank_url : storedSocial.hackerrank_url,
+        codechef_url: codechef_url !== undefined ? codechef_url : storedSocial.codechef_url,
+        kaggle_url: kaggle_url !== undefined ? kaggle_url : storedSocial.kaggle_url,
+        codolio_url: codolio_url !== undefined ? codolio_url : storedSocial.codolio_url,
+      };
+      localStorage.setItem(`eduspace_social_extra_${user.id}`, JSON.stringify(updatedSocial));
+
+      if (voice_bio_url !== undefined || voice_bio_transcript !== undefined || voice_bio_tags !== undefined) {
+        const storedVoiceBio = JSON.parse(localStorage.getItem(`eduspace_voice_bio_${user.id}`) || '{}');
+        const updatedVoiceBio = {
+          voice_bio_url: voice_bio_url !== undefined ? voice_bio_url : storedVoiceBio.voice_bio_url,
+          voice_bio_transcript: voice_bio_transcript !== undefined ? voice_bio_transcript : storedVoiceBio.voice_bio_transcript,
+          voice_bio_tags: voice_bio_tags !== undefined ? voice_bio_tags : storedVoiceBio.voice_bio_tags,
+        };
+        localStorage.setItem(`eduspace_voice_bio_${user.id}`, JSON.stringify(updatedVoiceBio));
+      }
+
+      setProfile((prev) => (prev ? { ...prev, ...data, ...updatedSocial } : null));
+
+      if (Object.keys(dbData).length > 0) {
+        const { error } = await supabase
+          .from("profiles")
+          .update(dbData)
+          .eq("user_id", user.id);
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
       }
 
       // Also sync to public_profiles table for sharing
