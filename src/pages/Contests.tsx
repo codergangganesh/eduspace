@@ -59,6 +59,34 @@ const PLATFORMS: { name: PlatformName | 'ALL'; label: string; bg: string; text: 
   { name: 'Kaggle', label: 'Kaggle', bg: 'bg-cyan-500/10', text: 'text-cyan-600 dark:text-cyan-400' },
 ];
 
+const CALENDAR_ADDED_KEY = 'eduspace_contest_calendar_added';
+
+function formatContestStartLabel(startTimeIso: string, includeYear = false) {
+  const startDate = new Date(startTimeIso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const contestDay = new Date(startDate);
+  contestDay.setHours(0, 0, 0, 0);
+
+  const dayDiff = Math.round((contestDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+  const time = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (dayDiff === 0) return `Today, ${time}`;
+  if (dayDiff === 1) return `Tomorrow, ${time}`;
+  if (dayDiff > 1 && dayDiff < 7) {
+    return `${startDate.toLocaleDateString(undefined, { weekday: 'short' })}, ${time}`;
+  }
+
+  const date = startDate.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' as const } : {}),
+  });
+
+  return `${date}, ${time}`;
+}
+
 function CountdownTimer({ startTimeIso, status }: { startTimeIso: string; status: ContestStatus }) {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
@@ -168,6 +196,13 @@ export default function Contests() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showTestBanner, setShowTestBanner] = useState(false);
+  const [calendarAdded, setCalendarAdded] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(CALENDAR_ADDED_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   // Filters & Controls
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformName | 'ALL'>('ALL');
@@ -231,6 +266,15 @@ export default function Contests() {
 
     setFavoritePlatforms(updated);
     localStorage.setItem('eduspace_fav_platforms', JSON.stringify(updated));
+  };
+
+  const markCalendarAdded = (contestId: string) => {
+    setCalendarAdded((current) => {
+      if (current.includes(contestId)) return current;
+      const updated = [...current, contestId];
+      localStorage.setItem(CALENDAR_ADDED_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const loadContests = async (isManualRefresh = false) => {
@@ -731,9 +775,8 @@ export default function Contests() {
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredContests.map((contest) => {
-              const startDate = new Date(contest.startTime);
-              const isReminded = reminders.includes(contest.id);
               const isFav = favoritePlatforms.includes(contest.platform);
+              const isCalendarAdded = calendarAdded.includes(contest.id);
 
               return (
                 /* Professional grid card */
@@ -778,7 +821,7 @@ export default function Contests() {
                               Start Time
                             </span>
                             <span className="font-semibold text-slate-900 dark:text-slate-200">
-                              {startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatContestStartLabel(contest.startTime)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -809,10 +852,14 @@ export default function Contests() {
                         href={generateGoogleCalendarUrl(contest)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-lg text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/70 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors"
+                        onClick={() => markCalendarAdded(contest.id)}
+                        className={`flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-lg text-xs font-semibold border transition-colors ${isCalendarAdded
+                          ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-900/70 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                          : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200/80 dark:border-amber-900/70 hover:bg-amber-100 dark:hover:bg-amber-950/60'
+                          }`}
                       >
-                        <CalendarCheck className="size-3.5 shrink-0" />
-                        Add Cal
+                        {isCalendarAdded ? <CheckCircle2 className="size-3.5 shrink-0" /> : <CalendarCheck className="size-3.5 shrink-0" />}
+                        {isCalendarAdded ? 'Added' : 'Add Cal'}
                       </a>
 
                       <button
@@ -832,9 +879,8 @@ export default function Contests() {
           /* List View */
           <div className="space-y-2.5">
             {filteredContests.map((contest) => {
-              const startDate = new Date(contest.startTime);
-              const isReminded = reminders.includes(contest.id);
               const isFav = favoritePlatforms.includes(contest.platform);
+              const isCalendarAdded = calendarAdded.includes(contest.id);
 
               return (
                 /* Professional list card */
@@ -862,7 +908,7 @@ export default function Contests() {
                       <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                         <span className="flex items-center gap-1">
                           <CalendarIcon className="size-3.5 text-slate-500 dark:text-slate-400" />
-                          {startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} @ {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {formatContestStartLabel(contest.startTime, true)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="size-3.5 text-slate-500 dark:text-slate-400" />
@@ -887,11 +933,15 @@ export default function Contests() {
                       href={generateGoogleCalendarUrl(contest)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/70 hover:bg-amber-100 dark:hover:bg-amber-950/60 transition-colors"
+                      onClick={() => markCalendarAdded(contest.id)}
+                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors ${isCalendarAdded
+                        ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-900/70 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                        : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200/80 dark:border-amber-900/70 hover:bg-amber-100 dark:hover:bg-amber-950/60'
+                        }`}
                     >
-                      <CalendarCheck className="size-3.5 shrink-0" />
-                      <span className="inline sm:hidden lg:inline">Add to Calendar</span>
-                      <span className="hidden sm:inline lg:hidden">Add Cal</span>
+                      {isCalendarAdded ? <CheckCircle2 className="size-3.5 shrink-0" /> : <CalendarCheck className="size-3.5 shrink-0" />}
+                      <span className="inline sm:hidden lg:inline">{isCalendarAdded ? 'Added' : 'Add to Calendar'}</span>
+                      <span className="hidden sm:inline lg:hidden">{isCalendarAdded ? 'Added' : 'Add Cal'}</span>
                     </a>
 
                     <button

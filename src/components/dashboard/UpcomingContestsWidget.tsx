@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Calendar, Clock, RefreshCw, Zap, ChevronRight } from 'lucide-react';
+import { Trophy, Calendar, Clock, RefreshCw, Zap, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { Contest, PlatformName } from '@/types/contest';
 import { fetchUpcomingContests, formatDuration, generateGoogleCalendarUrl } from '@/services/contestService';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,40 @@ const PLATFORM_COLORS: Record<PlatformName, { bg: string; text: string }> = {
   Other: { bg: 'bg-slate-50 dark:bg-slate-900/60', text: 'text-slate-600 dark:text-slate-400' },
 };
 
+const CALENDAR_ADDED_KEY = 'eduspace_contest_calendar_added';
+
+function formatContestStartLabel(startTimeIso: string) {
+  const startDate = new Date(startTimeIso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const contestDay = new Date(startDate);
+  contestDay.setHours(0, 0, 0, 0);
+
+  const dayDiff = Math.round((contestDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+  const time = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (dayDiff === 0) return `Today, ${time}`;
+  if (dayDiff === 1) return `Tomorrow, ${time}`;
+  if (dayDiff > 1 && dayDiff < 7) {
+    return `${startDate.toLocaleDateString(undefined, { weekday: 'short' })}, ${time}`;
+  }
+
+  const date = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${date}, ${time}`;
+}
+
 export function UpcomingContestsWidget() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [calendarAdded, setCalendarAdded] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(CALENDAR_ADDED_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const loadData = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -38,6 +68,15 @@ export function UpcomingContestsWidget() {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  const markCalendarAdded = (contestId: string) => {
+    setCalendarAdded((current) => {
+      if (current.includes(contestId)) return current;
+      const updated = [...current, contestId];
+      localStorage.setItem(CALENDAR_ADDED_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -101,10 +140,8 @@ export function UpcomingContestsWidget() {
           <div className="space-y-2">
             {contests.map((contest) => {
               const p = PLATFORM_COLORS[contest.platform] || PLATFORM_COLORS.Other;
-              const startDate = new Date(contest.startTime);
-              const formattedDate = startDate.toLocaleDateString(undefined, {
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-              });
+              const formattedDate = formatContestStartLabel(contest.startTime);
+              const isCalendarAdded = calendarAdded.includes(contest.id);
 
               return (
                 <div
@@ -146,10 +183,14 @@ export function UpcomingContestsWidget() {
                       href={generateGoogleCalendarUrl(contest)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Add to Google Calendar"
-                      className="size-7 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      title={isCalendarAdded ? 'Added to calendar' : 'Add to Google Calendar'}
+                      onClick={() => markCalendarAdded(contest.id)}
+                      className={`size-7 rounded-lg flex items-center justify-center transition-colors border ${isCalendarAdded
+                        ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-900/70 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
                     >
-                      <Calendar className="size-3.5" />
+                      {isCalendarAdded ? <CheckCircle2 className="size-3.5" /> : <Calendar className="size-3.5" />}
                     </a>
 
                     <a
