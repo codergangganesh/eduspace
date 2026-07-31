@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStudentAttendance } from "@/hooks/useAttendance";
 import { DashboardDuelCard } from "@/components/dashboard/DashboardDuelCard";
 import { DashboardStreakCard } from "@/components/dashboard/DashboardStreakCard";
+import { UpcomingContestsWidget } from "@/components/dashboard/UpcomingContestsWidget";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -314,6 +315,9 @@ export default function Dashboard() {
               </div>
               <DashboardStreakCard streak={displayStreak} className="mt-3" />
             </div>
+
+            {/* Upcoming Contests Widget */}
+            <UpcomingContestsWidget />
 
             {/* Upcoming Classes Widget */}
             <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/50 p-5 shadow-[6px_6px_12px_rgba(0,0,0,0.08),-6px_-6px_12px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[6px_6px_12px_rgba(0,0,0,0.3),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.15)] transition-all duration-300">

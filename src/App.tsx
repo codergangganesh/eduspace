@@ -80,6 +80,7 @@ const LecturerClassesAttendance = lazy(() => import("./pages/LecturerClassesAtte
 const LecturerAttendance = lazy(() => import("./pages/LecturerAttendance"));
 const VoiceTutor = lazy(() => import("./pages/VoiceTutor"));
 const StudentProfileView = lazy(() => import("./pages/StudentProfileView"));
+const Contests = lazy(() => import("./pages/Contests"));
 
 const LoadingFallback = () => {
   useEffect(() => {
@@ -236,6 +237,7 @@ const AnimatedRoutes = () => {
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
 
+        <Route path="/contests" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><Contests /></ProtectedRoute>} />
         <Route path="/class-feed" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><ClassFeed /></ProtectedRoute>} />
         <Route path="/ai-chat" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIChat /></ProtectedRoute>} />
         <Route path="/agent" element={<ProtectedRoute allowedRoles={["student", "lecturer", "admin"]}><AIAgent /></ProtectedRoute>} />
