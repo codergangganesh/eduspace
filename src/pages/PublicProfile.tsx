@@ -11,6 +11,7 @@ import { BadgeType, BADGE_DETAILS } from "@/services/streakService";
 import { StreakBadgeDetailModal } from "@/components/streak/StreakBadgeDetailModal";
 import { cn } from "@/lib/utils";
 import SEO from "@/components/SEO";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const LeetCodeIcon = ({ className = "size-4" }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -89,7 +90,7 @@ const RealBrandIcon = ({
     );
 };
 
-const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'kaggle', 'codolio'];
+const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'kaggle', 'codolio', 'twitter', 'portfolio'];
 
 interface SocialPlatformItem {
     id: string;
@@ -119,15 +120,15 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = true): So
     const active = allPlatforms.filter(p => Boolean(p.url));
 
     if (isViewOnly) {
-        return active.slice(0, 8);
+        return active.slice(0, 10);
     }
 
-    if (active.length >= 8) {
-        return active.slice(0, 8);
+    if (active.length >= 10) {
+        return active.slice(0, 10);
     }
 
     const activeIds = new Set(active.map(a => a.id));
-    const remainingSlotsNeeded = 8 - active.length;
+    const remainingSlotsNeeded = 10 - active.length;
     const defaultsToInclude = allPlatforms
         .filter(p => DEFAULT_CORE_PLATFORMS.includes(p.id) && !activeIds.has(p.id))
         .slice(0, remainingSlotsNeeded);
@@ -342,26 +343,35 @@ export default function PublicProfile() {
                             </h1>
                             {profile.role !== "lecturer" && (
                                 <div className="flex items-center gap-1 shrink-0 flex-wrap justify-center">
-                                    {getHeaderProfileIcons(profile, true).map((platform) => {
-                                        return (
-                                            <a
-                                                key={platform.id}
-                                                href={platform.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title={`${platform.label} Profile`}
-                                                className={cn(
-                                                    "size-6.5 rounded-full flex items-center justify-center border transition-all duration-300 hover:scale-110 backdrop-blur-md p-1",
-                                                    platform.bg,
-                                                    platform.border,
-                                                    platform.text,
-                                                    platform.shadow
-                                                )}
-                                            >
-                                                <RealBrandIcon id={platform.id} label={platform.label} fallback={platform.icon} className="size-3.5 object-contain" />
-                                            </a>
-                                        );
-                                    })}
+                                    <TooltipProvider delayDuration={100}>
+                                        {getHeaderProfileIcons(profile, true).map((platform) => {
+                                            const isFilled = Boolean(platform.url);
+                                            return (
+                                                <Tooltip key={platform.id}>
+                                                    <TooltipTrigger asChild>
+                                                        <a
+                                                            href={platform.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={cn(
+                                                                "size-6.5 rounded-full flex items-center justify-center border transition-all duration-300 hover:scale-110 backdrop-blur-md p-1",
+                                                                platform.bg,
+                                                                platform.border,
+                                                                platform.text,
+                                                                platform.shadow
+                                                            )}
+                                                        >
+                                                            <RealBrandIcon id={platform.id} label={platform.label} fallback={platform.icon} className="size-3.5 object-contain" />
+                                                        </a>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border shadow-sm">
+                                                        <RealBrandIcon id={platform.id} label={platform.label} fallback={platform.icon} className="size-3.5 object-contain" />
+                                                        <span>{platform.label}</span>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            );
+                                        })}
+                                    </TooltipProvider>
                                 </div>
                             )}
                         </div>
