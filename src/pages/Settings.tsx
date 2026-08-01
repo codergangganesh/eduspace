@@ -5,9 +5,11 @@ import { deleteUserAccount } from "@/lib/accountService";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PlatformBrandLogo } from "@/components/profile/CodingProfileCard";
+import { extractUsername } from "@/services/codingProfileService";
 import { motion } from "framer-motion";
 import {
   Trash2,
@@ -48,56 +50,111 @@ export default function Settings() {
   const [isConfirming, setIsConfirming] = useState(false);
 
   // Coding Profiles State
-  const [leetcodeUsername, setLeetcodeUsername] = useState(profile?.leetcode_username || "");
-  const [codeforcesHandle, setCodeforcesHandle] = useState(profile?.codeforces_handle || "");
+  const [leetcodeUsername, setLeetcodeUsername] = useState(
+    profile?.leetcode_username || extractUsername(profile?.leetcode_url) || ""
+  );
+  const [codeforcesHandle, setCodeforcesHandle] = useState(
+    profile?.codeforces_handle || extractUsername(profile?.codeforces_url) || ""
+  );
+  const [githubUsername, setGithubUsername] = useState(
+    (profile?.github_url ? extractUsername(profile.github_url) : "") || (profile as any)?.github_username || ""
+  );
+  const [codechefUsername, setCodechefUsername] = useState(
+    (profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || ""
+  );
+  const [codewarsUsername, setCodewarsUsername] = useState(
+    (profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || ""
+  );
+  const [geeksforgeeksUsername, setGeeksforgeeksUsername] = useState(
+    (profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || ""
+  );
+  const [atcoderUsername, setAtcoderUsername] = useState(
+    (profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || ""
+  );
+  const [hackerrankUrl, setHackerrankUrl] = useState(
+    profile?.hackerrank_url || ""
+  );
+  const [githubToken, setGithubToken] = useState(
+    (profile as any)?.github_token || (user?.id ? localStorage.getItem(`eduspace_github_token_${user.id}`) : "") || ""
+  );
   const [isSavingCoding, setIsSavingCoding] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setLeetcodeUsername(profile.leetcode_username || extractUsername(profile.leetcode_url) || "");
+      setCodeforcesHandle(profile.codeforces_handle || extractUsername(profile.codeforces_url) || "");
+      setGithubUsername((profile.github_url ? extractUsername(profile.github_url) : "") || (profile as any)?.github_username || "");
+      setCodechefUsername((profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || "");
+      setCodewarsUsername((profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || "");
+      setGeeksforgeeksUsername((profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || "");
+      setAtcoderUsername((profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || "");
+      setHackerrankUrl(profile.hackerrank_url || "");
+      setGithubToken((profile as any)?.github_token || (user?.id ? localStorage.getItem(`eduspace_github_token_${user.id}`) : "") || "");
+    }
+  }, [profile, user?.id]);
 
   const handleSaveCodingUsernames = async (e: React.FormEvent) => {
     e.preventDefault();
-    const lcClean = leetcodeUsername.trim();
-    const cfClean = codeforcesHandle.trim();
-
-    if (leetcodeUsername.length > 0 && !lcClean) {
-      toast({
-        title: "Validation Failed",
-        description: "LeetCode Username cannot be empty spaces.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (codeforcesHandle.length > 0 && !cfClean) {
-      toast({
-        title: "Validation Failed",
-        description: "Codeforces Handle cannot be empty spaces.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const lcClean = extractUsername(leetcodeUsername);
+    const cfClean = extractUsername(codeforcesHandle);
+    const ghClean = extractUsername(githubUsername);
+    const ccClean = extractUsername(codechefUsername);
+    const cwClean = extractUsername(codewarsUsername);
+    const gfgClean = extractUsername(geeksforgeeksUsername);
+    const atcoderClean = extractUsername(atcoderUsername);
+    const hrClean = extractUsername(hackerrankUrl);
+    const ghTokenClean = githubToken.trim();
 
     setIsSavingCoding(true);
     try {
+      if (user?.id) {
+        if (ghTokenClean) {
+          localStorage.setItem(`eduspace_github_token_${user.id}`, ghTokenClean);
+        } else {
+          localStorage.removeItem(`eduspace_github_token_${user.id}`);
+        }
+      }
+
       const lcUrl = lcClean ? `https://leetcode.com/u/${lcClean}/` : "";
       const cfUrl = cfClean ? `https://codeforces.com/profile/${cfClean}` : "";
+      const ghUrl = ghClean ? `https://github.com/${ghClean}` : "";
+      const ccUrl = ccClean ? `https://www.codechef.com/users/${ccClean}` : "";
+      const cwUrl = cwClean ? `https://www.codewars.com/users/${cwClean}` : "";
+      const gfgUrl = gfgClean ? `https://www.geeksforgeeks.org/user/${gfgClean}/` : "";
+      const atcoderUrl = atcoderClean ? `https://atcoder.jp/users/${atcoderClean}` : "";
+      const hrUrl = hrClean ? `https://www.hackerrank.com/profile/${hrClean}` : (hackerrankUrl.trim() || "");
 
       const res = await updateProfile({
         leetcode_username: lcClean || null,
         codeforces_handle: cfClean || null,
+        github_username: ghClean || null,
+        codechef_username: ccClean || null,
+        codewars_username: cwClean || null,
+        geeksforgeeks_username: gfgClean || null,
+        atcoder_username: atcoderClean || null,
         leetcode_url: lcUrl || null,
         codeforces_url: cfUrl || null,
-      });
+        github_url: ghUrl || null,
+        codechef_url: ccUrl || null,
+        codewars_url: cwUrl || null,
+        geeksforgeeks_url: gfgUrl || null,
+        atcoder_url: atcoderUrl || null,
+        hackerrank_url: hrUrl || null,
+        github_token: ghTokenClean || null,
+      } as any);
 
       if (res.success) {
         toast({
-          title: "Usernames Saved",
-          description: "Coding profile usernames have been updated.",
+          title: "Profiles Saved",
+          description: "Coding profile handles & URLs updated successfully.",
         });
       } else {
-        throw new Error(res.error || "Failed to update usernames");
+        throw new Error(res.error || "Failed to update coding profiles");
       }
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: err.message,
+        title: "Update Failed",
+        description: err.message || "Could not save coding profiles.",
         variant: "destructive",
       });
     } finally {
@@ -231,46 +288,149 @@ export default function Settings() {
                   Coding Profiles
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Connect your LeetCode username and Codeforces handle to showcase your real-time competitive programming statistics.
+                  Connect your competitive programming & open-source platform handles or URLs to showcase real-time statistics across all coding platforms.
                 </p>
               </div>
 
               <div className="md:col-span-2">
                 <form onSubmit={handleSaveCodingUsernames} className="bg-secondary/10 border border-border/50 rounded-2xl p-6 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="setting-leetcode" className="text-sm font-semibold">
-                      LeetCode Username
-                    </Label>
-                    <Input
-                      id="setting-leetcode"
-                      placeholder="e.g. ganesh123"
-                      value={leetcodeUsername}
-                      onChange={(e) => setLeetcodeUsername(e.target.value)}
-                      className="bg-background/50 font-mono text-sm"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-leetcode" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="leetcode" className="size-4" />
+                        LeetCode Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-leetcode"
+                        placeholder="e.g. johndoe or https://leetcode.com/u/johndoe/"
+                        value={leetcodeUsername}
+                        onChange={(e) => setLeetcodeUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-codeforces" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="codeforces" className="size-4" />
+                        Codeforces Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-codeforces"
+                        placeholder="e.g. tourist or https://codeforces.com/profile/tourist"
+                        value={codeforcesHandle}
+                        onChange={(e) => setCodeforcesHandle(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-github" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="github" className="size-4" />
+                        GitHub Username / URL
+                      </Label>
+                      <Input
+                        id="setting-github"
+                        placeholder="e.g. octocat or https://github.com/octocat"
+                        value={githubUsername}
+                        onChange={(e) => setGithubUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-codechef" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="codechef" className="size-4" />
+                        CodeChef Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-codechef"
+                        placeholder="e.g. chef123 or https://www.codechef.com/users/chef123"
+                        value={codechefUsername}
+                        onChange={(e) => setCodechefUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-codewars" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="codewars" className="size-4" />
+                        Codewars Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-codewars"
+                        placeholder="e.g. ninja or https://www.codewars.com/users/ninja"
+                        value={codewarsUsername}
+                        onChange={(e) => setCodewarsUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-geeksforgeeks" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="geeksforgeeks" className="size-4" />
+                        GeeksforGeeks Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-geeksforgeeks"
+                        placeholder="e.g. gfg_user or https://geeksforgeeks.org/user/gfg_user/"
+                        value={geeksforgeeksUsername}
+                        onChange={(e) => setGeeksforgeeksUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-atcoder" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="atcoder" className="size-4" />
+                        AtCoder Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-atcoder"
+                        placeholder="e.g. tourist or https://atcoder.jp/users/tourist"
+                        value={atcoderUsername}
+                        onChange={(e) => setAtcoderUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-hackerrank" className="text-xs font-semibold flex items-center gap-2 text-foreground">
+                        <Code2 className="size-4 text-emerald-500" />
+                        HackerRank Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-hackerrank"
+                        placeholder="e.g. hr_user or https://hackerrank.com/hr_user"
+                        value={hackerrankUrl}
+                        onChange={(e) => setHackerrankUrl(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="setting-codeforces" className="text-sm font-semibold">
-                      Codeforces Handle
+                  <div className="space-y-1.5 pt-2 border-t border-border/40">
+                    <Label htmlFor="setting-github-token" className="text-xs font-semibold flex items-center gap-2">
+                      <PlatformBrandLogo platform="github" className="size-4" />
+                      GitHub Personal Access Token (Optional - Increases Rate Limit)
                     </Label>
                     <Input
-                      id="setting-codeforces"
-                      placeholder="e.g. ganesh_cf"
-                      value={codeforcesHandle}
-                      onChange={(e) => setCodeforcesHandle(e.target.value)}
-                      className="bg-background/50 font-mono text-sm"
+                      id="setting-github-token"
+                      type="password"
+                      placeholder="ghp_..."
+                      value={githubToken}
+                      onChange={(e) => setGithubToken(e.target.value)}
+                      className="bg-background/50 font-mono text-xs h-9"
                     />
                   </div>
 
                   <div className="pt-2 flex justify-end">
-                    <Button type="submit" disabled={isSavingCoding} size="sm" className="rounded-xl font-medium text-xs">
+                    <Button type="submit" disabled={isSavingCoding} size="sm" className="rounded-xl font-bold text-xs px-5">
                       {isSavingCoding ? (
                         <>
-                          <Loader2 className="size-3.5 mr-2 animate-spin" /> Saving...
+                          <Loader2 className="size-3.5 mr-2 animate-spin" /> Saving Profiles...
                         </>
                       ) : (
-                        "Save Usernames"
+                        "Save All Profiles"
                       )}
                     </Button>
                   </div>

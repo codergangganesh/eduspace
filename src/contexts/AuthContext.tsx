@@ -49,6 +49,13 @@ export interface Profile {
   codeforces_handle?: string | null;
   hackerrank_url?: string | null;
   codechef_url?: string | null;
+  codewars_url?: string | null;
+  geeksforgeeks_url?: string | null;
+  atcoder_url?: string | null;
+  codechef_username?: string | null;
+  codewars_username?: string | null;
+  geeksforgeeks_username?: string | null;
+  atcoder_username?: string | null;
   kaggle_url?: string | null;
   codolio_url?: string | null;
   voice_bio_url?: string | null;
@@ -194,6 +201,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileData.codeforces_handle = mergedSocial.codeforces_handle ?? profileData.codeforces_handle ?? null;
         profileData.hackerrank_url = mergedSocial.hackerrank_url ?? profileData.hackerrank_url ?? null;
         profileData.codechef_url = mergedSocial.codechef_url ?? profileData.codechef_url ?? null;
+        profileData.codewars_url = mergedSocial.codewars_url ?? profileData.codewars_url ?? null;
+        profileData.geeksforgeeks_url = mergedSocial.geeksforgeeks_url ?? profileData.geeksforgeeks_url ?? null;
+        profileData.atcoder_url = mergedSocial.atcoder_url ?? profileData.atcoder_url ?? null;
+        profileData.codechef_username = mergedSocial.codechef_username ?? profileData.codechef_username ?? null;
+        profileData.codewars_username = mergedSocial.codewars_username ?? profileData.codewars_username ?? null;
+        profileData.geeksforgeeks_username = mergedSocial.geeksforgeeks_username ?? profileData.geeksforgeeks_username ?? null;
+        profileData.atcoder_username = mergedSocial.atcoder_username ?? profileData.atcoder_username ?? null;
         profileData.kaggle_url = mergedSocial.kaggle_url ?? profileData.kaggle_url ?? null;
         profileData.codolio_url = mergedSocial.codolio_url ?? profileData.codolio_url ?? null;
       }
@@ -560,6 +574,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         codeforces_handle,
         hackerrank_url,
         codechef_url,
+        codewars_url,
+        geeksforgeeks_url,
+        atcoder_url,
+        codechef_username,
+        codewars_username,
+        geeksforgeeks_username,
+        atcoder_username,
         kaggle_url,
         codolio_url,
         ...dbData
@@ -573,6 +594,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         codeforces_handle: codeforces_handle !== undefined ? codeforces_handle : storedSocial.codeforces_handle,
         hackerrank_url: hackerrank_url !== undefined ? hackerrank_url : storedSocial.hackerrank_url,
         codechef_url: codechef_url !== undefined ? codechef_url : storedSocial.codechef_url,
+        codewars_url: codewars_url !== undefined ? codewars_url : storedSocial.codewars_url,
+        geeksforgeeks_url: geeksforgeeks_url !== undefined ? geeksforgeeks_url : storedSocial.geeksforgeeks_url,
+        atcoder_url: atcoder_url !== undefined ? atcoder_url : storedSocial.atcoder_url,
+        codechef_username: codechef_username !== undefined ? codechef_username : storedSocial.codechef_username,
+        codewars_username: codewars_username !== undefined ? codewars_username : storedSocial.codewars_username,
+        geeksforgeeks_username: geeksforgeeks_username !== undefined ? geeksforgeeks_username : storedSocial.geeksforgeeks_username,
+        atcoder_username: atcoder_username !== undefined ? atcoder_username : storedSocial.atcoder_username,
         kaggle_url: kaggle_url !== undefined ? kaggle_url : storedSocial.kaggle_url,
         codolio_url: codolio_url !== undefined ? codolio_url : storedSocial.codolio_url,
       };

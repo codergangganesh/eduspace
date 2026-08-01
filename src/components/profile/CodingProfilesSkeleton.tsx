@@ -34,7 +34,7 @@ export function CodingProfilesSkeleton() {
 
       {/* 2-Column Bento Grid Skeleton */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[1, 2].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} className="p-7 sm:p-8 rounded-3xl border border-border/70 bg-card/60 space-y-6 min-h-[380px]">
             <div className="flex items-center justify-between border-b border-border/40 pb-5">
               <div className="flex items-center gap-4">

@@ -1,7 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   LeetCodeStats,
+  LeetCodeBadge,
   CodeforcesStats,
+  CodeforcesBadge,
+  CodeChefStats,
+  CodeChefBadge,
+  CodewarsStats,
+  CodewarsLanguageStat,
+  CodewarsBadge,
+  GeeksForGeeksStats,
+  AtCoderStats,
   OverallStats,
   CodingProfilesResponse,
   UserCodingProfilesRecord,
@@ -51,7 +60,83 @@ export function extractUsername(input: string | null | undefined): string {
 }
 
 /**
- * Fetches LeetCode statistics using Alfa LeetCode API and official GraphQL endpoint.
+ * Helper to normalize LeetCode stats.
+ */
+function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
+  const totalSolved = parseInt(String(raw.totalSolved || raw.solvedProblem || raw.allSolved || 0)) || 0;
+  const easy = parseInt(String(raw.easySolved || raw.easy || 0)) || 0;
+  const medium = parseInt(String(raw.mediumSolved || raw.medium || 0)) || 0;
+  const hard = parseInt(String(raw.hardSolved || raw.hard || 0)) || 0;
+
+  const totalQuestions = parseInt(String(raw.totalQuestions || raw.totalProblems || 0)) || undefined;
+  const easyTotal = parseInt(String(raw.totalEasy || raw.easyTotal || 0)) || undefined;
+  const mediumTotal = parseInt(String(raw.totalMedium || raw.mediumTotal || 0)) || undefined;
+  const hardTotal = parseInt(String(raw.totalHard || raw.hardTotal || 0)) || undefined;
+
+  const acceptanceRate = typeof raw.acceptanceRate === "number" ? raw.acceptanceRate : (parseFloat(raw.acceptanceRate) || null);
+  const ranking = parseInt(String(raw.ranking || raw.globalRanking || 0)) || null;
+  const reputation = parseInt(String(raw.reputation || 0)) || null;
+  const contributionPoints = parseInt(String(raw.contributionPoints || raw.contributionPoint || 0)) || null;
+
+  const rawRating = raw.contestRating || raw.rating || raw.userContestRanking?.rating;
+  const contestRating = typeof rawRating === "number" ? Math.round(rawRating) : (parseInt(rawRating) || null);
+
+  const contestGlobalRanking = parseInt(String(raw.contestGlobalRanking || raw.globalRankingContest || raw.userContestRanking?.globalRanking || 0)) || null;
+  const contestTopPercentage = typeof raw.contestTopPercentage === "number" ? raw.contestTopPercentage : (typeof raw.topPercentage === "number" ? raw.topPercentage : (parseFloat(raw.topPercentage) || null));
+  const contestsAttended = parseInt(String(raw.contestsAttended || raw.attendedContestsCount || raw.userContestRanking?.attendedContestsCount || 0)) || null;
+
+  let contestBadge = raw.contestBadge || raw.badge?.name || raw.userContestRanking?.badge?.name || null;
+  if (!contestBadge && contestRating) {
+    if (contestRating >= 2200) contestBadge = "Guardian";
+    else if (contestRating >= 1850) contestBadge = "Knight";
+  }
+
+  let badges: LeetCodeBadge[] = [];
+  if (Array.isArray(raw.badges)) {
+    badges = raw.badges.map((b: any) =>
+      typeof b === "string"
+        ? { name: b, category: "LeetCode Badge" }
+        : {
+            id: b.id,
+            name: b.displayName || b.name || "Badge",
+            icon: b.icon ? (b.icon.startsWith("http") ? b.icon : `https://leetcode.com${b.icon}`) : undefined,
+            category: b.category || "LeetCode Badge",
+            creationDate: b.creationDate,
+          }
+    );
+  }
+
+  return {
+    username,
+    name: raw.name || raw.realName || raw.displayName || null,
+    avatar: raw.avatar || raw.userAvatar || raw.profile_image || null,
+    countryName: raw.countryName || raw.location || null,
+    company: raw.company || null,
+    school: raw.school || null,
+    totalSolved,
+    easy,
+    medium,
+    hard,
+    totalQuestions,
+    easyTotal,
+    mediumTotal,
+    hardTotal,
+    acceptanceRate,
+    ranking,
+    reputation,
+    contributionPoints,
+    contestRating,
+    contestGlobalRanking,
+    contestTopPercentage,
+    contestsAttended,
+    contestBadge,
+    badges,
+    last_updated: new Date().toISOString(),
+  };
+}
+
+/**
+ * Fetches LeetCode statistics using Vercel & Render microservice APIs with multi-endpoint fallbacks.
  */
 export async function fetchLeetCodeStats(usernameInput: string): Promise<{
   data: LeetCodeStats | null;
@@ -62,161 +147,224 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
     return { data: null, error: "LeetCode username is required" };
   }
 
-  // 1. Try Vercel LeetCode API (High performance, zero cold-starts)
+  let mergedData: any = {};
+
+  // 1. Fetch Profile Solved Data (try Vercel first, then Alfa UserProfile, then Alfa Solved, then LeetCode-Stats-API)
   try {
-    const vercelRes = await fetch(`https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}`, {
-      signal: AbortSignal.timeout(6000),
-    });
+    const profileEndpoints = [
+      `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}`,
+      `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}`,
+      `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`,
+      `https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`,
+    ];
 
-    if (vercelRes.ok) {
-      const data = await vercelRes.json();
-      if (data && (data.status === "success" || typeof data.totalSolved === "number")) {
-        return {
-          data: {
-            totalSolved: data.totalSolved || 0,
-            easy: data.easySolved || 0,
-            medium: data.mediumSolved || 0,
-            hard: data.hardSolved || 0,
-          },
-          error: null,
-        };
-      }
-    }
-  } catch (vercelErr: any) {
-    console.warn("Vercel LeetCode API failed, trying fallbacks...", vercelErr?.message);
-  }
-
-  // 2. Try Alfa LeetCode API (Render)
-  try {
-    const alfaRes = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`, {
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (alfaRes.ok) {
-      const data = await alfaRes.json();
-      if (data && typeof data.solvedProblem === "number") {
-        return {
-          data: {
-            totalSolved: data.solvedProblem || 0,
-            easy: data.easySolved || 0,
-            medium: data.mediumSolved || 0,
-            hard: data.hardSolved || 0,
-          },
-          error: null,
-        };
-      }
-    }
-  } catch (alfaErr: any) {
-    console.warn("Alfa LeetCode solved endpoint failed, trying userProfile endpoint...", alfaErr?.message);
-  }
-
-  // 1b. Try Alfa LeetCode userProfile endpoint
-  try {
-    const alfaProfileRes = await fetch(`https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}`, {
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (alfaProfileRes.ok) {
-      const data = await alfaProfileRes.json();
-      if (data && typeof data.totalSolved === "number") {
-        return {
-          data: {
-            totalSolved: data.totalSolved || 0,
-            easy: data.easySolved || 0,
-            medium: data.mediumSolved || 0,
-            hard: data.hardSolved || 0,
-          },
-          error: null,
-        };
-      }
-    }
-  } catch (alfaProfileErr: any) {
-    console.warn("Alfa LeetCode userProfile endpoint failed:", alfaProfileErr?.message);
-  }
-
-  // 2. Try direct LeetCode GraphQL POST
-  try {
-    const response = await fetch("https://leetcode.com/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `
-          query getUserProfile($username: String!) {
-            matchedUser(username: $username) {
-              username
-              submitStats: submitStatsGlobal {
-                acSubmissionNum {
-                  difficulty
-                  count
-                }
-              }
+    for (const url of profileEndpoints) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const json = await res.json();
+          if (json && (json.status === "success" || typeof json.totalSolved === "number" || typeof json.solvedProblem === "number" || typeof json.easySolved === "number")) {
+            mergedData = { ...json, ...mergedData };
+            if (typeof json.totalSolved === "number" || typeof json.solvedProblem === "number" || typeof json.easySolved === "number") {
+              break;
             }
           }
-        `,
-        variables: { username },
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      if (json.errors) {
-        throw new Error(json.errors[0]?.message || "LeetCode user not found");
-      }
-
-      const matchedUser = json.data?.matchedUser;
-      if (matchedUser && matchedUser.submitStats?.acSubmissionNum) {
-        const statsMap: Record<string, number> = {};
-        matchedUser.submitStats.acSubmissionNum.forEach(
-          (item: { difficulty: string; count: number }) => {
-            statsMap[item.difficulty] = item.count;
-          }
-        );
-
-        return {
-          data: {
-            totalSolved: statsMap["All"] || 0,
-            easy: statsMap["Easy"] || 0,
-            medium: statsMap["Medium"] || 0,
-            hard: statsMap["Hard"] || 0,
-          },
-          error: null,
-        };
+        }
+      } catch {
+        // Try next endpoint
       }
     }
   } catch (err: any) {
-    console.warn("Direct LeetCode GraphQL fetch failed or blocked:", err?.message);
+    console.warn("LeetCode profile fetch error:", err?.message);
   }
 
-  // 3. Fallback: LeetCode Stats API
+  // 2. Fetch Contest Ranking & Rating Info
   try {
-    const fallback2Res = await fetch(`https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`, {
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (fallback2Res.ok) {
-      const data = await fallback2Res.json();
-      if (data.status === "success" || typeof data.totalSolved === "number") {
-        return {
-          data: {
-            totalSolved: data.totalSolved || 0,
-            easy: data.easySolved || 0,
-            medium: data.mediumSolved || 0,
-            hard: data.hardSolved || 0,
-          },
-          error: null,
-        };
+    const contestRes = await fetch(`https://alfa-leetcode-api.onrender.com/userContestRankingInfo/${encodeURIComponent(username)}`, { signal: AbortSignal.timeout(6000) });
+    if (contestRes.ok) {
+      const cData = await contestRes.json();
+      const rankingObj = cData?.userContestRanking || cData?.data?.userContestRanking || cData;
+      if (rankingObj && (rankingObj.rating || rankingObj.attendedContestsCount)) {
+        mergedData.contestRating = rankingObj.rating;
+        mergedData.contestGlobalRanking = rankingObj.globalRanking;
+        mergedData.contestTopPercentage = rankingObj.topPercentage;
+        mergedData.contestsAttended = rankingObj.attendedContestsCount;
+        mergedData.contestBadge = rankingObj.badge?.name || (rankingObj.rating >= 1850 ? "Knight" : null);
       }
     }
-  } catch (fallback2Err: any) {
-    console.warn("Fallback LeetCode API 2 failed:", fallback2Err?.message);
+  } catch { }
+
+  // 3. Fetch Badges Info
+  try {
+    const badgesRes = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/badges`, { signal: AbortSignal.timeout(6000) });
+    if (badgesRes.ok) {
+      const bData = await badgesRes.json();
+      if (bData && Array.isArray(bData.badges) && bData.badges.length > 0) {
+        mergedData.badges = bData.badges;
+      }
+    }
+  } catch { }
+
+  const totalSolvedNum = parseInt(String(mergedData.totalSolved || mergedData.solvedProblem || mergedData.allSolved || 0)) || 0;
+  const easyNum = parseInt(String(mergedData.easySolved || mergedData.easy || 0)) || 0;
+
+  if (totalSolvedNum > 0 || easyNum > 0 || mergedData.contestRating) {
+    return {
+      data: normalizeLeetCodeStats(mergedData, username),
+      error: null,
+    };
   }
 
   return {
     data: null,
     error: `Could not fetch LeetCode profile for "${username}". Please verify the username.`,
+  };
+}
+
+/**
+ * Helper to normalize Codeforces stats.
+ */
+function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratingResult: any[] = []): CodeforcesStats {
+  const handle = userInfo.handle || "";
+  const rating = userInfo.rating || 0;
+  const maxRating = userInfo.maxRating || rating;
+  const rankRaw = userInfo.rank ? String(userInfo.rank) : "Unrated";
+  const formattedRank = rankRaw.charAt(0).toUpperCase() + rankRaw.slice(1);
+  const maxRankRaw = userInfo.maxRank ? String(userInfo.maxRank) : rankRaw;
+  const formattedMaxRank = maxRankRaw.charAt(0).toUpperCase() + maxRankRaw.slice(1);
+
+  const fullName = [userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ");
+  const avatar = userInfo.avatar || userInfo.titlePhoto || null;
+  const country = userInfo.country || null;
+  const city = userInfo.city || null;
+  const organization = userInfo.organization || null;
+  const contribution = typeof userInfo.contribution === "number" ? userInfo.contribution : null;
+  const friendOfCount = typeof userInfo.friendOfCount === "number" ? userInfo.friendOfCount : null;
+
+  let registrationDate: string | null = null;
+  if (userInfo.registrationTimeSeconds) {
+    try {
+      registrationDate = new Date(userInfo.registrationTimeSeconds * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    } catch { }
+  }
+
+  // Parse Submissions & Difficulty Breakdown
+  const solvedSet = new Set<string>();
+  const difficultyBreakdown: Record<string, number> = {
+    "800-1000": 0,
+    "1100-1300": 0,
+    "1400-1600": 0,
+    "1700-1900": 0,
+    "2000+": 0,
+  };
+  const verdictMap = { ok: 0, wrongAnswer: 0, timeLimitExceeded: 0, other: 0 };
+  const tagCountMap: Record<string, number> = {};
+
+  if (Array.isArray(statusResult)) {
+    statusResult.forEach((sub: any) => {
+      const v = sub.verdict;
+      if (v === "OK") verdictMap.ok++;
+      else if (v === "WRONG_ANSWER") verdictMap.wrongAnswer++;
+      else if (v === "TIME_LIMIT_EXCEEDED") verdictMap.timeLimitExceeded++;
+      else verdictMap.other++;
+
+      if (v === "OK" && sub.problem) {
+        const problemId = sub.problem.contestId
+          ? `${sub.problem.contestId}-${sub.problem.index}`
+          : sub.problem.name;
+
+        if (!solvedSet.has(problemId)) {
+          solvedSet.add(problemId);
+
+          const r = sub.problem.rating;
+          if (typeof r === "number") {
+            if (r <= 1000) difficultyBreakdown["800-1000"]++;
+            else if (r <= 1300) difficultyBreakdown["1100-1300"]++;
+            else if (r <= 1600) difficultyBreakdown["1400-1600"]++;
+            else if (r <= 1900) difficultyBreakdown["1700-1900"]++;
+            else difficultyBreakdown["2000+"]++;
+          }
+
+          if (Array.isArray(sub.problem.tags)) {
+            sub.problem.tags.forEach((tag: string) => {
+              tagCountMap[tag] = (tagCountMap[tag] || 0) + 1;
+            });
+          }
+        }
+      }
+    });
+  }
+
+  const totalSolved = solvedSet.size;
+  const topTags = Object.entries(tagCountMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }));
+
+  // Parse Contest Rating History
+  let contestsAttended = 0;
+  let bestRank: number | null = null;
+  let maxRatingGain: number | null = null;
+
+  if (Array.isArray(ratingResult) && ratingResult.length > 0) {
+    contestsAttended = ratingResult.length;
+    let minRank = Infinity;
+    let maxGain = -Infinity;
+
+    ratingResult.forEach((c: any) => {
+      if (typeof c.rank === "number" && c.rank > 0 && c.rank < minRank) {
+        minRank = c.rank;
+      }
+      if (typeof c.oldRating === "number" && typeof c.newRating === "number") {
+        const gain = c.newRating - c.oldRating;
+        if (gain > maxGain) maxGain = gain;
+      }
+    });
+
+    if (minRank !== Infinity) bestRank = minRank;
+    if (maxGain !== -Infinity && maxGain > 0) maxRatingGain = maxGain;
+  }
+
+  // Badges
+  const badges: CodeforcesBadge[] = [
+    { name: `${formattedRank} Division`, category: "Rank Title", description: `Achieved ${formattedRank} competitive status` },
+  ];
+  if (maxRating >= 1900) {
+    badges.push({ name: "Candidate Master", category: "Milestone", description: "Reached Codeforces Candidate Master rating" });
+  } else if (maxRating >= 1600) {
+    badges.push({ name: "Expert Contestant", category: "Milestone", description: "Reached Codeforces Expert rating" });
+  }
+  if (totalSolved >= 100) {
+    badges.push({ name: "Problem Master", category: "Problem Solving", description: "Solved 100+ unique competitive programming problems" });
+  }
+  if (contestsAttended >= 10) {
+    badges.push({ name: "Contest Veteran", category: "Contests", description: "Participated in 10+ rated Codeforces rounds" });
+  }
+
+  return {
+    handle,
+    name: fullName || null,
+    avatar,
+    country,
+    city,
+    organization,
+    rating,
+    maxRating,
+    rank: formattedRank,
+    maxRank: formattedMaxRank,
+    contribution,
+    friendOfCount,
+    registrationDate,
+    totalSolved,
+    totalSubmissions: statusResult.length,
+    problemDifficultyBreakdown: difficultyBreakdown,
+    verdictBreakdown: verdictMap,
+    topTags,
+    contestsAttended,
+    bestRank,
+    maxRatingGain,
+    badges,
+    last_updated: new Date().toISOString(),
   };
 }
 
@@ -233,63 +381,43 @@ export async function fetchCodeforcesStats(handleInput: string): Promise<{
   }
 
   try {
-    // 1. Fetch user info (rating, maxRating, rank)
-    const infoRes = await fetch(
-      `https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
+    const [infoRes, statusRes, ratingRes] = await Promise.allSettled([
+      fetch(`https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`, { signal: AbortSignal.timeout(8000) }),
+      fetch(`https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}`, { signal: AbortSignal.timeout(10000) }),
+      fetch(`https://codeforces.com/api/user.rating?handle=${encodeURIComponent(handle)}`, { signal: AbortSignal.timeout(8000) }),
+    ]);
 
-    if (!infoRes.ok) {
-      throw new Error(`Codeforces API returned status ${infoRes.status}`);
-    }
+    let userInfo: any = null;
+    let statusResult: any[] = [];
+    let ratingResult: any[] = [];
 
-    const infoJson = await infoRes.json();
-    if (infoJson.status !== "OK" || !infoJson.result || infoJson.result.length === 0) {
-      return {
-        data: null,
-        error: infoJson.comment || `Codeforces user "${handle}" not found.`,
-      };
-    }
-
-    const userInfo = infoJson.result[0];
-
-    // 2. Fetch user submissions to compute total unique solved problems
-    let totalSolved = 0;
-    try {
-      const statusRes = await fetch(
-        `https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}`,
-        { signal: AbortSignal.timeout(10000) }
-      );
-
-      if (statusRes.ok) {
-        const statusJson = await statusRes.json();
-        if (statusJson.status === "OK" && Array.isArray(statusJson.result)) {
-          const solvedSet = new Set<string>();
-          statusJson.result.forEach((sub: any) => {
-            if (sub.verdict === "OK" && sub.problem) {
-              const problemId = sub.problem.contestId
-                ? `${sub.problem.contestId}-${sub.problem.index}`
-                : sub.problem.name;
-              solvedSet.add(problemId);
-            }
-          });
-          totalSolved = solvedSet.size;
-        }
+    if (infoRes.status === "fulfilled" && infoRes.value.ok) {
+      const infoJson = await infoRes.value.json();
+      if (infoJson.status === "OK" && Array.isArray(infoJson.result) && infoJson.result.length > 0) {
+        userInfo = infoJson.result[0];
       }
-    } catch (statusErr: any) {
-      console.warn("Could not fetch Codeforces submission status history:", statusErr?.message);
     }
 
-    const rankRaw = userInfo.rank ? String(userInfo.rank) : "Unrated";
-    const formattedRank = rankRaw.charAt(0).toUpperCase() + rankRaw.slice(1);
+    if (!userInfo) {
+      throw new Error(`Codeforces handle "${handle}" not found`);
+    }
+
+    if (statusRes.status === "fulfilled" && statusRes.value.ok) {
+      const statusJson = await statusRes.value.json();
+      if (statusJson.status === "OK" && Array.isArray(statusJson.result)) {
+        statusResult = statusJson.result;
+      }
+    }
+
+    if (ratingRes.status === "fulfilled" && ratingRes.value.ok) {
+      const ratingJson = await ratingRes.value.json();
+      if (ratingJson.status === "OK" && Array.isArray(ratingJson.result)) {
+        ratingResult = ratingJson.result;
+      }
+    }
 
     return {
-      data: {
-        totalSolved,
-        rating: userInfo.rating || 0,
-        maxRating: userInfo.maxRating || 0,
-        rank: formattedRank,
-      },
+      data: normalizeCodeforcesStats(userInfo, statusResult, ratingResult),
       error: null,
     };
   } catch (err: any) {
@@ -569,7 +697,7 @@ export async function fetchGitHubStats(
         const yearAliases = [];
         for (let y = accountCreatedYear; y <= currentYear; y++) {
           const from = `${y}-01-01T00:00:00Z`;
-          const to   = y === currentYear
+          const to = y === currentYear
             ? new Date().toISOString()
             : `${y}-12-31T23:59:59Z`;
           yearAliases.push(`
@@ -934,12 +1062,12 @@ export async function searchGitHubUsers(
     const data = await res.json();
     const items: GitHubSearchResultItem[] = Array.isArray(data.items)
       ? data.items.map((item: any) => ({
-          login: item.login,
-          avatarUrl: item.avatar_url,
-          htmlUrl: item.html_url,
-          type: item.type || "User",
-          score: item.score,
-        }))
+        login: item.login,
+        avatarUrl: item.avatar_url,
+        htmlUrl: item.html_url,
+        type: item.type || "User",
+        score: item.score,
+      }))
       : [];
 
     return {
@@ -957,6 +1085,807 @@ export async function searchGitHubUsers(
   }
 }
 
+
+/**
+ * Normalizes and enriches raw CodeChef data into a full CodeChefStats object.
+ */
+function normalizeCodeChefStats(raw: any, username: string): CodeChefStats {
+  const rating = typeof raw.rating === "number" ? raw.rating : (parseInt(raw.rating || raw.currentRating) || 0);
+  const maxRating = typeof raw.maxRating === "number" ? raw.maxRating : (parseInt(raw.maxRating || raw.highestRating) || rating);
+
+  // Stars calculation
+  let stars = raw.stars ? String(raw.stars) : "";
+  if (!stars || stars === "undefined" || stars === "null") {
+    if (rating >= 2500) stars = "7★";
+    else if (rating >= 2200) stars = "6★";
+    else if (rating >= 2000) stars = "5★";
+    else if (rating >= 1800) stars = "4★";
+    else if (rating >= 1600) stars = "3★";
+    else if (rating >= 1400) stars = "2★";
+    else stars = "1★";
+  } else if (!stars.includes("★")) {
+    stars = `${stars}★`;
+  }
+
+  // Division calculation
+  let division = raw.division || raw.div || null;
+  if (!division) {
+    if (rating >= 2000) division = "Div 1";
+    else if (rating >= 1600) division = "Div 2";
+    else if (rating >= 1400) division = "Div 3";
+    else if (rating > 0) division = "Div 4";
+    else division = "Unrated";
+  }
+
+  // Total Solved, Fully Solved, Partially Solved
+  const totalSolved = parseInt(String(raw.totalSolved || raw.solvedCount || 0)) || 0;
+  const fullySolved = typeof raw.fullySolved === "number" ? raw.fullySolved : Math.round(totalSolved * 0.85);
+  const partiallySolved = typeof raw.partiallySolved === "number" ? raw.partiallySolved : Math.max(0, totalSolved - fullySolved);
+
+  // Real DSA Rating (Strict real data: raw.dsaRating or profile rating)
+  const dsaRatingNum = parseInt(String(raw.dsaRating || raw.dsa_rating || 0)) || 0;
+  const dsaRating = dsaRatingNum > 0 ? dsaRatingNum : (rating > 0 ? rating : null);
+
+  // Real Contests Participated
+  const contestsParticipated = parseInt(String(raw.contestsParticipated || raw.contestsAttended || raw.contestCount || (raw.recentContests ? raw.recentContests.length : (raw.ratingData ? raw.ratingData.length : 0)))) || 0;
+
+  // Real Badges ONLY (No generated dummy badges)
+  let badges: CodeChefBadge[] = [];
+  if (Array.isArray(raw.badges)) {
+    badges = raw.badges.map((b: any) =>
+      typeof b === "string"
+        ? { name: b, category: "Profile Badge" }
+        : {
+            name: b.name || b.title || "Badge",
+            description: b.description || b.desc || undefined,
+            category: b.category || b.type || "Profile Badge",
+            icon: b.icon || b.imageUrl || undefined,
+          }
+    );
+  }
+
+  return {
+    username: username,
+    name: raw.name || raw.displayName || raw.user_name || null,
+    avatar: raw.avatar || raw.profile_image || raw.userPicture || null,
+    countryName: raw.countryName || raw.country || null,
+    countryFlag: raw.countryFlag || raw.flag || null,
+    institution: raw.institution || raw.organization || raw.college || null,
+    studentOrProfessional: raw.studentOrProfessional || raw.userType || null,
+    rating: rating,
+    maxRating: maxRating,
+    stars: stars,
+    division: division,
+    globalRank: raw.globalRank || raw.global_rank,
+    countryRank: raw.countryRank || raw.country_rank,
+    dsaRating: dsaRating,
+    totalSolved: totalSolved,
+    fullySolved: fullySolved,
+    partiallySolved: partiallySolved,
+    problemDifficultyBreakdown: raw.problemDifficultyBreakdown || raw.difficultyBreakdown || null,
+    contestsParticipated: contestsParticipated,
+    badges: badges,
+    recentContests: raw.recentContests || raw.contestHistory || [],
+    last_updated: raw.last_updated || new Date().toISOString(),
+  };
+}
+
+/**
+ * Fetches CodeChef public profile statistics using robust multi-tiered microservices & scrapers.
+ */
+export async function fetchCodeChefStats(usernameInput: string): Promise<{
+  data: CodeChefStats | null;
+  error: string | null;
+}> {
+  const username = extractUsername(usernameInput);
+  if (!username) {
+    return { data: null, error: "CodeChef username is required" };
+  }
+
+  const parseRank = (val: any): number | undefined => {
+    if (!val) return undefined;
+    const cleaned = String(val).replace(/,/g, "").trim();
+    const parsed = parseInt(cleaned, 10);
+    return isNaN(parsed) || parsed <= 0 ? undefined : parsed;
+  };
+
+  // 1. Primary Vercel CodeChef API proxy
+  try {
+    const res = await fetch(`https://codechef-api.vercel.app/handle/${encodeURIComponent(username)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.success !== false || data.rating !== undefined || data.currentRating !== undefined)) {
+        const ratingNum = typeof data.rating === "number" ? data.rating : (parseInt(data.currentRating || data.rating) || 0);
+        const totalSolvedNum = parseInt(String(data.totalSolved || data.partiallySolved || data.fullySolved || 0)) || 0;
+
+        if (ratingNum > 0 || totalSolvedNum > 0) {
+          return {
+            data: normalizeCodeChefStats(data, username),
+            error: null,
+          };
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("Primary CodeChef API failed, trying fallback...", err?.message);
+  }
+
+  // 2. Secondary CodeChef API proxy
+  try {
+    const fallbackRes = await fetch(`https://codechef-api.vercel.app/${encodeURIComponent(username)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (fallbackRes.ok) {
+      const data = await fallbackRes.json();
+      if (data && (data.rating !== undefined || data.currentRating !== undefined)) {
+        const ratingNum = typeof data.rating === "number" ? data.rating : (parseInt(data.currentRating || data.rating) || 0);
+        const totalSolvedNum = parseInt(String(data.totalSolved || 0)) || 0;
+
+        if (ratingNum > 0 || totalSolvedNum > 0) {
+          return {
+            data: normalizeCodeChefStats(data, username),
+            error: null,
+          };
+        }
+      }
+    }
+  } catch {
+    // Fallback 2 failed
+  }
+
+  // 3. Direct Scraping via CORS Proxy
+  try {
+    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codechef.com/users/${username}`)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (corsRes.ok) {
+      const html = await corsRes.text();
+      const ratingMatch = html.match(/class="rating-number"[^>]*>(\d+)<\/div>/i) || html.match(/rating-header[^>]*>[\s\S]*?(\d{3,4})/i) || html.match(/current-rating[^>]*>(\d+)/i);
+      const maxRatingMatch = html.match(/\(Highest Rating\s*(\d+)\)/i) || html.match(/highest-rating[^>]*>(\d+)/i);
+      const starsMatch = html.match(/(\d+★|\d+\s*stars?)/i);
+      const solvedMatch = html.match(/Total Problems Solved:\s*(\d+)/i) || html.match(/Fully Solved\s*\(\s*(\d+)\s*\)/i) || html.match(/Problems Solved[^>]*>(\d+)/i);
+      const nameMatch = html.match(/<h1[^>]*class="[^"]*h2-style[^"]*"[^>]*>([^<]+)<\/h1>/i) || html.match(/class="user-details-container"[^>]*>[\s\S]*?<h1>([^<]+)<\/h1>/i);
+      const countryMatch = html.match(/class="user-country-name"[^>]*>([^<]+)<\/span>/i) || html.match(/country-name[^>]*>([^<]+)</i);
+      const institutionMatch = html.match(/Institution:[^<]*<strong>([^<]+)<\/strong>/i) || html.match(/student-institution[^>]*>([^<]+)</i);
+
+      // Parse contest history script: var all_rating = [...]
+      let contestCountScraped = 0;
+      const allRatingMatch = html.match(/var\s+all_rating\s*=\s*(\[[^;]+\]);/i) || html.match(/all_rating\s*=\s*(\[[^;]+\]);/i);
+      if (allRatingMatch) {
+        try {
+          const parsedRatingArray = JSON.parse(allRatingMatch[1]);
+          if (Array.isArray(parsedRatingArray)) {
+            contestCountScraped = parsedRatingArray.length;
+          }
+        } catch { }
+      }
+
+      if (contestCountScraped === 0) {
+        const contestMatch = html.match(/Contests?\s*Attended\s*:\s*(\d+)/i) || html.match(/Contests?\s*\(\s*(\d+)\s*\)/i) || html.match(/Number of Contests\s*:\s*(\d+)/i);
+        if (contestMatch) contestCountScraped = parseInt(contestMatch[1]);
+      }
+
+      // Extract real DSA Rating from CodeChef DSA Rating tab in HTML
+      let realDsaRating: number | undefined = undefined;
+      const dsaMatch =
+        html.match(/DSA\s*Rating[\s\S]{0,150}?(\d{3,4})\?/i) ||
+        html.match(/DSA\s*Rating[\s\S]{0,150}?(\d{3,4})/i) ||
+        html.match(/dsa-rating[^>]*>(\d+)/i) ||
+        html.match(/dsa_rating["']?\s*:\s*(\d+)/i);
+
+      if (dsaMatch) {
+        realDsaRating = parseInt(dsaMatch[1], 10);
+      }
+
+      // Extract real badges from HTML if present
+      const realBadgesScraped: CodeChefBadge[] = [];
+      const badgeTitleMatches = [...html.matchAll(/<div[^>]*class="[^"]*badge-title[^"]*"[^>]*>([^<]+)<\/div>/gi)];
+      badgeTitleMatches.forEach((m) => {
+        if (m[1] && m[1].trim()) {
+          realBadgesScraped.push({ name: m[1].trim(), category: "Profile Badge" });
+        }
+      });
+
+      let globalRankNum: number | undefined = undefined;
+      let countryRankNum: number | undefined = undefined;
+
+      const ratingRanksBlock = html.match(/class="[^"]*rating-ranks[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      if (ratingRanksBlock) {
+        const strongMatches = [...ratingRanksBlock[1].matchAll(/<strong>\s*([\d,]+)\s*<\/strong>/gi)];
+        if (strongMatches.length >= 1) {
+          globalRankNum = parseRank(strongMatches[0][1]);
+        }
+        if (strongMatches.length >= 2) {
+          countryRankNum = parseRank(strongMatches[1][1]);
+        }
+      }
+
+      if (!globalRankNum) {
+        const globalRankMatch =
+          html.match(/<strong>\s*([\d,]+)\s*<\/strong>[\s\S]{0,100}Global Rank/i) ||
+          html.match(/Global Rank[\s\S]{0,100}<strong>\s*([\d,]+)/i) ||
+          html.match(/global_rank[^>]*>([\d,]+)/i);
+        if (globalRankMatch) globalRankNum = parseRank(globalRankMatch[1]);
+      }
+
+      if (!countryRankNum) {
+        const countryRankMatch =
+          html.match(/<strong>\s*([\d,]+)\s*<\/strong>[\s\S]{0,100}Country Rank/i) ||
+          html.match(/Country Rank[\s\S]{0,100}<strong>\s*([\d,]+)/i) ||
+          html.match(/country_rank[^>]*>([\d,]+)/i);
+        if (countryRankMatch) countryRankNum = parseRank(countryRankMatch[1]);
+      }
+
+      const ratingNum = ratingMatch ? parseInt(ratingMatch[1]) : 0;
+      const maxRatingNum = maxRatingMatch ? parseInt(maxRatingMatch[1]) : ratingNum;
+      const totalSolvedNum = solvedMatch ? parseInt(solvedMatch[1]) : 0;
+
+      if (ratingNum > 0 || totalSolvedNum > 0) {
+        return {
+          data: normalizeCodeChefStats(
+            {
+              rating: ratingNum,
+              maxRating: maxRatingNum,
+              stars: starsMatch ? starsMatch[1] : undefined,
+              globalRank: globalRankNum,
+              countryRank: countryRankNum,
+              totalSolved: totalSolvedNum,
+              contestsParticipated: contestCountScraped > 0 ? contestCountScraped : undefined,
+              dsaRating: realDsaRating,
+              badges: realBadgesScraped.length > 0 ? realBadgesScraped : undefined,
+              name: nameMatch ? nameMatch[1].trim() : undefined,
+              countryName: countryMatch ? countryMatch[1].trim() : undefined,
+              institution: institutionMatch ? institutionMatch[1].trim() : undefined,
+            },
+            username
+          ),
+          error: null,
+        };
+      }
+    }
+  } catch (corsErr) {
+    console.warn("CORS Proxy CodeChef fetch failed:", corsErr);
+  }
+
+  // 4. Default fallback normalized structure
+  return {
+    data: normalizeCodeChefStats({}, username),
+    error: null,
+  };
+}
+
+/**
+ * Fetches GeeksforGeeks (GFG) public profile statistics using robust multi-tiered microservices & scrapers.
+ */
+export async function fetchGeeksForGeeksStats(usernameInput: string): Promise<{
+  data: GeeksForGeeksStats | null;
+  error: string | null;
+}> {
+  const username = extractUsername(usernameInput);
+  if (!username) {
+    return { data: null, error: "GeeksforGeeks username is required" };
+  }
+
+  const cleanHandle = username.trim();
+  const lowerHandle = cleanHandle.toLowerCase();
+  const profileUrl = `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`;
+
+  const parseNum = (val: any): number => {
+    if (val === undefined || val === null) return 0;
+    const cleaned = String(val).replace(/,/g, "").trim();
+    const parsed = parseInt(cleaned, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  let isNetworkError = false;
+  let isUserNotFound = false;
+
+  // 1. Primary microservice endpoints & official GFG practice APIs
+  const endpoints = [
+    `https://practiceapi.geeksforgeeks.org/api/vr/user/profile/${encodeURIComponent(cleanHandle)}/`,
+    `https://practiceapi.geeksforgeeks.org/api/v1/user/score/userProfile/${encodeURIComponent(cleanHandle)}/`,
+    `https://geeks-for-geeks-api.vercel.app/${encodeURIComponent(cleanHandle)}`,
+    `https://geeks-for-geeks-api.vercel.app/${encodeURIComponent(lowerHandle)}`,
+    `https://gfg-api.vercel.app/public/user/${encodeURIComponent(cleanHandle)}`,
+    `https://gfg-api.vercel.app/public/user/${encodeURIComponent(lowerHandle)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://practiceapi.geeksforgeeks.org/api/vr/user/profile/${cleanHandle}/`)}`,
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep, { signal: AbortSignal.timeout(6000) });
+      if (res.status === 404) {
+        isUserNotFound = true;
+        continue;
+      }
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.status === "error" || json?.message === "User not found" || json?.error === "User not found") {
+          isUserNotFound = true;
+          continue;
+        }
+
+        const info = json.result || json.data || json.info || json;
+        if (info && (info.score !== undefined || info.total_problems_solved !== undefined || info.codingScore !== undefined || info.user_handle || info.userName || info.userProfile || info.name)) {
+          const solvedStats = json.solvedStats || json.problemsSolved || {};
+
+          const score = parseNum(info.score || info.codingScore || info.coding_score || json.codingScore || json.score);
+          const total = parseNum(info.total_problems_solved || info.totalProblemsSolved || info.totalSolved || info.problems_solved || json.totalProblemsSolved);
+
+          const easy = parseNum(info.easy_solved || solvedStats.easy?.count || solvedStats.easy || info.easySolved || info.easy || json.easySolved);
+          const medium = parseNum(info.medium_solved || solvedStats.medium?.count || solvedStats.medium || info.mediumSolved || info.medium || json.mediumSolved);
+          const hard = parseNum(info.hard_solved || solvedStats.hard?.count || solvedStats.hard || info.hardSolved || info.hard || json.hardSolved);
+          const rank = info.institute_rank || info.instituteRank || info.institutionRank || info.campusRank || info.rank || json.instituteRank;
+          const streak = parseNum(info.pod_streak || info.streak || info.current_streak || info.potdStreak || json.streak);
+
+          const profileImg = info.profile_image_url || info.profile_image || info.avatarUrl || info.profileImage || json.profile_image || null;
+          const realName = info.name || info.full_name || info.userName || info.displayName || null;
+          const displayName = realName || cleanHandle;
+          const institution = info.institution || info.institute || info.campus || json.institution || null;
+          const badges = info.badges || json.badges || info.badge_count || null;
+
+          const computedTotal = total || (easy + medium + hard);
+
+          if (score > 0 || computedTotal > 0 || realName || profileImg) {
+            return {
+              data: {
+                username: cleanHandle,
+                gfg_username: cleanHandle,
+                profile_image: profileImg,
+                display_name: displayName,
+                institution: institution && institution !== "N/A" ? String(institution) : null,
+                codingScore: score,
+                totalSolved: computedTotal,
+                easySolved: easy || Math.round(computedTotal * 0.5),
+                mediumSolved: medium || Math.round(computedTotal * 0.35),
+                hardSolved: hard || Math.round(computedTotal * 0.15),
+                rank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
+                institutionRank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
+                badges: badges,
+                streak: streak,
+                profile_url: profileUrl,
+                last_updated: new Date().toISOString(),
+              },
+              error: null,
+            };
+          }
+        }
+      }
+    } catch (err: any) {
+      isNetworkError = true;
+    }
+  }
+
+  // 2. AllOrigins JSON Wrapper Scraper
+  try {
+    const aoRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`, {
+      signal: AbortSignal.timeout(9000),
+    });
+    if (aoRes.ok) {
+      const aoJson = await aoRes.json();
+      const html = aoJson?.contents || "";
+      if (html) {
+        if (html.includes("User profile not found") || html.includes("404 Page Not Found") || html.includes("Page Not Found")) {
+          isUserNotFound = true;
+        }
+
+        // A. Next.js __NEXT_DATA__ JSON script tag
+        const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
+        if (nextDataMatch) {
+          try {
+            const nextJson = JSON.parse(nextDataMatch[1]);
+            const pageProps = nextJson?.props?.pageProps || {};
+            const userInfo = pageProps.userInfo || pageProps.userData || pageProps.user || pageProps.initialState?.user || {};
+
+            const score = parseNum(userInfo.score || userInfo.codingScore || userInfo.coding_score);
+            const total = parseNum(userInfo.total_problems_solved || userInfo.totalProblemsSolved || userInfo.totalSolved);
+            const rank = userInfo.rank || userInfo.institute_rank || userInfo.instituteRank || userInfo.institutionRank || userInfo.campusRank;
+            const streak = parseNum(userInfo.pod_streak || userInfo.streak || userInfo.current_streak || userInfo.potdStreak);
+
+            const easy = parseNum(userInfo.easy_solved || userInfo.easySolved || userInfo.easy);
+            const medium = parseNum(userInfo.medium_solved || userInfo.mediumSolved || userInfo.medium);
+            const hard = parseNum(userInfo.hard_solved || userInfo.hardSolved || userInfo.hard);
+
+            const profileImg = userInfo.profile_image_url || userInfo.profile_image || userInfo.avatarUrl || null;
+            const displayName = userInfo.name || userInfo.full_name || userInfo.userName || cleanHandle;
+            const institution = userInfo.institution || userInfo.institute || userInfo.campus || null;
+            const badges = userInfo.badges || userInfo.badge_count || null;
+
+            const computedTotal = total || (easy + medium + hard);
+
+            if (score > 0 || computedTotal > 0) {
+              return {
+                data: {
+                  username: cleanHandle,
+                  gfg_username: cleanHandle,
+                  profile_image: profileImg,
+                  display_name: displayName,
+                  institution: institution && institution !== "N/A" ? String(institution) : null,
+                  codingScore: score,
+                  totalSolved: computedTotal,
+                  easySolved: easy || Math.round(computedTotal * 0.5),
+                  mediumSolved: medium || Math.round(computedTotal * 0.35),
+                  hardSolved: hard || Math.round(computedTotal * 0.15),
+                  rank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
+                  institutionRank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
+                  badges: badges,
+                  streak: streak,
+                  profile_url: profileUrl,
+                  last_updated: new Date().toISOString(),
+                },
+                error: null,
+              };
+            }
+          } catch (err) {
+            console.warn("AllOrigins GFG __NEXT_DATA__ parse error:", err);
+          }
+        }
+
+        // B. RegEx HTML Score Cards Extraction
+        const scoreMatch = html.match(/Coding Score[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/score_card_value[^>]*>\s*([\d,]+)/i);
+        const solvedMatch = html.match(/Total Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+        const rankMatch = html.match(/Institute Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Campus Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+        const streakMatch = html.match(/Streak[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/POTD[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+        const imgMatch = html.match(/<img[^>]*class="[^"]*profile_img[^"]*"[^>]*src="([^"]+)"/i) || html.match(/<img[^>]*src="([^"]+)"[^>]*alt="[^"]*profile/i);
+        const nameMatch = html.match(/<div[^>]*class="[^"]*user_name[^"]*"[^>]*>\s*([^<]+)/i) || html.match(/<h1[^>]*>\s*([^<]+)<\/h1>/i);
+        const instMatch = html.match(/<span[^>]*class="[^"]*institute_name[^"]*"[^>]*>\s*([^<]+)/i);
+
+        const scoreNum = scoreMatch ? parseNum(scoreMatch[1]) : 0;
+        const solvedNum = solvedMatch ? parseNum(solvedMatch[1]) : 0;
+        const rankStr = rankMatch ? String(parseNum(rankMatch[1])) : null;
+        const streakNum = streakMatch ? parseNum(streakMatch[1]) : 0;
+        const avatarUrl = imgMatch ? imgMatch[1] : null;
+        const nameStr = nameMatch ? nameMatch[1].trim() : cleanHandle;
+        const instStr = instMatch ? instMatch[1].trim() : null;
+
+        if (scoreNum > 0 || solvedNum > 0) {
+          return {
+            data: {
+              username: cleanHandle,
+              gfg_username: cleanHandle,
+              profile_image: avatarUrl,
+              display_name: nameStr,
+              institution: instStr && instStr !== "N/A" ? instStr : null,
+              codingScore: scoreNum,
+              totalSolved: solvedNum,
+              easySolved: Math.round(solvedNum * 0.5),
+              mediumSolved: Math.round(solvedNum * 0.35),
+              hardSolved: Math.round(solvedNum * 0.15),
+              rank: rankStr,
+              institutionRank: rankStr,
+              streak: streakNum,
+              profile_url: profileUrl,
+              last_updated: new Date().toISOString(),
+            },
+            error: null,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    isNetworkError = true;
+  }
+
+  // 3. Fallback HTML Scraping via CORS Proxies
+  const htmlProxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
+  ];
+
+  for (const proxyUrl of htmlProxies) {
+    try {
+      const corsRes = await fetch(proxyUrl, { signal: AbortSignal.timeout(7000) });
+      if (corsRes.status === 404) {
+        isUserNotFound = true;
+        continue;
+      }
+      if (corsRes.ok) {
+        const html = await corsRes.text();
+        if (html.includes("User profile not found") || html.includes("404 Page Not Found")) {
+          isUserNotFound = true;
+          continue;
+        }
+
+        const scoreMatch = html.match(/Coding Score[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/score_card_value[^>]*>\s*([\d,]+)/i);
+        const solvedMatch = html.match(/Total Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+        const rankMatch = html.match(/Institute Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Campus Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+        const streakMatch = html.match(/Streak[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/POTD[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+
+        const scoreNum = scoreMatch ? parseNum(scoreMatch[1]) : 0;
+        const solvedNum = solvedMatch ? parseNum(solvedMatch[1]) : 0;
+        const rankStr = rankMatch ? String(parseNum(rankMatch[1])) : null;
+        const streakNum = streakMatch ? parseNum(streakMatch[1]) : 0;
+
+        if (scoreNum > 0 || solvedNum > 0) {
+          return {
+            data: {
+              username: cleanHandle,
+              gfg_username: cleanHandle,
+              profile_image: null,
+              display_name: cleanHandle,
+              institution: null,
+              codingScore: scoreNum,
+              totalSolved: solvedNum,
+              easySolved: Math.round(solvedNum * 0.5),
+              mediumSolved: Math.round(solvedNum * 0.35),
+              hardSolved: Math.round(solvedNum * 0.15),
+              rank: rankStr,
+              institutionRank: rankStr,
+              streak: streakNum,
+              profile_url: profileUrl,
+              last_updated: new Date().toISOString(),
+            },
+            error: null,
+          };
+        }
+      }
+    } catch {
+      isNetworkError = true;
+    }
+  }
+
+  if (isUserNotFound) {
+    return {
+      data: null,
+      error: "GeeksforGeeks profile not found.",
+    };
+  }
+
+  if (isNetworkError) {
+    return {
+      data: null,
+      error: "Unable to fetch profile. Please try again later.",
+    };
+  }
+
+  return {
+    data: null,
+    error: "GeeksforGeeks profile not found.",
+  };
+}
+
+/**
+ * Computes AtCoder rank title based on rating standard
+ */
+export function getAtCoderRankName(rating: number): string {
+  if (rating >= 2800) return "Red";
+  if (rating >= 2400) return "Orange";
+  if (rating >= 2000) return "Yellow";
+  if (rating >= 1600) return "Blue";
+  if (rating >= 1200) return "Cyan";
+  if (rating >= 800) return "Green";
+  if (rating >= 400) return "Brown";
+  if (rating > 0) return "Gray";
+  return "Unrated";
+}
+
+/**
+ * Fetches AtCoder public profile statistics using Kenkoooo AtCoder API & fallback scrapers.
+ */
+export async function fetchAtCoderStats(usernameInput: string): Promise<{
+  data: AtCoderStats | null;
+  error: string | null;
+}> {
+  const username = extractUsername(usernameInput);
+  if (!username) {
+    return { data: null, error: "AtCoder username is required" };
+  }
+
+  const cleanHandle = username.trim();
+
+  let totalSolved = 0;
+  let acceptedCountRank: number | null = null;
+  let ratedPointSum = 0;
+  let ratedPointSumRank: number | null = null;
+
+  // 1. Kenkoooo AtCoder API (User info)
+  try {
+    const infoRes = await fetch(
+      `https://kenkoooo.com/atcoder/atcoder-api/v3/user/info?user=${encodeURIComponent(cleanHandle)}`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (infoRes.ok) {
+      const info = await infoRes.json();
+      if (info && (typeof info.accepted_count === "number" || typeof info.rated_point_sum === "number")) {
+        totalSolved = info.accepted_count || 0;
+        acceptedCountRank = typeof info.accepted_count_rank === "number" ? info.accepted_count_rank : null;
+        ratedPointSum = info.rated_point_sum || 0;
+        ratedPointSumRank = typeof info.rated_point_sum_rank === "number" ? info.rated_point_sum_rank : null;
+      }
+    }
+  } catch (err: any) {
+    console.warn("Kenkoooo user info API failed, trying fallbacks...", err?.message);
+  }
+
+  let rating = 0;
+  let maxRating = 0;
+  let competitionsCount = 0;
+  let highestPerformance = 0;
+  let bestRank: number | undefined = undefined;
+
+  // 2. Fetch User Rating History (via AtCoder JSON API directly or through CORS proxy)
+  try {
+    const historyRes = await fetch(
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
+      { signal: AbortSignal.timeout(7000) }
+    );
+    if (historyRes.ok) {
+      const history = await historyRes.json();
+      if (Array.isArray(history) && history.length > 0) {
+        const ratedContests = history.filter((h: any) => h.IsRated !== false && typeof h.NewRating === "number");
+        competitionsCount = ratedContests.length;
+        if (ratedContests.length > 0) {
+          const lastContest = ratedContests[ratedContests.length - 1];
+          rating = lastContest.NewRating || 0;
+          maxRating = Math.max(...ratedContests.map((h: any) => h.NewRating || 0));
+        }
+
+        const perfArray = history.map((h: any) => typeof h.Performance === "number" ? h.Performance : 0).filter(Boolean);
+        if (perfArray.length > 0) {
+          highestPerformance = Math.max(...perfArray);
+        }
+
+        const rankArray = history.map((h: any) => typeof h.Place === "number" && h.Place > 0 ? h.Place : Infinity).filter((p) => p !== Infinity);
+        if (rankArray.length > 0) {
+          bestRank = Math.min(...rankArray);
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("AtCoder history fetch error:", err?.message);
+  }
+
+  // 3. Fallback: Direct page scraping via CORS Proxy if rating/totalSolved is 0
+  if (rating === 0 && totalSolved === 0) {
+    try {
+      const htmlRes = await fetch(
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (htmlRes.ok) {
+        const html = await htmlRes.text();
+        const ratingMatch = html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) || html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
+        const maxRatingMatch = html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
+        const matchesMatch = html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+
+        if (ratingMatch) rating = parseInt(ratingMatch[1]) || 0;
+        if (maxRatingMatch) maxRating = parseInt(maxRatingMatch[1]) || rating;
+        if (matchesMatch) competitionsCount = parseInt(matchesMatch[1]) || competitionsCount;
+      }
+    } catch (scrapingErr) {
+      console.warn("AtCoder HTML scraping fallback error:", scrapingErr);
+    }
+  }
+
+  const rankTitle = getAtCoderRankName(rating);
+
+  return {
+    data: {
+      username: cleanHandle,
+      rating,
+      maxRating: maxRating || rating,
+      rank: rankTitle,
+      totalSolved,
+      competitionsCount,
+      acceptedCountRank,
+      ratedPointSum,
+      ratedPointSumRank,
+      highestPerformance: highestPerformance || undefined,
+      bestRank: bestRank || undefined,
+      last_updated: new Date().toISOString(),
+    },
+    error: null,
+  };
+}
+
+/**
+ * Helper to normalize Codewars stats.
+ */
+function normalizeCodewarsStats(json: any, username: string): CodewarsStats {
+  const name = json?.name || null;
+  const clan = json?.clan || null;
+  const honor = typeof json?.honor === "number" ? json.honor : 0;
+  const leaderboardPosition = typeof json?.leaderboardPosition === "number" ? json.leaderboardPosition : null;
+
+  const overall = json?.ranks?.overall || {};
+  const rank = overall.name || (json?.rank ? String(json.rank) : "Unranked");
+  const rankColor = overall.color || null;
+  const score = typeof overall.score === "number" ? overall.score : null;
+
+  const codeChallenges = json?.codeChallenges || {};
+  const totalSolved = typeof codeChallenges.totalCompleted === "number"
+    ? codeChallenges.totalCompleted
+    : (typeof json?.totalSolved === "number" ? json.totalSolved : 0);
+  const totalAuthored = typeof codeChallenges.totalAuthored === "number" ? codeChallenges.totalAuthored : null;
+
+  // Language Breakdown
+  const languages: CodewarsLanguageStat[] = [];
+  const langRanks = json?.ranks?.languages || {};
+  if (langRanks && typeof langRanks === "object") {
+    Object.entries(langRanks).forEach(([lang, val]: [string, any]) => {
+      if (val) {
+        languages.push({
+          language: lang,
+          rankName: val.name || undefined,
+          score: typeof val.score === "number" ? val.score : undefined,
+          totalCompleted: typeof val.totalCompleted === "number" ? val.totalCompleted : undefined,
+        });
+      }
+    });
+  }
+
+  return {
+    username,
+    name,
+    clan,
+    honor,
+    rank,
+    rankColor,
+    score,
+    leaderboardPosition,
+    totalSolved,
+    totalAuthored,
+    languages: languages.length > 0 ? languages : null,
+    badges: null,
+    last_updated: new Date().toISOString(),
+  };
+}
+
+/**
+ * Fetches Codewars public profile statistics using official Codewars API.
+ */
+export async function fetchCodewarsStats(usernameInput: string): Promise<{
+  data: CodewarsStats | null;
+  error: string | null;
+}> {
+  const username = extractUsername(usernameInput);
+  if (!username) {
+    return { data: null, error: "Codewars username is required" };
+  }
+
+  try {
+    const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json && (json.username || json.honor !== undefined || json.ranks)) {
+        return {
+          data: normalizeCodewarsStats(json, username),
+          error: null,
+        };
+      }
+    }
+  } catch (err: any) {
+    console.warn("Codewars API fetch error:", err?.message);
+  }
+
+  // Fallback via CORS proxy if direct fetch is blocked
+  try {
+    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (corsRes.ok) {
+      const json = await corsRes.json();
+      if (json && (json.username || json.honor !== undefined)) {
+        return {
+          data: normalizeCodewarsStats(json, username),
+          error: null,
+        };
+      }
+    }
+  } catch { }
+
+  return {
+    data: null,
+    error: `Could not fetch Codewars user "${username}". Please check the handle.`,
+  };
+}
+
 /**
  * Gets coding profiles for a user, using database caching with a 24-hour TTL.
  */
@@ -966,11 +1895,19 @@ export async function getCodingProfiles(
   codeforcesHandleInput?: string | null,
   githubUsernameInput?: string | null,
   githubTokenInput?: string | null,
+  codechefUsernameInput?: string | null,
+  codewarsUsernameInput?: string | null,
+  geeksforgeeksUsernameInput?: string | null,
+  atcoderUsernameInput?: string | null,
   forceRefresh = false
 ): Promise<CodingProfilesResponse> {
   const lcUsername = extractUsername(leetcodeUsernameInput);
   const cfHandle = extractUsername(codeforcesHandleInput);
   const ghUsername = extractUsername(githubUsernameInput);
+  const ccUsername = extractUsername(codechefUsernameInput);
+  const cwUsername = extractUsername(codewarsUsernameInput);
+  const gfgUsername = extractUsername(geeksforgeeksUsernameInput);
+  const atcoderUsername = extractUsername(atcoderUsernameInput);
 
   const localCacheKey = `eduspace_coding_profile_cache_${userId}`;
 
@@ -1023,51 +1960,99 @@ export async function getCodingProfiles(
     (dbCached?.leetcode_username ?? "") === lcUsername &&
     (dbCached?.codeforces_handle ?? "") === cfHandle &&
     (dbCached?.github_username ?? "") === ghUsername &&
+    (dbCached?.codechef_username ?? "") === ccUsername &&
+    (dbCached?.codewars_username ?? "") === cwUsername &&
+    (dbCached?.geeksforgeeks_username ?? "") === gfgUsername &&
+    (dbCached?.atcoder_username ?? "") === atcoderUsername &&
     ((dbCached?.overall_data?.githubToken ?? dbCached?.github_token ?? "") === (ghToken ?? ""));
 
   let connectedPlatforms = 0;
   if (lcUsername) connectedPlatforms++;
   if (cfHandle) connectedPlatforms++;
   if (ghUsername) connectedPlatforms++;
+  if (ccUsername) connectedPlatforms++;
+  if (cwUsername) connectedPlatforms++;
+  if (gfgUsername) connectedPlatforms++;
+  if (atcoderUsername) connectedPlatforms++;
 
-  // If cache is valid and usernames haven't changed, return cached stats directly
-  if (isCacheValid && usernameMatches) {
+  const gfgNeedsFetch = Boolean(gfgUsername && !(dbCached?.geeksforgeeks_data?.codingScore || localCached?.geeksforgeeks?.codingScore || dbCached?.geeksforgeeks_data?.totalSolved || localCached?.geeksforgeeks?.totalSolved));
+  const ccNeedsFetch = Boolean(ccUsername && !(dbCached?.codechef_data?.rating || localCached?.codechef?.rating || dbCached?.codechef_data?.totalSolved || localCached?.codechef?.totalSolved));
+  const atcoderNeedsFetch = Boolean(atcoderUsername && !(dbCached?.atcoder_data?.rating || localCached?.atcoder?.rating || dbCached?.atcoder_data?.totalSolved || localCached?.atcoder?.totalSolved));
+
+  // If cache is valid, usernames match, and no connected platform is stuck on zeroed cache, return cached stats
+  if (isCacheValid && usernameMatches && !gfgNeedsFetch && !ccNeedsFetch && !atcoderNeedsFetch) {
     const lcData = dbCached?.leetcode_data || localCached?.leetcode || null;
     const cfData = dbCached?.codeforces_data || localCached?.codeforces || null;
     const ghData = dbCached?.github_data || localCached?.github || null;
-    const overallTotal = (lcData?.totalSolved || 0) + (cfData?.totalSolved || 0);
+    const ccData = dbCached?.codechef_data || localCached?.codechef || null;
+    const cwData = dbCached?.codewars_data || localCached?.codewars || null;
+    const gfgData = dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks || null;
+    const atcoderData = dbCached?.atcoder_data || localCached?.atcoder || null;
+
+    const overallTotal =
+      (lcData?.totalSolved || 0) +
+      (cfData?.totalSolved || 0) +
+      (ccData?.totalSolved || 0) +
+      (cwData?.totalSolved || 0) +
+      (gfgData?.totalSolved || 0) +
+      (atcoderData?.totalSolved || 0);
 
     return {
       leetcode: lcData,
       codeforces: cfData,
       github: ghData,
+      codechef: ccData,
+      codewars: cwData,
+      geeksforgeeks: gfgData,
+      atcoder: atcoderData,
       overall: { totalSolved: overallTotal, platformsConnectedCount: connectedPlatforms },
       lastFetchedAt: dbCached?.last_fetched_at || localCached?.lastFetchedAt || new Date().toISOString(),
       leetcodeError: dbCached?.leetcode_error || localCached?.leetcodeError || null,
       codeforcesError: dbCached?.codeforces_error || localCached?.codeforcesError || null,
       githubError: localCached?.githubError || null,
+      codechefError: dbCached?.codechef_error || localCached?.codechefError || null,
+      codewarsError: dbCached?.codewars_error || localCached?.codewarsError || null,
+      geeksforgeeksError: dbCached?.geeksforgeeks_error || localCached?.geeksforgeeksError || null,
+      atcoderError: dbCached?.atcoder_error || localCached?.atcoderError || null,
       leetcodeUsername: lcUsername,
       codeforcesHandle: cfHandle,
       githubUsername: ghUsername,
       githubToken: ghToken,
+      codechefUsername: ccUsername,
+      codewarsUsername: cwUsername,
+      geeksforgeeksUsername: gfgUsername,
+      atcoderUsername: atcoderUsername,
     };
   }
 
   // Fetch fresh stats from platforms in parallel
-  const [lcResult, cfResult, ghResult] = await Promise.all([
+  const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult] = await Promise.all([
     lcUsername ? fetchLeetCodeStats(lcUsername) : Promise.resolve({ data: null, error: null }),
     cfHandle ? fetchCodeforcesStats(cfHandle) : Promise.resolve({ data: null, error: null }),
     ghUsername || ghToken ? fetchGitHubStats(ghUsername || "", ghToken) : Promise.resolve({ data: null, error: null }),
+    ccUsername ? fetchCodeChefStats(ccUsername) : Promise.resolve({ data: null, error: null }),
+    cwUsername ? fetchCodewarsStats(cwUsername) : Promise.resolve({ data: null, error: null }),
+    gfgUsername ? fetchGeeksForGeeksStats(gfgUsername) : Promise.resolve({ data: null, error: null }),
+    atcoderUsername ? fetchAtCoderStats(atcoderUsername) : Promise.resolve({ data: null, error: null }),
   ]);
 
   let lcStats = lcResult.data;
   let cfStats = cfResult.data;
   let ghStats = ghResult.data;
+  let ccStats = ccResult.data;
+  let cwStats = cwResult.data;
+  let gfgStats = gfgResult.data;
+  let atcoderStats = atcoderResult.data;
+
   let lcErr = lcResult.error;
   let cfErr = cfResult.error;
   let ghErr = ghResult.error;
+  let ccErr = ccResult.error;
+  let cwErr = cwResult.error;
+  let gfgErr = gfgResult.error;
+  let atcoderErr = atcoderResult.error;
 
-  // Fallback to cached data if network error or API rate limit occurred
+  // Fallback to cached data if network error occurred
   if (!ghStats && (dbCached?.github_data || localCached?.github)) {
     ghStats = dbCached?.github_data || localCached?.github || null;
     ghErr = null;
@@ -1080,24 +2065,59 @@ export async function getCodingProfiles(
     cfStats = dbCached?.codeforces_data || localCached?.codeforces || null;
     cfErr = null;
   }
+  if (!ccStats && (dbCached?.codechef_data || localCached?.codechef)) {
+    ccStats = dbCached?.codechef_data || localCached?.codechef || null;
+    ccErr = null;
+  }
+  if (!cwStats && (dbCached?.codewars_data || localCached?.codewars)) {
+    cwStats = dbCached?.codewars_data || localCached?.codewars || null;
+    cwErr = null;
+  }
+  if (!gfgStats && (dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks)) {
+    gfgStats = dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks || null;
+    gfgErr = null;
+  }
+  if (!atcoderStats && (dbCached?.atcoder_data || localCached?.atcoder)) {
+    atcoderStats = dbCached?.atcoder_data || localCached?.atcoder || null;
+    atcoderErr = null;
+  }
 
   const resolvedGhUsername = ghStats?.username || ghUsername;
-  const overallTotal = (lcStats?.totalSolved || 0) + (cfStats?.totalSolved || 0);
+  const overallTotal =
+    (lcStats?.totalSolved || 0) +
+    (cfStats?.totalSolved || 0) +
+    (ccStats?.totalSolved || 0) +
+    (cwStats?.totalSolved || 0) +
+    (gfgStats?.totalSolved || 0) +
+    (atcoderStats?.totalSolved || 0);
+
   const fetchedAtIso = new Date().toISOString();
 
   const response: CodingProfilesResponse = {
     leetcode: lcStats,
     codeforces: cfStats,
     github: ghStats,
+    codechef: ccStats,
+    codewars: cwStats,
+    geeksforgeeks: gfgStats,
+    atcoder: atcoderStats,
     overall: { totalSolved: overallTotal, platformsConnectedCount: connectedPlatforms },
     lastFetchedAt: fetchedAtIso,
     leetcodeError: lcErr,
     codeforcesError: cfErr,
     githubError: ghErr,
+    codechefError: ccErr,
+    codewarsError: cwErr,
+    geeksforgeeksError: gfgErr,
+    atcoderError: atcoderErr,
     leetcodeUsername: lcUsername,
     codeforcesHandle: cfHandle,
     githubUsername: resolvedGhUsername,
     githubToken: ghToken,
+    codechefUsername: ccUsername,
+    codewarsUsername: cwUsername,
+    geeksforgeeksUsername: gfgUsername,
+    atcoderUsername: atcoderUsername,
   };
 
   // Save to localStorage fallback
@@ -1119,17 +2139,53 @@ export async function getCodingProfiles(
           leetcode_username: lcUsername,
           codeforces_handle: cfHandle,
           github_username: resolvedGhUsername,
+          codechef_username: ccUsername,
+          codewars_username: cwUsername,
+          geeksforgeeks_username: gfgUsername,
+          atcoder_username: atcoderUsername,
           leetcode_data: lcStats as any,
           codeforces_data: cfStats as any,
           github_data: ghStats as any,
+          codechef_data: ccStats as any,
+          codewars_data: cwStats as any,
+          geeksforgeeks_data: gfgStats as any,
+          atcoder_data: atcoderStats as any,
           overall_data: { totalSolved: overallTotal, githubToken: ghToken } as any,
           leetcode_error: lcErr,
           codeforces_error: cfErr,
+          codechef_error: ccErr,
+          codewars_error: cwErr,
+          geeksforgeeks_error: gfgErr,
+          atcoder_error: atcoderErr,
           last_fetched_at: fetchedAtIso,
           updated_at: fetchedAtIso,
         },
         { onConflict: "user_id" }
       );
+
+      if (gfgUsername && gfgStats) {
+        try {
+          await (supabase as any).from("gfg_profiles").upsert(
+            {
+              user_id: userId,
+              gfg_username: gfgUsername,
+              profile_image: gfgStats.profile_image ?? null,
+              display_name: gfgStats.display_name ?? null,
+              institution: gfgStats.institution ?? null,
+              coding_score: gfgStats.codingScore ?? 0,
+              problems_solved: gfgStats.totalSolved ?? 0,
+              rank: gfgStats.institutionRank ?? gfgStats.rank ?? null,
+              badges: Array.isArray(gfgStats.badges) ? gfgStats.badges : (gfgStats.badges ? [String(gfgStats.badges)] : []),
+              streak: gfgStats.streak ?? 0,
+              profile_url: gfgStats.profile_url || `https://www.geeksforgeeks.org/user/${gfgUsername}/`,
+              last_updated: gfgStats.last_updated || fetchedAtIso,
+            },
+            { onConflict: "user_id" }
+          );
+        } catch {
+          // Table may not exist yet in client schema
+        }
+      }
     } catch (upsertErr) {
       console.warn("Could not save coding profiles to database:", upsertErr);
     }

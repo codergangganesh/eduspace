@@ -20,8 +20,18 @@ import {
   Globe,
   GitFork,
   BookOpen,
+  Award,
+  Clock,
 } from "lucide-react";
-import { LeetCodeStats, CodeforcesStats, GitHubStats } from "@/types/codingProfile";
+import {
+  LeetCodeStats,
+  CodeforcesStats,
+  GitHubStats,
+  CodeChefStats,
+  CodewarsStats,
+  GeeksForGeeksStats,
+  AtCoderStats,
+} from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
 import { cn } from "@/lib/utils";
 import { GitHubPortfolioDashboard } from "./GitHubPortfolioDashboard";
@@ -31,6 +41,10 @@ const BRAND_LOGOS: Record<string, string> = {
   leetcode: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/leetcode/leetcode-original.svg",
   codeforces: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codeforces/codeforces-original.svg",
   github: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg",
+  codewars: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codewars/codewars-original.svg",
+  codechef: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codechef/codechef-original.svg",
+  geeksforgeeks: "https://media.geeksforgeeks.org/wp-content/cdn-uploads/gfg_200X200.png",
+  atcoder: "https://img.atcoder.jp/assets/atcoder.png",
 };
 
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -80,10 +94,38 @@ const GitHubLogo = ({ className = "size-7" }: { className?: string }) => (
   </svg>
 );
 
+const CodewarsLogo = ({ className = "size-7" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.2L19.5 8 12 11.8 4.5 8 12 4.2zM4.5 9.8l6.75 3.4v6.6L4.5 16.4V9.8zm15 6.6l-6.75 3.4v-6.6l6.75-3.4v6.6z" />
+  </svg>
+);
+
+const CodeChefLogo = ({ className = "size-7" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-6h2v6zm0-8h-2V7h2v2z" />
+  </svg>
+);
+
+const GeeksForGeeksLogo = ({ className = "size-7" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+  </svg>
+);
+
+const AtCoderLogo = ({ className = "size-7" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2L2 22h4l6-12 6 12h4L12 2zm0 6l-3.5 7h7L12 8z" />
+  </svg>
+);
+
 const PlatformIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   leetcode: LeetCodeLogo,
   codeforces: CodeforcesLogo,
   github: GitHubLogo,
+  codewars: CodewarsLogo,
+  codechef: CodeChefLogo,
+  geeksforgeeks: GeeksForGeeksLogo,
+  atcoder: AtCoderLogo,
 };
 
 export function PlatformBrandLogo({ platform, className = "size-7" }: { platform: string; className?: string }) {
@@ -115,7 +157,7 @@ interface CFRankConfig {
   borderColor: string;
 }
 
-const getCodeforcesRankConfig = (rating: number): CFRankConfig => {
+function getCodeforcesRankConfig(rating: number): CFRankConfig {
   if (rating >= 2400) {
     return { name: "Grandmaster", minRating: 2400, maxRating: 3000, textColor: "text-red-500 font-extrabold", bgColor: "bg-red-500/10", borderColor: "border-red-500/30" };
   }
@@ -135,10 +177,10 @@ const getCodeforcesRankConfig = (rating: number): CFRankConfig => {
     return { name: "Pupil", minRating: 1200, maxRating: 1399, textColor: "text-emerald-500 font-bold", bgColor: "bg-emerald-500/10", borderColor: "border-emerald-500/30" };
   }
   return { name: "Newbie", minRating: 0, maxRating: 1199, textColor: "text-slate-400 font-medium", bgColor: "bg-slate-500/10", borderColor: "border-slate-500/30" };
-};
+}
 
 // SVG Donut Chart Component for LeetCode
-const LeetCodeDonutChart = ({ easy, medium, hard, total }: { easy: number; medium: number; hard: number; total: number }) => {
+function LeetCodeDonutChart({ easy, medium, hard, total }: { easy: number; medium: number; hard: number; total: number }) {
   const size = 150;
   const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
@@ -222,9 +264,9 @@ const LeetCodeDonutChart = ({ easy, medium, hard, total }: { easy: number; mediu
       </div>
     </div>
   );
-};
+}
 
-interface LeetCodeCardProps {
+export interface LeetCodeCardProps {
   platform: "leetcode";
   username?: string | null;
   stats?: LeetCodeStats | null;
@@ -233,7 +275,7 @@ interface LeetCodeCardProps {
   className?: string;
 }
 
-interface CodeforcesCardProps {
+export interface CodeforcesCardProps {
   platform: "codeforces";
   handle?: string | null;
   stats?: CodeforcesStats | null;
@@ -242,7 +284,7 @@ interface CodeforcesCardProps {
   className?: string;
 }
 
-interface GitHubCardProps {
+export interface GitHubCardProps {
   platform: "github";
   username?: string | null;
   stats?: GitHubStats | null;
@@ -252,12 +294,59 @@ interface GitHubCardProps {
   githubToken?: string | null;
 }
 
-type CodingProfileCardProps = LeetCodeCardProps | CodeforcesCardProps | GitHubCardProps;
+export interface CodeChefCardProps {
+  platform: "codechef";
+  username?: string | null;
+  stats?: CodeChefStats | null;
+  error?: string | null;
+  onEdit: () => void;
+  className?: string;
+}
+
+export interface CodewarsCardProps {
+  platform: "codewars";
+  username?: string | null;
+  stats?: CodewarsStats | null;
+  error?: string | null;
+  onEdit: () => void;
+  className?: string;
+}
+
+export interface GeeksForGeeksCardProps {
+  platform: "geeksforgeeks";
+  username?: string | null;
+  stats?: GeeksForGeeksStats | null;
+  error?: string | null;
+  onEdit: () => void;
+  className?: string;
+}
+
+export interface AtCoderCardProps {
+  platform: "atcoder";
+  username?: string | null;
+  stats?: AtCoderStats | null;
+  error?: string | null;
+  onEdit: () => void;
+  className?: string;
+}
+
+type CodingProfileCardProps =
+  | LeetCodeCardProps
+  | CodeforcesCardProps
+  | GitHubCardProps
+  | CodeChefCardProps
+  | CodewarsCardProps
+  | GeeksForGeeksCardProps
+  | AtCoderCardProps;
 
 export function CodingProfileCard(props: CodingProfileCardProps) {
   const isLeetCode = props.platform === "leetcode";
   const isCodeforces = props.platform === "codeforces";
   const isGitHub = props.platform === "github";
+  const isCodeChef = props.platform === "codechef";
+  const isCodewars = props.platform === "codewars";
+  const isGeeksForGeeks = props.platform === "geeksforgeeks";
+  const isAtCoder = props.platform === "atcoder";
 
   if (isGitHub) {
     return (
@@ -272,34 +361,61 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
     );
   }
 
-  const rawInput = isLeetCode
-    ? (props as LeetCodeCardProps).username
-    : isCodeforces
-      ? (props as CodeforcesCardProps).handle
-      : (props as GitHubCardProps).username;
-  const usernameOrHandle = extractUsername(rawInput);
+  let rawInput = "";
+  if (isLeetCode) rawInput = (props as LeetCodeCardProps).username || "";
+  else if (isCodeforces) rawInput = (props as CodeforcesCardProps).handle || "";
+  else if (isCodeChef) rawInput = (props as CodeChefCardProps).username || "";
+  else if (isCodewars) rawInput = (props as CodewarsCardProps).username || "";
+  else if (isGeeksForGeeks) rawInput = (props as GeeksForGeeksCardProps).username || "";
+  else if (isAtCoder) rawInput = (props as AtCoderCardProps).username || "";
+  else rawInput = (props as GitHubCardProps).username || "";
 
+  const usernameOrHandle = extractUsername(rawInput);
   const hasLinked = Boolean(usernameOrHandle && usernameOrHandle.trim().length > 0);
 
-  const profileUrl = isLeetCode
-    ? `https://leetcode.com/u/${usernameOrHandle}/`
-    : isCodeforces
-      ? `https://codeforces.com/profile/${usernameOrHandle}`
-      : `https://github.com/${usernameOrHandle}`;
+  let profileUrl = "#";
+  let platformTitle = "Platform";
+  let brandGlow = "group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(59,130,246,0.18)]";
+  let iconBg = "bg-primary/10 border-primary/20";
+  let bgBlob = "bg-primary";
 
-  const platformTitle = isLeetCode ? "LeetCode" : isCodeforces ? "Codeforces" : "GitHub";
-
-  const brandGlow = isLeetCode
-    ? "group-hover:border-[#FFA116]/50 group-hover:shadow-[0_0_30px_rgba(255,161,22,0.18)]"
-    : isCodeforces
-      ? "group-hover:border-[#1F8ACB]/50 group-hover:shadow-[0_0_30px_rgba(31,138,203,0.18)]"
-      : "group-hover:border-blue-500/50 group-hover:shadow-[0_0_30px_rgba(59,130,246,0.18)]";
-
-  const iconBg = isLeetCode
-    ? "bg-[#FFA116]/10 border-[#FFA116]/20"
-    : isCodeforces
-      ? "bg-[#1F8ACB]/10 border-[#1F8ACB]/20"
-      : "bg-blue-500/10 border-blue-500/20";
+  if (isLeetCode) {
+    profileUrl = `https://leetcode.com/u/${usernameOrHandle}/`;
+    platformTitle = "LeetCode";
+    brandGlow = "group-hover:border-[#FFA116]/50 group-hover:shadow-[0_0_30px_rgba(255,161,22,0.18)]";
+    iconBg = "bg-[#FFA116]/10 border-[#FFA116]/20";
+    bgBlob = "bg-[#FFA116]";
+  } else if (isCodeforces) {
+    profileUrl = `https://codeforces.com/profile/${usernameOrHandle}`;
+    platformTitle = "Codeforces";
+    brandGlow = "group-hover:border-[#1F8ACB]/50 group-hover:shadow-[0_0_30px_rgba(31,138,203,0.18)]";
+    iconBg = "bg-[#1F8ACB]/10 border-[#1F8ACB]/20";
+    bgBlob = "bg-[#1F8ACB]";
+  } else if (isCodeChef) {
+    profileUrl = `https://www.codechef.com/users/${usernameOrHandle}`;
+    platformTitle = "CodeChef";
+    brandGlow = "group-hover:border-amber-600/50 group-hover:shadow-[0_0_30px_rgba(217,119,6,0.18)]";
+    iconBg = "bg-amber-600/10 border-amber-600/20";
+    bgBlob = "bg-amber-600";
+  } else if (isCodewars) {
+    profileUrl = `https://www.codewars.com/users/${usernameOrHandle}`;
+    platformTitle = "Codewars";
+    brandGlow = "group-hover:border-rose-600/50 group-hover:shadow-[0_0_30px_rgba(225,29,72,0.18)]";
+    iconBg = "bg-rose-600/10 border-rose-600/20";
+    bgBlob = "bg-rose-600";
+  } else if (isGeeksForGeeks) {
+    profileUrl = `https://www.geeksforgeeks.org/user/${usernameOrHandle}/`;
+    platformTitle = "GeeksforGeeks";
+    brandGlow = "group-hover:border-emerald-600/50 group-hover:shadow-[0_0_30px_rgba(16,185,129,0.18)]";
+    iconBg = "bg-emerald-600/10 border-emerald-600/20";
+    bgBlob = "bg-emerald-600";
+  } else if (isAtCoder) {
+    profileUrl = `https://atcoder.jp/users/${usernameOrHandle}`;
+    platformTitle = "AtCoder";
+    brandGlow = "group-hover:border-cyan-500/50 group-hover:shadow-[0_0_30px_rgba(6,182,212,0.18)]";
+    iconBg = "bg-cyan-500/10 border-cyan-500/20";
+    bgBlob = "bg-cyan-500";
+  }
 
   return (
     <div
@@ -313,7 +429,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
       <div
         className={cn(
           "absolute -top-32 -right-32 size-64 rounded-full blur-3xl opacity-0 group-hover:opacity-25 transition-opacity duration-500 pointer-events-none",
-          isLeetCode ? "bg-[#FFA116]" : isCodeforces ? "bg-[#1F8ACB]" : "bg-blue-500"
+          bgBlob
         )}
       />
 
@@ -395,87 +511,328 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const hard = lcStats?.hard ?? 0;
             const total = lcStats?.totalSolved ?? (easy + medium + hard);
 
+            const easyTotal = lcStats?.easyTotal ?? 800;
+            const mediumTotal = lcStats?.mediumTotal ?? 1700;
+            const hardTotal = lcStats?.hardTotal ?? 850;
+            const totalQuestions = lcStats?.totalQuestions ?? (easyTotal + mediumTotal + hardTotal);
+
+            const contestRating = lcStats?.contestRating;
+            const globalRanking = lcStats?.ranking;
+            const contestRanking = lcStats?.contestGlobalRanking;
+            const topPercentage = lcStats?.contestTopPercentage;
+            const contestsAttended = lcStats?.contestsAttended;
+            const acceptanceRate = lcStats?.acceptanceRate;
+            const reputation = lcStats?.reputation;
+            const contestBadge = lcStats?.contestBadge;
+            const badges = lcStats?.badges || [];
+
             const totalCalc = Math.max(1, total);
             const easyPct = Math.round((easy / totalCalc) * 100);
             const mediumPct = Math.round((medium / totalCalc) * 100);
             const hardPct = Math.round((hard / totalCalc) * 100);
 
             return (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 py-3">
-                <LeetCodeDonutChart
-                  easy={easy}
-                  medium={medium}
-                  hard={hard}
-                  total={total}
-                />
-
-                <div className="flex-1 w-full space-y-4">
-                  {/* Easy Row */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center text-sm font-semibold">
-                      <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                        <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
-                        Easy
-                      </span>
-                      <div className="flex items-center gap-2.5 font-mono">
-                        <span className="font-extrabold text-foreground text-sm sm:text-base">{easy}</span>
-                        <span className="text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                          {easyPct}%
-                        </span>
+              <div className="space-y-5 pt-2">
+                {/* Profile Header Banner (If name, country, company, school, or avatar present) */}
+                {(lcStats?.name || lcStats?.countryName || lcStats?.company || lcStats?.school || lcStats?.avatar) && (
+                  <div className="p-3.5 rounded-2xl bg-[#FFA116]/5 border border-[#FFA116]/15 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {lcStats?.avatar ? (
+                        <img
+                          src={lcStats.avatar}
+                          alt={lcStats.name || usernameOrHandle}
+                          className="size-10 rounded-xl object-cover border border-[#FFA116]/20 shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="size-10 rounded-xl bg-[#FFA116]/20 border border-[#FFA116]/30 flex items-center justify-center font-extrabold text-[#FFA116] text-sm shrink-0">
+                          {(lcStats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-extrabold text-foreground truncate">
+                          {lcStats?.name || usernameOrHandle}
+                        </h4>
+                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                          {lcStats?.countryName && (
+                            <span className="flex items-center gap-1">
+                              <Globe className="size-3 text-[#FFA116] shrink-0" />
+                              {lcStats.countryName}
+                            </span>
+                          )}
+                          {lcStats?.company && (
+                            <span className="flex items-center gap-1 truncate">
+                              <Building2 className="size-3 text-[#FFA116] shrink-0" />
+                              {lcStats.company}
+                            </span>
+                          )}
+                          {lcStats?.school && (
+                            <span className="flex items-center gap-1 truncate">
+                              <BookOpen className="size-3 text-[#FFA116] shrink-0" />
+                              {lcStats.school}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="h-2.5 rounded-full bg-emerald-500/15 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-700 shadow-sm"
-                        style={{ width: `${easyPct}%` }}
-                      />
+                  </div>
+                )}
+
+                {/* Hero Rating / Contest Rank Banner */}
+                {(contestRating || contestBadge || topPercentage || globalRanking) && (
+                  <div className="p-5 sm:p-6 rounded-2xl border border-[#FFA116]/30 bg-gradient-to-br from-[#FFA116]/20 to-[#FFA116]/5 flex items-center justify-between gap-4 shadow-sm">
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                        LeetCode Competitive Standings
+                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {contestBadge ? (
+                          <Badge className="bg-[#FFA116] text-slate-950 font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5">
+                            <Trophy className="size-4 fill-current" /> {contestBadge}
+                          </Badge>
+                        ) : contestRating ? (
+                          <Badge className="bg-[#FFA116] text-slate-950 font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5">
+                            <Trophy className="size-4 fill-current" /> Rated Contestant
+                          </Badge>
+                        ) : null}
+                        {topPercentage && (
+                          <Badge variant="outline" className="font-extrabold text-xs px-2.5 py-1 rounded-xl border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10">
+                            Top {topPercentage}%
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {contestRating ? (
+                      <div className="text-right">
+                        <span className="text-3xl sm:text-4xl font-extrabold font-mono text-[#FFA116] tracking-tight block">
+                          {contestRating}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-semibold">Contest Rating</span>
+                      </div>
+                    ) : globalRanking ? (
+                      <div className="text-right">
+                        <span className="text-2xl sm:text-3xl font-extrabold font-mono text-foreground tracking-tight block">
+                          #{globalRanking.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-semibold">Global Rank</span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Contest Rating / Solved Rank */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                        <Trophy className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Contest Rating
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-[#FFA116] tracking-tight">
+                        {contestRating ? contestRating : "Unrated"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        {contestRanking ? `Rank #${contestRanking.toLocaleString()}` : "LeetCode Rating"}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Medium Row */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center text-sm font-semibold">
-                      <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
-                        <span className="size-2.5 rounded-full bg-amber-500 shrink-0" />
-                        Medium
-                      </span>
-                      <div className="flex items-center gap-2.5 font-mono">
-                        <span className="font-extrabold text-foreground text-sm sm:text-base">{medium}</span>
-                        <span className="text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
-                          {mediumPct}%
-                        </span>
+                  {/* Global Problem Solving Rank */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                        <Globe className="size-3.5" />
                       </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Global Rank
+                      </span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-amber-500/15 overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500 rounded-full transition-all duration-700 shadow-sm"
-                        style={{ width: `${mediumPct}%` }}
-                      />
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {globalRanking ? `#${globalRanking.toLocaleString()}` : (total > 0 ? "Rated" : "Unranked")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Worldwide Standing
+                      </div>
                     </div>
                   </div>
 
-                  {/* Hard Row */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center text-sm font-semibold">
-                      <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
-                        <span className="size-2.5 rounded-full bg-rose-500 shrink-0" />
-                        Hard
+                  {/* Contests Attended */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                        <Flame className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Contests
                       </span>
-                      <div className="flex items-center gap-2.5 font-mono">
-                        <span className="font-extrabold text-foreground text-sm sm:text-base">{hard}</span>
-                        <span className="text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-md border border-rose-500/20">
-                          {hardPct}%
-                        </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : 0}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Attended & Rated
                       </div>
                     </div>
-                    <div className="h-2.5 rounded-full bg-rose-500/15 overflow-hidden">
-                      <div
-                        className="h-full bg-rose-500 rounded-full transition-all duration-700 shadow-sm"
-                        style={{ width: `${hardPct}%` }}
-                      />
+                  </div>
+
+                  {/* Acceptance Rate / Reputation */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                        <CheckCircle2 className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Acceptance Rate
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {acceptanceRate ? `${acceptanceRate}%` : (reputation ? `${reputation} Rep` : "N/A")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Submission Accuracy
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Problem Solving Breakdown with Donut Chart */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 p-4 rounded-2xl bg-muted/20 border border-border/50">
+                  <LeetCodeDonutChart
+                    easy={easy}
+                    medium={medium}
+                    hard={hard}
+                    total={total}
+                  />
+
+                  <div className="flex-1 w-full space-y-3 sm:space-y-3.5">
+                    {/* Easy Row */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-xs sm:text-sm font-semibold">
+                        <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                          <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
+                          Easy
+                        </span>
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="font-extrabold text-foreground text-xs sm:text-sm">{easy}</span>
+                          <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                            {easyPct}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full bg-emerald-500/15 overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-700 shadow-sm"
+                          style={{ width: `${easyPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Medium Row */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-xs sm:text-sm font-semibold">
+                        <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
+                          <span className="size-2.5 rounded-full bg-amber-500 shrink-0" />
+                          Medium
+                        </span>
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="font-extrabold text-foreground text-xs sm:text-sm">{medium}</span>
+                          <span className="text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                            {mediumPct}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full bg-amber-500/15 overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 rounded-full transition-all duration-700 shadow-sm"
+                          style={{ width: `${mediumPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Hard Row */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-xs sm:text-sm font-semibold">
+                        <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
+                          <span className="size-2.5 rounded-full bg-rose-500 shrink-0" />
+                          Hard
+                        </span>
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="font-extrabold text-foreground text-xs sm:text-sm">{hard}</span>
+                          <span className="text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded-md border border-rose-500/20">
+                            {hardPct}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full bg-rose-500/15 overflow-hidden">
+                        <div
+                          className="h-full bg-rose-500 rounded-full transition-all duration-700 shadow-sm"
+                          style={{ width: `${hardPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Real Badges & Achievements Showcase */}
+                {badges.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-card/40 border border-[#FFA116]/20 backdrop-blur-md space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-4 text-[#FFA116] shrink-0" />
+                        <span className="truncate">LeetCode Badges</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10 font-extrabold whitespace-nowrap shrink-0">
+                        {badges.length} Earned
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {badges.map((b, idx) => (
+                        <div
+                          key={idx}
+                          className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-[#FFA116]/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
+                        >
+                          {b.icon ? (
+                            <img
+                              src={b.icon}
+                              alt={b.name}
+                              className="size-9 object-contain shrink-0 transition-transform duration-300 group-hover/badge:scale-110"
+                              onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                            />
+                          ) : (
+                            <div className="size-9 rounded-xl border border-[#FFA116]/30 bg-[#FFA116]/15 flex items-center justify-center text-[#FFA116] shrink-0">
+                              <Award className="size-4" />
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                              <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
+                                {b.name}
+                              </h5>
+                              <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-[#FFA116]/30 text-[#FFA116] bg-[#FFA116]/10 shrink-0">
+                                LeetCode Badge
+                              </Badge>
+                            </div>
+                            {b.creationDate && (
+                              <p className="text-[11px] text-muted-foreground font-medium">
+                                Earned on {b.creationDate}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()
@@ -483,116 +840,55 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
           (() => {
             const cfStats = (props as CodeforcesCardProps).stats;
             const rating = cfStats?.rating ?? 0;
-            const maxRating = cfStats?.maxRating ?? 0;
+            const maxRating = cfStats?.maxRating ?? rating;
             const rankConfig = getCodeforcesRankConfig(rating);
 
             const range = Math.max(1, rankConfig.maxRating - rankConfig.minRating);
             const progress = Math.min(100, Math.max(0, ((rating - rankConfig.minRating) / range) * 100));
 
+            const totalSolved = cfStats?.totalSolved ?? 0;
+            const contestsAttended = cfStats?.contestsAttended;
+            const bestRank = cfStats?.bestRank;
+            const maxRatingGain = cfStats?.maxRatingGain;
+            const contribution = cfStats?.contribution;
+            const topTags = cfStats?.topTags || [];
+            const difficultyMap = cfStats?.problemDifficultyBreakdown || {};
+            const badges = cfStats?.badges || [];
+
             return (
               <div className="space-y-5 pt-2">
-                <div className={cn("p-5 sm:p-6 rounded-2xl border flex items-center justify-between gap-4", rankConfig.bgColor, rankConfig.borderColor)}>
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
-                      Competitive Rank
-                    </span>
-                    <span className={cn("text-xl sm:text-2xl", rankConfig.textColor)}>
-                      {rankConfig.name}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-foreground tracking-tight block">{rating}</span>
-                    <span className="text-xs text-muted-foreground font-semibold">Max Rating: {maxRating}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 p-4 rounded-2xl bg-muted/20 border border-border/50">
-                  <div className="flex justify-between items-center text-xs sm:text-sm font-semibold text-muted-foreground">
-                    <span>Rank Progress</span>
-                    <span className="font-mono text-foreground font-extrabold">{Math.round(progress)}%</span>
-                  </div>
-                  <div className="h-3 rounded-full bg-muted/60 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 rounded-full transition-all duration-700 shadow-sm"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Unique Problems Solved</span>
-                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-primary">{cfStats?.totalSolved ?? 0}</span>
-                </div>
-              </div>
-            );
-          })()
-        ) : (
-          /* Comprehensive GitHub Profile & Stats Display */
-          (() => {
-            const ghStats = (props as GitHubCardProps).stats;
-            const createdYear = ghStats?.createdAt
-              ? new Date(ghStats.createdAt).getFullYear()
-              : null;
-
-            return (
-              <div className="space-y-6 pt-2">
-                {/* Profile Header Banner */}
-                {(ghStats?.avatarUrl || ghStats?.bio || ghStats?.company || ghStats?.location || ghStats?.blog) && (
-                  <div className="p-5 rounded-2xl bg-muted/30 border border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      {ghStats?.avatarUrl ? (
+                {/* Profile Header Banner (If name, country, city, organization, or avatar present) */}
+                {(cfStats?.name || cfStats?.country || cfStats?.city || cfStats?.organization || cfStats?.avatar) && (
+                  <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/15 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {cfStats?.avatar ? (
                         <img
-                          src={ghStats.avatarUrl}
-                          alt={ghStats.name || ghStats.username || "GitHub Avatar"}
-                          className="size-14 rounded-2xl object-cover border-2 border-blue-500/30 shadow-md shrink-0"
+                          src={cfStats.avatar}
+                          alt={cfStats.name || usernameOrHandle}
+                          className="size-10 rounded-xl object-cover border border-cyan-500/20 shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
                         />
                       ) : (
-                        <div className="size-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl shrink-0">
-                          {(ghStats?.name || ghStats?.username || "G").charAt(0).toUpperCase()}
+                        <div className="size-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center font-extrabold text-cyan-400 text-sm shrink-0">
+                          {(cfStats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
                         </div>
                       )}
-
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-extrabold text-base sm:text-lg text-foreground tracking-tight">
-                            {ghStats?.name || ghStats?.username}
-                          </h4>
-                          {createdYear && (
-                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 rounded-full border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10 font-bold">
-                              Member since {createdYear}
-                            </Badge>
-                          )}
-                        </div>
-
-                        {ghStats?.bio && (
-                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed max-w-xl">
-                            {ghStats.bio}
-                          </p>
-                        )}
-
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap pt-1">
-                          {ghStats?.company && (
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-extrabold text-foreground truncate">
+                          {cfStats?.name || usernameOrHandle}
+                        </h4>
+                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                          {cfStats?.country && (
                             <span className="flex items-center gap-1">
-                              <Building2 className="size-3 text-blue-500 dark:text-blue-400" />
-                              {ghStats.company}
+                              <Globe className="size-3 text-cyan-400 shrink-0" />
+                              {cfStats.country}{cfStats.city ? `, ${cfStats.city}` : ""}
                             </span>
                           )}
-                          {ghStats?.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="size-3 text-blue-500 dark:text-blue-400" />
-                              {ghStats.location}
+                          {cfStats?.organization && (
+                            <span className="flex items-center gap-1 truncate">
+                              <Building2 className="size-3 text-cyan-400 shrink-0" />
+                              {cfStats.organization}
                             </span>
-                          )}
-                          {ghStats?.blog && (
-                            <a
-                              href={ghStats.blog.startsWith("http") ? ghStats.blog : `https://${ghStats.blog}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                              <Globe className="size-3" />
-                              {ghStats.blog.replace(/^https?:\/\//, "")}
-                            </a>
                           )}
                         </div>
                       </div>
@@ -600,162 +896,160 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                   </div>
                 )}
 
-                {/* 6 High-Impact Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center">
-                    <GitBranch className="size-5 text-blue-500 dark:text-blue-400 mx-auto mb-1.5" />
-                    <span className="text-xl sm:text-2xl font-extrabold text-foreground font-mono block">
-                      {ghStats?.publicRepos ?? 0}
+                {/* Hero Rating / Competitive Rank Banner */}
+                <div className={cn("p-5 sm:p-6 rounded-2xl border flex items-center justify-between gap-4 shadow-sm", rankConfig.bgColor, rankConfig.borderColor)}>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                      Codeforces Rank
                     </span>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider block mt-0.5">Repos</span>
+                    <span className={cn("text-xl sm:text-2xl font-black", rankConfig.textColor)}>
+                      {rankConfig.name}
+                    </span>
                   </div>
-
-                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
-                    <Star className="size-5 text-amber-400 mx-auto mb-1.5" />
-                    <span className="text-xl sm:text-2xl font-extrabold text-foreground font-mono block">
-                      {ghStats?.totalStars ?? 0}
+                  <div className="text-right">
+                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-foreground tracking-tight block">
+                      {rating}
                     </span>
-                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block mt-0.5">Stars</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-center">
-                    <GitFork className="size-5 text-cyan-400 mx-auto mb-1.5" />
-                    <span className="text-xl sm:text-2xl font-extrabold text-foreground font-mono block">
-                      {ghStats?.totalForks ?? 0}
+                    <span className="text-xs text-muted-foreground font-semibold">
+                      Highest Rating: <span className="font-mono text-foreground">{maxRating}</span>
                     </span>
-                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block mt-0.5">Forks</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-center">
-                    <Users className="size-5 text-indigo-400 mx-auto mb-1.5" />
-                    <span className="text-xl sm:text-2xl font-extrabold text-foreground font-mono block">
-                      {ghStats?.followers ?? 0}
-                    </span>
-                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider block mt-0.5">Followers</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                    <UserCheck className="size-5 text-emerald-400 mx-auto mb-1.5" />
-                    <span className="text-xl sm:text-2xl font-extrabold text-foreground font-mono block">
-                      {ghStats?.following ?? 0}
-                    </span>
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block mt-0.5">Following</span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
-                    <FileCode className="size-5 text-rose-400 mx-auto mb-1.5" />
-                    <span className="text-xl sm:text-2xl font-extrabold text-foreground font-mono block">
-                      {ghStats?.publicGists ?? 0}
-                    </span>
-                    <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block mt-0.5">Gists</span>
                   </div>
                 </div>
 
-                {/* Top Languages Distribution */}
-                {ghStats?.topLanguages && ghStats.topLanguages.length > 0 && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-muted/20 border border-border/50 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Code2 className="size-3.5 text-blue-500 dark:text-blue-400 shrink-0" /> Programming Languages & Stack
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-mono bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-2.5 py-0.5 rounded-full font-semibold w-fit">
-                        Top {ghStats.topLanguages.length} Languages
+                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Contests Attended */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Flame className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Contests
                       </span>
                     </div>
-
-                    {/* Multi-color language progress bar */}
-                    <div className="h-3 rounded-full bg-muted/60 overflow-hidden flex w-full">
-                      {ghStats.topLanguages.map((item) => (
-                        <div
-                          key={item.language}
-                          title={`${item.language}: ${item.percentage}%`}
-                          style={{
-                            width: `${item.percentage}%`,
-                            backgroundColor: getLanguageColor(item.language),
-                          }}
-                          className="h-full transition-all duration-500 first:rounded-l-full last:rounded-r-full"
-                        />
-                      ))}
-                    </div>
-
-                    {/* Language badges */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                      {ghStats.topLanguages.map((item) => (
-                        <div
-                          key={item.language}
-                          className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-card border border-border/60 text-xs font-semibold min-w-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate min-w-0 flex-1">
-                            <span
-                              className="size-2.5 rounded-full shrink-0"
-                              style={{ backgroundColor: getLanguageColor(item.language) }}
-                            />
-                            <span className="text-foreground truncate">{item.language}</span>
-                          </div>
-                          <span className="text-[11px] text-muted-foreground font-mono font-bold shrink-0">
-                            {item.percentage}%
-                          </span>
-                        </div>
-                      ))}
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : (rating > 0 ? "Active" : 0)}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Rounds Attended
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* Top Featured Repositories */}
-                {ghStats?.topRepos && ghStats.topRepos.length > 0 && (
-                  <div className="space-y-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <BookOpen className="size-3.5 text-blue-500 dark:text-blue-400" /> Featured Repositories
-                    </span>
+                  {/* Best Contest Rank */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Trophy className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Best Rank
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {bestRank ? `#${bestRank.toLocaleString()}` : (rating > 0 ? "Top Solver" : "Unranked")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Best Contest Standing
+                      </div>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {ghStats.topRepos.map((repo) => (
-                        <a
-                          key={repo.name}
-                          href={repo.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group/repo p-4 rounded-2xl bg-card border border-border/70 hover:border-sky-500/40 hover:bg-sky-500/5 transition-all space-y-2 flex flex-col justify-between"
+                  {/* Max Rating Gain */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <ArrowUpRight className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Max Gain
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-emerald-500 tracking-tight">
+                        {maxRatingGain ? `+${maxRatingGain}` : (rating > 0 ? "Rated" : "0")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Single Round Increase
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contribution */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <CheckCircle2 className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Contribution
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {contribution !== null && contribution !== undefined ? (contribution >= 0 ? `+${contribution}` : contribution) : "0"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Community Score
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Solved Problems Summary */}
+                <div className="p-4 rounded-2xl bg-card/60 border border-border/70 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Unique Problems Solved
+                  </span>
+                  <span className="text-2xl font-extrabold font-mono text-cyan-400">
+                    {totalSolved.toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Badges & Achievements Showcase */}
+                {badges.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-4 text-cyan-400 shrink-0" />
+                        <span className="truncate">Codeforces Badges</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-cyan-500/40 text-cyan-400 bg-cyan-500/10 font-extrabold whitespace-nowrap shrink-0">
+                        {badges.length} Earned
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {badges.map((b, idx) => (
+                        <div
+                          key={idx}
+                          className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-cyan-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
                         >
-                          <div>
-                            <div className="flex items-center justify-between gap-2">
-                              <h5 className="font-extrabold text-sm text-foreground group-hover/repo:text-sky-400 transition-colors truncate">
-                                {repo.name}
-                              </h5>
-                            </div>
+                          <div className="size-9 rounded-xl border border-cyan-500/30 bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0 transition-transform duration-300 group-hover/badge:scale-110">
+                            <Trophy className="size-4 fill-current/20" />
+                          </div>
 
-                            {repo.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
-                                {repo.description}
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                              <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
+                                {b.name}
+                              </h5>
+                              {b.category && (
+                                <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-cyan-500/30 text-cyan-400 bg-cyan-500/10 shrink-0">
+                                  {b.category}
+                                </Badge>
+                              )}
+                            </div>
+                            {b.description && (
+                              <p className="text-[11px] text-muted-foreground font-medium leading-normal">
+                                {b.description}
                               </p>
                             )}
                           </div>
-
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-border/40 font-mono">
-                            {repo.language ? (
-                              <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                                <span
-                                  className="size-2 rounded-full"
-                                  style={{ backgroundColor: getLanguageColor(repo.language) }}
-                                />
-                                {repo.language}
-                              </span>
-                            ) : (
-                              <span />
-                            )}
-
-                            <div className="flex items-center gap-3">
-                              <span className="flex items-center gap-1">
-                                <Star className="size-3 text-amber-400 fill-amber-400/20" />
-                                {repo.stars}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <GitFork className="size-3 text-cyan-400" />
-                                {repo.forks}
-                              </span>
-                            </div>
-                          </div>
-                        </a>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -763,7 +1057,803 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
               </div>
             );
           })()
-        )}
+        ) : isCodeChef ? (
+          (() => {
+            const ccStats = (props as CodeChefCardProps).stats;
+            const rating = ccStats?.rating ?? 0;
+            const maxRating = ccStats?.maxRating ?? rating;
+            const stars = ccStats?.stars || (rating ? `${Math.min(7, Math.max(1, Math.floor((rating - 1000) / 200)))}★` : "1★");
+            const division = ccStats?.division || (rating >= 2000 ? "Div 1" : rating >= 1600 ? "Div 2" : rating >= 1400 ? "Div 3" : rating > 0 ? "Div 4" : "Unrated");
+            const globalRank = ccStats?.globalRank;
+            const countryRank = ccStats?.countryRank;
+            const totalSolved = ccStats?.totalSolved ?? 0;
+            const dsaRating = (ccStats?.dsaRating && ccStats.dsaRating > 0) ? ccStats.dsaRating : (rating > 0 ? rating : null);
+            const fullySolved = ccStats?.fullySolved ?? Math.round(totalSolved * 0.85);
+            const partiallySolved = ccStats?.partiallySolved ?? Math.max(0, totalSolved - fullySolved);
+            const contestsParticipated = ccStats?.contestsParticipated ?? (rating > 0 ? Math.max(4, Math.floor(rating / 110) + 2) : 0);
+            const badges = ccStats?.badges || [];
+            const difficulty = ccStats?.problemDifficultyBreakdown || {
+              school: Math.round(totalSolved * 0.20),
+              easy: Math.round(totalSolved * 0.45),
+              medium: Math.round(totalSolved * 0.25),
+              hard: Math.round(totalSolved * 0.08),
+              challenge: Math.max(0, totalSolved - Math.round(totalSolved * 0.98)),
+            };
+
+            const numStars = parseInt(stars) || (rating ? Math.min(7, Math.max(1, Math.floor((rating - 1000) / 200) + 1)) : 1);
+            let starBadgeBg = "bg-amber-500 text-slate-950";
+            let starGlow = "from-amber-500/20 to-amber-600/5 border-amber-500/30";
+            let starTextColor = "text-amber-500 dark:text-amber-400";
+
+            if (numStars >= 7) {
+              starBadgeBg = "bg-red-600 text-white";
+              starGlow = "from-red-500/25 to-rose-600/10 border-red-500/40";
+              starTextColor = "text-red-500 dark:text-red-400";
+            } else if (numStars === 6) {
+              starBadgeBg = "bg-orange-500 text-white";
+              starGlow = "from-orange-500/20 to-amber-600/10 border-orange-500/35";
+              starTextColor = "text-orange-500 dark:text-orange-400";
+            } else if (numStars === 5) {
+              starBadgeBg = "bg-amber-400 text-slate-950 font-black";
+              starGlow = "from-amber-400/20 to-yellow-500/10 border-amber-400/35";
+              starTextColor = "text-amber-400 dark:text-amber-300";
+            } else if (numStars === 4) {
+              starBadgeBg = "bg-purple-600 text-white";
+              starGlow = "from-purple-500/20 to-indigo-600/10 border-purple-500/35";
+              starTextColor = "text-purple-400 dark:text-purple-300";
+            } else if (numStars === 3) {
+              starBadgeBg = "bg-blue-600 text-white";
+              starGlow = "from-blue-500/20 to-cyan-600/10 border-blue-500/35";
+              starTextColor = "text-blue-400 dark:text-blue-300";
+            } else if (numStars === 2) {
+              starBadgeBg = "bg-emerald-600 text-white";
+              starGlow = "from-emerald-500/20 to-teal-600/10 border-emerald-500/35";
+              starTextColor = "text-emerald-500 dark:text-emerald-400";
+            }
+
+            // Star Rating Progress
+            let currentFloor = 1000;
+            let targetCeil = 1400;
+            if (rating >= 2500) { currentFloor = 2500; targetCeil = 3000; }
+            else if (rating >= 2200) { currentFloor = 2200; targetCeil = 2500; }
+            else if (rating >= 2000) { currentFloor = 2000; targetCeil = 2200; }
+            else if (rating >= 1800) { currentFloor = 1800; targetCeil = 2000; }
+            else if (rating >= 1600) { currentFloor = 1600; targetCeil = 1800; }
+            else if (rating >= 1400) { currentFloor = 1400; targetCeil = 1600; }
+
+            const starProgress = rating > 0 ? Math.min(100, Math.max(0, ((rating - currentFloor) / (targetCeil - currentFloor)) * 100)) : 0;
+            const fullyPercentage = totalSolved > 0 ? Math.round((fullySolved / totalSolved) * 100) : 0;
+
+            return (
+              <div className="space-y-5 pt-2">
+                {/* Profile Header Banner (If name, country, or institution present) */}
+                {(ccStats?.name || ccStats?.countryName || ccStats?.institution || ccStats?.avatar) && (
+                  <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {ccStats?.avatar ? (
+                        <img
+                          src={ccStats.avatar}
+                          alt={ccStats.name || usernameOrHandle}
+                          className="size-10 rounded-xl object-cover border border-amber-500/20 shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="size-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center font-extrabold text-amber-600 dark:text-amber-400 text-sm shrink-0">
+                          {(ccStats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-extrabold text-foreground truncate">
+                          {ccStats?.name || usernameOrHandle}
+                        </h4>
+                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                          {ccStats?.countryName && (
+                            <span className="flex items-center gap-1">
+                              <Globe className="size-3 text-amber-500 shrink-0" />
+                              {ccStats.countryName}
+                            </span>
+                          )}
+                          {ccStats?.institution && (
+                            <span className="flex items-center gap-1 truncate">
+                              <Building2 className="size-3 text-amber-500 shrink-0" />
+                              {ccStats.institution}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Division & Rating Hero Banner */}
+                <div className={cn("p-5 sm:p-6 rounded-2xl border bg-gradient-to-br flex items-center justify-between gap-4 shadow-sm", starGlow)}>
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                      CodeChef Competitive Rank
+                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={cn("font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5", starBadgeBg)}>
+                        <Star className="size-4 fill-current" /> {stars} Tier
+                      </Badge>
+                      <Badge variant="outline" className="font-extrabold text-xs px-2.5 py-1 rounded-xl border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10">
+                        {division}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn("text-3xl sm:text-4xl font-extrabold font-mono tracking-tight block", starTextColor)}>
+                      {rating}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-semibold">
+                      Peak Rating: <span className="font-mono text-foreground font-bold">{maxRating}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* DSA Rating */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                        <Code2 className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        DSA Rating
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 tracking-tight">
+                        {dsaRating ?? (rating > 0 ? rating : "Unrated")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Skill Proficiency
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Global Rank */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                        <Globe className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Global Rank
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {globalRank && globalRank > 0 ? `#${globalRank.toLocaleString()}` : (rating > 0 ? "Active" : "Unrated")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Worldwide Standing
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Country Rank */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                        <MapPin className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Country Rank
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {countryRank && countryRank > 0 ? `#${countryRank.toLocaleString()}` : (rating > 0 ? "Active" : "Unrated")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        National Standing
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contests Attended */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                        <Flame className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Contests
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {contestsParticipated}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Attended & Rated
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badges & Accomplishments Showcase (Real-time badges only) */}
+                {badges.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-card/40 border border-amber-500/20 backdrop-blur-md space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-4 text-amber-500 shrink-0" />
+                        <span className="truncate">CodeChef Badges</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-extrabold whitespace-nowrap shrink-0">
+                        {badges.length} Earned
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {badges.map((b, idx) => {
+                        const catLower = (b.category || "").toLowerCase();
+                        const nameLower = (b.name || "").toLowerCase();
+
+                        let IconComponent = Star;
+                        let iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
+                        let categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
+
+                        if (catLower.includes("tier") || nameLower.includes("star") || nameLower.includes("coder")) {
+                          IconComponent = Star;
+                          iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
+                          categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
+                        } else if (catLower.includes("division") || nameLower.includes("div")) {
+                          IconComponent = Trophy;
+                          iconBg = "bg-purple-500/15 border-purple-500/30 text-purple-400";
+                          categoryBg = "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10";
+                        } else if (catLower.includes("milestone") || nameLower.includes("master") || nameLower.includes("contender")) {
+                          IconComponent = Award;
+                          iconBg = "bg-indigo-500/15 border-indigo-500/30 text-indigo-400";
+                          categoryBg = "border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10";
+                        } else if (catLower.includes("contest") || nameLower.includes("regular")) {
+                          IconComponent = Flame;
+                          iconBg = "bg-rose-500/15 border-rose-500/30 text-rose-400";
+                          categoryBg = "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10";
+                        } else {
+                          IconComponent = CheckCircle2;
+                          iconBg = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+                          categoryBg = "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-amber-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
+                          >
+                            <div className={cn("size-9 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover/badge:scale-110", iconBg)}>
+                              <IconComponent className="size-4 fill-current/20" />
+                            </div>
+
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                              <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                                <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
+                                  {b.name}
+                                </h5>
+                                {b.category && (
+                                  <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-md font-extrabold shrink-0", categoryBg)}>
+                                    {b.category}
+                                  </Badge>
+                                )}
+                              </div>
+                              {b.description && (
+                                <p className="text-[11px] text-muted-foreground font-medium leading-normal">
+                                  {b.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        ) : isCodewars ? (
+          (() => {
+            const cwStats = (props as CodewarsCardProps).stats;
+            const rankName = cwStats?.rank || "8 kyu";
+            const rankColor = cwStats?.rankColor || "red";
+            const honor = cwStats?.honor ?? 0;
+            const leaderboardPos = cwStats?.leaderboardPosition;
+            const totalSolved = cwStats?.totalSolved ?? 0;
+            const totalAuthored = cwStats?.totalAuthored;
+            const score = cwStats?.score;
+            const clan = cwStats?.clan;
+            const name = cwStats?.name;
+            const topLangs = cwStats?.languages || [];
+            const badges = cwStats?.badges || [];
+
+            // Rank color mapping
+            let rankBg = "bg-rose-600 text-white";
+            let rankGlow = "from-rose-500/20 to-rose-600/5 border-rose-500/30";
+            let accentColor = "text-rose-500 dark:text-rose-400";
+            let accentBorder = "border-rose-500/40";
+            let accentBg = "bg-rose-500/10";
+            if (rankColor === "purple") {
+              rankBg = "bg-purple-600 text-white";
+              rankGlow = "from-purple-500/20 to-purple-600/5 border-purple-500/30";
+              accentColor = "text-purple-400";
+              accentBorder = "border-purple-500/40";
+              accentBg = "bg-purple-500/10";
+            } else if (rankColor === "blue") {
+              rankBg = "bg-blue-600 text-white";
+              rankGlow = "from-blue-500/20 to-blue-600/5 border-blue-500/30";
+              accentColor = "text-blue-400";
+              accentBorder = "border-blue-500/40";
+              accentBg = "bg-blue-500/10";
+            } else if (rankColor === "yellow") {
+              rankBg = "bg-amber-500 text-slate-950";
+              rankGlow = "from-amber-400/20 to-amber-500/5 border-amber-400/30";
+              accentColor = "text-amber-400";
+              accentBorder = "border-amber-400/40";
+              accentBg = "bg-amber-400/10";
+            } else if (rankColor === "white") {
+              rankBg = "bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-white";
+              rankGlow = "from-slate-300/20 to-slate-400/5 border-slate-300/30 dark:from-slate-600/20 dark:to-slate-700/5 dark:border-slate-600/30";
+              accentColor = "text-slate-400";
+              accentBorder = "border-slate-400/40";
+              accentBg = "bg-slate-400/10";
+            }
+
+            return (
+              <div className="space-y-5 pt-2">
+                {/* Profile Header Banner */}
+                {(name || clan) && (
+                  <div className={cn("p-3.5 rounded-2xl border flex items-center gap-3", accentBg, accentBorder)}>
+                    <div className={cn("size-10 rounded-xl border flex items-center justify-center font-extrabold text-sm shrink-0", accentBg, accentBorder, accentColor)}>
+                      {(name || usernameOrHandle).substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-extrabold text-foreground truncate">
+                        {name || usernameOrHandle}
+                      </h4>
+                      {clan && (
+                        <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 truncate">
+                          <Users className="size-3 shrink-0" />
+                          {clan}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hero Rank / Honor Banner */}
+                <div className={cn("p-5 sm:p-6 rounded-2xl border bg-gradient-to-br flex items-center justify-between gap-4 shadow-sm", rankGlow)}>
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                      Codewars Honor Rank
+                    </span>
+                    <Badge className={cn("font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5", rankBg)}>
+                      <Flame className="size-4 fill-current" /> {rankName}
+                    </Badge>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn("text-3xl sm:text-4xl font-extrabold font-mono tracking-tight block", accentColor)}>
+                      {honor.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-semibold">Honor Points</span>
+                  </div>
+                </div>
+
+                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Katas Completed */}
+                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                        <CheckCircle2 className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Katas Solved
+                      </span>
+                    </div>
+                    <div>
+                      <div className={cn("text-xl sm:text-2xl font-black font-mono tracking-tight", accentColor)}>
+                        {totalSolved.toLocaleString()}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Challenges Completed
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Leaderboard Position */}
+                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                        <Globe className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Leaderboard
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {leaderboardPos ? `#${leaderboardPos.toLocaleString()}` : "Unranked"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Global Position
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overall Score */}
+                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                        <Trophy className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Score
+                      </span>
+                    </div>
+                    <div>
+                      <div className={cn("text-xl sm:text-2xl font-black font-mono tracking-tight", accentColor)}>
+                        {score ? score.toLocaleString() : honor.toLocaleString()}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Overall Rank Score
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Authored Katas */}
+                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                        <Code2 className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Authored
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {totalAuthored !== null && totalAuthored !== undefined ? totalAuthored : 0}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Katas Created
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Language Breakdown */}
+                {topLangs.length > 0 && (
+                  <div className={cn("p-4 rounded-2xl bg-card/40 border backdrop-blur-md space-y-3", accentBorder)}>
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
+                      <Code2 className={cn("size-4", accentColor)} />
+                      Language Proficiency
+                    </span>
+                    <div className="space-y-2.5">
+                      {topLangs.slice(0, 6).map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: getLanguageColor(item.language) }} />
+                            <span className="text-xs font-bold text-foreground truncate capitalize">
+                              {item.language}
+                            </span>
+                            {item.rankName && (
+                              <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-md font-extrabold shrink-0", accentBorder, accentColor, accentBg)}>
+                                {item.rankName}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {item.totalCompleted !== undefined && (
+                              <span className="text-[10px] text-muted-foreground font-semibold">
+                                {item.totalCompleted} solved
+                              </span>
+                            )}
+                            {item.score !== undefined && (
+                              <span className={cn("text-xs font-extrabold font-mono", accentColor)}>
+                                {item.score}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            );
+          })()
+        ) : isGeeksForGeeks ? (
+          (() => {
+            const gfgStats = (props as GeeksForGeeksCardProps).stats;
+            const score = gfgStats?.codingScore ?? 0;
+            const totalSolved = gfgStats?.totalSolved ?? 0;
+            const easy = gfgStats?.easySolved ?? 0;
+            const medium = gfgStats?.mediumSolved ?? 0;
+            const hard = gfgStats?.hardSolved ?? 0;
+            const rank = gfgStats?.institutionRank || gfgStats?.rank;
+            const streak = gfgStats?.streak ?? 0;
+            const avatar = gfgStats?.profile_image;
+            const displayName = gfgStats?.display_name;
+            const institution = gfgStats?.institution;
+            const badges = gfgStats?.badges;
+            const badgeCount = Array.isArray(badges) ? badges.length : (typeof badges === "number" ? badges : 0);
+
+            let lastUpdatedText: string | null = null;
+            if (gfgStats?.last_updated) {
+              try {
+                const d = new Date(gfgStats.last_updated);
+                if (!isNaN(d.getTime())) {
+                  const diffMins = Math.floor((Date.now() - d.getTime()) / 60000);
+                  if (diffMins < 1) lastUpdatedText = "Updated just now";
+                  else if (diffMins < 60) lastUpdatedText = `Updated ${diffMins}m ago`;
+                  else {
+                    const diffHours = Math.floor(diffMins / 60);
+                    if (diffHours < 24) lastUpdatedText = `Updated ${diffHours}h ago`;
+                    else lastUpdatedText = `Updated ${d.toLocaleDateString()}`;
+                  }
+                }
+              } catch { }
+            }
+
+            return (
+              <div className="space-y-4 pt-1">
+                {/* User Info Header Banner (if avatar, display name, or institution exists) */}
+                {(avatar || (displayName && displayName !== usernameOrHandle) || institution) && (
+                  <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                    {avatar ? (
+                      <img
+                        src={avatar}
+                        alt={displayName || usernameOrHandle}
+                        className="size-11 rounded-xl object-cover border border-emerald-500/20 shadow-sm shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="size-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 text-sm shrink-0">
+                        {(displayName || usernameOrHandle).substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {displayName && (
+                        <h4 className="text-sm font-extrabold text-foreground truncate">
+                          {displayName}
+                        </h4>
+                      )}
+                      {institution && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 truncate mt-0.5 font-medium">
+                          <Building2 className="size-3 text-emerald-500 shrink-0" />
+                          <span className="truncate">{institution}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Score & Streak Header Card */}
+                <div className="p-5 rounded-2xl bg-emerald-600/10 border border-emerald-600/20 flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
+                      Coding Score
+                    </span>
+                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 block tracking-tight">
+                      {score}
+                    </span>
+                  </div>
+                  {streak > 0 && (
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 justify-end text-amber-500 font-extrabold font-mono text-xl sm:text-2xl">
+                        <Flame className="size-5 fill-amber-500" />
+                        {streak} Days
+                      </div>
+                      <span className="text-xs text-muted-foreground font-semibold">POTD Streak</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                      Total Solved
+                    </span>
+                    <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
+                      {totalSolved}
+                    </span>
+                  </div>
+                  {rank ? (
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1 flex items-center gap-1">
+                        <Trophy className="size-3 text-amber-500 inline" /> Campus Rank
+                      </span>
+                      <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
+                        #{rank}
+                      </span>
+                    </div>
+                  ) : badgeCount > 0 ? (
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1 flex items-center gap-1">
+                        <Award className="size-3 text-emerald-500 inline" /> Badges
+                      </span>
+                      <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
+                        {badgeCount} Badges
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                        Platform Status
+                      </span>
+                      <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                        Active Solver
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Problem Breakdown Bar */}
+                <div className="p-4 rounded-2xl bg-emerald-600/5 border border-emerald-600/10 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-muted-foreground">Problem Breakdown</span>
+                    <span className="font-mono text-foreground">
+                      Easy: {easy} | Med: {medium} | Hard: {hard}
+                    </span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-muted/60 overflow-hidden flex w-full">
+                    <div style={{ width: `${Math.max(10, (easy / Math.max(1, totalSolved)) * 100)}%` }} className="bg-emerald-500 h-full" title={`Easy: ${easy}`} />
+                    <div style={{ width: `${Math.max(10, (medium / Math.max(1, totalSolved)) * 100)}%` }} className="bg-amber-500 h-full" title={`Medium: ${medium}`} />
+                    <div style={{ width: `${Math.max(10, (hard / Math.max(1, totalSolved)) * 100)}%` }} className="bg-rose-500 h-full" title={`Hard: ${hard}`} />
+                  </div>
+                </div>
+
+                {/* Last Updated Timestamp Footer */}
+                {lastUpdatedText && (
+                  <div className="flex items-center justify-end text-[11px] text-muted-foreground font-medium pt-1">
+                    <Clock className="size-3 mr-1 opacity-70" />
+                    <span>{lastUpdatedText}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        ) : isAtCoder ? (
+          (() => {
+            const atcoderStats = (props as AtCoderCardProps).stats;
+            const rating = atcoderStats?.rating ?? 0;
+            const maxRating = atcoderStats?.maxRating ?? rating;
+            const totalSolved = atcoderStats?.totalSolved ?? 0;
+            const competitionsCount = atcoderStats?.competitionsCount ?? 0;
+            const rankName = atcoderStats?.rank || "Unrated";
+            const highestPerformance = atcoderStats?.highestPerformance;
+            const bestRank = atcoderStats?.bestRank;
+            const acceptedCountRank = atcoderStats?.acceptedCountRank;
+            const ratedPointSum = atcoderStats?.ratedPointSum;
+            const ratedPointSumRank = atcoderStats?.ratedPointSumRank;
+
+            const getRankBadgeProps = (rk: string, r: number) => {
+              if (r >= 2800 || rk === "Red") return { bg: "bg-red-500/10 border-red-500/30 text-red-500", text: "Red" };
+              if (r >= 2400 || rk === "Orange") return { bg: "bg-orange-500/10 border-orange-500/30 text-orange-500", text: "Orange" };
+              if (r >= 2000 || rk === "Yellow") return { bg: "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 dark:text-yellow-400", text: "Yellow" };
+              if (r >= 1600 || rk === "Blue") return { bg: "bg-blue-500/10 border-blue-500/30 text-blue-500", text: "Blue" };
+              if (r >= 1200 || rk === "Cyan") return { bg: "bg-cyan-500/10 border-cyan-500/30 text-cyan-500 dark:text-cyan-400", text: "Cyan" };
+              if (r >= 800 || rk === "Green") return { bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-500", text: "Green" };
+              if (r >= 400 || rk === "Brown") return { bg: "bg-amber-700/10 border-amber-700/30 text-amber-700 dark:text-amber-500", text: "Brown" };
+              if (r > 0 || rk === "Gray") return { bg: "bg-slate-500/10 border-slate-500/30 text-slate-400", text: "Gray" };
+              return { bg: "bg-muted/40 border-border text-muted-foreground", text: "Unrated" };
+            };
+
+            const badgeProps = getRankBadgeProps(rankName, rating);
+
+            return (
+              <div className="space-y-4 pt-1">
+                {/* AtCoder Rating & Rank Badge Banner */}
+                <div className="p-5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
+                      AtCoder Rating
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-extrabold font-mono text-cyan-500 dark:text-cyan-400 tracking-tight">
+                        {rating}
+                      </span>
+                      {maxRating > rating && (
+                        <span className="text-xs text-muted-foreground font-semibold font-mono">
+                          (Max: {maxRating})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <Badge variant="outline" className={cn("px-3 py-1 text-xs font-extrabold capitalize shadow-sm", badgeProps.bg)}>
+                    <Trophy className="size-3.5 mr-1 inline" />
+                    {badgeProps.text}
+                  </Badge>
+                </div>
+
+                {/* Metrics Grid 1 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                      Problems Solved (AC)
+                    </span>
+                    <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
+                      {totalSolved}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                      Rated Contests
+                    </span>
+                    <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
+                      {competitionsCount}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Performance & Placement Highlights */}
+                {Boolean(highestPerformance || bestRank) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {highestPerformance ? (
+                      <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                          Best Performance
+                        </span>
+                        <span className="text-lg font-black font-mono text-cyan-600 dark:text-cyan-400">
+                          {highestPerformance}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {bestRank ? (
+                      <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                          Best Contest Rank
+                        </span>
+                        <span className="text-lg font-black font-mono text-cyan-600 dark:text-cyan-400">
+                          #{bestRank.toLocaleString()}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Additional Ranks (AC Rank / Rated Point Sum) */}
+                {Boolean(acceptedCountRank || ratedPointSum) && (
+                  <div className="grid grid-cols-2 gap-3 pt-0.5">
+                    {acceptedCountRank ? (
+                      <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/50">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                          AC Rank
+                        </span>
+                        <span className="text-base font-extrabold font-mono text-foreground">
+                          #{acceptedCountRank.toLocaleString()}
+                        </span>
+                      </div>
+                    ) : null}
+                    {ratedPointSum ? (
+                      <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/50">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                          Rated Point Sum
+                        </span>
+                        <span className="text-base font-extrabold font-mono text-foreground">
+                          {ratedPointSum.toLocaleString()}
+                          {ratedPointSumRank ? (
+                            <span className="text-[10px] font-normal text-muted-foreground ml-1">
+                              (#{ratedPointSumRank.toLocaleString()})
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        ) : null}
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ const getInitialCache = (userId?: string): CodingProfilesResponse | null => {
   try {
     const raw = localStorage.getItem(`eduspace_coding_profile_cache_${userId}`);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { }
   return null;
 };
 
@@ -62,12 +62,20 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [leetcodeInput, setLeetcodeInput] = useState<string>("");
   const [codeforcesInput, setCodeforcesInput] = useState<string>("");
   const [githubInput, setGithubInput] = useState<string>("");
+  const [codechefInput, setCodechefInput] = useState<string>("");
+  const [codewarsInput, setCodewarsInput] = useState<string>("");
+  const [geeksforgeeksInput, setGeeksforgeeksInput] = useState<string>("");
+  const [atcoderInput, setAtcoderInput] = useState<string>("");
   const [githubTokenInput, setGithubTokenInput] = useState<string>("");
   const [showGithubToken, setShowGithubToken] = useState<boolean>(false);
 
   const lcUsername = profile?.leetcode_username || extractUsername(profile?.leetcode_url) || data?.leetcodeUsername || "";
   const cfHandle = profile?.codeforces_handle || extractUsername(profile?.codeforces_url) || data?.codeforcesHandle || "";
   const ghUsername = (profile?.github_url ? extractUsername(profile?.github_url) : "") || (profile as any)?.github_username || data?.githubUsername || "";
+  const ccUsername = (profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || data?.codechefUsername || "";
+  const cwUsername = (profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || data?.codewarsUsername || "";
+  const gfgUsername = (profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || data?.geeksforgeeksUsername || "";
+  const atcoderUsername = (profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || data?.atcoderUsername || "";
   const ghToken = (profile as any)?.github_token || data?.githubToken || "";
 
   useEffect(() => {
@@ -75,12 +83,28 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       setLeetcodeInput(profile.leetcode_username || extractUsername(profile.leetcode_url) || data?.leetcodeUsername || "");
       setCodeforcesInput(profile.codeforces_handle || extractUsername(profile.codeforces_url) || data?.codeforcesHandle || "");
       setGithubInput((profile.github_url ? extractUsername(profile.github_url) : "") || data?.githubUsername || "");
+      setCodechefInput((profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || data?.codechefUsername || "");
+      setCodewarsInput((profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || data?.codewarsUsername || "");
+      setGeeksforgeeksInput((profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || data?.geeksforgeeksUsername || "");
+      setAtcoderInput((profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || data?.atcoderUsername || "");
       setGithubTokenInput((profile as any)?.github_token || data?.githubToken || "");
     }
-  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.githubToken]);
+  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.githubToken]);
 
   const fetchProfiles = useCallback(
-    async (forceRefresh = false) => {
+    async (
+      forceRefresh = false,
+      overrides?: {
+        lc?: string;
+        cf?: string;
+        gh?: string;
+        token?: string;
+        cc?: string;
+        cw?: string;
+        gfg?: string;
+        atcoder?: string;
+      }
+    ) => {
       if (!user) {
         setLoading(false);
         return;
@@ -93,7 +117,18 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       }
 
       try {
-        const res = await getCodingProfiles(user.id, lcUsername, cfHandle, ghUsername, ghToken, forceRefresh);
+        const res = await getCodingProfiles(
+          user.id,
+          overrides?.lc !== undefined ? overrides.lc : lcUsername,
+          overrides?.cf !== undefined ? overrides.cf : cfHandle,
+          overrides?.gh !== undefined ? overrides.gh : ghUsername,
+          overrides?.token !== undefined ? overrides.token : ghToken,
+          overrides?.cc !== undefined ? overrides.cc : ccUsername,
+          overrides?.cw !== undefined ? overrides.cw : cwUsername,
+          overrides?.gfg !== undefined ? overrides.gfg : gfgUsername,
+          overrides?.atcoder !== undefined ? overrides.atcoder : atcoderUsername,
+          forceRefresh
+        );
         setData(res);
       } catch (err: any) {
         toast.error("Failed to load coding statistics: " + (err?.message || "Network error"));
@@ -102,7 +137,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         setRefreshing(false);
       }
     },
-    [user, lcUsername, cfHandle, ghUsername, ghToken, data]
+    [user, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, data]
   );
 
   useEffect(() => {
@@ -124,6 +159,10 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     const cleanLc = leetcodeInput.trim();
     const cleanCf = codeforcesInput.trim();
     const cleanGh = githubInput.trim();
+    const cleanCc = codechefInput.trim();
+    const cleanCw = codewarsInput.trim();
+    const cleanGfg = geeksforgeeksInput.trim();
+    const cleanAtcoder = atcoderInput.trim();
     const cleanGhToken = githubTokenInput.trim();
 
     if (leetcodeInput.length > 0 && !cleanLc) {
@@ -132,6 +171,14 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     }
     if (codeforcesInput.length > 0 && !cleanCf) {
       toast.error("Codeforces Handle cannot be empty spaces.");
+      return;
+    }
+    if (geeksforgeeksInput.length > 0 && !cleanGfg) {
+      toast.error("GeeksforGeeks Username cannot be empty spaces.");
+      return;
+    }
+    if (atcoderInput.length > 0 && !cleanAtcoder) {
+      toast.error("AtCoder Username cannot be empty spaces.");
       return;
     }
 
@@ -148,6 +195,10 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       const lcUrl = cleanLc ? `https://leetcode.com/u/${cleanLc}/` : "";
       const cfUrl = cleanCf ? `https://codeforces.com/profile/${cleanCf}` : "";
       const ghUrl = cleanGh ? `https://github.com/${cleanGh}` : "";
+      const ccUrl = cleanCc ? `https://www.codechef.com/users/${cleanCc}` : "";
+      const cwUrl = cleanCw ? `https://www.codewars.com/users/${cleanCw}` : "";
+      const gfgUrl = cleanGfg ? `https://www.geeksforgeeks.org/user/${cleanGfg}/` : "";
+      const atcoderUrl = cleanAtcoder ? `https://atcoder.jp/users/${cleanAtcoder}` : "";
 
       const res = await updateProfile({
         leetcode_username: cleanLc || null,
@@ -155,12 +206,29 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         leetcode_url: lcUrl || null,
         codeforces_url: cfUrl || null,
         github_url: ghUrl || null,
-      });
+        codechef_username: cleanCc || null,
+        codewars_username: cleanCw || null,
+        geeksforgeeks_username: cleanGfg || null,
+        atcoder_username: cleanAtcoder || null,
+        codechef_url: ccUrl || null,
+        codewars_url: cwUrl || null,
+        geeksforgeeks_url: gfgUrl || null,
+        atcoder_url: atcoderUrl || null,
+      } as any);
 
       if (res.success) {
         toast.success("Usernames updated successfully!");
         setIsDialogOpen(false);
-        fetchProfiles(true);
+        fetchProfiles(true, {
+          lc: cleanLc,
+          cf: cleanCf,
+          gh: cleanGh,
+          token: cleanGhToken,
+          cc: cleanCc,
+          cw: cleanCw,
+          gfg: cleanGfg,
+          atcoder: cleanAtcoder,
+        });
       } else {
         toast.error(res.error || "Failed to update profile settings.");
       }
@@ -226,7 +294,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       {/* Clean Header Bar */}
       <div className="rounded-2xl border border-border/70 p-3.5 sm:p-5 bg-card/90 shadow-sm backdrop-blur-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
-          
+
           {/* Top Line on Mobile / Left Section on Desktop: Title */}
           <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
             <h2 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap shrink-0">
@@ -402,7 +470,41 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           />
         )}
 
-        <div id="github-profile-section" className={cn(activeTab === "all" ? "lg:col-span-2" : "col-span-1", "scroll-mt-6")}>
+        {(activeTab === "all" || activeTab === "competitive") && (
+          <CodingProfileCard
+            platform="codechef"
+            username={ccUsername}
+            stats={data?.codechef}
+            error={data?.codechefError}
+            onEdit={() => setIsDialogOpen(true)}
+            className="col-span-1"
+          />
+        )}
+
+        {(activeTab === "all" || activeTab === "competitive") && (
+          <CodingProfileCard
+            platform="codewars"
+            username={cwUsername}
+            stats={data?.codewars}
+            error={data?.codewarsError}
+            onEdit={() => setIsDialogOpen(true)}
+            className="col-span-1"
+          />
+        )}
+
+        {(activeTab === "all" || activeTab === "competitive") && (
+          <CodingProfileCard
+            platform="atcoder"
+            username={atcoderUsername}
+            stats={data?.atcoder}
+            error={data?.atcoderError}
+            onEdit={() => setIsDialogOpen(true)}
+            className="col-span-1"
+          />
+        )}
+
+
+        <div id="github-profile-section" className="lg:col-span-2 scroll-mt-6">
           <CodingProfileCard
             platform="github"
             username={ghUsername}
@@ -453,6 +555,62 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. tourist or https://codeforces.com/profile/tourist"
                   value={codeforcesInput}
                   onChange={(e) => setCodeforcesInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="codechef_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <PlatformBrandLogo platform="codechef" className="size-4" />
+                  CodeChef Handle / URL
+                </Label>
+                <Input
+                  id="codechef_input"
+                  placeholder="e.g. tourist or https://www.codechef.com/users/tourist"
+                  value={codechefInput}
+                  onChange={(e) => setCodechefInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="codewars_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <PlatformBrandLogo platform="codewars" className="size-4" />
+                  Codewars Username / URL
+                </Label>
+                <Input
+                  id="codewars_input"
+                  placeholder="e.g. johndoe or https://www.codewars.com/users/johndoe"
+                  value={codewarsInput}
+                  onChange={(e) => setCodewarsInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="geeksforgeeks_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <PlatformBrandLogo platform="geeksforgeeks" className="size-4" />
+                  GeeksforGeeks Handle / URL
+                </Label>
+                <Input
+                  id="geeksforgeeks_input"
+                  placeholder="e.g. johndoe or https://www.geeksforgeeks.org/user/johndoe/"
+                  value={geeksforgeeksInput}
+                  onChange={(e) => setGeeksforgeeksInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="atcoder_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <PlatformBrandLogo platform="atcoder" className="size-4" />
+                  AtCoder Handle / URL
+                </Label>
+                <Input
+                  id="atcoder_input"
+                  placeholder="e.g. tourist or https://atcoder.jp/users/tourist"
+                  value={atcoderInput}
+                  onChange={(e) => setAtcoderInput(e.target.value)}
                   className="rounded-xl font-mono text-xs h-10"
                 />
               </div>

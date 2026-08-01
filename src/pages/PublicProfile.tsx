@@ -49,11 +49,25 @@ const CodolioIcon = ({ className = "size-4" }: { className?: string }) => (
     </svg>
 );
 
+const CodewarsIcon = ({ className = "size-4" }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.2L19.5 8 12 11.8 4.5 8 12 4.2zM4.5 9.8l6.75 3.4v6.6L4.5 16.4V9.8zm15 6.6l-6.75 3.4v-6.6l6.75-3.4v6.6z" />
+    </svg>
+);
+
+const GeeksForGeeksIcon = ({ className = "size-4" }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+    </svg>
+);
+
 const BRAND_ICON_URLS: Record<string, string> = {
     leetcode: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/leetcode/leetcode-original.svg",
     codeforces: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codeforces/codeforces-original.svg",
     hackerrank: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/hackerrank/hackerrank-original.svg",
     codechef: "https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/codechef.svg",
+    codewars: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codewars/codewars-original.svg",
+    geeksforgeeks: "https://media.geeksforgeeks.org/wp-content/cdn-uploads/gfg_200X200.png",
     codolio: "https://codolio.com/codolio_assets/codolio.svg",
     linkedin: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/linkedin/linkedin-original.svg",
     github: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg",
@@ -90,7 +104,7 @@ const RealBrandIcon = ({
     );
 };
 
-const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'kaggle', 'codolio', 'twitter', 'portfolio'];
+const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'codewars', 'geeksforgeeks', 'kaggle', 'codolio', 'twitter', 'portfolio'];
 
 interface SocialPlatformItem {
     id: string;
@@ -111,6 +125,8 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = true): So
         { id: 'codeforces', label: 'Codeforces', url: data.codeforces_url, icon: CodeforcesIcon, bg: 'bg-[#1F8ACB]/10 hover:bg-[#1F8ACB]/20', border: 'border-[#1F8ACB]/30', text: 'text-[#1F8ACB]', shadow: 'hover:shadow-[0_0_12px_rgba(31,138,203,0.35)]' },
         { id: 'hackerrank', label: 'HackerRank', url: data.hackerrank_url, icon: HackerRankIcon, bg: 'bg-[#2EC4B6]/10 hover:bg-[#2EC4B6]/20', border: 'border-[#2EC4B6]/30', text: 'text-[#2EC4B6]', shadow: 'hover:shadow-[0_0_12px_rgba(46,196,182,0.35)]' },
         { id: 'codechef', label: 'CodeChef', url: data.codechef_url, icon: CodeChefIcon, bg: 'bg-[#5B4638]/15 hover:bg-[#5B4638]/30', border: 'border-[#5B4638]/40', text: 'text-[#d97706]', shadow: 'hover:shadow-[0_0_12px_rgba(217,119,6,0.35)]' },
+        { id: 'codewars', label: 'Codewars', url: data.codewars_url, icon: CodewarsIcon, bg: 'bg-rose-500/10 hover:bg-rose-500/20', border: 'border-rose-500/30', text: 'text-rose-500', shadow: 'hover:shadow-[0_0_12px_rgba(244,63,94,0.35)]' },
+        { id: 'geeksforgeeks', label: 'GeeksforGeeks', url: data.geeksforgeeks_url, icon: GeeksForGeeksIcon, bg: 'bg-emerald-500/10 hover:bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-500', shadow: 'hover:shadow-[0_0_12px_rgba(16,185,129,0.35)]' },
         { id: 'kaggle', label: 'Kaggle', url: data.kaggle_url, icon: KaggleIcon, bg: 'bg-[#20BEFF]/10 hover:bg-[#20BEFF]/20', border: 'border-[#20BEFF]/30', text: 'text-[#20BEFF]', shadow: 'hover:shadow-[0_0_12px_rgba(32,190,255,0.35)]' },
         { id: 'codolio', label: 'Codolio', url: data.codolio_url, icon: CodolioIcon, bg: 'bg-[#FF5722]/10 hover:bg-[#FF5722]/20', border: 'border-[#FF5722]/30', text: 'text-[#FF5722]', shadow: 'hover:shadow-[0_0_12px_rgba(255,87,34,0.35)]' },
         { id: 'twitter', label: 'Twitter / X', url: data.twitter_url, icon: Twitter, bg: 'bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20', border: 'border-[#1DA1F2]/30', text: 'text-[#1DA1F2]', shadow: 'hover:shadow-[0_0_12px_rgba(29,161,242,0.35)]' },
