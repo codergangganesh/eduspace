@@ -149,33 +149,29 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
 
   let mergedData: any = {};
 
-  // 1. Fetch Profile Solved Data (try Vercel first, then Alfa UserProfile, then Alfa Solved, then LeetCode-Stats-API)
-  try {
-    const profileEndpoints = [
-      `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}`,
-      `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}`,
-      `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`,
-      `https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`,
-    ];
+  // 1. Fetch Profile Solved Data (Vercel API, Alfa UserProfile, Alfa Solved, LeetCode-Stats-API)
+  const profileEndpoints = [
+    `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}`,
+    `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}`,
+    `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`,
+    `https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`,
+  ];
 
-    for (const url of profileEndpoints) {
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-        if (res.ok) {
-          const json = await res.json();
-          if (json && (json.status === "success" || typeof json.totalSolved === "number" || typeof json.solvedProblem === "number" || typeof json.easySolved === "number")) {
-            mergedData = { ...json, ...mergedData };
-            if (typeof json.totalSolved === "number" || typeof json.solvedProblem === "number" || typeof json.easySolved === "number") {
-              break;
-            }
+  for (const url of profileEndpoints) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && (json.status === "success" || typeof json.totalSolved === "number" || typeof json.solvedProblem === "number" || typeof json.easySolved === "number")) {
+          mergedData = { ...mergedData, ...json };
+          if (mergedData.totalSolved || mergedData.solvedProblem || mergedData.easySolved) {
+            break;
           }
         }
-      } catch {
-        // Try next endpoint
       }
+    } catch {
+      // Try next endpoint
     }
-  } catch (err: any) {
-    console.warn("LeetCode profile fetch error:", err?.message);
   }
 
   // 2. Fetch Contest Ranking & Rating Info
@@ -185,11 +181,13 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
       const cData = await contestRes.json();
       const rankingObj = cData?.userContestRanking || cData?.data?.userContestRanking || cData;
       if (rankingObj && (rankingObj.rating || rankingObj.attendedContestsCount)) {
-        mergedData.contestRating = rankingObj.rating;
-        mergedData.contestGlobalRanking = rankingObj.globalRanking;
-        mergedData.contestTopPercentage = rankingObj.topPercentage;
-        mergedData.contestsAttended = rankingObj.attendedContestsCount;
-        mergedData.contestBadge = rankingObj.badge?.name || (rankingObj.rating >= 1850 ? "Knight" : null);
+        if (rankingObj.rating) mergedData.contestRating = rankingObj.rating;
+        if (rankingObj.globalRanking) mergedData.contestGlobalRanking = rankingObj.globalRanking;
+        if (rankingObj.topPercentage) mergedData.contestTopPercentage = rankingObj.topPercentage;
+        if (rankingObj.attendedContestsCount) mergedData.contestsAttended = rankingObj.attendedContestsCount;
+        if (rankingObj.badge?.name || rankingObj.rating >= 1850) {
+          mergedData.contestBadge = rankingObj.badge?.name || (rankingObj.rating >= 1850 ? "Knight" : null);
+        }
       }
     }
   } catch { }
@@ -1681,14 +1679,21 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   let ratedPointSum = 0;
   let ratedPointSumRank: number | null = null;
 
-  // 1. Kenkoooo AtCoder API (User info)
+  let rating = 0;
+  let maxRating = 0;
+  let competitionsCount = 0;
+  let highestPerformance = 0;
+  let bestRank: number | undefined = undefined;
+
+  // 1. Kenkoooo AtCoder API (User info & User rating)
   try {
-    const infoRes = await fetch(
-      `https://kenkoooo.com/atcoder/atcoder-api/v3/user/info?user=${encodeURIComponent(cleanHandle)}`,
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (infoRes.ok) {
-      const info = await infoRes.json();
+    const [infoRes, ratingRes] = await Promise.allSettled([
+      fetch(`https://kenkoooo.com/atcoder/atcoder-api/v3/user/info?user=${encodeURIComponent(cleanHandle)}`, { signal: AbortSignal.timeout(6000) }),
+      fetch(`https://kenkoooo.com/atcoder/atcoder-api/v2/user_info?user=${encodeURIComponent(cleanHandle)}`, { signal: AbortSignal.timeout(6000) })
+    ]);
+
+    if (infoRes.status === "fulfilled" && infoRes.value.ok) {
+      const info = await infoRes.value.json();
       if (info && (typeof info.accepted_count === "number" || typeof info.rated_point_sum === "number")) {
         totalSolved = info.accepted_count || 0;
         acceptedCountRank = typeof info.accepted_count_rank === "number" ? info.accepted_count_rank : null;
@@ -1696,67 +1701,84 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
         ratedPointSumRank = typeof info.rated_point_sum_rank === "number" ? info.rated_point_sum_rank : null;
       }
     }
+
+    if (ratingRes.status === "fulfilled" && ratingRes.value.ok) {
+      const rInfo = await ratingRes.value.json();
+      if (rInfo) {
+        if (typeof rInfo.rating === "number") rating = rInfo.rating;
+        if (typeof rInfo.highest_rating === "number") maxRating = rInfo.highest_rating;
+        if (typeof rInfo.accepted_count === "number" && totalSolved === 0) totalSolved = rInfo.accepted_count;
+      }
+    }
   } catch (err: any) {
     console.warn("Kenkoooo user info API failed, trying fallbacks...", err?.message);
   }
 
-  let rating = 0;
-  let maxRating = 0;
-  let competitionsCount = 0;
-  let highestPerformance = 0;
-  let bestRank: number | undefined = undefined;
+  // 2. Fetch User Rating History (via direct fetch or multi-tiered proxies)
+  const historyUrls = [
+    `https://atcoder.jp/users/${encodeURIComponent(cleanHandle)}/history/json`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`
+  ];
 
-  // 2. Fetch User Rating History (via AtCoder JSON API directly or through CORS proxy)
-  try {
-    const historyRes = await fetch(
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
-      { signal: AbortSignal.timeout(7000) }
-    );
-    if (historyRes.ok) {
-      const history = await historyRes.json();
-      if (Array.isArray(history) && history.length > 0) {
-        const ratedContests = history.filter((h: any) => h.IsRated !== false && typeof h.NewRating === "number");
-        competitionsCount = ratedContests.length;
-        if (ratedContests.length > 0) {
-          const lastContest = ratedContests[ratedContests.length - 1];
-          rating = lastContest.NewRating || 0;
-          maxRating = Math.max(...ratedContests.map((h: any) => h.NewRating || 0));
-        }
+  for (const hUrl of historyUrls) {
+    try {
+      const historyRes = await fetch(hUrl, { signal: AbortSignal.timeout(6000) });
+      if (historyRes.ok) {
+        const history = await historyRes.json();
+        if (Array.isArray(history) && history.length > 0) {
+          const ratedContests = history.filter((h: any) => h.IsRated !== false && typeof h.NewRating === "number");
+          competitionsCount = ratedContests.length;
+          if (ratedContests.length > 0) {
+            const lastContest = ratedContests[ratedContests.length - 1];
+            rating = lastContest.NewRating || 0;
+            maxRating = Math.max(...ratedContests.map((h: any) => h.NewRating || 0));
+          }
 
-        const perfArray = history.map((h: any) => typeof h.Performance === "number" ? h.Performance : 0).filter(Boolean);
-        if (perfArray.length > 0) {
-          highestPerformance = Math.max(...perfArray);
-        }
+          const perfArray = history.map((h: any) => typeof h.Performance === "number" ? h.Performance : 0).filter(Boolean);
+          if (perfArray.length > 0) {
+            highestPerformance = Math.max(...perfArray);
+          }
 
-        const rankArray = history.map((h: any) => typeof h.Place === "number" && h.Place > 0 ? h.Place : Infinity).filter((p) => p !== Infinity);
-        if (rankArray.length > 0) {
-          bestRank = Math.min(...rankArray);
+          const rankArray = history.map((h: any) => typeof h.Place === "number" && h.Place > 0 ? h.Place : Infinity).filter((p) => p !== Infinity);
+          if (rankArray.length > 0) {
+            bestRank = Math.min(...rankArray);
+          }
+          break;
         }
       }
+    } catch {
+      // try next history proxy
     }
-  } catch (err: any) {
-    console.warn("AtCoder history fetch error:", err?.message);
   }
 
-  // 3. Fallback: Direct page scraping via CORS Proxy if rating/totalSolved is 0
-  if (rating === 0 && totalSolved === 0) {
-    try {
-      const htmlRes = await fetch(
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
-        { signal: AbortSignal.timeout(8000) }
-      );
-      if (htmlRes.ok) {
-        const html = await htmlRes.text();
-        const ratingMatch = html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) || html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
-        const maxRatingMatch = html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
-        const matchesMatch = html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+  // 3. Fallback: Direct page scraping via proxies if rating/totalSolved is 0
+  if (rating === 0 || totalSolved === 0) {
+    const profileUrls = [
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
+      `https://corsproxy.io/?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`
+    ];
 
-        if (ratingMatch) rating = parseInt(ratingMatch[1]) || 0;
-        if (maxRatingMatch) maxRating = parseInt(maxRatingMatch[1]) || rating;
-        if (matchesMatch) competitionsCount = parseInt(matchesMatch[1]) || competitionsCount;
+    for (const pUrl of profileUrls) {
+      try {
+        const htmlRes = await fetch(pUrl, { signal: AbortSignal.timeout(6000) });
+        if (htmlRes.ok) {
+          const html = await htmlRes.text();
+          const ratingMatch = html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) || html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
+          const maxRatingMatch = html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
+          const matchesMatch = html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+          const solvedMatch = html.match(/Tasks Solved<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+
+          if (rating === 0 && ratingMatch) rating = parseInt(ratingMatch[1]) || 0;
+          if (maxRating === 0 && maxRatingMatch) maxRating = parseInt(maxRatingMatch[1]) || rating;
+          if (competitionsCount === 0 && matchesMatch) competitionsCount = parseInt(matchesMatch[1]) || competitionsCount;
+          if (totalSolved === 0 && solvedMatch) totalSolved = parseInt(solvedMatch[1]) || 0;
+
+          if (rating > 0 || totalSolved > 0) break;
+        }
+      } catch {
+        // try next profile proxy
       }
-    } catch (scrapingErr) {
-      console.warn("AtCoder HTML scraping fallback error:", scrapingErr);
     }
   }
 

@@ -634,10 +634,10 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-[#FFA116] tracking-tight">
-                        {contestRating ? contestRating : "Unrated"}
+                        {contestRating ? contestRating : (total > 0 ? "Rated" : "Unrated")}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {contestRanking ? `Rank #${contestRanking.toLocaleString()}` : "LeetCode Rating"}
+                        {contestRanking ? `Rank #${contestRanking.toLocaleString()}` : "Competitive Score"}
                       </div>
                     </div>
                   </div>
@@ -654,7 +654,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {globalRanking ? `#${globalRanking.toLocaleString()}` : (total > 0 ? "Rated" : "Unranked")}
+                        {globalRanking ? `#${globalRanking.toLocaleString()}` : (total > 0 ? "Top Solver" : "Unranked")}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
                         Worldwide Standing
@@ -674,7 +674,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : 0}
+                        {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : (contestRating ? "Active" : 0)}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
                         Attended & Rated
@@ -694,10 +694,10 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {acceptanceRate ? `${acceptanceRate}%` : (reputation ? `${reputation} Rep` : "N/A")}
+                        {acceptanceRate !== null && acceptanceRate !== undefined ? `${acceptanceRate}%` : (total > 0 ? "High AC" : "N/A")}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Submission Accuracy
+                        {reputation ? `${reputation.toLocaleString()} Reputation` : "Submission Accuracy"}
                       </div>
                     </div>
                   </div>
@@ -1747,109 +1747,109 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const badgeProps = getRankBadgeProps(rankName, rating);
 
             return (
-              <div className="space-y-4 pt-1">
-                {/* AtCoder Rating & Rank Badge Banner */}
-                <div className="p-5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
-                      AtCoder Rating
+              <div className="space-y-5 pt-2">
+                {/* Hero Rating / AtCoder Competitive Standings Banner */}
+                <div className="p-5 sm:p-6 rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-between gap-4 shadow-sm">
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                      AtCoder Competitive Standings
                     </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-extrabold font-mono text-cyan-500 dark:text-cyan-400 tracking-tight">
-                        {rating}
+                    <Badge variant="outline" className={cn("px-3 py-1 text-xs font-extrabold capitalize shadow-sm border-0 flex items-center gap-1.5", badgeProps.bg)}>
+                      <Trophy className="size-4 fill-current" /> {badgeProps.text} Tier
+                    </Badge>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-cyan-400 tracking-tight block">
+                      {rating}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-semibold">
+                      Highest Rating: <span className="font-mono text-foreground">{maxRating > 0 ? maxRating : rating}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Problems Solved */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <CheckCircle2 className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Problems Solved
                       </span>
-                      {maxRating > rating && (
-                        <span className="text-xs text-muted-foreground font-semibold font-mono">
-                          (Max: {maxRating})
-                        </span>
-                      )}
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-cyan-400 tracking-tight">
+                        {totalSolved.toLocaleString()}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        {acceptedCountRank ? `Rank #${acceptedCountRank.toLocaleString()}` : "Accepted Tasks (AC)"}
+                      </div>
                     </div>
                   </div>
 
-                  <Badge variant="outline" className={cn("px-3 py-1 text-xs font-extrabold capitalize shadow-sm", badgeProps.bg)}>
-                    <Trophy className="size-3.5 mr-1 inline" />
-                    {badgeProps.text}
-                  </Badge>
+                  {/* Rated Contests */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Flame className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Contests
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {competitionsCount}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        Attended & Rated
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Best Performance */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Trophy className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Best Performance
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {highestPerformance ? highestPerformance : (rating > 0 ? rating : "N/A")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        {bestRank ? `Best Rank #${bestRank.toLocaleString()}` : "Peak Contest Performance"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rated Point Sum */}
+                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Globe className="size-3.5" />
+                      </div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                        Point Sum
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                        {ratedPointSum ? ratedPointSum.toLocaleString() : "Active"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                        {ratedPointSumRank ? `Rank #${ratedPointSumRank.toLocaleString()}` : "Total Rated Points"}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Metrics Grid 1 */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                      Problems Solved (AC)
-                    </span>
-                    <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
-                      {totalSolved}
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                      Rated Contests
-                    </span>
-                    <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
-                      {competitionsCount}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Performance & Placement Highlights */}
-                {Boolean(highestPerformance || bestRank) && (
-                  <div className="grid grid-cols-2 gap-3">
-                    {highestPerformance ? (
-                      <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
-                          Best Performance
-                        </span>
-                        <span className="text-lg font-black font-mono text-cyan-600 dark:text-cyan-400">
-                          {highestPerformance}
-                        </span>
-                      </div>
-                    ) : null}
-
-                    {bestRank ? (
-                      <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/10">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
-                          Best Contest Rank
-                        </span>
-                        <span className="text-lg font-black font-mono text-cyan-600 dark:text-cyan-400">
-                          #{bestRank.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-
-                {/* Additional Ranks (AC Rank / Rated Point Sum) */}
-                {Boolean(acceptedCountRank || ratedPointSum) && (
-                  <div className="grid grid-cols-2 gap-3 pt-0.5">
-                    {acceptedCountRank ? (
-                      <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/50">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
-                          AC Rank
-                        </span>
-                        <span className="text-base font-extrabold font-mono text-foreground">
-                          #{acceptedCountRank.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : null}
-                    {ratedPointSum ? (
-                      <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/50">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
-                          Rated Point Sum
-                        </span>
-                        <span className="text-base font-extrabold font-mono text-foreground">
-                          {ratedPointSum.toLocaleString()}
-                          {ratedPointSumRank ? (
-                            <span className="text-[10px] font-normal text-muted-foreground ml-1">
-                              (#{ratedPointSumRank.toLocaleString()})
-                            </span>
-                          ) : null}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
               </div>
             );
           })()
