@@ -139,6 +139,14 @@ export interface CodingProfilesResponse {
   kaggleUsername?: string | null;
 }
 
+export interface GitHubSearchResultItem {
+  login: string;
+  avatarUrl: string;
+  htmlUrl: string;
+  type: string;
+  score?: number;
+}
+
 export interface UserCodingProfilesRecord {
   user_id: string;
   leetcode_username?: string | null;

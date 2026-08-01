@@ -11,6 +11,7 @@ import {
   GitHubOrg,
   GitHubActivityEvent,
   GitHubAchievement,
+  GitHubSearchResultItem,
 } from "@/types/codingProfile";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -751,6 +752,78 @@ export async function fetchGitHubStats(
     data: null,
     error: `Could not fetch GitHub profile for "${username}".`,
   };
+}
+
+/**
+ * Searches GitHub users across the web using GitHub's User Search REST API.
+ * Supports pagination via the `page` parameter (1-indexed, 16 results per page).
+ */
+export async function searchGitHubUsers(
+  query: string,
+  userTokenInput?: string | null,
+  page: number = 1
+): Promise<{
+  items: GitHubSearchResultItem[];
+  totalCount: number;
+  error: string | null;
+}> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return { items: [], totalCount: 0, error: null };
+  }
+
+  try {
+    const ghToken = userTokenInput?.trim() || import.meta.env.VITE_GITHUB_TOKEN;
+    const ghHeaders: Record<string, string> = {
+      Accept: "application/vnd.github.v3+json",
+    };
+    if (ghToken) {
+      ghHeaders.Authorization = `Bearer ${ghToken}`;
+    }
+
+    const res = await fetch(
+      `https://api.github.com/search/users?q=${encodeURIComponent(trimmed)}&per_page=16&page=${page}`,
+      {
+        headers: ghHeaders,
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+
+    if (!res.ok) {
+      if (res.status === 403) {
+        return {
+          items: [],
+          totalCount: 0,
+          error: "GitHub API rate limit reached. Add a free GitHub token in settings to expand your limit to 5,000 req/hr.",
+        };
+      }
+      throw new Error(`GitHub API returned status ${res.status}`);
+    }
+
+    const data = await res.json();
+    const items: GitHubSearchResultItem[] = Array.isArray(data.items)
+      ? data.items.map((item: any) => ({
+          login: item.login,
+          avatarUrl: item.avatar_url,
+          htmlUrl: item.html_url,
+          type: item.type || "User",
+          score: item.score,
+        }))
+      : [];
+
+    return {
+      items,
+      totalCount: data.total_count || items.length,
+      error: null,
+    };
+  } catch (err: any) {
+    console.warn("GitHub user search error:", err);
+    return {
+      items: [],
+      totalCount: 0,
+      error: err?.message || "Failed to search GitHub profiles across the web.",
+    };
+  }
 }
 
 /**

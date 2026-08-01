@@ -38,8 +38,14 @@ import {
   Key,
   Flame,
   Zap,
+  Search,
+  Trophy,
+  Award,
+  AtSign,
+  Twitter,
 } from "lucide-react";
 import { GitHubStats } from "@/types/codingProfile";
+import { GitHubProfileSearchDialog } from "./GitHubProfileSearchDialog";
 import { cn } from "@/lib/utils";
 
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -96,6 +102,7 @@ interface GitHubPortfolioDashboardProps {
   error?: string | null;
   onEdit: () => void;
   className?: string;
+  githubToken?: string | null;
 }
 
 export function GitHubPortfolioDashboard({
@@ -104,7 +111,9 @@ export function GitHubPortfolioDashboard({
   error,
   onEdit,
   className,
+  githubToken,
 }: GitHubPortfolioDashboardProps) {
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const hasLinked = Boolean(username && username.trim().length > 0);
   const profileUrl = stats?.htmlUrl || `https://github.com/${username}`;
 
@@ -120,12 +129,27 @@ export function GitHubPortfolioDashboard({
             Link your GitHub handle to showcase your open-source projects, top languages, stargazers, and development portfolio.
           </p>
         </div>
-        <Button
-          onClick={onEdit}
-          className="rounded-2xl font-bold gap-2 text-xs px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
-        >
-          <PlusCircle className="size-4" /> Connect GitHub
-        </Button>
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <Button
+            onClick={onEdit}
+            className="rounded-2xl font-bold gap-2 text-xs px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+          >
+            <PlusCircle className="size-4" /> Connect GitHub
+          </Button>
+          <Button
+            onClick={() => setIsSearchOpen(true)}
+            variant="outline"
+            className="rounded-2xl font-bold gap-2 text-xs px-5 py-2 border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 shadow-sm"
+          >
+            <Search className="size-4" /> Search Profiles
+          </Button>
+        </div>
+
+        <GitHubProfileSearchDialog
+          open={isSearchOpen}
+          onOpenChange={setIsSearchOpen}
+          githubToken={githubToken}
+        />
       </div>
     );
   }
@@ -224,11 +248,27 @@ export function GitHubPortfolioDashboard({
 
         <div className="p-4 rounded-2xl bg-muted/20 border border-border/50 text-xs text-muted-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span>Connected GitHub Account: <strong className="text-foreground font-mono">@{username}</strong></span>
-          <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1">
-            <span>github.com/{username}</span>
-            <ExternalLink className="size-3" />
-          </a>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={() => setIsSearchOpen(true)}
+              variant="outline"
+              size="sm"
+              className="rounded-xl text-xs font-bold gap-1.5 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+            >
+              <Search className="size-3.5" /> Search Profiles
+            </Button>
+            <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1">
+              <span>github.com/{username}</span>
+              <ExternalLink className="size-3" />
+            </a>
+          </div>
         </div>
+
+        <GitHubProfileSearchDialog
+          open={isSearchOpen}
+          onOpenChange={setIsSearchOpen}
+          githubToken={githubToken}
+        />
       </div>
     );
   }
@@ -243,26 +283,27 @@ export function GitHubPortfolioDashboard({
       <div className="group relative rounded-3xl border border-border/80 bg-gradient-to-b from-card via-card/95 to-card/90 backdrop-blur-xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-all overflow-hidden space-y-6">
         <div className="absolute -top-32 -right-32 size-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-5">
-            {stats?.avatarUrl ? (
-              <div className="relative shrink-0">
-                <img
-                  src={stats.avatarUrl}
-                  alt={stats.name || stats.username || "GitHub Avatar"}
-                  className="size-16 sm:size-20 rounded-2xl object-cover border-2 border-blue-500/30 shadow-lg"
-                />
-                <div className="absolute -bottom-1 -right-1 bg-card border border-border/60 rounded-full p-1 shadow-sm">
-                  <CheckCircle className="size-4 text-blue-500 fill-blue-500/20" />
-                </div>
+        <div className="flex items-start gap-5 w-full">
+          {stats?.avatarUrl ? (
+            <div className="relative shrink-0">
+              <img
+                src={stats.avatarUrl}
+                alt={stats.name || stats.username || "GitHub Avatar"}
+                className="size-16 sm:size-20 rounded-2xl object-cover border-2 border-blue-500/30 shadow-lg"
+              />
+              <div className="absolute -bottom-1 -right-1 bg-card border border-border/60 rounded-full p-1 shadow-sm">
+                <CheckCircle className="size-4 text-blue-500 fill-blue-500/20" />
               </div>
-            ) : (
-              <div className="size-16 sm:size-20 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-extrabold text-2xl shrink-0 shadow-inner">
-                {(stats?.name || stats?.username || "G").charAt(0).toUpperCase()}
-              </div>
-            )}
+            </div>
+          ) : (
+            <div className="size-16 sm:size-20 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-extrabold text-2xl shrink-0 shadow-inner">
+              {(stats?.name || stats?.username || "G").charAt(0).toUpperCase()}
+            </div>
+          )}
 
-            <div className="space-y-1.5">
+          <div className="space-y-2 flex-1 min-w-0">
+            {/* Top Name Row: Name + Handle on Left, Search + View Profile Buttons on Right */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="font-extrabold text-xl sm:text-2xl text-foreground tracking-tight">
                   {stats?.name || stats?.username}
@@ -270,155 +311,105 @@ export function GitHubPortfolioDashboard({
                 <span className="text-xs font-mono text-muted-foreground font-semibold">
                   @{stats?.username || username}
                 </span>
-
-                {stats?.hireable && (
-                  <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full border-teal-500/30 text-teal-600 dark:text-teal-400 bg-teal-500/10 font-bold flex items-center gap-1">
-                    <Briefcase className="size-3" /> Available for Hire
-                  </Badge>
-                )}
-
-                {/* Dedicated Quota Badge */}
-                <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-bold flex items-center gap-1">
-                  <Zap className="size-3 text-emerald-500 fill-emerald-500/20 animate-pulse" /> 5,000 req/hr Active
-                </Badge>
-
-                {/* Daily Coding Streak Badge */}
-                {(stats?.streak?.currentStreak ?? 1) > 0 && (
-                  <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-bold flex items-center gap-1">
-                    <Flame className="size-3 text-amber-500 fill-amber-500/30 animate-pulse" /> {stats?.streak?.currentStreak || 1} Day Streak
-                  </Badge>
-                )}
-
-                {joinedDateFormatted && (
-                  <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10 font-bold flex items-center gap-1">
-                    <Calendar className="size-3" /> Joined {joinedDateFormatted}
-                  </Badge>
-                )}
               </div>
 
-              {stats?.bio && (
-                <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl leading-relaxed">
-                  {stats.bio}
-                </p>
-              )}
+              {/* Action Header Buttons: Placed right inline with the developer name */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+                <Button
+                  onClick={() => setIsSearchOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-2xl text-xs font-bold gap-1.5 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0 shadow-sm transition-transform active:scale-95 px-3.5 py-1.5"
+                >
+                  <Search className="size-3.5 text-blue-500" />
+                  <span>Search Profiles</span>
+                </Button>
 
-              {/* Contact & Metadata Pills */}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap pt-1">
-                {stats?.company && (
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <Building2 className="size-3.5 text-blue-500 dark:text-blue-400" />
-                    {stats.company}
-                  </span>
-                )}
-                {stats?.location && (
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <MapPin className="size-3.5 text-blue-500 dark:text-blue-400" />
-                    {stats.location}
-                  </span>
-                )}
-                {stats?.blog && (
-                  <a
-                    href={stats.blog.startsWith("http") ? stats.blog : `https://${stats.blog}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                  >
-                    <Globe className="size-3.5" />
-                    {stats.blog.replace(/^https?:\/\//, "")}
-                  </a>
-                )}
-                {stats?.email && (
-                  <a
-                    href={`mailto:${stats.email}`}
-                    className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium"
-                  >
-                    <Mail className="size-3.5 text-blue-500 dark:text-blue-400" />
-                    {stats.email}
-                  </a>
-                )}
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 transition-all font-bold text-xs flex items-center gap-1.5 shadow-sm shrink-0"
+                >
+                  <span>View GitHub Profile</span>
+
+                </a>
               </div>
             </div>
-          </div>
 
-          {/* Action Header Buttons: History Side Sheet Trigger + View GitHub Profile Button */}
-          <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto justify-end">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-9 rounded-2xl border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0 shadow-sm transition-transform active:scale-95"
-                  title="View Recent Activity History"
+            {/* Developer Badges Row */}
+            <div className="flex items-center gap-2 flex-wrap">
+
+
+
+
+
+
+
+
+
+              {/* Dedicated Quota Badge */}
+
+
+              {/* Daily Coding Streak Badge */}
+              {(stats?.streak?.currentStreak ?? 1) > 0 && (
+                <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-bold flex items-center gap-1">
+                  <Flame className="size-3 text-amber-500 fill-amber-500/30 animate-pulse" /> {stats?.streak?.currentStreak || 1} Day Streak
+                </Badge>
+              )}
+
+              {joinedDateFormatted && (
+                <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10 font-bold flex items-center gap-1">
+                  <Calendar className="size-3" /> Joined {joinedDateFormatted}
+                </Badge>
+              )}
+            </div>
+
+            {stats?.bio && (
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl leading-relaxed">
+                {stats.bio}
+              </p>
+            )}
+
+            {/* Contact & Metadata Pills */}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap pt-1">
+
+              {stats?.company && (
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Building2 className="size-3.5 text-blue-500 dark:text-blue-400" />
+                  {stats.company}
+                </span>
+              )}
+              {stats?.location && (
+                <span className="flex items-center gap-1.5 font-medium">
+                  <MapPin className="size-3.5 text-blue-500 dark:text-blue-400" />
+                  {stats.location}
+                </span>
+              )}
+
+              {/* {stats?.email && (
+                <a
+                  href={`mailto:${stats.email}`}
+                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium"
                 >
-                  <History className="size-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[92vw] sm:max-w-md p-6 overflow-y-auto rounded-l-3xl border-l border-border/80">
-                <SheetHeader className="pb-4 border-b border-border/50">
-                  <SheetTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
-                    <History className="size-4 text-blue-500 dark:text-blue-400" />
-                    Recent GitHub Activity
-                  </SheetTitle>
-                  <SheetDescription className="text-xs text-muted-foreground">
-                    Latest open-source events, commits, pull requests, and stars for @{stats?.username || username}.
-                  </SheetDescription>
-                </SheetHeader>
+                  <Mail className="size-3.5 text-blue-500 dark:text-blue-400" />
+                  {stats.email}
+                </a>
+              )} */}
+              {stats?.twitterUsername && (
+                <a
+                  href={`https://twitter.com/${stats.twitterUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sky-500 hover:underline font-semibold"
+                >
+                  <Twitter className="size-3.5 text-sky-400" />
+                  @{stats.twitterUsername}
+                </a>
+              )}
+            </div>
 
-                {/* Activity Feed inside Slide-Over Side Panel */}
-                <div className="space-y-3 py-4">
-                  {stats?.recentEvents && stats.recentEvents.length > 0 ? (
-                    stats.recentEvents.map((evt) => (
-                      <a
-                        key={evt.id}
-                        href={evt.repoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/evt p-3.5 rounded-2xl bg-muted/30 border border-border/60 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all flex items-start gap-3 text-xs block shadow-sm"
-                      >
-                        <div className="p-2 rounded-xl bg-blue-500/10 border border-border/20 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
-                          {evt.type === "PushEvent" ? (
-                            <GitCommit className="size-4" />
-                          ) : evt.type === "PullRequestEvent" ? (
-                            <GitPullRequest className="size-4" />
-                          ) : (
-                            <GitBranch className="size-4" />
-                          )}
-                        </div>
 
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-extrabold text-foreground truncate group-hover/evt:text-blue-500 dark:group-hover/evt:text-blue-400 transition-colors">
-                              {evt.repoName}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                              {formatRelativeTime(evt.createdAt)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                            {evt.message}
-                          </p>
-                        </div>
-                      </a>
-                    ))
-                  ) : (
-                    <div className="py-12 px-4 text-center text-xs text-muted-foreground border border-dashed border-border/80 rounded-2xl bg-muted/20 space-y-2">
-                      <Clock className="size-8 text-muted-foreground/50 mx-auto" />
-                      <p className="font-semibold">No recent public activity recorded.</p>
-                    </div>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 transition-all font-bold text-xs flex items-center gap-2 shadow-sm"
-            >
-              <span>View GitHub Profile</span>
-              <ExternalLink className="size-3.5" />
-            </a>
           </div>
         </div>
 
@@ -545,19 +536,19 @@ export function GitHubPortfolioDashboard({
         <div className="rounded-3xl border border-border/80 bg-card/90 backdrop-blur-xl p-4 sm:p-6 space-y-4 shadow-sm w-full">
           <div className="flex items-center justify-between">
             <h4 className="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-foreground flex items-center gap-2">
-              <BookOpen className="size-4 text-blue-500 dark:text-blue-400 shrink-0" /> Featured Repositories ({stats.topRepos.length})
+              <BookOpen className="size-4 text-blue-500 dark:text-blue-400 shrink-0" /> Featured Repositories ({stats?.publicRepos ?? stats.topRepos.length})
             </h4>
             <Sheet>
               <SheetTrigger asChild>
                 <button className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
-                  <span>View All</span>
+                  <span>View All ({stats?.publicRepos ?? stats.topRepos.length})</span>
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[92vw] sm:max-w-lg p-6 overflow-y-auto rounded-l-3xl border-l border-border/80">
                 <SheetHeader className="pb-4 border-b border-border/50">
                   <SheetTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
                     <BookOpen className="size-4 text-blue-500 dark:text-blue-400" />
-                    All Featured Repositories
+                    All Public Repositories ({stats?.publicRepos ?? stats.topRepos.length})
                   </SheetTitle>
                   <SheetDescription className="text-xs text-muted-foreground">
                     Public projects and repositories for @{stats?.username || username}.
@@ -825,6 +816,13 @@ export function GitHubPortfolioDashboard({
           </div>
         )}
       </div>
+
+      {/* Global GitHub Profile Search Dialog */}
+      <GitHubProfileSearchDialog
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        githubToken={githubToken}
+      />
     </div>
   );
 }

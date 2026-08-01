@@ -409,6 +409,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.github}
             error={data?.githubError}
             onEdit={() => setIsDialogOpen(true)}
+            githubToken={ghToken}
           />
         </div>
       </div>

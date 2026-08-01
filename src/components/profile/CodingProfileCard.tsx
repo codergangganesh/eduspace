@@ -249,6 +249,7 @@ interface GitHubCardProps {
   error?: string | null;
   onEdit: () => void;
   className?: string;
+  githubToken?: string | null;
 }
 
 type CodingProfileCardProps = LeetCodeCardProps | CodeforcesCardProps | GitHubCardProps;
@@ -266,6 +267,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
         error={(props as GitHubCardProps).error}
         onEdit={props.onEdit}
         className={props.className}
+        githubToken={(props as GitHubCardProps).githubToken}
       />
     );
   }
