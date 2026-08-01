@@ -1,3 +1,8 @@
+export interface ContributionDay {
+  date: string;   // "YYYY-MM-DD"
+  count: number;
+}
+
 export interface LeetCodeStats {
   totalSolved: number;
   easy: number;
@@ -102,6 +107,9 @@ export interface GitHubStats {
 
   // Achievements
   achievements?: GitHubAchievement[];
+
+  // Contribution Heatmap (365 days of day-by-day commit counts)
+  contributionData?: ContributionDay[];
 
   lastFetchedAt?: string;
 }

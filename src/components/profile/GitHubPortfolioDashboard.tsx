@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { GitHubStats } from "@/types/codingProfile";
 import { GitHubProfileSearchDialog } from "./GitHubProfileSearchDialog";
+import { GitHubContributionHeatmap } from "./GitHubContributionHeatmap";
 import { cn } from "@/lib/utils";
 
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -815,6 +816,27 @@ export function GitHubPortfolioDashboard({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Contribution Heatmap Calendar (Full Width at Bottom) */}
+      <div className="w-full">
+        <GitHubContributionHeatmap
+          contributions={stats?.contributionData}
+          username={stats?.username || username}
+          totalContributions={stats?.contributionData?.reduce((s, d) => s + d.count, 0)}
+          accountCreatedYear={stats?.createdAt ? new Date(stats.createdAt).getFullYear() : undefined}
+          hasFullHistory={
+            // GraphQL data covers multiple years; events-only data covers ~90 days max
+            // We detect this by checking if any contribution predates 90 days ago
+            (() => {
+              const days90ago = new Date();
+              days90ago.setDate(days90ago.getDate() - 91);
+              const cutoff = days90ago.toISOString().split("T")[0];
+              return (stats?.contributionData ?? []).some((d) => d.date < cutoff && d.count > 0);
+            })()
+          }
+          onAddToken={onEdit}
+        />
       </div>
 
       {/* Global GitHub Profile Search Dialog */}

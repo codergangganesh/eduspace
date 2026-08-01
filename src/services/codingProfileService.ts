@@ -12,6 +12,7 @@ import {
   GitHubActivityEvent,
   GitHubAchievement,
   GitHubSearchResultItem,
+  ContributionDay,
 } from "@/types/codingProfile";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -401,7 +402,7 @@ export async function fetchGitHubStats(
 
     const userData = await res.json();
 
-    // 2. Secondary requests in parallel (repos, orgs, events)
+    // 2. Secondary requests in parallel (repos, orgs, events, contribution heatmap)
     let totalStars = 0;
     let totalForks = 0;
     let totalWatchers = 0;
@@ -413,8 +414,17 @@ export async function fetchGitHubStats(
     let recentCommitsCount = 0;
     let recentPrsCount = 0;
     let recentIssuesCount = 0;
+    let contributionData: ContributionDay[] = [];
 
-    const [reposResult, orgsResult, eventsResult] = await Promise.allSettled([
+    // Fetch up to 3 pages of events for heatmap (300 total events ≈ 90 days coverage)
+    const eventPages = [1, 2, 3].map((page) =>
+      fetch(
+        `https://api.github.com/users/${encodeURIComponent(username)}/events/public?per_page=100&page=${page}`,
+        { headers: ghHeaders, signal: AbortSignal.timeout(8000) }
+      ).catch(() => null)
+    );
+
+    const [reposResult, orgsResult, eventsResult, ...heatmapEventResults] = await Promise.allSettled([
       fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100&sort=updated`, {
         headers: ghHeaders,
         signal: AbortSignal.timeout(8000),
@@ -427,6 +437,7 @@ export async function fetchGitHubStats(
         headers: ghHeaders,
         signal: AbortSignal.timeout(6000),
       }),
+      ...eventPages,
     ]);
 
     // Parse Repositories
@@ -543,6 +554,125 @@ export async function fetchGitHubStats(
       }
     }
 
+    // Build contribution heatmap:
+    // Strategy 1 (token present): GitHub GraphQL contributionCalendar — full history for ALL years
+    // Strategy 2 (fallback):      Events API — last ~300 events, ~90 days only
+    if (ghToken) {
+      try {
+        const accountCreatedYear = userData.created_at
+          ? new Date(userData.created_at).getFullYear()
+          : new Date().getFullYear();
+        const currentYear = new Date().getFullYear();
+
+        // Build one GraphQL query that fetches every year from account creation → now
+        // Each year is a separate contributionsCollection alias
+        const yearAliases = [];
+        for (let y = accountCreatedYear; y <= currentYear; y++) {
+          const from = `${y}-01-01T00:00:00Z`;
+          const to   = y === currentYear
+            ? new Date().toISOString()
+            : `${y}-12-31T23:59:59Z`;
+          yearAliases.push(`
+            y${y}: contributionsCollection(from: "${from}", to: "${to}") {
+              contributionCalendar {
+                weeks {
+                  contributionDays {
+                    date
+                    contributionCount
+                  }
+                }
+              }
+            }
+          `);
+        }
+
+        const graphqlQuery = `
+          query {
+            user(login: ${JSON.stringify(username)}) {
+              ${yearAliases.join("\n")}
+            }
+          }
+        `;
+
+        const gqlRes = await fetch("https://api.github.com/graphql", {
+          method: "POST",
+          headers: {
+            ...ghHeaders,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: graphqlQuery }),
+          signal: AbortSignal.timeout(12000),
+        });
+
+        if (gqlRes.ok) {
+          const gqlData = await gqlRes.json();
+          const user = gqlData?.data?.user;
+          if (user && !gqlData.errors) {
+            const dayCountMap = new Map<string, number>();
+
+            // Flatten all years' contribution days into a single map
+            for (let y = accountCreatedYear; y <= currentYear; y++) {
+              const collection = user[`y${y}`];
+              const weeks = collection?.contributionCalendar?.weeks ?? [];
+              for (const week of weeks) {
+                for (const day of week.contributionDays ?? []) {
+                  if (day.date && typeof day.contributionCount === "number") {
+                    dayCountMap.set(day.date, day.contributionCount);
+                  }
+                }
+              }
+            }
+
+            contributionData = Array.from(dayCountMap.entries())
+              .map(([date, count]) => ({ date, count }))
+              .sort((a, b) => a.date.localeCompare(b.date));
+          }
+        }
+      } catch (gqlErr) {
+        console.warn("GitHub GraphQL contribution fetch failed, falling back to events API:", gqlErr);
+      }
+    }
+
+    // Fallback: build heatmap from events pages if GraphQL didn't populate data
+    if (contributionData.length === 0) {
+      const dayCountMap = new Map<string, number>();
+      // Pre-fill last 365 days with 0
+      const today = new Date();
+      for (let i = 364; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        dayCountMap.set(d.toISOString().split("T")[0], 0);
+      }
+
+      // Count events per day across all pages
+      for (const pageResult of heatmapEventResults) {
+        if (pageResult.status !== "fulfilled" || !pageResult.value) continue;
+        try {
+          const resp = pageResult.value as Response;
+          if (!resp.ok) continue;
+          const pageEvents: any[] = await resp.json();
+          if (!Array.isArray(pageEvents)) continue;
+          pageEvents.forEach((evt) => {
+            if (!evt.created_at) return;
+            const dateKey = evt.created_at.split("T")[0];
+            if (dayCountMap.has(dateKey)) {
+              let weight = 1;
+              if (evt.type === "PushEvent") {
+                weight = Math.max(1, evt.payload?.commits?.length || 1);
+              }
+              dayCountMap.set(dateKey, (dayCountMap.get(dateKey) || 0) + weight);
+            }
+          });
+        } catch {
+          // silently ignore parse errors for individual pages
+        }
+      }
+
+      contributionData = Array.from(dayCountMap.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+
     const streak = calculateGitHubStreak(recentEvents);
 
     // Dynamic Achievements Calculation
@@ -634,6 +764,7 @@ export async function fetchGitHubStats(
         recentIssuesCount,
         streak,
         achievements,
+        contributionData,
         lastFetchedAt: new Date().toISOString(),
       },
       error: null,
