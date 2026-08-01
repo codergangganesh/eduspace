@@ -45,6 +45,8 @@ export interface Profile {
   portfolio_url: string | null;
   leetcode_url?: string | null;
   codeforces_url?: string | null;
+  leetcode_username?: string | null;
+  codeforces_handle?: string | null;
   hackerrank_url?: string | null;
   codechef_url?: string | null;
   kaggle_url?: string | null;
@@ -161,19 +163,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileData?.user_id) {
         const storedVoiceBio = JSON.parse(localStorage.getItem(`eduspace_voice_bio_${profileData.user_id}`) || '{}');
         const storedSocial = JSON.parse(localStorage.getItem(`eduspace_social_extra_${profileData.user_id}`) || '{}');
+
+        // Fetch extra social links from Supabase user_coding_profiles database table
+        let dbSocial: Record<string, any> = {};
+        try {
+          const { data: codingProf } = await (supabase as any)
+            .from("user_coding_profiles")
+            .select("overall_data")
+            .eq("user_id", profileData.user_id)
+            .maybeSingle();
+
+          if (codingProf?.overall_data?.social_links) {
+            dbSocial = codingProf.overall_data.social_links;
+          }
+        } catch (e) {
+          console.warn("Could not load social links from Supabase DB:", e);
+        }
+
+        const mergedSocial = { ...storedSocial, ...dbSocial };
+
         if (storedVoiceBio) {
           profileData.voice_bio_url = storedVoiceBio.voice_bio_url ?? profileData.voice_bio_url ?? null;
           profileData.voice_bio_transcript = storedVoiceBio.voice_bio_transcript ?? profileData.voice_bio_transcript ?? null;
           profileData.voice_bio_tags = storedVoiceBio.voice_bio_tags ?? profileData.voice_bio_tags ?? [];
         }
-        if (storedSocial) {
-          profileData.leetcode_url = storedSocial.leetcode_url ?? profileData.leetcode_url ?? null;
-          profileData.codeforces_url = storedSocial.codeforces_url ?? profileData.codeforces_url ?? null;
-          profileData.hackerrank_url = storedSocial.hackerrank_url ?? profileData.hackerrank_url ?? null;
-          profileData.codechef_url = storedSocial.codechef_url ?? profileData.codechef_url ?? null;
-          profileData.kaggle_url = storedSocial.kaggle_url ?? profileData.kaggle_url ?? null;
-          profileData.codolio_url = storedSocial.codolio_url ?? profileData.codolio_url ?? null;
-        }
+
+        profileData.leetcode_url = mergedSocial.leetcode_url ?? profileData.leetcode_url ?? null;
+        profileData.codeforces_url = mergedSocial.codeforces_url ?? profileData.codeforces_url ?? null;
+        profileData.leetcode_username = mergedSocial.leetcode_username ?? profileData.leetcode_username ?? null;
+        profileData.codeforces_handle = mergedSocial.codeforces_handle ?? profileData.codeforces_handle ?? null;
+        profileData.hackerrank_url = mergedSocial.hackerrank_url ?? profileData.hackerrank_url ?? null;
+        profileData.codechef_url = mergedSocial.codechef_url ?? profileData.codechef_url ?? null;
+        profileData.kaggle_url = mergedSocial.kaggle_url ?? profileData.kaggle_url ?? null;
+        profileData.codolio_url = mergedSocial.codolio_url ?? profileData.codolio_url ?? null;
       }
 
       if (profileData?.avatar_url) {
@@ -534,6 +556,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         voice_bio_tags,
         leetcode_url,
         codeforces_url,
+        leetcode_username,
+        codeforces_handle,
         hackerrank_url,
         codechef_url,
         kaggle_url,
@@ -545,12 +569,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updatedSocial = {
         leetcode_url: leetcode_url !== undefined ? leetcode_url : storedSocial.leetcode_url,
         codeforces_url: codeforces_url !== undefined ? codeforces_url : storedSocial.codeforces_url,
+        leetcode_username: leetcode_username !== undefined ? leetcode_username : storedSocial.leetcode_username,
+        codeforces_handle: codeforces_handle !== undefined ? codeforces_handle : storedSocial.codeforces_handle,
         hackerrank_url: hackerrank_url !== undefined ? hackerrank_url : storedSocial.hackerrank_url,
         codechef_url: codechef_url !== undefined ? codechef_url : storedSocial.codechef_url,
         kaggle_url: kaggle_url !== undefined ? kaggle_url : storedSocial.kaggle_url,
         codolio_url: codolio_url !== undefined ? codolio_url : storedSocial.codolio_url,
       };
       localStorage.setItem(`eduspace_social_extra_${user.id}`, JSON.stringify(updatedSocial));
+
+      // Persist extra social links to Supabase database so they sync cross-device!
+      try {
+        const { data: existingCodingProf } = await (supabase as any)
+          .from("user_coding_profiles")
+          .select("overall_data")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const existingOverall = existingCodingProf?.overall_data || {};
+        const updatedOverall = {
+          ...existingOverall,
+          social_links: updatedSocial,
+        };
+
+        await (supabase as any).from("user_coding_profiles").upsert(
+          {
+            user_id: user.id,
+            overall_data: updatedOverall,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+      } catch (e) {
+        console.warn("Could not persist social links to Supabase DB:", e);
+      }
 
       if (voice_bio_url !== undefined || voice_bio_transcript !== undefined || voice_bio_tags !== undefined) {
         const storedVoiceBio = JSON.parse(localStorage.getItem(`eduspace_voice_bio_${user.id}`) || '{}');

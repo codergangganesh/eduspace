@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Database,
   Mail,
-  ShieldCheck
+  ShieldCheck,
+  Code2
 } from "lucide-react";
 import {
   AlertDialog,
@@ -36,12 +37,73 @@ import SEO from "@/components/SEO";
 
 export default function Settings() {
   const { toast } = useToast();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, updateProfile, role } = useAuth();
   const navigate = useNavigate();
+  const isLecturer = role === "lecturer" || profile?.role === "lecturer";
+  const isStudent = !isLecturer;
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // Coding Profiles State
+  const [leetcodeUsername, setLeetcodeUsername] = useState(profile?.leetcode_username || "");
+  const [codeforcesHandle, setCodeforcesHandle] = useState(profile?.codeforces_handle || "");
+  const [isSavingCoding, setIsSavingCoding] = useState(false);
+
+  const handleSaveCodingUsernames = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const lcClean = leetcodeUsername.trim();
+    const cfClean = codeforcesHandle.trim();
+
+    if (leetcodeUsername.length > 0 && !lcClean) {
+      toast({
+        title: "Validation Failed",
+        description: "LeetCode Username cannot be empty spaces.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (codeforcesHandle.length > 0 && !cfClean) {
+      toast({
+        title: "Validation Failed",
+        description: "Codeforces Handle cannot be empty spaces.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingCoding(true);
+    try {
+      const lcUrl = lcClean ? `https://leetcode.com/u/${lcClean}/` : "";
+      const cfUrl = cfClean ? `https://codeforces.com/profile/${cfClean}` : "";
+
+      const res = await updateProfile({
+        leetcode_username: lcClean || null,
+        codeforces_handle: cfClean || null,
+        leetcode_url: lcUrl || null,
+        codeforces_url: cfUrl || null,
+      });
+
+      if (res.success) {
+        toast({
+          title: "Usernames Saved",
+          description: "Coding profile usernames have been updated.",
+        });
+      } else {
+        throw new Error(res.error || "Failed to update usernames");
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingCoding(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (!user || !user.email) return;
@@ -159,6 +221,63 @@ export default function Settings() {
               </div>
             </div>
           </section>
+
+          {/* Coding Profiles Settings Section (Students Only) */}
+          {isStudent && (
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
+              <div className="md:col-span-1">
+                <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+                  <Code2 className="size-5 text-amber-500" />
+                  Coding Profiles
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Connect your LeetCode username and Codeforces handle to showcase your real-time competitive programming statistics.
+                </p>
+              </div>
+
+              <div className="md:col-span-2">
+                <form onSubmit={handleSaveCodingUsernames} className="bg-secondary/10 border border-border/50 rounded-2xl p-6 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="setting-leetcode" className="text-sm font-semibold">
+                      LeetCode Username
+                    </Label>
+                    <Input
+                      id="setting-leetcode"
+                      placeholder="e.g. ganesh123"
+                      value={leetcodeUsername}
+                      onChange={(e) => setLeetcodeUsername(e.target.value)}
+                      className="bg-background/50 font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="setting-codeforces" className="text-sm font-semibold">
+                      Codeforces Handle
+                    </Label>
+                    <Input
+                      id="setting-codeforces"
+                      placeholder="e.g. ganesh_cf"
+                      value={codeforcesHandle}
+                      onChange={(e) => setCodeforcesHandle(e.target.value)}
+                      className="bg-background/50 font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button type="submit" disabled={isSavingCoding} size="sm" className="rounded-xl font-medium text-xs">
+                      {isSavingCoding ? (
+                        <>
+                          <Loader2 className="size-3.5 mr-2 animate-spin" /> Saving...
+                        </>
+                      ) : (
+                        "Save Usernames"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </section>
+          )}
 
           {/* Privacy & Governance */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">

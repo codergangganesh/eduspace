@@ -70,6 +70,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { ProfileNotificationSettings } from "@/components/ProfileNotificationSettings";
+import { CodingProfiles } from "@/components/profile/CodingProfiles";
 import SEO from "@/components/SEO";
 import imageCompression from "browser-image-compression";
 import DOMPurify from "dompurify";
@@ -200,6 +201,7 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = false): S
 const profileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
   { id: "academic", label: "Academic Details", icon: GraduationCap },
+  { id: "coding", label: "Coding Profiles", icon: Code2 },
   { id: "social", label: "Social Links", icon: Share2 },
   { id: "security", label: "Security", icon: Shield },
   { id: "notifications", label: "Notifications", icon: Bell },
@@ -224,7 +226,7 @@ export default function Profile() {
   const isLecturer = role === "lecturer" || profile?.role === "lecturer";
   const isStudent = !isLecturer;
   const visibleProfileTabs = profileTabs.filter(
-    (tab) => tab.id !== "social" || isStudent
+    (tab) => (tab.id !== "social" && tab.id !== "coding") || isStudent
   );
 
   // Form state
@@ -874,6 +876,9 @@ export default function Profile() {
               </div>
             </div>
           </div>
+
+          {/* Coding Profiles Section (Students Only) */}
+          {isStudent && activeTab === "coding" && <CodingProfiles />}
 
           {/* Personal Information Section */}
           {activeTab === "personal" && (
