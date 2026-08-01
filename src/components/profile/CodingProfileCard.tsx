@@ -399,100 +399,79 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const hardPct = Math.round((hard / totalCalc) * 100);
 
             return (
-              <div className="space-y-5 pt-2">
-                {/* Donut Chart & Difficulty Distribution Card */}
-                <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-5 sm:p-6 rounded-2xl bg-card border border-border/70 shadow-sm backdrop-blur-xl">
-                  <LeetCodeDonutChart
-                    easy={easy}
-                    medium={medium}
-                    hard={hard}
-                    total={total}
-                  />
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 py-3">
+                <LeetCodeDonutChart
+                  easy={easy}
+                  medium={medium}
+                  hard={hard}
+                  total={total}
+                />
 
-                  <div className="flex-1 w-full space-y-3.5">
-                    {/* Easy Row */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center gap-3 min-w-0 text-xs sm:text-sm font-semibold">
-                        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
-                          <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
-                          Easy
+                <div className="flex-1 w-full space-y-4">
+                  {/* Easy Row */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-sm font-semibold">
+                      <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
+                        Easy
+                      </span>
+                      <div className="flex items-center gap-2.5 font-mono">
+                        <span className="font-extrabold text-foreground text-sm sm:text-base">{easy}</span>
+                        <span className="text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                          {easyPct}%
                         </span>
-                        <div className="flex items-center gap-2 font-mono shrink-0">
-                          <span className="font-extrabold text-foreground">{easy}</span>
-                          <span className="text-[10px] text-muted-foreground font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded">
-                            {easyPct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-emerald-500/10 overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500 rounded-full transition-all duration-700 shadow-sm"
-                          style={{ width: `${easyPct}%` }}
-                        />
                       </div>
                     </div>
-
-                    {/* Medium Row */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center gap-3 min-w-0 text-xs sm:text-sm font-semibold">
-                        <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold shrink-0">
-                          <span className="size-2.5 rounded-full bg-amber-500 shrink-0" />
-                          Medium
-                        </span>
-                        <div className="flex items-center gap-2 font-mono shrink-0">
-                          <span className="font-extrabold text-foreground">{medium}</span>
-                          <span className="text-[10px] text-muted-foreground font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded">
-                            {mediumPct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-amber-500/10 overflow-hidden">
-                        <div
-                          className="h-full bg-amber-500 rounded-full transition-all duration-700 shadow-sm"
-                          style={{ width: `${mediumPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Hard Row */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center gap-3 min-w-0 text-xs sm:text-sm font-semibold">
-                        <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-bold shrink-0">
-                          <span className="size-2.5 rounded-full bg-rose-500 shrink-0" />
-                          Hard
-                        </span>
-                        <div className="flex items-center gap-2 font-mono shrink-0">
-                          <span className="font-extrabold text-foreground">{hard}</span>
-                          <span className="text-[10px] text-muted-foreground font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded">
-                            {hardPct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-rose-500/10 overflow-hidden">
-                        <div
-                          className="h-full bg-rose-500 rounded-full transition-all duration-700 shadow-sm"
-                          style={{ width: `${hardPct}%` }}
-                        />
-                      </div>
+                    <div className="h-2.5 rounded-full bg-emerald-500/15 overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-700 shadow-sm"
+                        style={{ width: `${easyPct}%` }}
+                      />
                     </div>
                   </div>
-                </div>
 
-                {/* 3-Tile Breakdown Cards */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">Easy Solved</span>
-                    <span className="text-lg sm:text-xl font-extrabold text-foreground font-mono block mt-0.5">{easy}</span>
+                  {/* Medium Row */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-sm font-semibold">
+                      <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
+                        <span className="size-2.5 rounded-full bg-amber-500 shrink-0" />
+                        Medium
+                      </span>
+                      <div className="flex items-center gap-2.5 font-mono">
+                        <span className="font-extrabold text-foreground text-sm sm:text-base">{medium}</span>
+                        <span className="text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
+                          {mediumPct}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-amber-500/15 overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500 rounded-full transition-all duration-700 shadow-sm"
+                        style={{ width: `${mediumPct}%` }}
+                      />
+                    </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider block">Medium Solved</span>
-                    <span className="text-lg sm:text-xl font-extrabold text-foreground font-mono block mt-0.5">{medium}</span>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
-                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider block">Hard Solved</span>
-                    <span className="text-lg sm:text-xl font-extrabold text-foreground font-mono block mt-0.5">{hard}</span>
+                  {/* Hard Row */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-sm font-semibold">
+                      <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
+                        <span className="size-2.5 rounded-full bg-rose-500 shrink-0" />
+                        Hard
+                      </span>
+                      <div className="flex items-center gap-2.5 font-mono">
+                        <span className="font-extrabold text-foreground text-sm sm:text-base">{hard}</span>
+                        <span className="text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-md border border-rose-500/20">
+                          {hardPct}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-rose-500/15 overflow-hidden">
+                      <div
+                        className="h-full bg-rose-500 rounded-full transition-all duration-700 shadow-sm"
+                        style={{ width: `${hardPct}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
