@@ -25,7 +25,7 @@ import {
   ContributionDay,
 } from "@/types/codingProfile";
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes real-time cache TTL
 
 /**
  * Extracts a clean username/handle from either a full profile URL or raw username.
@@ -46,16 +46,19 @@ export function extractUsername(input: string | null | undefined): string {
       const url = new URL(trimmed);
       const parts = url.pathname.split("/").filter(Boolean);
       if (parts.length > 0) {
-        // e.g. /u/username or /profile/handle or /users/username or /username
-        if (parts[0] === "u" || parts[0] === "profile" || parts[0] === "user" || parts[0] === "users") {
-          return parts[1] || parts[0];
+        let last = parts[parts.length - 1];
+        if ((parts[0] === "u" || parts[0] === "profile" || parts[0] === "user" || parts[0] === "users") && parts[1]) {
+          last = parts[1];
         }
-        return parts[parts.length - 1];
+        trimmed = last;
       }
     }
   } catch {
     // If not a valid URL, treat as raw username
   }
+
+  // Remove leading @ if present e.g. "@lboris" -> "lboris"
+  trimmed = trimmed.replace(/^@+/, "");
 
   return trimmed;
 }
@@ -150,17 +153,19 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
 
   let mergedData: any = {};
 
+  const timestamp = Date.now();
+
   // 1. Fetch Profile Solved Data (Vercel API, Alfa UserProfile, Alfa Solved, LeetCode-Stats-API)
   const profileEndpoints = [
-    `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}`,
-    `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}`,
-    `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`,
-    `https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`,
+    `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}?_t=${timestamp}`,
+    `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}?_t=${timestamp}`,
+    `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved?_t=${timestamp}`,
+    `https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}?_t=${timestamp}`,
   ];
 
   for (const url of profileEndpoints) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         const json = await res.json();
         if (json && (json.status === "success" || typeof json.totalSolved === "number" || typeof json.solvedProblem === "number" || typeof json.easySolved === "number")) {
@@ -177,7 +182,7 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
 
   // 2. Fetch Contest Ranking & Rating Info
   try {
-    const contestRes = await fetch(`https://alfa-leetcode-api.onrender.com/userContestRankingInfo/${encodeURIComponent(username)}`, { signal: AbortSignal.timeout(6000) });
+    const contestRes = await fetch(`https://alfa-leetcode-api.onrender.com/userContestRankingInfo/${encodeURIComponent(username)}?_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(6000) });
     if (contestRes.ok) {
       const cData = await contestRes.json();
       const rankingObj = cData?.userContestRanking || cData?.data?.userContestRanking || cData;
@@ -195,7 +200,7 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
 
   // 3. Fetch Badges Info
   try {
-    const badgesRes = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/badges`, { signal: AbortSignal.timeout(6000) });
+    const badgesRes = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/badges?_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(6000) });
     if (badgesRes.ok) {
       const bData = await badgesRes.json();
       if (bData && Array.isArray(bData.badges) && bData.badges.length > 0) {
@@ -380,10 +385,11 @@ export async function fetchCodeforcesStats(handleInput: string): Promise<{
   }
 
   try {
+    const timestamp = Date.now();
     const [infoRes, statusRes, ratingRes] = await Promise.allSettled([
-      fetch(`https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`, { signal: AbortSignal.timeout(8000) }),
-      fetch(`https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}`, { signal: AbortSignal.timeout(10000) }),
-      fetch(`https://codeforces.com/api/user.rating?handle=${encodeURIComponent(handle)}`, { signal: AbortSignal.timeout(8000) }),
+      fetch(`https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}&_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(8000) }),
+      fetch(`https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}&_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(10000) }),
+      fetch(`https://codeforces.com/api/user.rating?handle=${encodeURIComponent(handle)}&_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(8000) }),
     ]);
 
     let userInfo: any = null;
@@ -1870,7 +1876,9 @@ export async function fetchCodewarsStats(usernameInput: string): Promise<{
   }
 
   try {
-    const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`, {
+    const timestamp = Date.now();
+    const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}?_t=${timestamp}`, {
+      cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
 
@@ -1889,7 +1897,9 @@ export async function fetchCodewarsStats(usernameInput: string): Promise<{
 
   // Fallback via CORS proxy if direct fetch is blocked
   try {
-    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`)}`, {
+    const timestamp = Date.now();
+    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}?_t=${timestamp}`)}`, {
+      cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
     if (corsRes.ok) {
@@ -2153,6 +2163,18 @@ export async function getCodingProfiles(
     }
     if (!heStats.rating && prevHe.rating) {
       heStats.rating = prevHe.rating;
+    }
+    if (!heStats.maxRating && prevHe.maxRating) {
+      heStats.maxRating = prevHe.maxRating;
+    }
+    if (!heStats.contestsAttended && prevHe.contestsAttended) {
+      heStats.contestsAttended = prevHe.contestsAttended;
+    }
+    if (!heStats.globalRank && prevHe.globalRank) {
+      heStats.globalRank = prevHe.globalRank;
+    }
+    if (!heStats.badges?.length && prevHe.badges?.length) {
+      heStats.badges = prevHe.badges;
     }
   } else if (!heStats && prevHe) {
     heStats = prevHe;

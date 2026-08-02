@@ -287,7 +287,7 @@ export async function fetchHackerEarthStats(usernameInput: string): Promise<{
   data: HackerEarthStats | null;
   error: string | null;
 }> {
-  const username = extractUsername(usernameInput);
+  const username = extractUsername(usernameInput).replace(/^@+/, "");
   if (!username) {
     return { data: null, error: "HackerEarth handle is required" };
   }
@@ -302,48 +302,62 @@ export async function fetchHackerEarthStats(usernameInput: string): Promise<{
   let avatar: string | null = null;
   let country: string | null = null;
 
-  // Query HackerEarth endpoints via proxies
+  let fetchedOk = false;
+  const timestamp = Date.now();
+
+  // Query HackerEarth endpoints via proxies and direct APIs
   const urls = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/`)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/`)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}`)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}`)}`
+    `https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`
   ];
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(7000) });
       if (res.ok) {
+        fetchedOk = true;
         const text = await res.text();
         
         // Try JSON parse first
         try {
           const json = JSON.parse(text);
-          if (json) {
-            rating = json.rating || json.current_rating || rating;
-            maxRating = json.max_rating || json.peak_rating || rating;
-            totalSolved = json.total_problems_solved || json.solved || totalSolved;
-            contestsAttended = json.contests_attended || contestsAttended;
-            globalRank = json.global_rank || globalRank;
+          if (json && typeof json === "object") {
+            rating = parseInt(String(json.rating || json.current_rating || json.rating_number || 0)) || rating;
+            maxRating = parseInt(String(json.max_rating || json.peak_rating || json.best_rating || 0)) || maxRating;
+            totalSolved = parseInt(String(json.total_problems_solved || json.solved || json.problems_solved || 0)) || totalSolved;
+            contestsAttended = parseInt(String(json.contests_attended || json.contests || 0)) || contestsAttended;
+            globalRank = parseInt(String(json.global_rank || json.rank_number || 0)) || globalRank;
             rankTitle = json.rank_title || json.rank || rankTitle;
             name = json.name || json.fullname || name;
-            avatar = json.avatar || json.profile_picture || avatar;
+            avatar = json.avatar || json.profile_picture || json.image || avatar;
             country = json.country || country;
-            if (rating > 0 || totalSolved > 0) break;
+            if (rating > 0 || totalSolved > 0 || name) break;
           }
         } catch {
           // HTML Parsing
-          const ratingMatch = text.match(/rating-number[^>]*>(\d+)/i) || text.match(/Rating:\s*(\d+)/i);
-          const solvedMatch = text.match(/problems-solved[^>]*>(\d+)/i) || text.match(/Solved:\s*(\d+)/i) || text.match(/Problems Solved[\s\S]{0,50}?(\d+)/i);
-          const contestMatch = text.match(/contests-attended[^>]*>(\d+)/i) || text.match(/Contests:\s*(\d+)/i);
-          const nameMatch = text.match(/class="name"[^>]*>([^<]+)</i) || text.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+          const ratingMatch = text.match(/rating-number[^>]*>(\d+)/i) || text.match(/Rating:\s*(\d+)/i) || text.match(/class="[^"]*rating[^"]*"[^>]*>(\d+)/i);
+          const maxRatingMatch = text.match(/max-rating[^>]*>(\d+)/i) || text.match(/Best Rating:\s*(\d+)/i);
+          const solvedMatch = text.match(/problems-solved[^>]*>(\d+)/i) || text.match(/Solved:\s*(\d+)/i) || text.match(/Problems Solved[\s\S]{0,80}?(\d+)/i);
+          const contestMatch = text.match(/contests-attended[^>]*>(\d+)/i) || text.match(/Contests:\s*(\d+)/i) || text.match(/Contests Attended[\s\S]{0,80}?(\d+)/i);
+          const rankMatch = text.match(/Global Rank[\s\S]{0,80}?#?(\d+)/i) || text.match(/global-rank[^>]*>#?(\d+)/i);
+          const nameMatch = text.match(/class="name"[^>]*>([^<]+)</i) || text.match(/<h1[^>]*>([^<]+)<\/h1>/i) || text.match(/<title>([^<|]+)/i);
+          const avatarMatch = text.match(/class="profile-pic"[^>]*src="([^"]+)"/i) || text.match(/class="avatar"[^>]*src="([^"]+)"/i);
 
-          if (ratingMatch) rating = parseInt(ratingMatch[1]) || 0;
-          if (solvedMatch) totalSolved = parseInt(solvedMatch[1]) || 0;
-          if (contestMatch) contestsAttended = parseInt(contestMatch[1]) || 0;
-          if (nameMatch) name = nameMatch[1].trim();
+          if (ratingMatch) rating = parseInt(ratingMatch[1]) || rating;
+          if (maxRatingMatch) maxRating = parseInt(maxRatingMatch[1]) || maxRating;
+          if (solvedMatch) totalSolved = parseInt(solvedMatch[1]) || totalSolved;
+          if (contestMatch) contestsAttended = parseInt(contestMatch[1]) || contestsAttended;
+          if (rankMatch) globalRank = parseInt(rankMatch[1]) || globalRank;
+          if (nameMatch) {
+            const rawName = nameMatch[1].replace(/HackerEarth Profile/i, "").replace(/HackerEarth/i, "").trim();
+            if (rawName) name = rawName;
+          }
+          if (avatarMatch) avatar = avatarMatch[1];
 
-          if (rating > 0 || totalSolved > 0) break;
+          if (rating > 0 || totalSolved > 0 || name) break;
         }
       }
     } catch { }
@@ -357,16 +371,16 @@ export async function fetchHackerEarthStats(usernameInput: string): Promise<{
     else rankTitle = "Problem Solver";
   }
 
-  if (rating > 0 || totalSolved > 0 || name) {
+  if (fetchedOk || rating > 0 || totalSolved > 0 || name) {
     return {
       data: {
         username,
-        name,
+        name: name || username,
         avatar,
         country,
         rating,
         maxRating: maxRating || rating,
-        rank: rankTitle,
+        rank: rankTitle || "HackerEarth Developer",
         globalRank,
         totalSolved,
         contestsAttended,

@@ -12,6 +12,7 @@ import {
   Award,
 } from "lucide-react";
 import { HackerEarthStats } from "@/types/codingProfile";
+import { extractUsername } from "@/services/codingProfileService";
 import { cn } from "@/lib/utils";
 
 interface HackerEarthProfileCardProps {
@@ -34,7 +35,8 @@ export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
   onEditHandle,
 }) => {
   const isConnected = Boolean(usernameOrHandle);
-  const profileUrl = `https://www.hackerearth.com/@${encodeURIComponent(usernameOrHandle)}`;
+  const cleanHandle = extractUsername(usernameOrHandle).replace(/^@+/, "");
+  const profileUrl = cleanHandle ? `https://www.hackerearth.com/@${cleanHandle}` : `https://www.hackerearth.com/`;
 
   const rating = stats?.rating ?? 0;
   const maxRating = stats?.maxRating ?? rating;
@@ -61,7 +63,7 @@ export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
               )}
             </h3>
             <p className="text-xs text-muted-foreground font-medium truncate">
-              {isConnected ? `@${usernameOrHandle}` : "Not connected"}
+              {isConnected ? `@${cleanHandle || usernameOrHandle}` : "Not connected"}
             </p>
           </div>
         </div>

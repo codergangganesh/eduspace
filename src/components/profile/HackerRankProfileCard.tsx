@@ -16,6 +16,7 @@ import {
   Code2,
 } from "lucide-react";
 import { HackerRankStats } from "@/types/codingProfile";
+import { extractUsername } from "@/services/codingProfileService";
 import { cn } from "@/lib/utils";
 
 interface HackerRankProfileCardProps {
@@ -38,7 +39,8 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
   onEditHandle,
 }) => {
   const isConnected = Boolean(usernameOrHandle);
-  const profileUrl = `https://www.hackerrank.com/profile/${encodeURIComponent(usernameOrHandle)}`;
+  const cleanHandle = extractUsername(usernameOrHandle).replace(/^@+/, "");
+  const profileUrl = cleanHandle ? `https://www.hackerrank.com/profile/${cleanHandle}` : `https://www.hackerrank.com/`;
 
   const totalSolved = stats?.totalSolved ?? 0;
   const badges = stats?.badges || [];
@@ -66,7 +68,7 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
               )}
             </h3>
             <p className="text-xs text-muted-foreground font-medium truncate">
-              {isConnected ? `@${usernameOrHandle}` : "Not connected"}
+              {isConnected ? `@${cleanHandle || usernameOrHandle}` : "Not connected"}
             </p>
           </div>
         </div>
