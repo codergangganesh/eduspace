@@ -3,6 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getCodingProfiles, extractUsername } from "@/services/codingProfileService";
 import { CodingProfilesResponse } from "@/types/codingProfile";
 import { CodingProfileCard, PlatformBrandLogo } from "./CodingProfileCard";
+import { HackerRankProfileCard } from "./HackerRankProfileCard";
+import { HackerEarthProfileCard } from "./HackerEarthProfileCard";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +68,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [codewarsInput, setCodewarsInput] = useState<string>("");
   const [geeksforgeeksInput, setGeeksforgeeksInput] = useState<string>("");
   const [atcoderInput, setAtcoderInput] = useState<string>("");
+  const [hackerrankInput, setHackerrankInput] = useState<string>("");
+  const [hackerearthInput, setHackerearthInput] = useState<string>("");
   const [githubTokenInput, setGithubTokenInput] = useState<string>("");
   const [showGithubToken, setShowGithubToken] = useState<boolean>(false);
 
@@ -76,6 +80,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const cwUsername = (profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || data?.codewarsUsername || "";
   const gfgUsername = (profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || data?.geeksforgeeksUsername || "";
   const atcoderUsername = (profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || data?.atcoderUsername || "";
+  const hrUsername = (profile as any)?.hackerrank_username || extractUsername((profile as any)?.hackerrank_url) || data?.hackerrankUsername || "";
+  const heUsername = (profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || data?.hackerearthUsername || "";
   const ghToken = (profile as any)?.github_token || data?.githubToken || "";
 
   useEffect(() => {
@@ -87,9 +93,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       setCodewarsInput((profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || data?.codewarsUsername || "");
       setGeeksforgeeksInput((profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || data?.geeksforgeeksUsername || "");
       setAtcoderInput((profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || data?.atcoderUsername || "");
+      setHackerrankInput((profile as any)?.hackerrank_username || extractUsername((profile as any)?.hackerrank_url) || data?.hackerrankUsername || "");
+      setHackerearthInput((profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || data?.hackerearthUsername || "");
       setGithubTokenInput((profile as any)?.github_token || data?.githubToken || "");
     }
-  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.githubToken]);
+  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.hackerrankUsername, data?.hackerearthUsername, data?.githubToken]);
 
   const fetchProfiles = useCallback(
     async (
@@ -103,6 +111,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         cw?: string;
         gfg?: string;
         atcoder?: string;
+        hr?: string;
+        he?: string;
       }
     ) => {
       if (!user) {
@@ -127,6 +137,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           overrides?.cw !== undefined ? overrides.cw : cwUsername,
           overrides?.gfg !== undefined ? overrides.gfg : gfgUsername,
           overrides?.atcoder !== undefined ? overrides.atcoder : atcoderUsername,
+          overrides?.hr !== undefined ? overrides.hr : hrUsername,
+          overrides?.he !== undefined ? overrides.he : heUsername,
           forceRefresh
         );
         setData(res);
@@ -137,7 +149,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         setRefreshing(false);
       }
     },
-    [user, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, data]
+    [user, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, hrUsername, heUsername, data]
   );
 
   useEffect(() => {
@@ -163,6 +175,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     const cleanCw = codewarsInput.trim();
     const cleanGfg = geeksforgeeksInput.trim();
     const cleanAtcoder = atcoderInput.trim();
+    const cleanHr = hackerrankInput.trim();
+    const cleanHe = hackerearthInput.trim();
     const cleanGhToken = githubTokenInput.trim();
 
     if (leetcodeInput.length > 0 && !cleanLc) {
@@ -199,6 +213,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       const cwUrl = cleanCw ? `https://www.codewars.com/users/${cleanCw}` : "";
       const gfgUrl = cleanGfg ? `https://www.geeksforgeeks.org/user/${cleanGfg}/` : "";
       const atcoderUrl = cleanAtcoder ? `https://atcoder.jp/users/${cleanAtcoder}` : "";
+      const hrUrl = cleanHr ? `https://www.hackerrank.com/profile/${cleanHr}` : "";
+      const heUrl = cleanHe ? `https://www.hackerearth.com/@${cleanHe}` : "";
 
       const res = await updateProfile({
         leetcode_username: cleanLc || null,
@@ -210,10 +226,14 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         codewars_username: cleanCw || null,
         geeksforgeeks_username: cleanGfg || null,
         atcoder_username: cleanAtcoder || null,
+        hackerrank_username: cleanHr || null,
+        hackerearth_username: cleanHe || null,
         codechef_url: ccUrl || null,
         codewars_url: cwUrl || null,
         geeksforgeeks_url: gfgUrl || null,
         atcoder_url: atcoderUrl || null,
+        hackerrank_url: hrUrl || null,
+        hackerearth_url: heUrl || null,
       } as any);
 
       if (res.success) {
@@ -228,6 +248,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           cw: cleanCw,
           gfg: cleanGfg,
           atcoder: cleanAtcoder,
+          hr: cleanHr,
+          he: cleanHe,
         });
       } else {
         toast.error(res.error || "Failed to update profile settings.");
@@ -503,6 +525,26 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           />
         )}
 
+        {(activeTab === "all" || activeTab === "competitive") && (
+          <HackerRankProfileCard
+            usernameOrHandle={hrUsername}
+            stats={data?.hackerrank}
+            error={data?.hackerrankError}
+            onConnect={() => setIsDialogOpen(true)}
+            onEditHandle={() => setIsDialogOpen(true)}
+          />
+        )}
+
+        {(activeTab === "all" || activeTab === "competitive") && (
+          <HackerEarthProfileCard
+            usernameOrHandle={heUsername}
+            stats={data?.hackerearth}
+            error={data?.hackerearthError}
+            onConnect={() => setIsDialogOpen(true)}
+            onEditHandle={() => setIsDialogOpen(true)}
+          />
+        )}
+
 
         <div id="github-profile-section" className="lg:col-span-2 scroll-mt-6">
           <CodingProfileCard
@@ -611,6 +653,34 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. tourist or https://atcoder.jp/users/tourist"
                   value={atcoderInput}
                   onChange={(e) => setAtcoderInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="hackerrank_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <div className="size-4 rounded-md bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-[9px]">H</div>
+                  HackerRank Username / URL
+                </Label>
+                <Input
+                  id="hackerrank_input"
+                  placeholder="e.g. johndoe or https://www.hackerrank.com/profile/johndoe"
+                  value={hackerrankInput}
+                  onChange={(e) => setHackerrankInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="hackerearth_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <div className="size-4 rounded-md bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-[9px]">HE</div>
+                  HackerEarth Handle / URL
+                </Label>
+                <Input
+                  id="hackerearth_input"
+                  placeholder="e.g. johndoe or https://www.hackerearth.com/@johndoe"
+                  value={hackerearthInput}
+                  onChange={(e) => setHackerearthInput(e.target.value)}
                   className="rounded-xl font-mono text-xs h-10"
                 />
               </div>

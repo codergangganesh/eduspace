@@ -305,6 +305,59 @@ export interface AtCoderStats {
   last_updated?: string;
 }
 
+export interface HackerRankBadge {
+  badge_name: string;
+  stars: number;
+  icon?: string;
+  category?: string;
+}
+
+export interface HackerRankCertificate {
+  heading: string;
+  level?: string;
+  certificate_url?: string;
+  earned_at?: string;
+}
+
+export interface HackerRankStats {
+  username: string;
+  name?: string | null;
+  avatar?: string | null;
+  country?: string | null;
+  school?: string | null;
+  level?: number | null;
+  totalSolved: number;
+  badgesCount: number;
+  totalStars?: number;
+  badges?: HackerRankBadge[];
+  certificatesCount: number;
+  certificates?: HackerRankCertificate[];
+  globalRank?: number | null;
+  score?: number | null;
+  last_updated?: string;
+}
+
+export interface HackerEarthBadge {
+  name: string;
+  icon?: string;
+  description?: string;
+}
+
+export interface HackerEarthStats {
+  username: string;
+  name?: string | null;
+  avatar?: string | null;
+  country?: string | null;
+  rating: number;
+  maxRating?: number;
+  rank?: string | null;
+  globalRank?: number | null;
+  totalSolved: number;
+  contestsAttended?: number;
+  badges?: HackerEarthBadge[];
+  last_updated?: string;
+}
+
 export interface OverallStats {
   totalSolved: number;
   platformsConnectedCount?: number;
@@ -319,6 +372,8 @@ export interface CodingProfilesResponse {
   codewars?: CodewarsStats | null;
   geeksforgeeks?: GeeksForGeeksStats | null;
   atcoder?: AtCoderStats | null;
+  hackerrank?: HackerRankStats | null;
+  hackerearth?: HackerEarthStats | null;
   overall: OverallStats;
   lastFetchedAt?: string | null;
   leetcodeError?: string | null;
@@ -328,11 +383,14 @@ export interface CodingProfilesResponse {
   codewarsError?: string | null;
   geeksforgeeksError?: string | null;
   atcoderError?: string | null;
+  hackerrankError?: string | null;
+  hackerearthError?: string | null;
   leetcodeUsername?: string | null;
   codeforcesHandle?: string | null;
   githubUsername?: string | null;
   githubToken?: string | null;
   hackerrankUsername?: string | null;
+  hackerearthUsername?: string | null;
   codechefUsername?: string | null;
   codewarsUsername?: string | null;
   geeksforgeeksUsername?: string | null;
@@ -356,6 +414,7 @@ export interface UserCodingProfilesRecord {
   github_username?: string | null;
   github_token?: string | null;
   hackerrank_username?: string | null;
+  hackerearth_username?: string | null;
   codechef_username?: string | null;
   codewars_username?: string | null;
   geeksforgeeks_username?: string | null;
@@ -369,6 +428,8 @@ export interface UserCodingProfilesRecord {
   codewars_data?: CodewarsStats | null;
   geeksforgeeks_data?: GeeksForGeeksStats | null;
   atcoder_data?: AtCoderStats | null;
+  hackerrank_data?: HackerRankStats | null;
+  hackerearth_data?: HackerEarthStats | null;
   overall_data?: OverallStats | null;
   leetcode_error?: string | null;
   codeforces_error?: string | null;
@@ -376,6 +437,8 @@ export interface UserCodingProfilesRecord {
   codewars_error?: string | null;
   geeksforgeeks_error?: string | null;
   atcoder_error?: string | null;
+  hackerrank_error?: string | null;
+  hackerearth_error?: string | null;
   last_fetched_at?: string | null;
   updated_at?: string | null;
 }

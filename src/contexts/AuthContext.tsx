@@ -200,6 +200,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileData.leetcode_username = mergedSocial.leetcode_username ?? profileData.leetcode_username ?? null;
         profileData.codeforces_handle = mergedSocial.codeforces_handle ?? profileData.codeforces_handle ?? null;
         profileData.hackerrank_url = mergedSocial.hackerrank_url ?? profileData.hackerrank_url ?? null;
+        profileData.hackerrank_username = mergedSocial.hackerrank_username ?? profileData.hackerrank_username ?? null;
+        profileData.hackerearth_url = mergedSocial.hackerearth_url ?? profileData.hackerearth_url ?? null;
+        profileData.hackerearth_username = mergedSocial.hackerearth_username ?? profileData.hackerearth_username ?? null;
         profileData.codechef_url = mergedSocial.codechef_url ?? profileData.codechef_url ?? null;
         profileData.codewars_url = mergedSocial.codewars_url ?? profileData.codewars_url ?? null;
         profileData.geeksforgeeks_url = mergedSocial.geeksforgeeks_url ?? profileData.geeksforgeeks_url ?? null;
@@ -573,6 +576,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         leetcode_username,
         codeforces_handle,
         hackerrank_url,
+        hackerrank_username,
+        hackerearth_url,
+        hackerearth_username,
         codechef_url,
         codewars_url,
         geeksforgeeks_url,
@@ -593,6 +599,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         leetcode_username: leetcode_username !== undefined ? leetcode_username : storedSocial.leetcode_username,
         codeforces_handle: codeforces_handle !== undefined ? codeforces_handle : storedSocial.codeforces_handle,
         hackerrank_url: hackerrank_url !== undefined ? hackerrank_url : storedSocial.hackerrank_url,
+        hackerrank_username: hackerrank_username !== undefined ? hackerrank_username : storedSocial.hackerrank_username,
+        hackerearth_url: hackerearth_url !== undefined ? hackerearth_url : storedSocial.hackerearth_url,
+        hackerearth_username: hackerearth_username !== undefined ? hackerearth_username : storedSocial.hackerearth_username,
         codechef_url: codechef_url !== undefined ? codechef_url : storedSocial.codechef_url,
         codewars_url: codewars_url !== undefined ? codewars_url : storedSocial.codewars_url,
         geeksforgeeks_url: geeksforgeeks_url !== undefined ? geeksforgeeks_url : storedSocial.geeksforgeeks_url,

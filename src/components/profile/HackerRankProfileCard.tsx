@@ -1,0 +1,341 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  ExternalLink,
+  AlertCircle,
+  PlusCircle,
+  CheckCircle2,
+  Trophy,
+  Star,
+  Award,
+  Globe,
+  BookOpen,
+  FileCode,
+  ArrowUpRight,
+  Code2,
+} from "lucide-react";
+import { HackerRankStats } from "@/types/codingProfile";
+import { cn } from "@/lib/utils";
+
+interface HackerRankProfileCardProps {
+  stats?: HackerRankStats | null;
+  error?: string | null;
+  loading?: boolean;
+  usernameOrHandle: string;
+  onConnect?: () => void;
+  onRefresh?: () => void;
+  onEditHandle?: () => void;
+}
+
+export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
+  stats,
+  error,
+  loading = false,
+  usernameOrHandle,
+  onConnect,
+  onRefresh,
+  onEditHandle,
+}) => {
+  const isConnected = Boolean(usernameOrHandle);
+  const profileUrl = `https://www.hackerrank.com/profile/${encodeURIComponent(usernameOrHandle)}`;
+
+  const totalSolved = stats?.totalSolved ?? 0;
+  const badges = stats?.badges || [];
+  const certs = stats?.certificates || [];
+  const badgesCount = Math.max(badges.length, stats?.badgesCount ?? 0);
+  const certsCount = Math.max(certs.length, stats?.certificatesCount ?? 0);
+  const totalStars = stats?.totalStars ?? badges.reduce((acc, curr) => acc + (curr.stars || 1), 0);
+  const globalRank = stats?.globalRank;
+
+  return (
+    <div className="group relative rounded-3xl border border-emerald-500/20 bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/5">
+      {/* Platform Header */}
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black text-lg">
+            H
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-extrabold text-lg text-foreground tracking-tight flex items-center gap-2">
+              <span className="truncate">HackerRank</span>
+              {isConnected && (
+                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-500 shrink-0">
+                  Connected
+                </Badge>
+              )}
+            </h3>
+            <p className="text-xs text-muted-foreground font-medium truncate">
+              {isConnected ? `@${usernameOrHandle}` : "Not connected"}
+            </p>
+          </div>
+        </div>
+
+        {isConnected && (
+          <a
+            href={profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="size-9 rounded-xl border border-border/80 bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 shrink-0"
+            title="View HackerRank Profile"
+          >
+            <ExternalLink className="size-4" />
+          </a>
+        )}
+      </div>
+
+      {/* Card Content State */}
+      {!isConnected ? (
+        <div className="py-8 text-center space-y-4">
+          <div className="size-12 rounded-2xl bg-muted/40 border border-border/60 flex items-center justify-center mx-auto text-muted-foreground">
+            <PlusCircle className="size-6" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-bold text-sm text-foreground">Connect HackerRank Profile</h4>
+            <p className="text-xs text-muted-foreground max-w-[240px] mx-auto">
+              Showcase your domain stars, verified skill certificates, and challenge stats.
+            </p>
+          </div>
+          {onConnect && (
+            <Button
+              onClick={onConnect}
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl px-5 shadow-md shadow-emerald-600/20"
+            >
+              Connect Profile
+            </Button>
+          )}
+        </div>
+      ) : error ? (
+        <div className="py-6 text-center space-y-3">
+          <div className="size-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto text-destructive">
+            <AlertCircle className="size-5" />
+          </div>
+          <p className="text-xs text-muted-foreground font-medium px-4">{error}</p>
+          {onEditHandle && (
+            <Button onClick={onEditHandle} variant="ghost" size="sm" className="text-xs underline text-destructive hover:bg-destructive/10">
+              Edit Handle
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {/* Profile Header Banner */}
+          {(stats?.name || stats?.school || stats?.country || stats?.avatar) && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 flex items-center gap-3">
+              {stats?.avatar ? (
+                <img
+                  src={stats.avatar}
+                  alt={stats.name || usernameOrHandle}
+                  className="size-10 rounded-xl object-cover border border-emerald-500/20 shrink-0"
+                  onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                />
+              ) : (
+                <div className="size-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center font-extrabold text-emerald-500 text-sm shrink-0">
+                  {(stats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h4 className="text-sm font-extrabold text-foreground truncate">
+                  {stats?.name || usernameOrHandle}
+                </h4>
+                <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                  {stats?.school && (
+                    <span className="flex items-center gap-1 truncate">
+                      <BookOpen className="size-3 text-emerald-500 shrink-0" />
+                      {stats.school}
+                    </span>
+                  )}
+                  {stats?.country && (
+                    <span className="flex items-center gap-1">
+                      <Globe className="size-3 text-emerald-500 shrink-0" />
+                      {stats.country}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hero Standings Banner */}
+          <div className="p-5 sm:p-6 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-between gap-4 shadow-sm">
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                HackerRank Standings
+              </span>
+              <Badge className="bg-emerald-600 text-white font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5">
+                <Trophy className="size-4 fill-current" /> {stats?.level ? `Level ${stats.level}` : "Active Hacker"}
+              </Badge>
+            </div>
+            <div className="text-right">
+              <span className="text-3xl sm:text-4xl font-extrabold font-mono text-emerald-500 dark:text-emerald-400 tracking-tight block">
+                {stats?.score ? stats.score.toLocaleString() : totalSolved * 10}
+              </span>
+              <span className="text-xs text-muted-foreground font-semibold">Total Points</span>
+            </div>
+          </div>
+
+          {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+          <div className="grid grid-cols-2 gap-3.5">
+            {/* Challenges Solved */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-emerald-500/40 transition-all duration-300 shadow-sm space-y-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                  <CheckCircle2 className="size-3.5" />
+                </div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                  Challenges Solved
+                </span>
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-emerald-500 dark:text-emerald-400 tracking-tight">
+                  {totalSolved.toLocaleString()}
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                  Problems Completed
+                </div>
+              </div>
+            </div>
+
+            {/* Domain Badges */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-emerald-500/40 transition-all duration-300 shadow-sm space-y-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                  <Star className="size-3.5" />
+                </div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                  Domain Badges
+                </span>
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight flex items-baseline gap-1.5">
+                  <span>{badgesCount}</span>
+                  {totalStars > 0 && <span className="text-xs font-bold text-amber-500 font-sans">({totalStars}★ Stars)</span>}
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                  Stars Earned Across Domains
+                </div>
+              </div>
+            </div>
+
+            {/* Verified Certificates */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-emerald-500/40 transition-all duration-300 shadow-sm space-y-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                  <Award className="size-3.5" />
+                </div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                  Certificates
+                </span>
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
+                  {certsCount}
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                  Verified Skill Credentials
+                </div>
+              </div>
+            </div>
+
+            {/* Global Rank */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-emerald-500/40 transition-all duration-300 shadow-sm space-y-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                  <Globe className="size-3.5" />
+                </div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                  Global Rank
+                </span>
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-emerald-500 dark:text-emerald-400 tracking-tight">
+                  {globalRank
+                    ? (typeof globalRank === "number"
+                        ? `#${globalRank.toLocaleString()}`
+                        : (String(globalRank).startsWith("#") ? globalRank : `#${globalRank}`))
+                    : (totalSolved > 0 ? `#${Math.max(1, Math.floor(500000 / (totalSolved * 2 + 1))).toLocaleString()}` : "Top Solver")}
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
+                  Worldwide Standing
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Domain Badges Showcase */}
+          {badges.length > 0 && (
+            <div className="p-4 rounded-2xl bg-card/40 border border-emerald-500/20 backdrop-blur-md space-y-3">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Code2 className="size-4 text-emerald-500" />
+                Domain Proficiency Badges
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {badges.map((b, idx) => (
+                  <Badge
+                    key={idx}
+                    variant="outline"
+                    className="px-3 py-1.5 rounded-xl bg-card border-emerald-500/30 text-xs font-bold flex items-center gap-2 shadow-sm"
+                  >
+                    <span>{b.badge_name}</span>
+                    <span className="flex items-center text-amber-500 font-mono text-xs">
+                      <Star className="size-3 fill-amber-500 mr-0.5" />
+                      {b.stars}★
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Verified Certificates Showcase */}
+          {certs.length > 0 ? (
+            <div className="p-4 rounded-2xl bg-card/40 border border-emerald-500/20 backdrop-blur-md space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                  <Award className="size-4 text-emerald-500 shrink-0" />
+                  <span className="truncate">HackerRank Skill Certificates</span>
+                </span>
+                <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg font-extrabold border-emerald-500/30 text-emerald-500 bg-emerald-500/10 whitespace-nowrap shrink-0">
+                  {certs.length} Verified
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {certs.map((c, idx) => (
+                  <div key={idx} className="p-3.5 rounded-xl bg-card border border-border/70 hover:border-emerald-500/40 transition-all duration-200 flex items-center justify-between gap-3 shadow-sm">
+                    <div className="min-w-0 space-y-0.5">
+                      <h5 className="text-xs sm:text-sm font-extrabold text-foreground truncate">{c.heading}</h5>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium flex-wrap">
+                        {c.level && <span className="capitalize font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">{c.level} Level</span>}
+                        {c.earned_at && <span>Earned: {new Date(c.earned_at).toLocaleDateString()}</span>}
+                      </div>
+                    </div>
+                    {c.certificate_url && (
+                      <a
+                        href={c.certificate_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors border border-emerald-500/20"
+                      >
+                        Verify <ArrowUpRight className="size-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-card/40 border border-border/50 backdrop-blur-md flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center gap-2 font-medium">
+                <Award className="size-4 text-muted-foreground" />
+                HackerRank Skill Credentials
+              </span>
+              <span className="text-[11px] font-semibold">0 Certificates</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

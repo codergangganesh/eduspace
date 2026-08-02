@@ -71,8 +71,11 @@ export default function Settings() {
   const [atcoderUsername, setAtcoderUsername] = useState(
     (profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || ""
   );
-  const [hackerrankUrl, setHackerrankUrl] = useState(
-    profile?.hackerrank_url || ""
+  const [hackerrankUsername, setHackerrankUsername] = useState(
+    (profile as any)?.hackerrank_username || extractUsername(profile?.hackerrank_url) || ""
+  );
+  const [hackerearthUsername, setHackerearthUsername] = useState(
+    (profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || ""
   );
   const [githubToken, setGithubToken] = useState(
     (profile as any)?.github_token || (user?.id ? localStorage.getItem(`eduspace_github_token_${user.id}`) : "") || ""
@@ -88,7 +91,8 @@ export default function Settings() {
       setCodewarsUsername((profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || "");
       setGeeksforgeeksUsername((profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || "");
       setAtcoderUsername((profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || "");
-      setHackerrankUrl(profile.hackerrank_url || "");
+      setHackerrankUsername((profile as any)?.hackerrank_username || extractUsername(profile?.hackerrank_url) || "");
+      setHackerearthUsername((profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || "");
       setGithubToken((profile as any)?.github_token || (user?.id ? localStorage.getItem(`eduspace_github_token_${user.id}`) : "") || "");
     }
   }, [profile, user?.id]);
@@ -102,7 +106,8 @@ export default function Settings() {
     const cwClean = extractUsername(codewarsUsername);
     const gfgClean = extractUsername(geeksforgeeksUsername);
     const atcoderClean = extractUsername(atcoderUsername);
-    const hrClean = extractUsername(hackerrankUrl);
+    const hrClean = extractUsername(hackerrankUsername);
+    const heClean = extractUsername(hackerearthUsername);
     const ghTokenClean = githubToken.trim();
 
     setIsSavingCoding(true);
@@ -122,7 +127,8 @@ export default function Settings() {
       const cwUrl = cwClean ? `https://www.codewars.com/users/${cwClean}` : "";
       const gfgUrl = gfgClean ? `https://www.geeksforgeeks.org/user/${gfgClean}/` : "";
       const atcoderUrl = atcoderClean ? `https://atcoder.jp/users/${atcoderClean}` : "";
-      const hrUrl = hrClean ? `https://www.hackerrank.com/profile/${hrClean}` : (hackerrankUrl.trim() || "");
+      const hrUrl = hrClean ? `https://www.hackerrank.com/profile/${hrClean}` : "";
+      const heUrl = heClean ? `https://www.hackerearth.com/@${heClean}` : "";
 
       const res = await updateProfile({
         leetcode_username: lcClean || null,
@@ -132,6 +138,8 @@ export default function Settings() {
         codewars_username: cwClean || null,
         geeksforgeeks_username: gfgClean || null,
         atcoder_username: atcoderClean || null,
+        hackerrank_username: hrClean || null,
+        hackerearth_username: heClean || null,
         leetcode_url: lcUrl || null,
         codeforces_url: cfUrl || null,
         github_url: ghUrl || null,
@@ -140,6 +148,7 @@ export default function Settings() {
         geeksforgeeks_url: gfgUrl || null,
         atcoder_url: atcoderUrl || null,
         hackerrank_url: hrUrl || null,
+        hackerearth_url: heUrl || null,
         github_token: ghTokenClean || null,
       } as any);
 
@@ -395,14 +404,28 @@ export default function Settings() {
 
                     <div className="space-y-1.5">
                       <Label htmlFor="setting-hackerrank" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-                        <Code2 className="size-4 text-emerald-500" />
+                        <div className="size-4 rounded bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-[9px]">H</div>
                         HackerRank Handle / URL
                       </Label>
                       <Input
                         id="setting-hackerrank"
-                        placeholder="e.g. hr_user or https://hackerrank.com/hr_user"
-                        value={hackerrankUrl}
-                        onChange={(e) => setHackerrankUrl(e.target.value)}
+                        placeholder="e.g. hr_user or https://hackerrank.com/profile/hr_user"
+                        value={hackerrankUsername}
+                        onChange={(e) => setHackerrankUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-hackerearth" className="text-xs font-semibold flex items-center gap-2 text-foreground">
+                        <div className="size-4 rounded bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-[9px]">HE</div>
+                        HackerEarth Handle / URL
+                      </Label>
+                      <Input
+                        id="setting-hackerearth"
+                        placeholder="e.g. he_user or https://hackerearth.com/@he_user"
+                        value={hackerearthUsername}
+                        onChange={(e) => setHackerearthUsername(e.target.value)}
                         className="bg-background/50 font-mono text-xs h-9"
                       />
                     </div>
