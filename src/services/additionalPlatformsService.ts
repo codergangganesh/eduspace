@@ -132,7 +132,7 @@ export async function fetchHackerRankStats(usernameInput: string): Promise<{
         const res = await fetch(hUrl, { signal: AbortSignal.timeout(7000) });
         if (res.ok) {
           const html = await res.text();
-          
+
           // 1. Try Next.js __NEXT_DATA__
           const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
           if (nextDataMatch) {
@@ -246,7 +246,7 @@ export async function fetchHackerRankStats(usernameInput: string): Promise<{
   const country = profileData?.country || scoresData?.country || null;
   const school = profileData?.school || profileData?.college || scoresData?.school || null;
   const level = profileData?.level || scoresData?.level || null;
-  
+
   const rawRank = scoresData?.rank || scoresData?.leaderboard_rank || profileData?.rank || profileData?.global_rank || profileData?.leaderboard_rank || profileData?.hacker_rank || profileData?.country_rank || null;
   const globalRank = rawRank ? (typeof rawRank === "number" ? rawRank : (parseInt(String(rawRank).replace(/[^0-9]/g, "")) || rawRank)) : null;
   const realScore = scoresData?.score || profileData?.score || undefined;
@@ -295,97 +295,188 @@ export async function fetchHackerEarthStats(usernameInput: string): Promise<{
   let rating = 0;
   let maxRating = 0;
   let totalSolved = 0;
+  let solutionsSubmitted = 0;
+  let points = 0;
   let contestsAttended = 0;
   let globalRank: number | null = null;
   let rankTitle: string | null = null;
   let name: string | null = null;
   let avatar: string | null = null;
   let country: string | null = null;
+  let location: string | null = null;
+  let company: string | null = null;
+  let role: string | null = null;
+  let education: string | null = null;
+  let skills: string[] = [];
+  let topPercentiles: { title: string; percentile: string }[] = [];
 
-  let fetchedOk = false;
   const timestamp = Date.now();
 
   // Query HackerEarth endpoints via proxies and direct APIs
   const urls = [
-    `https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
     `https://corsproxy.io/?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://www.hackerearth.com/profiles/api/${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
     `https://corsproxy.io/?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`,
+    `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(`https://www.hackerearth.com/@${encodeURIComponent(username)}/?_t=${timestamp}`)}`
   ];
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(7000) });
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
       if (res.ok) {
-        fetchedOk = true;
-        const text = await res.text();
+        let text = "";
+        try {
+          const resJson = await res.json();
+          text = resJson?.contents || JSON.stringify(resJson);
+        } catch {
+          text = await res.text();
+        }
+
+        if (!text || text.includes("Access Denied") || text.includes("403 Forbidden") || text.includes("Just a moment...")) {
+          continue;
+        }
         
         // Try JSON parse first
         try {
           const json = JSON.parse(text);
           if (json && typeof json === "object") {
-            rating = parseInt(String(json.rating || json.current_rating || json.rating_number || 0)) || rating;
-            maxRating = parseInt(String(json.max_rating || json.peak_rating || json.best_rating || 0)) || maxRating;
-            totalSolved = parseInt(String(json.total_problems_solved || json.solved || json.problems_solved || 0)) || totalSolved;
-            contestsAttended = parseInt(String(json.contests_attended || json.contests || 0)) || contestsAttended;
-            globalRank = parseInt(String(json.global_rank || json.rank_number || 0)) || globalRank;
-            rankTitle = json.rank_title || json.rank || rankTitle;
-            name = json.name || json.fullname || name;
-            avatar = json.avatar || json.profile_picture || json.image || avatar;
-            country = json.country || country;
-            if (rating > 0 || totalSolved > 0 || name) break;
+            const r = parseInt(String(json.rating || json.current_rating || json.rating_number || 0).replace(/,/g, "")) || 0;
+            const mr = parseInt(String(json.max_rating || json.peak_rating || json.best_rating || 0).replace(/,/g, "")) || 0;
+            const s = parseInt(String(json.total_problems_solved || json.solved || json.problems_solved || 0).replace(/,/g, "")) || 0;
+            const sub = parseInt(String(json.solutions_submitted || json.total_submissions || json.submissions || 0).replace(/,/g, "")) || 0;
+            const pts = parseInt(String(json.points || json.hacker_points || json.score || 0).replace(/,/g, "")) || 0;
+            const c = parseInt(String(json.contests_attended || json.contests || 0).replace(/,/g, "")) || 0;
+            const gr = parseInt(String(json.global_rank || json.rank_number || 0).replace(/,/g, "")) || null;
+
+            if (r > 0) rating = r;
+            if (mr > 0) maxRating = mr;
+            if (s > 0) totalSolved = s;
+            if (sub > 0) solutionsSubmitted = sub;
+            if (pts > 0) points = pts;
+            if (c > 0) contestsAttended = c;
+            if (gr) globalRank = gr;
+            if (json.rank_title || json.rank) rankTitle = json.rank_title || json.rank;
+            if (json.name || json.fullname) name = json.name || json.fullname;
+            if (json.avatar || json.profile_picture || json.image) avatar = json.avatar || json.profile_picture || json.image;
+            if (json.country) country = json.country;
+            if (json.location || json.city) location = json.location || json.city;
+            if (json.company || json.organization) company = json.company || json.organization;
+            if (json.role || json.designation) role = json.role || json.designation;
+            if (json.education || json.degree) education = json.education || json.degree;
+            if (Array.isArray(json.skills)) skills = json.skills;
+
+            if (rating > 0 || totalSolved > 0 || points > 0) break;
           }
         } catch {
-          // HTML Parsing
-          const ratingMatch = text.match(/rating-number[^>]*>(\d+)/i) || text.match(/Rating:\s*(\d+)/i) || text.match(/class="[^"]*rating[^"]*"[^>]*>(\d+)/i);
-          const maxRatingMatch = text.match(/max-rating[^>]*>(\d+)/i) || text.match(/Best Rating:\s*(\d+)/i);
-          const solvedMatch = text.match(/problems-solved[^>]*>(\d+)/i) || text.match(/Solved:\s*(\d+)/i) || text.match(/Problems Solved[\s\S]{0,80}?(\d+)/i);
-          const contestMatch = text.match(/contests-attended[^>]*>(\d+)/i) || text.match(/Contests:\s*(\d+)/i) || text.match(/Contests Attended[\s\S]{0,80}?(\d+)/i);
-          const rankMatch = text.match(/Global Rank[\s\S]{0,80}?#?(\d+)/i) || text.match(/global-rank[^>]*>#?(\d+)/i);
-          const nameMatch = text.match(/class="name"[^>]*>([^<]+)</i) || text.match(/<h1[^>]*>([^<]+)<\/h1>/i) || text.match(/<title>([^<|]+)/i);
-          const avatarMatch = text.match(/class="profile-pic"[^>]*src="([^"]+)"/i) || text.match(/class="avatar"[^>]*src="([^"]+)"/i);
+          // Comprehensive JSON & HTML Regex Extractions
+          const ratingMatch = text.match(/"rating"\s*:\s*"?([\d,]+)"?/i) || text.match(/"current_rating"\s*:\s*"?([\d,]+)"?/i) || text.match(/rating-number[^>]*>([\d,]+)/i) || text.match(/Rating:\s*([\d,]+)/i) || text.match(/class="[^"]*rating[^"]*"[^>]*>([\d,]+)/i) || text.match(/([\d,]+)\s*Contest Ratings/i);
+          const maxRatingMatch = text.match(/"max_rating"\s*:\s*"?([\d,]+)"?/i) || text.match(/"peak_rating"\s*:\s*"?([\d,]+)"?/i) || text.match(/max-rating[^>]*>([\d,]+)/i) || text.match(/Best Rating:\s*([\d,]+)/i);
+          const solvedMatch = text.match(/"total_problems_solved"\s*:\s*"?([\d,]+)"?/i) || text.match(/"problems_solved"\s*:\s*"?([\d,]+)"?/i) || text.match(/"solved"\s*:\s*"?([\d,]+)"?/i) || text.match(/problems-solved[^>]*>([\d,]+)/i) || text.match(/Solved:\s*([\d,]+)/i) || text.match(/Problems Solved[\s\S]{0,100}?([\d,]+)/i) || text.match(/([\d,]+)\s*Problems Solved/i);
+          const pointsMatch = text.match(/"points"\s*:\s*"?([\d,]+)"?/i) || text.match(/"hacker_points"\s*:\s*"?([\d,]+)"?/i) || text.match(/Points[\s\S]{0,100}?([\d,]+)/i) || text.match(/([\d,]+)\s*Points/i);
+          const submissionsMatch = text.match(/"solutions_submitted"\s*:\s*"?([\d,]+)"?/i) || text.match(/"total_submissions"\s*:\s*"?([\d,]+)"?/i) || text.match(/"submissions"\s*:\s*"?([\d,]+)"?/i) || text.match(/Solutions Submitted[\s\S]{0,100}?([\d,]+)/i) || text.match(/Submissions[\s\S]{0,100}?([\d,]+)/i) || text.match(/([\d,]+)\s*Solutions Submitted/i);
+          const contestMatch = text.match(/"contests"\s*:\s*"?([\d,]+)"?/i) || text.match(/contests-attended[^>]*>([\d,]+)/i) || text.match(/Contests:\s*([\d,]+)/i) || text.match(/Contests Attended[\s\S]{0,100}?([\d,]+)/i);
+          const rankMatch = text.match(/"global_rank"\s*:\s*"?([\d,]+)"?/i) || text.match(/Global Rank[\s\S]{0,100}?#?([\d,]+)/i) || text.match(/global-rank[^>]*>#?([\d,]+)/i);
+          const nameMatch = text.match(/"name"\s*:\s*"([^"]+)"/i) || text.match(/class="name"[^>]*>([^<]+)</i) || text.match(/<h1[^>]*>([^<]+)<\/h1>/i) || text.match(/<title>([^<|]+)/i);
+          const avatarMatch = text.match(/"avatar"\s*:\s*"([^"]+)"/i) || text.match(/class="profile-pic"[^>]*src="([^"]+)"/i) || text.match(/class="avatar"[^>]*src="([^"]+)"/i);
+          const compMatch = text.match(/(?:SWE|Engineer|Developer|Manager|Consultant)\s*@\s*[\w\s]+/i) || text.match(/class="[^"]*company[^"]*"[^>]*>([^<]+)/i);
+          const locMatch = text.match(/class="[^"]*location[^"]*"[^>]*>([^<]+)/i) || text.match(/([A-Za-z\s]+,\s*[A-Z]{2},\s*[A-Za-z\s]+)/);
 
-          if (ratingMatch) rating = parseInt(ratingMatch[1]) || rating;
-          if (maxRatingMatch) maxRating = parseInt(maxRatingMatch[1]) || maxRating;
-          if (solvedMatch) totalSolved = parseInt(solvedMatch[1]) || totalSolved;
-          if (contestMatch) contestsAttended = parseInt(contestMatch[1]) || contestsAttended;
-          if (rankMatch) globalRank = parseInt(rankMatch[1]) || globalRank;
+          if (ratingMatch) rating = parseInt(ratingMatch[1].replace(/,/g, "")) || rating;
+          if (maxRatingMatch) maxRating = parseInt(maxRatingMatch[1].replace(/,/g, "")) || maxRating;
+          if (solvedMatch) totalSolved = parseInt(solvedMatch[1].replace(/,/g, "")) || totalSolved;
+          if (pointsMatch) points = parseInt(pointsMatch[1].replace(/,/g, "")) || points;
+          if (submissionsMatch) solutionsSubmitted = parseInt(submissionsMatch[1].replace(/,/g, "")) || solutionsSubmitted;
+          if (contestMatch) contestsAttended = parseInt(contestMatch[1].replace(/,/g, "")) || contestsAttended;
+          if (rankMatch) globalRank = parseInt(rankMatch[1].replace(/,/g, "")) || globalRank;
           if (nameMatch) {
             const rawName = nameMatch[1].replace(/HackerEarth Profile/i, "").replace(/HackerEarth/i, "").trim();
-            if (rawName) name = rawName;
+            if (rawName && rawName.toLowerCase() !== username.toLowerCase()) name = rawName;
           }
           if (avatarMatch) avatar = avatarMatch[1];
+          if (compMatch) company = compMatch[1] || compMatch[0];
+          if (locMatch) location = locMatch[1] || locMatch[0];
 
-          if (rating > 0 || totalSolved > 0 || name) break;
+          // Top Percentile Matches
+          const percentileMatches = [...text.matchAll(/Top\s*(\d+%)\s*in\s*([A-Za-z0-9\s]+)/gi)];
+          percentileMatches.forEach((m) => {
+            if (m[1] && m[2]) {
+              const perc = `Top ${m[1]}`;
+              const title = m[2].trim();
+              if (!topPercentiles.some((p) => p.title === title)) {
+                topPercentiles.push({ title, percentile: perc });
+              }
+            }
+          });
+
+          // Deep Script Tag Embedded JSON Extraction (React / Next.js profile state)
+          const scriptJsonMatches = [...text.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)];
+          for (const sMatch of scriptJsonMatches) {
+            const sText = sMatch[1];
+            if (sText && (sText.includes("rating") || sText.includes("solved") || sText.includes("points") || sText.includes("submissions"))) {
+              const r = sText.match(/"rating"\s*:\s*"?([\d,]+)"?/i) || sText.match(/rating\s*:\s*"?([\d,]+)"?/i) || sText.match(/"rating_number"\s*:\s*"?([\d,]+)"?/i);
+              const mr = sText.match(/"max_rating"\s*:\s*"?([\d,]+)"?/i) || sText.match(/max_rating\s*:\s*"?([\d,]+)"?/i) || sText.match(/"peak_rating"\s*:\s*"?([\d,]+)"?/i);
+              const s = sText.match(/"total_problems_solved"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"problems_solved"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"solved"\s*:\s*"?([\d,]+)"?/i) || sText.match(/solved\s*:\s*"?([\d,]+)"?/i);
+              const sub = sText.match(/"solutions_submitted"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"total_submissions"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"submissions"\s*:\s*"?([\d,]+)"?/i);
+              const pts = sText.match(/"points"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"hacker_points"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"score"\s*:\s*"?([\d,]+)"?/i);
+              const c = sText.match(/"contests"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"contests_attended"\s*:\s*"?([\d,]+)"?/i);
+              const gr = sText.match(/"global_rank"\s*:\s*"?([\d,]+)"?/i) || sText.match(/"rank_number"\s*:\s*"?([\d,]+)"?/i);
+              const n = sText.match(/"name"\s*:\s*"([^"]+)"/i) || sText.match(/"fullname"\s*:\s*"([^"]+)"/i);
+
+              if (r) rating = parseInt(r[1].replace(/,/g, "")) || rating;
+              if (mr) maxRating = parseInt(mr[1].replace(/,/g, "")) || maxRating;
+              if (s) totalSolved = parseInt(s[1].replace(/,/g, "")) || totalSolved;
+              if (sub) solutionsSubmitted = parseInt(sub[1].replace(/,/g, "")) || solutionsSubmitted;
+              if (pts) points = parseInt(pts[1].replace(/,/g, "")) || points;
+              if (c) contestsAttended = parseInt(c[1].replace(/,/g, "")) || contestsAttended;
+              if (gr) globalRank = parseInt(gr[1].replace(/,/g, "")) || globalRank;
+              if (n && n[1] && n[1].toLowerCase() !== username.toLowerCase()) name = n[1];
+            }
+          }
+
+          if (rating > 0 || totalSolved > 0 || points > 0) break;
         }
       }
     } catch { }
   }
 
-  // Derive rank title if missing
-  if (!rankTitle && rating > 0) {
-    if (rating >= 2000) rankTitle = "Candidate Master";
-    else if (rating >= 1600) rankTitle = "Expert";
-    else if (rating >= 1400) rankTitle = "Specialist";
-    else rankTitle = "Problem Solver";
+  // Rank title derivation from real live rating
+  let finalRankTitle = rankTitle;
+  if (!finalRankTitle) {
+    if (rating >= 2000) finalRankTitle = "Candidate Master";
+    else if (rating >= 1600) finalRankTitle = "Expert";
+    else if (rating >= 1400) finalRankTitle = "Specialist";
+    else if (rating > 0) finalRankTitle = "Competitive Solver";
+    else finalRankTitle = "HackerEarth Developer";
   }
 
-  if (fetchedOk || rating > 0 || totalSolved > 0 || name) {
+  // Return parsed profile data if at least one key metric was successfully extracted
+  if (rating > 0 || totalSolved > 0 || points > 0 || solutionsSubmitted > 0 || contestsAttended > 0 || globalRank !== null) {
     return {
       data: {
         username,
         name: name || username,
         avatar,
         country,
+        location,
+        company,
+        role,
+        education,
+        skills,
+        points,
         rating,
         maxRating: maxRating || rating,
-        rank: rankTitle || "HackerEarth Developer",
+        rank: finalRankTitle,
         globalRank,
         totalSolved,
+        solutionsSubmitted,
         contestsAttended,
+        topPercentiles,
         badges: [
-          { name: rankTitle || "HackerEarth Solver", description: "HackerEarth competitive programming status" }
+          { name: finalRankTitle, description: "HackerEarth competitive programming status" }
         ],
         last_updated: new Date().toISOString(),
       },
@@ -395,6 +486,6 @@ export async function fetchHackerEarthStats(usernameInput: string): Promise<{
 
   return {
     data: null,
-    error: `Could not fetch HackerEarth handle "${username}". Please verify the username.`,
+    error: `Could not fetch HackerEarth profile metrics for "${username}". HackerEarth protects public profiles against automated third-party CORS proxies and web scrapers. Please verify the handle or try again later.`,
   };
 }

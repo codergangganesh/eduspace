@@ -5,6 +5,8 @@ import { CodingProfilesResponse } from "@/types/codingProfile";
 import { CodingProfileCard, PlatformBrandLogo } from "./CodingProfileCard";
 import { HackerRankProfileCard } from "./HackerRankProfileCard";
 import { HackerEarthProfileCard } from "./HackerEarthProfileCard";
+import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
+import { ChessProfileCard } from "./ChessProfileCard";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import {
   RefreshCw,
   Edit3,
@@ -70,6 +80,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [atcoderInput, setAtcoderInput] = useState<string>("");
   const [hackerrankInput, setHackerrankInput] = useState<string>("");
   const [hackerearthInput, setHackerearthInput] = useState<string>("");
+  const [huggingfaceInput, setHuggingfaceInput] = useState<string>("");
+  const [chessInput, setChessInput] = useState<string>("");
   const [githubTokenInput, setGithubTokenInput] = useState<string>("");
   const [showGithubToken, setShowGithubToken] = useState<boolean>(false);
 
@@ -82,6 +94,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const atcoderUsername = (profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || data?.atcoderUsername || "";
   const hrUsername = (profile as any)?.hackerrank_username || extractUsername((profile as any)?.hackerrank_url) || data?.hackerrankUsername || "";
   const heUsername = (profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || data?.hackerearthUsername || "";
+  const hfUsername = (profile as any)?.huggingface_username || extractUsername((profile as any)?.huggingface_url) || data?.huggingfaceUsername || "";
+  const chessUsername = (profile as any)?.chess_username || extractUsername((profile as any)?.chess_url) || data?.chessUsername || "";
   const ghToken = (profile as any)?.github_token || data?.githubToken || "";
 
   useEffect(() => {
@@ -95,9 +109,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       setAtcoderInput((profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || data?.atcoderUsername || "");
       setHackerrankInput((profile as any)?.hackerrank_username || extractUsername((profile as any)?.hackerrank_url) || data?.hackerrankUsername || "");
       setHackerearthInput((profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || data?.hackerearthUsername || "");
+      setHuggingfaceInput((profile as any)?.huggingface_username || extractUsername((profile as any)?.huggingface_url) || data?.huggingfaceUsername || "");
+      setChessInput((profile as any)?.chess_username || extractUsername((profile as any)?.chess_url) || data?.chessUsername || "");
       setGithubTokenInput((profile as any)?.github_token || data?.githubToken || "");
     }
-  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.hackerrankUsername, data?.hackerearthUsername, data?.githubToken]);
+  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.hackerrankUsername, data?.hackerearthUsername, data?.huggingfaceUsername, data?.chessUsername, data?.githubToken]);
 
   const fetchProfiles = useCallback(
     async (
@@ -113,6 +129,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         atcoder?: string;
         hr?: string;
         he?: string;
+        hf?: string;
+        chess?: string;
       }
     ) => {
       if (!user) {
@@ -122,8 +140,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
       if (forceRefresh) {
         setRefreshing(true);
-      } else if (!data) {
-        setLoading(true);
+      } else {
+        setLoading((prev) => (data ? false : true));
       }
 
       try {
@@ -139,6 +157,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           overrides?.atcoder !== undefined ? overrides.atcoder : atcoderUsername,
           overrides?.hr !== undefined ? overrides.hr : hrUsername,
           overrides?.he !== undefined ? overrides.he : heUsername,
+          overrides?.hf !== undefined ? overrides.hf : hfUsername,
+          overrides?.chess !== undefined ? overrides.chess : chessUsername,
           forceRefresh
         );
         setData(res);
@@ -149,7 +169,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         setRefreshing(false);
       }
     },
-    [user, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, hrUsername, heUsername, data]
+    [user?.id, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, hrUsername, heUsername, hfUsername, chessUsername]
   );
 
   useEffect(() => {
@@ -177,6 +197,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     const cleanAtcoder = atcoderInput.trim();
     const cleanHr = hackerrankInput.trim();
     const cleanHe = hackerearthInput.trim();
+    const cleanHf = huggingfaceInput.trim();
+    const cleanChess = chessInput.trim();
     const cleanGhToken = githubTokenInput.trim();
 
     if (leetcodeInput.length > 0 && !cleanLc) {
@@ -215,6 +237,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       const atcoderUrl = cleanAtcoder ? `https://atcoder.jp/users/${cleanAtcoder}` : "";
       const hrUrl = cleanHr ? `https://www.hackerrank.com/profile/${cleanHr}` : "";
       const heUrl = cleanHe ? `https://www.hackerearth.com/@${cleanHe}` : "";
+      const hfUrl = cleanHf ? `https://huggingface.co/${cleanHf}` : "";
+      const chessUrl = cleanChess ? `https://www.chess.com/member/${cleanChess}` : "";
 
       const res = await updateProfile({
         leetcode_username: cleanLc || null,
@@ -228,12 +252,16 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         atcoder_username: cleanAtcoder || null,
         hackerrank_username: cleanHr || null,
         hackerearth_username: cleanHe || null,
+        huggingface_username: cleanHf || null,
+        chess_username: cleanChess || null,
         codechef_url: ccUrl || null,
         codewars_url: cwUrl || null,
         geeksforgeeks_url: gfgUrl || null,
         atcoder_url: atcoderUrl || null,
         hackerrank_url: hrUrl || null,
         hackerearth_url: heUrl || null,
+        huggingface_url: hfUrl || null,
+        chess_url: chessUrl || null,
       } as any);
 
       if (res.success) {
@@ -250,6 +278,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           atcoder: cleanAtcoder,
           hr: cleanHr,
           he: cleanHe,
+          hf: cleanHf,
+          chess: cleanChess,
         });
       } else {
         toast.error(res.error || "Failed to update profile settings.");
@@ -477,6 +507,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.leetcode}
             error={data?.leetcodeError}
             onEdit={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
             className="col-span-1"
           />
         )}
@@ -488,6 +520,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.codeforces}
             error={data?.codeforcesError}
             onEdit={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
             className="col-span-1"
           />
         )}
@@ -499,6 +533,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.codechef}
             error={data?.codechefError}
             onEdit={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
             className="col-span-1"
           />
         )}
@@ -510,6 +546,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.codewars}
             error={data?.codewarsError}
             onEdit={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
             className="col-span-1"
           />
         )}
@@ -521,6 +559,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.atcoder}
             error={data?.atcoderError}
             onEdit={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
             className="col-span-1"
           />
         )}
@@ -532,16 +572,32 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             error={data?.hackerrankError}
             onConnect={() => setIsDialogOpen(true)}
             onEditHandle={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
+          />
+        )}
+
+        {(activeTab === "all" || activeTab === "competitive" || activeTab === "opensource") && (
+          <HuggingFaceProfileCard
+            usernameOrHandle={hfUsername}
+            stats={data?.huggingface}
+            error={data?.huggingfaceError}
+            onConnect={() => setIsDialogOpen(true)}
+            onEditHandle={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
           />
         )}
 
         {(activeTab === "all" || activeTab === "competitive") && (
-          <HackerEarthProfileCard
-            usernameOrHandle={heUsername}
-            stats={data?.hackerearth}
-            error={data?.hackerearthError}
+          <ChessProfileCard
+            usernameOrHandle={chessUsername}
+            stats={data?.chess}
+            error={data?.chessError}
             onConnect={() => setIsDialogOpen(true)}
             onEditHandle={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
           />
         )}
 
@@ -553,26 +609,56 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             stats={data?.github}
             error={data?.githubError}
             onEdit={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
             githubToken={ghToken}
           />
         </div>
       </div>
 
-      {/* Edit Usernames Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md w-[92vw] sm:w-full rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
-          <form onSubmit={handleSaveUsernames}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+      {/* Edit Usernames Slide-Over Sheet */}
+      <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-l border-slate-200/50 dark:border-slate-800/50 p-0 overflow-hidden flex flex-col z-[70]">
+          <form onSubmit={handleSaveUsernames} className="flex flex-col h-full overflow-y-auto p-6 space-y-4">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2 text-lg font-bold">
                 <Code2 className="size-5 text-primary" />
                 Manage Platform Handles
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              </SheetTitle>
+              <SheetDescription className="text-xs text-muted-foreground">
                 Enter your platform usernames or URLs to sync your statistics.
-              </DialogDescription>
-            </DialogHeader>
+              </SheetDescription>
+            </SheetHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="huggingface_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <div className="size-4 rounded-md bg-yellow-500/20 text-yellow-500 flex items-center justify-center font-bold text-[10px]">🤗</div>
+                  Hugging Face Username / URL
+                </Label>
+                <Input
+                  id="huggingface_input"
+                  placeholder="e.g. facebook or https://huggingface.co/facebook"
+                  value={huggingfaceInput}
+                  onChange={(e) => setHuggingfaceInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="chess_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <div className="size-4 rounded-md bg-[#81b64c]/20 text-[#81b64c] flex items-center justify-center font-bold text-[10px]">♟️</div>
+                  Chess.com Username / URL
+                </Label>
+                <Input
+                  id="chess_input"
+                  placeholder="e.g. hikaru or https://www.chess.com/member/hikaru"
+                  value={chessInput}
+                  onChange={(e) => setChessInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="leetcode_input" className="flex items-center gap-2 text-xs font-semibold">
                   <PlatformBrandLogo platform="leetcode" className="size-4" />
@@ -671,20 +757,6 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="hackerearth_input" className="flex items-center gap-2 text-xs font-semibold">
-                  <div className="size-4 rounded-md bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-[9px]">HE</div>
-                  HackerEarth Handle / URL
-                </Label>
-                <Input
-                  id="hackerearth_input"
-                  placeholder="e.g. johndoe or https://www.hackerearth.com/@johndoe"
-                  value={hackerearthInput}
-                  onChange={(e) => setHackerearthInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
-                />
-              </div>
-
               <div className="space-y-2 pt-2 border-t border-border/50">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="github_token_input" className="flex items-center gap-2 text-xs font-semibold text-foreground">
@@ -723,8 +795,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   <button
                     type="button"
                     onClick={() => setShowGithubToken(!showGithubToken)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    title={showGithubToken ? "Hide token" : "Show token"}
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                   >
                     {showGithubToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -761,7 +832,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <SheetFooter className="gap-2 sm:gap-0 pt-2">
               <Button
                 type="button"
                 variant="outline"
@@ -785,10 +856,10 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   </>
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

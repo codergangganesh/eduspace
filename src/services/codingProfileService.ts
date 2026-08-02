@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { fetchHackerRankStats, fetchHackerEarthStats } from "./additionalPlatformsService";
+import { fetchHuggingFaceStats } from "./huggingFaceService";
+import { fetchChessStats } from "./chessService";
 import {
   LeetCodeStats,
   LeetCodeBadge,
@@ -101,12 +103,12 @@ function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
       typeof b === "string"
         ? { name: b, category: "LeetCode Badge" }
         : {
-            id: b.id,
-            name: b.displayName || b.name || "Badge",
-            icon: b.icon ? (b.icon.startsWith("http") ? b.icon : `https://leetcode.com${b.icon}`) : undefined,
-            category: b.category || "LeetCode Badge",
-            creationDate: b.creationDate,
-          }
+          id: b.id,
+          name: b.displayName || b.name || "Badge",
+          icon: b.icon ? (b.icon.startsWith("http") ? b.icon : `https://leetcode.com${b.icon}`) : undefined,
+          category: b.category || "LeetCode Badge",
+          creationDate: b.creationDate,
+        }
     );
   }
 
@@ -157,6 +159,10 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
 
   // 1. Fetch Profile Solved Data (Vercel API, Alfa UserProfile, Alfa Solved, LeetCode-Stats-API)
   const profileEndpoints = [
+    `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}`,
+    `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}`,
+    `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`,
+    `https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`,
     `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}?_t=${timestamp}`,
     `https://alfa-leetcode-api.onrender.com/userProfile/${encodeURIComponent(username)}?_t=${timestamp}`,
     `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved?_t=${timestamp}`,
@@ -1141,11 +1147,11 @@ function normalizeCodeChefStats(raw: any, username: string): CodeChefStats {
       typeof b === "string"
         ? { name: b, category: "Profile Badge" }
         : {
-            name: b.name || b.title || "Badge",
-            description: b.description || b.desc || undefined,
-            category: b.category || b.type || "Profile Badge",
-            icon: b.icon || b.imageUrl || undefined,
-          }
+          name: b.name || b.title || "Badge",
+          description: b.description || b.desc || undefined,
+          category: b.category || b.type || "Profile Badge",
+          icon: b.icon || b.imageUrl || undefined,
+        }
     );
   }
 
@@ -1876,9 +1882,7 @@ export async function fetchCodewarsStats(usernameInput: string): Promise<{
   }
 
   try {
-    const timestamp = Date.now();
-    const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}?_t=${timestamp}`, {
-      cache: "no-store",
+    const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`, {
       signal: AbortSignal.timeout(8000),
     });
 
@@ -1897,9 +1901,7 @@ export async function fetchCodewarsStats(usernameInput: string): Promise<{
 
   // Fallback via CORS proxy if direct fetch is blocked
   try {
-    const timestamp = Date.now();
-    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}?_t=${timestamp}`)}`, {
-      cache: "no-store",
+    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`)}`, {
       signal: AbortSignal.timeout(8000),
     });
     if (corsRes.ok) {
@@ -1934,6 +1936,8 @@ export async function getCodingProfiles(
   atcoderUsernameInput?: string | null,
   hackerrankUsernameInput?: string | null,
   hackerearthUsernameInput?: string | null,
+  huggingfaceUsernameInput?: string | null,
+  chessUsernameInput?: string | null,
   forceRefresh = false
 ): Promise<CodingProfilesResponse> {
   const lcUsername = extractUsername(leetcodeUsernameInput);
@@ -1945,6 +1949,8 @@ export async function getCodingProfiles(
   const atcoderUsername = extractUsername(atcoderUsernameInput);
   const hrUsername = extractUsername(hackerrankUsernameInput);
   const heUsername = extractUsername(hackerearthUsernameInput);
+  const hfUsername = extractUsername(huggingfaceUsernameInput);
+  const chessUsername = extractUsername(chessUsernameInput);
 
   const localCacheKey = `eduspace_coding_profile_cache_${userId}`;
 
@@ -1993,17 +1999,30 @@ export async function getCodingProfiles(
       : 0;
 
   const isCacheValid = !forceRefresh && cachedTime > 0 && now - cachedTime < CACHE_TTL_MS;
+  const cachedLc = dbCached?.leetcode_username || localCached?.leetcodeUsername || "";
+  const cachedCf = dbCached?.codeforces_handle || localCached?.codeforcesHandle || "";
+  const cachedGh = dbCached?.github_username || (dbCached?.overall_data as any)?.social_links?.github || localCached?.githubUsername || "";
+  const cachedCc = dbCached?.codechef_username || (dbCached?.overall_data as any)?.social_links?.codechef || localCached?.codechefUsername || "";
+  const cachedCw = dbCached?.codewars_username || (dbCached?.overall_data as any)?.social_links?.codewars || localCached?.codewarsUsername || "";
+  const cachedGfg = dbCached?.geeksforgeeks_username || (dbCached?.overall_data as any)?.social_links?.geeksforgeeks || localCached?.geeksforgeeksUsername || "";
+  const cachedAtcoder = dbCached?.atcoder_username || (dbCached?.overall_data as any)?.social_links?.atcoder || localCached?.atcoderUsername || "";
+  const cachedHr = dbCached?.hackerrank_username || (dbCached?.overall_data as any)?.social_links?.hackerrank || localCached?.hackerrankUsername || "";
+  const cachedHe = dbCached?.hackerearth_username || (dbCached?.overall_data as any)?.social_links?.hackerearth || localCached?.hackerearthUsername || "";
+  const cachedHf = dbCached?.huggingface_username || localCached?.huggingfaceUsername || "";
+  const cachedChess = dbCached?.chess_username || localCached?.chessUsername || "";
+
   const usernameMatches =
-    (dbCached?.leetcode_username ?? "") === lcUsername &&
-    (dbCached?.codeforces_handle ?? "") === cfHandle &&
-    (dbCached?.github_username ?? "") === ghUsername &&
-    (dbCached?.codechef_username ?? "") === ccUsername &&
-    (dbCached?.codewars_username ?? "") === cwUsername &&
-    (dbCached?.geeksforgeeks_username ?? "") === gfgUsername &&
-    (dbCached?.atcoder_username ?? "") === atcoderUsername &&
-    (dbCached?.hackerrank_username ?? "") === hrUsername &&
-    (dbCached?.hackerearth_username ?? "") === heUsername &&
-    ((dbCached?.overall_data?.githubToken ?? dbCached?.github_token ?? "") === (ghToken ?? ""));
+    extractUsername(cachedLc).toLowerCase() === extractUsername(lcUsername).toLowerCase() &&
+    extractUsername(cachedCf).toLowerCase() === extractUsername(cfHandle).toLowerCase() &&
+    extractUsername(cachedGh).toLowerCase() === extractUsername(ghUsername).toLowerCase() &&
+    extractUsername(cachedCc).toLowerCase() === extractUsername(ccUsername).toLowerCase() &&
+    extractUsername(cachedCw).toLowerCase() === extractUsername(cwUsername).toLowerCase() &&
+    extractUsername(cachedGfg).toLowerCase() === extractUsername(gfgUsername).toLowerCase() &&
+    extractUsername(cachedAtcoder).toLowerCase() === extractUsername(atcoderUsername).toLowerCase() &&
+    extractUsername(cachedHr).toLowerCase() === extractUsername(hrUsername).toLowerCase() &&
+    extractUsername(cachedHe).toLowerCase() === extractUsername(heUsername).toLowerCase() &&
+    extractUsername(cachedHf).toLowerCase() === extractUsername(hfUsername).toLowerCase() &&
+    extractUsername(cachedChess).toLowerCase() === extractUsername(chessUsername).toLowerCase();
 
   let connectedPlatforms = 0;
   if (lcUsername) connectedPlatforms++;
@@ -2015,6 +2034,8 @@ export async function getCodingProfiles(
   if (atcoderUsername) connectedPlatforms++;
   if (hrUsername) connectedPlatforms++;
   if (heUsername) connectedPlatforms++;
+  if (hfUsername) connectedPlatforms++;
+  if (chessUsername) connectedPlatforms++;
 
   const gfgNeedsFetch = Boolean(gfgUsername && !(dbCached?.geeksforgeeks_data?.codingScore || localCached?.geeksforgeeks?.codingScore || dbCached?.geeksforgeeks_data?.totalSolved || localCached?.geeksforgeeks?.totalSolved));
   const ccNeedsFetch = Boolean(ccUsername && !(dbCached?.codechef_data?.rating || localCached?.codechef?.rating || dbCached?.codechef_data?.totalSolved || localCached?.codechef?.totalSolved));
@@ -2033,6 +2054,8 @@ export async function getCodingProfiles(
     const atcoderData = dbCached?.atcoder_data || localCached?.atcoder || null;
     const hrData = dbCached?.hackerrank_data || localCached?.hackerrank || null;
     const heData = dbCached?.hackerearth_data || localCached?.hackerearth || null;
+    const hfData = dbCached?.huggingface_data || localCached?.huggingface || null;
+    const chessData = dbCached?.chess_data || localCached?.chess || null;
 
     const overallTotal =
       (lcData?.totalSolved || 0) +
@@ -2054,6 +2077,8 @@ export async function getCodingProfiles(
       atcoder: atcoderData,
       hackerrank: hrData,
       hackerearth: heData,
+      huggingface: hfData,
+      chess: chessData,
       overall: { totalSolved: overallTotal, platformsConnectedCount: connectedPlatforms },
       lastFetchedAt: dbCached?.last_fetched_at || localCached?.lastFetchedAt || new Date().toISOString(),
       leetcodeError: dbCached?.leetcode_error || localCached?.leetcodeError || null,
@@ -2065,6 +2090,8 @@ export async function getCodingProfiles(
       atcoderError: dbCached?.atcoder_error || localCached?.atcoderError || null,
       hackerrankError: dbCached?.hackerrank_error || localCached?.hackerrankError || null,
       hackerearthError: dbCached?.hackerearth_error || localCached?.hackerearthError || null,
+      huggingfaceError: dbCached?.huggingface_error || localCached?.huggingfaceError || null,
+      chessError: dbCached?.chess_error || localCached?.chessError || null,
       leetcodeUsername: lcUsername,
       codeforcesHandle: cfHandle,
       githubUsername: ghUsername,
@@ -2075,11 +2102,13 @@ export async function getCodingProfiles(
       atcoderUsername: atcoderUsername,
       hackerrankUsername: hrUsername,
       hackerearthUsername: heUsername,
+      huggingfaceUsername: hfUsername,
+      chessUsername: chessUsername,
     };
   }
 
   // Fetch fresh stats from platforms in parallel
-  const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult, hrResult, heResult] = await Promise.all([
+  const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult, hrResult, heResult, hfResult, chessResult] = await Promise.all([
     lcUsername ? fetchLeetCodeStats(lcUsername) : Promise.resolve({ data: null, error: null }),
     cfHandle ? fetchCodeforcesStats(cfHandle) : Promise.resolve({ data: null, error: null }),
     ghUsername || ghToken ? fetchGitHubStats(ghUsername || "", ghToken) : Promise.resolve({ data: null, error: null }),
@@ -2089,6 +2118,8 @@ export async function getCodingProfiles(
     atcoderUsername ? fetchAtCoderStats(atcoderUsername) : Promise.resolve({ data: null, error: null }),
     hrUsername ? fetchHackerRankStats(hrUsername) : Promise.resolve({ data: null, error: null }),
     heUsername ? fetchHackerEarthStats(heUsername) : Promise.resolve({ data: null, error: null }),
+    hfUsername ? fetchHuggingFaceStats(hfUsername) : Promise.resolve({ data: null, error: null }),
+    chessUsername ? fetchChessStats(chessUsername) : Promise.resolve({ data: null, error: null }),
   ]);
 
   let lcStats = lcResult.data;
@@ -2100,6 +2131,8 @@ export async function getCodingProfiles(
   let atcoderStats = atcoderResult.data;
   let hrStats = hrResult.data;
   let heStats = heResult.data;
+  let hfStats = hfResult.data;
+  let chessStats = chessResult.data;
 
   let lcErr = lcResult.error;
   let cfErr = cfResult.error;
@@ -2110,39 +2143,47 @@ export async function getCodingProfiles(
   let atcoderErr = atcoderResult.error;
   let hrErr = hrResult.error;
   let heErr = heResult.error;
+  let hfErr = hfResult.error;
+  let chessErr = chessResult.error;
 
-  // Fallback to cached data if network error occurred
-  if (!ghStats && (dbCached?.github_data || localCached?.github)) {
-    ghStats = dbCached?.github_data || localCached?.github || null;
+  // Fallback to cached data if network error occurred AND username matches
+  const prevGh = dbCached?.github_data || localCached?.github;
+  if (!ghStats && prevGh && extractUsername(prevGh.username) === ghUsername) {
+    ghStats = prevGh;
     ghErr = null;
   }
-  if (!lcStats && (dbCached?.leetcode_data || localCached?.leetcode)) {
-    lcStats = dbCached?.leetcode_data || localCached?.leetcode || null;
+  const prevLc = dbCached?.leetcode_data || localCached?.leetcode;
+  if (!lcStats && prevLc && extractUsername(prevLc.username) === lcUsername) {
+    lcStats = prevLc;
     lcErr = null;
   }
-  if (!cfStats && (dbCached?.codeforces_data || localCached?.codeforces)) {
-    cfStats = dbCached?.codeforces_data || localCached?.codeforces || null;
+  const prevCf = dbCached?.codeforces_data || localCached?.codeforces;
+  if (!cfStats && prevCf && extractUsername(prevCf.handle) === cfHandle) {
+    cfStats = prevCf;
     cfErr = null;
   }
-  if (!ccStats && (dbCached?.codechef_data || localCached?.codechef)) {
-    ccStats = dbCached?.codechef_data || localCached?.codechef || null;
+  const prevCc = dbCached?.codechef_data || localCached?.codechef;
+  if (!ccStats && prevCc && extractUsername(prevCc.username) === ccUsername) {
+    ccStats = prevCc;
     ccErr = null;
   }
-  if (!cwStats && (dbCached?.codewars_data || localCached?.codewars)) {
-    cwStats = dbCached?.codewars_data || localCached?.codewars || null;
+  const prevCw = dbCached?.codewars_data || localCached?.codewars;
+  if (!cwStats && prevCw && extractUsername(prevCw.username) === cwUsername) {
+    cwStats = prevCw;
     cwErr = null;
   }
-  if (!gfgStats && (dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks)) {
-    gfgStats = dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks || null;
+  const prevGfg = dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks;
+  if (!gfgStats && prevGfg && extractUsername(prevGfg.username) === gfgUsername) {
+    gfgStats = prevGfg;
     gfgErr = null;
   }
-  if (!atcoderStats && (dbCached?.atcoder_data || localCached?.atcoder)) {
-    atcoderStats = dbCached?.atcoder_data || localCached?.atcoder || null;
+  const prevAtcoder = dbCached?.atcoder_data || localCached?.atcoder;
+  if (!atcoderStats && prevAtcoder && extractUsername(prevAtcoder.username) === atcoderUsername) {
+    atcoderStats = prevAtcoder;
     atcoderErr = null;
   }
-  // Smart non-destructive persistence: merge fresh fetch with previous cached data
   const prevHr = dbCached?.hackerrank_data || localCached?.hackerrank;
-  if (hrStats && prevHr) {
+  if (hrStats && prevHr && extractUsername(prevHr.username) === hrUsername) {
     if ((!hrStats.badges || hrStats.badges.length === 0) && prevHr.badges && prevHr.badges.length > 0) {
       hrStats.badges = prevHr.badges;
       hrStats.badgesCount = prevHr.badges.length;
@@ -2151,34 +2192,40 @@ export async function getCodingProfiles(
       hrStats.certificates = prevHr.certificates;
       hrStats.certificatesCount = prevHr.certificates.length;
     }
-  } else if (!hrStats && prevHr) {
+  } else if (!hrStats && prevHr && extractUsername(prevHr.username) === hrUsername) {
     hrStats = prevHr;
     hrErr = null;
   }
 
   const prevHe = dbCached?.hackerearth_data || localCached?.hackerearth;
-  if (heStats && prevHe) {
-    if (!heStats.totalSolved && prevHe.totalSolved) {
-      heStats.totalSolved = prevHe.totalSolved;
-    }
-    if (!heStats.rating && prevHe.rating) {
-      heStats.rating = prevHe.rating;
-    }
-    if (!heStats.maxRating && prevHe.maxRating) {
-      heStats.maxRating = prevHe.maxRating;
-    }
-    if (!heStats.contestsAttended && prevHe.contestsAttended) {
-      heStats.contestsAttended = prevHe.contestsAttended;
-    }
-    if (!heStats.globalRank && prevHe.globalRank) {
-      heStats.globalRank = prevHe.globalRank;
-    }
-    if (!heStats.badges?.length && prevHe.badges?.length) {
-      heStats.badges = prevHe.badges;
-    }
-  } else if (!heStats && prevHe) {
+  if (heStats && prevHe && extractUsername(prevHe.username) === heUsername) {
+    if (!heStats.totalSolved && prevHe.totalSolved) heStats.totalSolved = prevHe.totalSolved;
+    if (!heStats.solutionsSubmitted && prevHe.solutionsSubmitted) heStats.solutionsSubmitted = prevHe.solutionsSubmitted;
+    if (!heStats.points && prevHe.points) heStats.points = prevHe.points;
+    if (!heStats.rating && prevHe.rating) heStats.rating = prevHe.rating;
+    if (!heStats.maxRating && prevHe.maxRating) heStats.maxRating = prevHe.maxRating;
+    if (!heStats.contestsAttended && prevHe.contestsAttended) heStats.contestsAttended = prevHe.contestsAttended;
+    if (!heStats.globalRank && prevHe.globalRank) heStats.globalRank = prevHe.globalRank;
+    if (!heStats.company && prevHe.company) heStats.company = prevHe.company;
+    if (!heStats.location && prevHe.location) heStats.location = prevHe.location;
+    if (!heStats.skills?.length && prevHe.skills?.length) heStats.skills = prevHe.skills;
+    if (!heStats.topPercentiles?.length && prevHe.topPercentiles?.length) heStats.topPercentiles = prevHe.topPercentiles;
+    if (!heStats.badges?.length && prevHe.badges?.length) heStats.badges = prevHe.badges;
+  } else if (!heStats && prevHe && extractUsername(prevHe.username) === heUsername) {
     heStats = prevHe;
     heErr = null;
+  }
+
+  const prevHf = dbCached?.huggingface_data || localCached?.huggingface;
+  if (!hfStats && prevHf && extractUsername(prevHf.username) === hfUsername) {
+    hfStats = prevHf;
+    hfErr = null;
+  }
+
+  const prevChess = dbCached?.chess_data || localCached?.chess;
+  if (!chessStats && prevChess && extractUsername(prevChess.username) === chessUsername) {
+    chessStats = prevChess;
+    chessErr = null;
   }
 
   const resolvedGhUsername = ghStats?.username || ghUsername;
@@ -2204,6 +2251,8 @@ export async function getCodingProfiles(
     atcoder: atcoderStats,
     hackerrank: hrStats,
     hackerearth: heStats,
+    huggingface: hfStats,
+    chess: chessStats,
     overall: { totalSolved: overallTotal, platformsConnectedCount: connectedPlatforms },
     lastFetchedAt: fetchedAtIso,
     leetcodeError: lcErr,
@@ -2215,6 +2264,8 @@ export async function getCodingProfiles(
     atcoderError: atcoderErr,
     hackerrankError: hrErr,
     hackerearthError: heErr,
+    huggingfaceError: hfErr,
+    chessError: chessErr,
     leetcodeUsername: lcUsername,
     codeforcesHandle: cfHandle,
     githubUsername: resolvedGhUsername,
@@ -2225,6 +2276,8 @@ export async function getCodingProfiles(
     atcoderUsername: atcoderUsername,
     hackerrankUsername: hrUsername,
     hackerearthUsername: heUsername,
+    huggingfaceUsername: hfUsername,
+    chessUsername: chessUsername,
   };
 
   // Save to localStorage fallback
@@ -2252,6 +2305,8 @@ export async function getCodingProfiles(
           atcoder_username: atcoderUsername,
           hackerrank_username: hrUsername,
           hackerearth_username: heUsername,
+          huggingface_username: hfUsername,
+          chess_username: chessUsername,
           leetcode_data: lcStats as any,
           codeforces_data: cfStats as any,
           github_data: ghStats as any,
@@ -2261,6 +2316,8 @@ export async function getCodingProfiles(
           atcoder_data: atcoderStats as any,
           hackerrank_data: hrStats as any,
           hackerearth_data: heStats as any,
+          huggingface_data: hfStats as any,
+          chess_data: chessStats as any,
           overall_data: { totalSolved: overallTotal, githubToken: ghToken } as any,
           leetcode_error: lcErr,
           codeforces_error: cfErr,
@@ -2270,35 +2327,13 @@ export async function getCodingProfiles(
           atcoder_error: atcoderErr,
           hackerrank_error: hrErr,
           hackerearth_error: heErr,
+          huggingface_error: hfErr,
+          chess_error: chessErr,
           last_fetched_at: fetchedAtIso,
           updated_at: fetchedAtIso,
         },
         { onConflict: "user_id" }
       );
-
-      if (gfgUsername && gfgStats) {
-        try {
-          await (supabase as any).from("gfg_profiles").upsert(
-            {
-              user_id: userId,
-              gfg_username: gfgUsername,
-              profile_image: gfgStats.profile_image ?? null,
-              display_name: gfgStats.display_name ?? null,
-              institution: gfgStats.institution ?? null,
-              coding_score: gfgStats.codingScore ?? 0,
-              problems_solved: gfgStats.totalSolved ?? 0,
-              rank: gfgStats.institutionRank ?? gfgStats.rank ?? null,
-              badges: Array.isArray(gfgStats.badges) ? gfgStats.badges : (gfgStats.badges ? [String(gfgStats.badges)] : []),
-              streak: gfgStats.streak ?? 0,
-              profile_url: gfgStats.profile_url || `https://www.geeksforgeeks.org/user/${gfgUsername}/`,
-              last_updated: gfgStats.last_updated || fetchedAtIso,
-            },
-            { onConflict: "user_id" }
-          );
-        } catch {
-          // Table may not exist yet in client schema
-        }
-      }
     } catch (upsertErr) {
       console.warn("Could not save coding profiles to database:", upsertErr);
     }

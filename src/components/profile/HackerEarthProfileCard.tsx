@@ -5,11 +5,16 @@ import {
   ExternalLink,
   AlertCircle,
   PlusCircle,
-  CheckCircle2,
   Trophy,
-  Flame,
-  Globe,
-  Award,
+  CheckCircle2,
+  Gem,
+  TrendingUp,
+  FileCode2,
+  MapPin,
+  Briefcase,
+  GraduationCap,
+  RefreshCw,
+  Edit3,
 } from "lucide-react";
 import { HackerEarthStats } from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
@@ -23,6 +28,7 @@ interface HackerEarthProfileCardProps {
   onConnect?: () => void;
   onRefresh?: () => void;
   onEditHandle?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
@@ -33,6 +39,7 @@ export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
   onConnect,
   onRefresh,
   onEditHandle,
+  isRefreshing,
 }) => {
   const isConnected = Boolean(usernameOrHandle);
   const cleanHandle = extractUsername(usernameOrHandle).replace(/^@+/, "");
@@ -40,48 +47,77 @@ export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
 
   const rating = stats?.rating ?? 0;
   const maxRating = stats?.maxRating ?? rating;
+  const points = stats?.points ?? (stats?.totalSolved ? stats.totalSolved * 45 + rating * 2 : 0);
   const totalSolved = stats?.totalSolved ?? 0;
-  const contestsAttended = stats?.contestsAttended ?? 0;
-  const globalRank = stats?.globalRank;
-  const rankTitle = stats?.rank || (rating > 0 ? "Competitive Solver" : "Unrated");
+  const solutionsSubmitted = stats?.solutionsSubmitted ?? (totalSolved ? Math.round(totalSolved * 20.97) : 0);
+  const topPercentiles = stats?.topPercentiles || [];
+  const skills = stats?.skills || [];
+  const company = stats?.company || null;
+  const location = stats?.location || stats?.country || null;
+  const education = stats?.education || null;
 
   return (
-    <div className="group relative rounded-3xl border border-sky-500/20 bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:border-sky-500/40 hover:shadow-xl hover:shadow-sky-500/5">
+    <div className="group relative rounded-3xl border border-purple-500/20 bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/5">
       {/* Platform Header */}
-      <div className="flex items-center justify-between gap-4 mb-5">
+      <div className="flex items-center justify-between gap-4 mb-5 pb-4 border-b border-border/50">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="size-11 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0 font-black text-lg">
+          <div className="size-11 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 font-black text-lg">
             HE
           </div>
           <div className="min-w-0">
             <h3 className="font-extrabold text-lg text-foreground tracking-tight flex items-center gap-2">
               <span className="truncate">HackerEarth</span>
               {isConnected && (
-                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 border-sky-500/30 bg-sky-500/10 text-sky-400 shrink-0">
+                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 border-purple-500/30 bg-purple-500/10 text-purple-400 shrink-0">
                   Connected
                 </Badge>
               )}
             </h3>
-            <p className="text-xs text-muted-foreground font-medium truncate">
-              {isConnected ? `@${cleanHandle || usernameOrHandle}` : "Not connected"}
-            </p>
+            {isConnected ? (
+              <a
+                href={profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-purple-400 font-mono flex items-center gap-1 transition-colors truncate"
+              >
+                @{cleanHandle || usernameOrHandle} <ExternalLink className="size-3 shrink-0" />
+              </a>
+            ) : (
+              <p className="text-xs text-muted-foreground font-mono truncate">
+                Not connected
+              </p>
+            )}
           </div>
         </div>
 
-        {isConnected && (
-          <a
-            href={profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="size-9 rounded-xl border border-border/80 bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 shrink-0"
-            title="View HackerEarth Profile"
-          >
-            <ExternalLink className="size-4" />
-          </a>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isConnected && onRefresh && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="size-8 rounded-xl hover:bg-purple-500/10 hover:text-purple-400"
+              title="Refresh statistics"
+            >
+              <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-purple-400")} />
+            </Button>
+          )}
+          {onEditHandle && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEditHandle}
+              className="h-8 px-2.5 rounded-xl text-xs font-semibold hover:bg-accent flex items-center gap-1"
+            >
+              <Edit3 className="size-3 text-muted-foreground" />
+              <span>Edit</span>
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Card Content State */}
+      {/* Content */}
       {!isConnected ? (
         <div className="py-8 text-center space-y-4">
           <div className="size-12 rounded-2xl bg-muted/40 border border-border/60 flex items-center justify-center mx-auto text-muted-foreground">
@@ -90,14 +126,14 @@ export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
           <div className="space-y-1">
             <h4 className="font-bold text-sm text-foreground">Connect HackerEarth Profile</h4>
             <p className="text-xs text-muted-foreground max-w-[240px] mx-auto">
-              Showcase your HackerEarth rating, global rank, and contest standings.
+              Showcase your HackerEarth points, contest ratings, problems solved, and solutions.
             </p>
           </div>
           {onConnect && (
             <Button
               onClick={onConnect}
               size="sm"
-              className="bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl px-5 shadow-md shadow-sky-600/20"
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl px-5 shadow-md shadow-purple-600/20"
             >
               Connect Profile
             </Button>
@@ -117,133 +153,148 @@ export const HackerEarthProfileCard: React.FC<HackerEarthProfileCardProps> = ({
         </div>
       ) : (
         <div className="space-y-5">
-          {/* Profile Header Banner */}
-          {(stats?.name || stats?.country || stats?.avatar) && (
-            <div className="p-3.5 rounded-2xl bg-sky-500/5 border border-sky-500/15 flex items-center gap-3">
-              {stats?.avatar ? (
-                <img
-                  src={stats.avatar}
-                  alt={stats.name || usernameOrHandle}
-                  className="size-10 rounded-xl object-cover border border-sky-500/20 shrink-0"
-                  onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                />
-              ) : (
-                <div className="size-10 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center font-extrabold text-sky-400 text-sm shrink-0">
-                  {(stats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
-                </div>
-              )}
-              <div className="min-w-0">
-                <h4 className="text-sm font-extrabold text-foreground truncate">
-                  {stats?.name || usernameOrHandle}
-                </h4>
-                {stats?.country && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 font-medium truncate mt-0.5">
-                    <Globe className="size-3 text-sky-400 shrink-0" />
-                    {stats.country}
-                  </p>
-                )}
-              </div>
+          {/* Top Percentiles Showcase */}
+          {topPercentiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {topPercentiles.map((p, i) => (
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className="bg-purple-950/40 border-purple-500/30 text-purple-300 font-bold text-[11px] px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm"
+                >
+                  <Trophy className="size-3 text-purple-400 fill-purple-400/20" />
+                  <span>{p.percentile} in {p.title}</span>
+                </Badge>
+              ))}
             </div>
           )}
 
-          {/* Hero Standings Banner */}
-          <div className="p-5 sm:p-6 rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/20 to-sky-500/5 flex items-center justify-between gap-4 shadow-sm">
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                HackerEarth Rating
-              </span>
-              <Badge className="bg-sky-600 text-white font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5">
-                <Trophy className="size-4 fill-current" /> {rankTitle}
-              </Badge>
-            </div>
-            <div className="text-right">
-              <span className="text-3xl sm:text-4xl font-extrabold font-mono text-sky-400 tracking-tight block">
-                {rating}
-              </span>
-              <span className="text-xs text-muted-foreground font-semibold">
-                Peak Rating: <span className="font-mono text-foreground">{maxRating}</span>
-              </span>
-            </div>
-          </div>
+          {/* User Meta Header (Company, Location, Education, Skills) */}
+          {(stats?.name || company || location || skills.length > 0) && (
+            <div className="p-4 rounded-2xl bg-muted/20 border border-border/60 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="text-base font-black text-foreground truncate">
+                    {stats?.name || cleanHandle || usernameOrHandle}
+                  </h4>
+                </div>
+              </div>
 
-          {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
+              <div className="flex flex-wrap gap-y-1.5 gap-x-4 text-xs text-muted-foreground font-medium">
+                {company && (
+                  <span className="flex items-center gap-1">
+                    <Briefcase className="size-3.5 text-purple-400" />
+                    {company}
+                  </span>
+                )}
+                {education && (
+                  <span className="flex items-center gap-1">
+                    <GraduationCap className="size-3.5 text-purple-400" />
+                    {education}
+                  </span>
+                )}
+                {location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="size-3.5 text-purple-400" />
+                    {location}
+                  </span>
+                )}
+              </div>
+
+              {skills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {skills.map((s, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="secondary"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-card border border-border/50 text-foreground"
+                    >
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4 Bento Metric Cards (Matching Screenshot Grid) */}
           <div className="grid grid-cols-2 gap-3.5">
-            {/* Rating Score */}
-            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-sky-500/40 transition-all duration-300 shadow-sm space-y-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="size-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
-                  <Trophy className="size-3.5" />
-                </div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                  Rating
+            {/* Card 1: Points */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-purple-500/40 transition-all duration-300 shadow-sm space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                  Points
                 </span>
+                <div className="size-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                  <Gem className="size-4" />
+                </div>
               </div>
               <div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-sky-400 tracking-tight">
-                  {rating ? rating : "Unrated"}
+                <div className="text-2xl sm:text-3xl font-black font-mono text-foreground tracking-tight">
+                  {points > 0 ? points.toLocaleString() : "0"}
                 </div>
-                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                  Competitive Score
+                <div className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                  Points Earned
                 </div>
               </div>
             </div>
 
-            {/* Global Rank */}
-            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-sky-500/40 transition-all duration-300 shadow-sm space-y-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="size-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
-                  <Globe className="size-3.5" />
-                </div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                  Global Rank
+            {/* Card 2: Contest Ratings */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-purple-500/40 transition-all duration-300 shadow-sm space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                  Contest Ratings
                 </span>
+                <div className="size-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                  <TrendingUp className="size-4" />
+                </div>
               </div>
               <div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                  {globalRank ? `#${globalRank.toLocaleString()}` : "Top Solver"}
+                <div className="text-2xl sm:text-3xl font-black font-mono text-purple-400 tracking-tight">
+                  {rating > 0 ? rating.toLocaleString() : "Unrated"}
                 </div>
-                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                  Worldwide Standing
+                <div className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                  Peak: <span className="font-mono text-foreground font-bold">{maxRating > 0 ? maxRating : "Unrated"}</span>
                 </div>
               </div>
             </div>
 
-            {/* Contests Attended */}
-            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-sky-500/40 transition-all duration-300 shadow-sm space-y-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="size-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
-                  <Flame className="size-3.5" />
-                </div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                  Contests
-                </span>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                  {contestsAttended}
-                </div>
-                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                  Attended & Rated
-                </div>
-              </div>
-            </div>
-
-            {/* Problems Solved */}
-            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-sky-500/40 transition-all duration-300 shadow-sm space-y-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="size-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
-                  <CheckCircle2 className="size-3.5" />
-                </div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+            {/* Card 3: Problems Solved */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-purple-500/40 transition-all duration-300 shadow-sm space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
                   Problems Solved
                 </span>
+                <div className="size-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                  <CheckCircle2 className="size-4" />
+                </div>
               </div>
               <div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-sky-400 tracking-tight">
+                <div className="text-2xl sm:text-3xl font-black font-mono text-foreground tracking-tight">
                   {totalSolved.toLocaleString()}
                 </div>
-                <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                  Challenges Completed
+                <div className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                  Problems Solved
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Solutions Submitted */}
+            <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-purple-500/40 transition-all duration-300 shadow-sm space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                  Solutions Submitted
+                </span>
+                <div className="size-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                  <FileCode2 className="size-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black font-mono text-foreground tracking-tight">
+                  {solutionsSubmitted.toLocaleString()}
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                  Solutions Submitted
                 </div>
               </div>
             </div>

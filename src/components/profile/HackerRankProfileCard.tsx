@@ -14,6 +14,8 @@ import {
   FileCode,
   ArrowUpRight,
   Code2,
+  RefreshCw,
+  Edit3,
 } from "lucide-react";
 import { HackerRankStats } from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
@@ -27,6 +29,7 @@ interface HackerRankProfileCardProps {
   onConnect?: () => void;
   onRefresh?: () => void;
   onEditHandle?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
@@ -37,6 +40,7 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
   onConnect,
   onRefresh,
   onEditHandle,
+  isRefreshing,
 }) => {
   const isConnected = Boolean(usernameOrHandle);
   const cleanHandle = extractUsername(usernameOrHandle).replace(/^@+/, "");
@@ -53,7 +57,7 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
   return (
     <div className="group relative rounded-3xl border border-emerald-500/20 bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/5">
       {/* Platform Header */}
-      <div className="flex items-center justify-between gap-4 mb-5">
+      <div className="flex items-center justify-between gap-4 mb-5 pb-4 border-b border-border/50">
         <div className="flex items-center gap-3 min-w-0">
           <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black text-lg">
             H
@@ -62,28 +66,53 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
             <h3 className="font-extrabold text-lg text-foreground tracking-tight flex items-center gap-2">
               <span className="truncate">HackerRank</span>
               {isConnected && (
-                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-500 shrink-0">
-                  Connected
+                <Badge variant="outline" className="text-[10px] px-1.5 py-px rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold w-fit whitespace-nowrap leading-tight shrink-0">
+                  <CheckCircle2 className="size-2.5 mr-0.5" />Linked
                 </Badge>
               )}
             </h3>
-            <p className="text-xs text-muted-foreground font-medium truncate">
-              {isConnected ? `@${cleanHandle || usernameOrHandle}` : "Not connected"}
-            </p>
+            {isConnected ? (
+              <a
+                href={profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-emerald-500 font-mono flex items-center gap-1 transition-colors truncate"
+              >
+                @{cleanHandle || usernameOrHandle} <ExternalLink className="size-3 shrink-0" />
+              </a>
+            ) : (
+              <p className="text-xs text-muted-foreground font-mono truncate">
+                Not connected
+              </p>
+            )}
           </div>
         </div>
 
-        {isConnected && (
-          <a
-            href={profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="size-9 rounded-xl border border-border/80 bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 shrink-0"
-            title="View HackerRank Profile"
-          >
-            <ExternalLink className="size-4" />
-          </a>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isConnected && onRefresh && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="size-8 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-500"
+              title="Refresh statistics"
+            >
+              <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-emerald-500")} />
+            </Button>
+          )}
+          {onEditHandle && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEditHandle}
+              className="size-8 rounded-xl hover:bg-accent"
+              title="Edit handle"
+            >
+              <Edit3 className="size-3.5 text-muted-foreground" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Card Content State */}
@@ -254,8 +283,8 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
                 <div className="text-xl sm:text-2xl font-black font-mono text-emerald-500 dark:text-emerald-400 tracking-tight">
                   {globalRank
                     ? (typeof globalRank === "number"
-                        ? `#${globalRank.toLocaleString()}`
-                        : (String(globalRank).startsWith("#") ? globalRank : `#${globalRank}`))
+                      ? `#${globalRank.toLocaleString()}`
+                      : (String(globalRank).startsWith("#") ? globalRank : `#${globalRank}`))
                     : (totalSolved > 0 ? `#${Math.max(1, Math.floor(500000 / (totalSolved * 2 + 1))).toLocaleString()}` : "Top Solver")}
                 </div>
                 <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">

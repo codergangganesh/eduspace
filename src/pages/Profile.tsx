@@ -99,9 +99,9 @@ const CodeChefIcon = ({ className = "size-4" }: { className?: string }) => (
   </svg>
 );
 
-const KaggleIcon = ({ className = "size-4" }: { className?: string }) => (
+const ChessIcon = ({ className = "size-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.825 23.859h-3.411l-5.341-7.228-2.658 2.658v4.57H4.517V.141h2.898v13.567l7.562-7.562h3.693l-6.31 6.31 6.465 11.403z" />
+    <path d="M12 2a3 3 0 0 0-3 3c0 .8.3 1.5.8 2.1C8.6 8.1 8 9.5 8 11c0 1.2.4 2.3 1.1 3.1C7.8 15.3 7 17 7 19h10c0-2-.8-3.7-2.1-4.9.7-.8 1.1-1.9 1.1-3.1 0-1.5-.6-2.9-1.8-3.9.5-.6.8-1.3.8-2.1a3 3 0 0 0-3-3zm-6 19v2h12v-2H6z" />
   </svg>
 );
 
@@ -133,7 +133,7 @@ const BRAND_ICON_URLS: Record<string, string> = {
   codolio: "https://codolio.com/codolio_assets/codolio.svg",
   linkedin: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/linkedin/linkedin-original.svg",
   github: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg",
-  kaggle: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kaggle/kaggle-original.svg",
+  chess: "https://images.chesscomfiles.com/uploads/v1/user/29371584.582ecb3d.50x50o.a1a0989f64bf.png",
   twitter: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/twitter/twitter-original.svg",
 };
 
@@ -166,7 +166,7 @@ const RealBrandIcon = ({
   );
 };
 
-const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'codewars', 'geeksforgeeks', 'kaggle', 'codolio', 'twitter', 'portfolio'];
+const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'codewars', 'geeksforgeeks', 'chess', 'codolio', 'twitter', 'portfolio'];
 
 interface SocialPlatformItem {
   id: string;
@@ -189,7 +189,7 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = false): S
     { id: 'codechef', label: 'CodeChef', url: data.codechef_url, icon: CodeChefIcon, bg: 'bg-[#5B4638]/15 hover:bg-[#5B4638]/30', border: 'border-[#5B4638]/40', text: 'text-[#d97706]', shadow: 'hover:shadow-[0_0_12px_rgba(217,119,6,0.35)]' },
     { id: 'codewars', label: 'Codewars', url: data.codewars_url, icon: CodewarsIcon, bg: 'bg-rose-500/10 hover:bg-rose-500/20', border: 'border-rose-500/30', text: 'text-rose-500', shadow: 'hover:shadow-[0_0_12px_rgba(244,63,94,0.35)]' },
     { id: 'geeksforgeeks', label: 'GeeksforGeeks', url: data.geeksforgeeks_url, icon: GeeksForGeeksIcon, bg: 'bg-emerald-500/10 hover:bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-500', shadow: 'hover:shadow-[0_0_12px_rgba(16,185,129,0.35)]' },
-    { id: 'kaggle', label: 'Kaggle', url: data.kaggle_url, icon: KaggleIcon, bg: 'bg-[#20BEFF]/10 hover:bg-[#20BEFF]/20', border: 'border-[#20BEFF]/30', text: 'text-[#20BEFF]', shadow: 'hover:shadow-[0_0_12px_rgba(32,190,255,0.35)]' },
+    { id: 'chess', label: 'Chess.com', url: data.chess_url, icon: ChessIcon, bg: 'bg-[#81b64c]/10 hover:bg-[#81b64c]/20', border: 'border-[#81b64c]/30', text: 'text-[#81b64c]', shadow: 'hover:shadow-[0_0_12px_rgba(129,182,76,0.35)]' },
     { id: 'codolio', label: 'Codolio', url: data.codolio_url, icon: CodolioIcon, bg: 'bg-[#FF5722]/10 hover:bg-[#FF5722]/20', border: 'border-[#FF5722]/30', text: 'text-[#FF5722]', shadow: 'hover:shadow-[0_0_12px_rgba(255,87,34,0.35)]' },
     { id: 'twitter', label: 'Twitter / X', url: data.twitter_url, icon: Twitter, bg: 'bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20', border: 'border-[#1DA1F2]/30', text: 'text-[#1DA1F2]', shadow: 'hover:shadow-[0_0_12px_rgba(29,161,242,0.35)]' },
     { id: 'portfolio', label: 'Portfolio', url: data.portfolio_url, icon: Globe, bg: 'bg-purple-500/10 hover:bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-500', shadow: 'hover:shadow-[0_0_12px_rgba(139,92,246,0.35)]' },
@@ -287,7 +287,7 @@ export default function Profile() {
     codechef_url: "",
     codewars_url: "",
     geeksforgeeks_url: "",
-    kaggle_url: "",
+    chess_url: "",
     codolio_url: "",
   });
 
@@ -342,7 +342,7 @@ export default function Profile() {
         codechef_url: (profile as any).codechef_url || "",
         codewars_url: (profile as any).codewars_url || "",
         geeksforgeeks_url: (profile as any).geeksforgeeks_url || "",
-        kaggle_url: profile.kaggle_url || "",
+        chess_url: (profile as any).chess_url || "",
         codolio_url: profile.codolio_url || "",
       });
     }
@@ -575,7 +575,7 @@ export default function Profile() {
       codeforces_url: DOMPurify.sanitize(formData.codeforces_url.trim()),
       hackerrank_url: DOMPurify.sanitize(formData.hackerrank_url.trim()),
       codechef_url: DOMPurify.sanitize(formData.codechef_url.trim()),
-      kaggle_url: DOMPurify.sanitize(formData.kaggle_url.trim()),
+      chess_url: DOMPurify.sanitize(formData.chess_url.trim()),
       codolio_url: DOMPurify.sanitize(formData.codolio_url.trim()),
     } as Partial<ProfileType>);
 
@@ -1171,16 +1171,16 @@ export default function Profile() {
                   />
                 </div>
 
-                {/* Kaggle */}
+                {/* Chess.com */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <RealBrandIcon id="kaggle" label="Kaggle" fallback={KaggleIcon} className="size-4 object-contain" />
-                    Kaggle Profile
+                    <RealBrandIcon id="chess" label="Chess.com" fallback={ChessIcon} className="size-4 object-contain" />
+                    Chess.com Profile
                   </label>
                   <Input
-                    placeholder="https://kaggle.com/username"
-                    value={formData.kaggle_url}
-                    onChange={(e) => handleInputChange("kaggle_url", e.target.value)}
+                    placeholder="https://chess.com/member/username"
+                    value={formData.chess_url}
+                    onChange={(e) => handleInputChange("chess_url", e.target.value)}
                     disabled={!isEditing}
                     className="bg-surface/50 transition-all focus:ring-primary/20"
                   />
@@ -1279,11 +1279,11 @@ export default function Profile() {
                         <span className="hidden sm:inline">CodeChef</span>
                       </a>
                     )}
-                    {formData.kaggle_url && (
-                      <a href={formData.kaggle_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#20BEFF]/10 hover:bg-[#20BEFF]/20 border border-[#20BEFF]/20 transition-all text-sm font-medium text-[#20BEFF] backdrop-blur-sm group" title="Kaggle Profile">
-                        <RealBrandIcon id="kaggle" label="Kaggle" fallback={KaggleIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
-                        <span className="hidden sm:inline">Kaggle</span>
+                    {formData.chess_url && (
+                      <a href={formData.chess_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 rounded-full bg-[#81b64c]/10 hover:bg-[#81b64c]/20 border border-[#81b64c]/20 transition-all text-sm font-medium text-[#81b64c] backdrop-blur-sm group" title="Chess.com Profile">
+                        <RealBrandIcon id="chess" label="Chess.com" fallback={ChessIcon} className="size-4 object-contain group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Chess.com</span>
                       </a>
                     )}
                     {formData.codolio_url && (
@@ -1313,7 +1313,7 @@ export default function Profile() {
                       !formData.codeforces_url &&
                       !formData.hackerrank_url &&
                       !formData.codechef_url &&
-                      !formData.kaggle_url &&
+                      !formData.chess_url &&
                       !formData.codolio_url &&
                       !formData.twitter_url &&
                       !formData.portfolio_url && (
@@ -1836,7 +1836,7 @@ export default function Profile() {
                   )}
 
                   {/* Social Presence Links */}
-                  {isStudent && (formData.linkedin_url || formData.github_url || formData.leetcode_url || formData.codeforces_url || formData.hackerrank_url || formData.codechef_url || formData.kaggle_url || formData.codolio_url || formData.twitter_url) && (
+                  {isStudent && (formData.linkedin_url || formData.github_url || formData.leetcode_url || formData.codeforces_url || formData.hackerrank_url || formData.codechef_url || formData.chess_url || formData.codolio_url || formData.twitter_url) && (
                     <div className="flex flex-wrap gap-2">
                       {formData.linkedin_url && (
                         <a
@@ -1904,15 +1904,15 @@ export default function Profile() {
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">CodeChef</span>
                         </a>
                       )}
-                      {formData.kaggle_url && (
+                      {formData.chess_url && (
                         <a
-                          href={formData.kaggle_url}
+                          href={formData.chess_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f1623] border border-slate-200 dark:border-white/5 hover:border-blue-500/20 transition-all shadow-sm group/social"
                         >
-                          <RealBrandIcon id="kaggle" label="Kaggle" fallback={KaggleIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
-                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Kaggle</span>
+                          <RealBrandIcon id="chess" label="Chess.com" fallback={ChessIcon} className="size-3.5 object-contain group-hover/social:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Chess.com</span>
                         </a>
                       )}
                       {formData.codolio_url && (

@@ -22,6 +22,8 @@ import {
   BookOpen,
   Award,
   Clock,
+  RefreshCw,
+  Edit3,
 } from "lucide-react";
 import {
   LeetCodeStats,
@@ -272,6 +274,8 @@ export interface LeetCodeCardProps {
   stats?: LeetCodeStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -281,6 +285,8 @@ export interface CodeforcesCardProps {
   stats?: CodeforcesStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -290,6 +296,8 @@ export interface GitHubCardProps {
   stats?: GitHubStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
   githubToken?: string | null;
 }
@@ -300,6 +308,8 @@ export interface CodeChefCardProps {
   stats?: CodeChefStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -309,6 +319,8 @@ export interface CodewarsCardProps {
   stats?: CodewarsStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -318,6 +330,8 @@ export interface GeeksForGeeksCardProps {
   stats?: GeeksForGeeksStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -327,6 +341,8 @@ export interface AtCoderCardProps {
   stats?: AtCoderStats | null;
   error?: string | null;
   onEdit: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -442,33 +458,56 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight">
                   {platformTitle}
                 </h3>
                 {hasLinked && (
-                  <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-bold tracking-wide">
-                    <CheckCircle2 className="size-3 mr-1" /> Linked
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-px rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold w-fit whitespace-nowrap leading-tight">
+                    <CheckCircle2 className="size-2.5 mr-0.5" />Linked
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate max-w-[180px] sm:max-w-[240px]">
-                {hasLinked ? `@${usernameOrHandle}` : "Not linked"}
-              </p>
+              {hasLinked ? (
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary font-mono mt-0.5 flex items-center gap-1 transition-colors truncate max-w-[180px] sm:max-w-[240px]"
+                >
+                  @{usernameOrHandle} <ExternalLink className="size-3 shrink-0" />
+                </a>
+              ) : (
+                <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate max-w-[180px] sm:max-w-[240px]">
+                  Not linked
+                </p>
+              )}
             </div>
           </div>
 
-          {hasLinked && (
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2.5 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-colors border border-transparent hover:border-border/60 shadow-sm"
-              title={`View ${platformTitle} Profile`}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {props.onRefresh && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={props.onRefresh}
+                disabled={props.isRefreshing}
+                className="size-8 rounded-xl hover:bg-accent hover:text-foreground"
+                title="Refresh statistics"
+              >
+                <RefreshCw className={cn("size-3.5", props.isRefreshing && "animate-spin text-primary")} />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={props.onEdit}
+              className="size-8 rounded-xl hover:bg-accent"
+              title="Edit handle"
             >
-              <ExternalLink className="size-5" />
-            </a>
-          )}
+              <Edit3 className="size-3.5 text-muted-foreground" />
+            </Button>
+          </div>
         </div>
 
         {/* Card Body */}
@@ -1858,3 +1897,4 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
     </div>
   );
 }
+

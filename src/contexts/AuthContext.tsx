@@ -48,6 +48,9 @@ export interface Profile {
   leetcode_username?: string | null;
   codeforces_handle?: string | null;
   hackerrank_url?: string | null;
+  hackerrank_username?: string | null;
+  hackerearth_url?: string | null;
+  hackerearth_username?: string | null;
   codechef_url?: string | null;
   codewars_url?: string | null;
   geeksforgeeks_url?: string | null;
@@ -56,7 +59,10 @@ export interface Profile {
   codewars_username?: string | null;
   geeksforgeeks_username?: string | null;
   atcoder_username?: string | null;
-  kaggle_url?: string | null;
+  chess_url?: string | null;
+  chess_username?: string | null;
+  huggingface_url?: string | null;
+  huggingface_username?: string | null;
   codolio_url?: string | null;
   voice_bio_url?: string | null;
   voice_bio_transcript?: string | null;
@@ -211,7 +217,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileData.codewars_username = mergedSocial.codewars_username ?? profileData.codewars_username ?? null;
         profileData.geeksforgeeks_username = mergedSocial.geeksforgeeks_username ?? profileData.geeksforgeeks_username ?? null;
         profileData.atcoder_username = mergedSocial.atcoder_username ?? profileData.atcoder_username ?? null;
-        profileData.kaggle_url = mergedSocial.kaggle_url ?? profileData.kaggle_url ?? null;
+        profileData.chess_url = mergedSocial.chess_url ?? profileData.chess_url ?? null;
+        profileData.chess_username = mergedSocial.chess_username ?? profileData.chess_username ?? null;
         profileData.codolio_url = mergedSocial.codolio_url ?? profileData.codolio_url ?? null;
       }
 
@@ -587,7 +594,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         codewars_username,
         geeksforgeeks_username,
         atcoder_username,
-        kaggle_url,
+        chess_url,
+        chess_username,
+        huggingface_url,
+        huggingface_username,
         codolio_url,
         ...dbData
       } = data as any;
@@ -610,7 +620,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         codewars_username: codewars_username !== undefined ? codewars_username : storedSocial.codewars_username,
         geeksforgeeks_username: geeksforgeeks_username !== undefined ? geeksforgeeks_username : storedSocial.geeksforgeeks_username,
         atcoder_username: atcoder_username !== undefined ? atcoder_username : storedSocial.atcoder_username,
-        kaggle_url: kaggle_url !== undefined ? kaggle_url : storedSocial.kaggle_url,
+        chess_url: chess_url !== undefined ? chess_url : storedSocial.chess_url,
+        chess_username: chess_username !== undefined ? chess_username : storedSocial.chess_username,
+        huggingface_url: huggingface_url !== undefined ? huggingface_url : storedSocial.huggingface_url,
+        huggingface_username: huggingface_username !== undefined ? huggingface_username : storedSocial.huggingface_username,
         codolio_url: codolio_url !== undefined ? codolio_url : storedSocial.codolio_url,
       };
       localStorage.setItem(`eduspace_social_extra_${user.id}`, JSON.stringify(updatedSocial));

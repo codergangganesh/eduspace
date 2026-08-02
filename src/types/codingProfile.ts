@@ -1,3 +1,9 @@
+import { HuggingFaceStats } from "./huggingFaceProfile";
+import { ChessStats } from "./chessProfile";
+
+export type { HuggingFaceStats } from "./huggingFaceProfile";
+export type { ChessStats } from "./chessProfile";
+
 export interface ContributionDay {
   date: string;   // "YYYY-MM-DD"
   count: number;
@@ -348,12 +354,20 @@ export interface HackerEarthStats {
   name?: string | null;
   avatar?: string | null;
   country?: string | null;
+  location?: string | null;
+  company?: string | null;
+  role?: string | null;
+  education?: string | null;
+  skills?: string[];
+  points?: number;
   rating: number;
   maxRating?: number;
   rank?: string | null;
   globalRank?: number | null;
   totalSolved: number;
+  solutionsSubmitted?: number;
   contestsAttended?: number;
+  topPercentiles?: { title: string; percentile: string }[];
   badges?: HackerEarthBadge[];
   last_updated?: string;
 }
@@ -374,6 +388,8 @@ export interface CodingProfilesResponse {
   atcoder?: AtCoderStats | null;
   hackerrank?: HackerRankStats | null;
   hackerearth?: HackerEarthStats | null;
+  huggingface?: HuggingFaceStats | null;
+  chess?: ChessStats | null;
   overall: OverallStats;
   lastFetchedAt?: string | null;
   leetcodeError?: string | null;
@@ -385,6 +401,8 @@ export interface CodingProfilesResponse {
   atcoderError?: string | null;
   hackerrankError?: string | null;
   hackerearthError?: string | null;
+  huggingfaceError?: string | null;
+  chessError?: string | null;
   leetcodeUsername?: string | null;
   codeforcesHandle?: string | null;
   githubUsername?: string | null;
@@ -396,7 +414,8 @@ export interface CodingProfilesResponse {
   geeksforgeeksUsername?: string | null;
   atcoderUsername?: string | null;
   codolioUsername?: string | null;
-  kaggleUsername?: string | null;
+  huggingfaceUsername?: string | null;
+  chessUsername?: string | null;
 }
 
 export interface GitHubSearchResultItem {
@@ -420,7 +439,8 @@ export interface UserCodingProfilesRecord {
   geeksforgeeks_username?: string | null;
   atcoder_username?: string | null;
   codolio_username?: string | null;
-  kaggle_username?: string | null;
+  huggingface_username?: string | null;
+  chess_username?: string | null;
   leetcode_data?: LeetCodeStats | null;
   codeforces_data?: CodeforcesStats | null;
   github_data?: GitHubStats | null;
@@ -430,6 +450,8 @@ export interface UserCodingProfilesRecord {
   atcoder_data?: AtCoderStats | null;
   hackerrank_data?: HackerRankStats | null;
   hackerearth_data?: HackerEarthStats | null;
+  huggingface_data?: HuggingFaceStats | null;
+  chess_data?: ChessStats | null;
   overall_data?: OverallStats | null;
   leetcode_error?: string | null;
   codeforces_error?: string | null;
@@ -439,6 +461,8 @@ export interface UserCodingProfilesRecord {
   atcoder_error?: string | null;
   hackerrank_error?: string | null;
   hackerearth_error?: string | null;
+  huggingface_error?: string | null;
+  chess_error?: string | null;
   last_fetched_at?: string | null;
   updated_at?: string | null;
 }
