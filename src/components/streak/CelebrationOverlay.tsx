@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { X, Trophy, Sparkles, Star, Award, Zap, Shield, Swords, Sword, Crown, Gem, Infinity as InfinityIcon, Target, Medal, GraduationCap, TrendingUp } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getUserGestureAudioContext } from '@/lib/audio';
 
 const IconMap: Record<string, React.ElementType> = {
   Trophy,
@@ -87,24 +88,23 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   useEffect(() => {
     setIsMounted(true);
 
-    const playTriumphSound = () => {
+    const playTriumphSound = async () => {
       try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
-        
+        const ctx = await getUserGestureAudioContext();
+        if (!ctx) return;
+
         const playSynthTone = (freq: number, start: number, duration: number, type: OscillatorType = 'sine') => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
-          
+
           osc.type = type;
           osc.frequency.setValueAtTime(freq, start);
-          
+
           // Smooth amplitude envelope to avoid sharp pop sounds
           gain.gain.setValueAtTime(0, start);
           gain.gain.linearRampToValueAtTime(0.2, start + 0.04);
           gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-          
+
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(start);
@@ -120,7 +120,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
         playSynthTone(659.25, now + 0.32, 0.7, 'sine');      // E5
         playSynthTone(783.99, now + 0.40, 0.8, 'sine');      // G5
         playSynthTone(1046.50, now + 0.48, 1.2, 'sine');     // C6 (Triumphant Peak)
-        
+
         // Add a subtle high-frequency spark tone in background
         playSynthTone(1318.51, now + 0.56, 0.6, 'sine');     // E6
         playSynthTone(1567.98, now + 0.64, 0.8, 'sine');     // G6
@@ -130,7 +130,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
     };
 
     // 1. Play synthesized arpeggio victory fanfare
-    playTriumphSound();
+    void playTriumphSound();
 
     // 2. Play native mobile haptic feedback if available
     if (typeof navigator !== 'undefined' && navigator.vibrate) {

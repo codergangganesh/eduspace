@@ -321,7 +321,7 @@ export function ChessProfileCard({
                         <Icon className="size-3.5 text-[#81b64c]" /> {m.label}
                       </span>
                       <div className="flex items-center gap-1">
-                        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border", m.color)}>
+                        <span className={cn("text-[9px] font-bold px-1 py-0.2 rounded border leading-none", m.color)}>
                           {m.data?.highestRating}
                         </span>
                       </div>
@@ -381,7 +381,7 @@ export function ChessProfileCard({
             onClick={() => setIsSheetOpen(true)}
             className="w-full h-9 text-xs font-bold bg-[#81b64c] hover:bg-[#6fa03d] text-white transition-colors gap-2 rounded-xl"
           >
-             View All Achievements & Recent Matches
+            View All Achievements & Recent Matches
           </Button>
         </div>
       </div>

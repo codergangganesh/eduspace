@@ -7,6 +7,7 @@ import {
   preloadImage,
   writeCachedProfileIdentity,
 } from "@/lib/imagePerformance";
+import { readStoredJson } from "@/lib/storage";
 
 export type AppRole = "student" | "lecturer" | "admin";
 type SelectableRole = Exclude<AppRole, "admin">;
@@ -174,8 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const profileData = data as any as Profile | null;
       if (profileData?.user_id) {
-        const storedVoiceBio = JSON.parse(localStorage.getItem(`eduspace_voice_bio_${profileData.user_id}`) || '{}');
-        const storedSocial = JSON.parse(localStorage.getItem(`eduspace_social_extra_${profileData.user_id}`) || '{}');
+        const storedVoiceBio = readStoredJson<Record<string, any>>(`eduspace_voice_bio_${profileData.user_id}`, {});
+        const storedSocial = readStoredJson<Record<string, any>>(`eduspace_social_extra_${profileData.user_id}`, {});
 
         // Fetch extra social links from Supabase user_coding_profiles database table
         let dbSocial: Record<string, any> = {};
@@ -602,7 +603,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...dbData
       } = data as any;
 
-      const storedSocial = JSON.parse(localStorage.getItem(`eduspace_social_extra_${user.id}`) || '{}');
+      const storedSocial = readStoredJson<Record<string, any>>(`eduspace_social_extra_${user.id}`, {});
       const updatedSocial = {
         leetcode_url: leetcode_url !== undefined ? leetcode_url : storedSocial.leetcode_url,
         codeforces_url: codeforces_url !== undefined ? codeforces_url : storedSocial.codeforces_url,
@@ -655,7 +656,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (voice_bio_url !== undefined || voice_bio_transcript !== undefined || voice_bio_tags !== undefined) {
-        const storedVoiceBio = JSON.parse(localStorage.getItem(`eduspace_voice_bio_${user.id}`) || '{}');
+        const storedVoiceBio = readStoredJson<Record<string, any>>(`eduspace_voice_bio_${user.id}`, {});
         const updatedVoiceBio = {
           voice_bio_url: voice_bio_url !== undefined ? voice_bio_url : storedVoiceBio.voice_bio_url,
           voice_bio_transcript: voice_bio_transcript !== undefined ? voice_bio_transcript : storedVoiceBio.voice_bio_transcript,

@@ -1654,7 +1654,9 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     else lastUpdatedText = `Updated ${d.toLocaleDateString()}`;
                   }
                 }
-              } catch { }
+              } catch {
+                lastUpdatedText = null;
+              }
             }
 
             return (

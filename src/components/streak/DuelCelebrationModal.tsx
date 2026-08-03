@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, Sparkles, Star, Medal, Award, Zap, Crown, Shield, Swords, TrendingUp, Infinity as InfinityIcon } from 'lucide-react';
 import { DuelBadgeType, DUEL_BADGE_DETAILS } from './DuelBadgeDetailModal';
 import confetti from 'canvas-confetti';
+import { getUserGestureAudioContext } from '@/lib/audio';
 
 const IconMap: Record<string, React.ElementType> = {
   Trophy,
@@ -35,22 +36,21 @@ export const DuelCelebrationModal: React.FC<DuelCelebrationModalProps> = ({
   // Trigger high-quality game confetti burst when modal mounts
   useEffect(() => {
     // Play premium 8-bit/high-fidelity victory level-up audio synthesized via Web Audio API
-    const playUnlockSound = () => {
+    const playUnlockSound = async () => {
       try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
-        
+        const ctx = await getUserGestureAudioContext();
+        if (!ctx) return;
+
         const playTone = (freq: number, start: number, duration: number, type: OscillatorType = 'sine') => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = type;
           osc.frequency.setValueAtTime(freq, start);
-          
+
           gain.gain.setValueAtTime(0, start);
           gain.gain.linearRampToValueAtTime(0.15, start + 0.05); // volume ramp up
           gain.gain.exponentialRampToValueAtTime(0.0001, start + duration); // smooth decay
-          
+
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(start);
@@ -72,7 +72,7 @@ export const DuelCelebrationModal: React.FC<DuelCelebrationModalProps> = ({
     };
 
     // 1. Play musical arpeggio sound
-    playUnlockSound();
+    void playUnlockSound();
 
     // 2. Center burst
     confetti({

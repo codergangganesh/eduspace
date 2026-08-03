@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCodingProfiles, extractUsername } from "@/services/codingProfileService";
+import { readStoredJson } from "@/lib/storage";
 import { CodingProfilesResponse } from "@/types/codingProfile";
 import { CodingProfileCard, PlatformBrandLogo } from "./CodingProfileCard";
 import { HackerRankProfileCard } from "./HackerRankProfileCard";
@@ -49,11 +50,7 @@ import { cn } from "@/lib/utils";
 
 const getInitialCache = (userId?: string): CodingProfilesResponse | null => {
   if (!userId) return null;
-  try {
-    const raw = localStorage.getItem(`eduspace_coding_profile_cache_${userId}`);
-    if (raw) return JSON.parse(raw);
-  } catch { }
-  return null;
+  return readStoredJson<CodingProfilesResponse | null>(`eduspace_coding_profile_cache_${userId}`, null);
 };
 
 interface CodingProfilesProps {
