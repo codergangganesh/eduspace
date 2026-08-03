@@ -45,6 +45,7 @@ import {
   Zap,
   Globe,
 } from "lucide-react";
+import { ChessPawnIcon } from "./ChessProfileCard";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -332,6 +333,16 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     }, 50);
   };
 
+  const handleChessClick = () => {
+    setActiveTab("all");
+    setTimeout(() => {
+      const el = document.getElementById("chess-profile-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 50);
+  };
+
   if (loading) {
     return <CodingProfilesSkeleton />;
   }
@@ -376,6 +387,15 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   )}
                 >
                   <Code className="size-3.5" />
+                </button>
+                <button
+                  onClick={handleChessClick}
+                  title="Chess Profile (Scroll to Chess.com)"
+                  className={cn(
+                    "p-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <ChessPawnIcon className="size-3.5" />
                 </button>
                 <button
                   onClick={handleOpenSourceClick}
@@ -438,6 +458,15 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                 )}
               >
                 <Code className="size-4" />
+              </button>
+              <button
+                onClick={handleChessClick}
+                title="Chess Profile (Scroll to Chess.com)"
+                className={cn(
+                  "p-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ChessPawnIcon className="size-4" />
               </button>
               <button
                 onClick={handleOpenSourceClick}
@@ -586,7 +615,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           />
         )}
 
-        {(activeTab === "all" || activeTab === "competitive") && (
+        <div id="chess-profile-section" className="col-span-1 scroll-mt-6">
           <ChessProfileCard
             usernameOrHandle={chessUsername}
             stats={data?.chess}
@@ -596,7 +625,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             onRefresh={handleManualRefresh}
             isRefreshing={refreshing}
           />
-        )}
+        </div>
 
 
         <div id="github-profile-section" className="lg:col-span-2 scroll-mt-6">

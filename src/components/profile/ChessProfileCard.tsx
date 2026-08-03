@@ -33,6 +33,17 @@ import {
   Activity,
   Star,
 } from "lucide-react";
+
+const POPULAR_CHESS_HANDLES = ["hikaru", "magnuscarlsen", "dannyrench", "gothamchess", "levonaronian"];
+
+export function ChessPawnIcon({ className = "size-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2a3 3 0 0 0-3 3c0 .8.3 1.5.8 2.1C8.6 8.1 8 9.5 8 11c0 1.2.4 2.3 1.1 3.1C7.8 15.3 7 17 7 19h10c0-2-.8-3.7-2.1-4.9.7-.8 1.1-1.9 1.1-3.1 0-1.5-.6-2.9-1.8-3.9.5-.6.8-1.3.8-2.1a3 3 0 0 0-3-3zM6 19v2h12v-2H6z" />
+    </svg>
+  );
+}
+
 import { cn } from "@/lib/utils";
 import { fetchChessStats } from "@/services/chessService";
 import { toast } from "sonner";
@@ -45,17 +56,6 @@ interface ChessProfileCardProps {
   onEditHandle?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
-}
-
-const POPULAR_CHESS_HANDLES = ["hikaru", "magnuscarlsen", "dannyrench", "gothamchess", "levonaronian"];
-
-// Chess Pawn Icon Component
-function ChessPawnIcon({ className = "size-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2a3 3 0 0 0-3 3c0 .8.3 1.5.8 2.1C8.6 8.1 8 9.5 8 11c0 1.2.4 2.3 1.1 3.1C7.8 15.3 7 17 7 19h10c0-2-.8-3.7-2.1-4.9.7-.8 1.1-1.9 1.1-3.1 0-1.5-.6-2.9-1.8-3.9.5-.6.8-1.3.8-2.1a3 3 0 0 0-3-3zm-6 19v2h12v-2H6z" />
-    </svg>
-  );
 }
 
 export function ChessProfileCard({
