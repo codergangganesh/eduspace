@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,6 +16,7 @@ import {
   Code2,
   RefreshCw,
   Edit3,
+  MoreHorizontal,
 } from "lucide-react";
 import { HackerRankStats } from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
@@ -295,68 +296,111 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
           </div>
 
           {/* Domain Badges Showcase */}
-          {badges.length > 0 && (
-            <div className="p-4 rounded-2xl bg-card/40 border border-emerald-500/20 backdrop-blur-md space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Code2 className="size-4 text-emerald-500" />
-                Domain Proficiency Badges
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {badges.map((b, idx) => (
-                  <Badge
-                    key={idx}
-                    variant="outline"
-                    className="px-3 py-1.5 rounded-xl bg-card border-emerald-500/30 text-xs font-bold flex items-center gap-2 shadow-sm"
-                  >
-                    <span>{b.badge_name}</span>
-                    <span className="flex items-center text-amber-500 font-mono text-xs">
-                      <Star className="size-3 fill-amber-500 mr-0.5" />
-                      {b.stars}★
-                    </span>
+          {badges.length > 0 && (() => {
+            const [visibleBadgesCount, setVisibleBadgesCount] = useState(6);
+            const visibleBadges = badges.slice(0, visibleBadgesCount);
+            const hasMore = visibleBadgesCount < badges.length;
+
+            return (
+              <div className="p-4 rounded-2xl bg-card/40 border border-emerald-500/20 backdrop-blur-md space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
+                    <Code2 className="size-4 text-emerald-500" />
+                    Domain Proficiency Badges
+                  </span>
+                  <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-extrabold whitespace-nowrap shrink-0">
+                    {badges.length} Earned
                   </Badge>
-                ))}
+                </div>
+                <div className="max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
+                  <div className="flex flex-wrap gap-2">
+                    {visibleBadges.map((b, idx) => (
+                      <Badge
+                        key={idx}
+                        variant="outline"
+                        className="px-3 py-1.5 rounded-xl bg-card border-emerald-500/30 text-xs font-bold flex items-center gap-2 shadow-sm"
+                      >
+                        <span>{b.badge_name}</span>
+                        <span className="flex items-center text-amber-500 font-mono text-xs">
+                          <Star className="size-3 fill-amber-500 mr-0.5" />
+                          {b.stars}★
+                        </span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                {hasMore && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisibleBadgesCount((prev) => Math.min(prev + 6, badges.length))}
+                    className="w-full rounded-xl text-xs font-bold border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all"
+                  >
+                    <MoreHorizontal className="size-3.5 mr-1.5" />
+                    Load More ({badges.length - visibleBadgesCount} more)
+                  </Button>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Verified Certificates Showcase */}
-          {certs.length > 0 ? (
-            <div className="p-4 rounded-2xl bg-card/40 border border-emerald-500/20 backdrop-blur-md space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                  <Award className="size-4 text-emerald-500 shrink-0" />
-                  <span className="truncate">HackerRank Skill Certificates</span>
-                </span>
-                <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg font-extrabold border-emerald-500/30 text-emerald-500 bg-emerald-500/10 whitespace-nowrap shrink-0">
-                  {certs.length} Verified
-                </Badge>
-              </div>
+          {certs.length > 0 ? (() => {
+            const [visibleCertsCount, setVisibleCertsCount] = useState(3);
+            const visibleCerts = certs.slice(0, visibleCertsCount);
+            const hasMore = visibleCertsCount < certs.length;
 
-              <div className="grid grid-cols-1 gap-2.5">
-                {certs.map((c, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-card border border-border/70 hover:border-emerald-500/40 transition-all duration-200 flex items-center justify-between gap-3 shadow-sm">
-                    <div className="min-w-0 space-y-0.5">
-                      <h5 className="text-xs sm:text-sm font-extrabold text-foreground truncate">{c.heading}</h5>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium flex-wrap">
-                        {c.level && <span className="capitalize font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">{c.level} Level</span>}
-                        {c.earned_at && <span>Earned: {new Date(c.earned_at).toLocaleDateString()}</span>}
+            return (
+              <div className="p-4 rounded-2xl bg-card/40 border border-emerald-500/20 backdrop-blur-md space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                    <Award className="size-4 text-emerald-500 shrink-0" />
+                    <span className="truncate">HackerRank Skill Certificates</span>
+                  </span>
+                  <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg font-extrabold border-emerald-500/30 text-emerald-500 bg-emerald-500/10 whitespace-nowrap shrink-0">
+                    {certs.length} Verified
+                  </Badge>
+                </div>
+
+                <div className="max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {visibleCerts.map((c, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-card border border-border/70 hover:border-emerald-500/40 transition-all duration-200 flex items-center justify-between gap-3 shadow-sm">
+                        <div className="min-w-0 space-y-0.5">
+                          <h5 className="text-xs sm:text-sm font-extrabold text-foreground truncate">{c.heading}</h5>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium flex-wrap">
+                            {c.level && <span className="capitalize font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">{c.level} Level</span>}
+                            {c.earned_at && <span>Earned: {new Date(c.earned_at).toLocaleDateString()}</span>}
+                          </div>
+                        </div>
+                        {c.certificate_url && (
+                          <a
+                            href={c.certificate_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors border border-emerald-500/20"
+                          >
+                            Verify <ArrowUpRight className="size-3" />
+                          </a>
+                        )}
                       </div>
-                    </div>
-                    {c.certificate_url && (
-                      <a
-                        href={c.certificate_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors border border-emerald-500/20"
-                      >
-                        Verify <ArrowUpRight className="size-3" />
-                      </a>
-                    )}
+                    ))}
                   </div>
-                ))}
+                </div>
+                {hasMore && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisibleCertsCount((prev) => Math.min(prev + 3, certs.length))}
+                    className="w-full rounded-xl text-xs font-bold border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all"
+                  >
+                    <MoreHorizontal className="size-3.5 mr-1.5" />
+                    Load More ({certs.length - visibleCertsCount} more)
+                  </Button>
+                )}
               </div>
-            </div>
-          ) : (
+            );
+          })() : (
             <div className="p-3.5 rounded-2xl bg-card/40 border border-border/50 backdrop-blur-md flex items-center justify-between text-xs text-muted-foreground">
               <span className="flex items-center gap-2 font-medium">
                 <Award className="size-4 text-muted-foreground" />

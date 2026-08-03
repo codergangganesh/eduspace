@@ -668,125 +668,14 @@ export function GitHubPortfolioDashboard({
         </div>
       )}
 
-      {/* 3. Bottom Grid: Recent Activity & Organizations */}
+
       <div
         className={cn(
           "grid grid-cols-1 gap-6 w-full",
           stats?.organizations && stats.organizations.length > 0 ? "lg:grid-cols-3" : "grid-cols-1"
         )}
       >
-        {/* Recent Open-Source Activity */}
-        {stats?.recentEvents && stats.recentEvents.length > 0 && (
-          <div
-            className={cn(
-              "rounded-3xl border border-border/80 bg-card/90 backdrop-blur-xl p-4 sm:p-6 space-y-4 shadow-sm",
-              stats?.organizations && stats.organizations.length > 0 ? "lg:col-span-2" : "w-full"
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Clock className="size-4 text-blue-500 dark:text-blue-400 shrink-0" /> Recent Activity
-              </h4>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <button className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
-                    <span>View All</span>
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[92vw] sm:max-w-md p-6 overflow-y-auto rounded-l-3xl border-l border-border/80">
-                  <SheetHeader className="pb-4 border-b border-border/50">
-                    <SheetTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
-                      <History className="size-4 text-blue-500 dark:text-blue-400" />
-                      Recent GitHub Activity
-                    </SheetTitle>
-                    <SheetDescription className="text-xs text-muted-foreground">
-                      Latest open-source events, commits, pull requests, and stars for @{stats?.username || username}.
-                    </SheetDescription>
-                  </SheetHeader>
 
-                  <div className="space-y-3 py-4">
-                    {stats.recentEvents.map((evt) => (
-                      <a
-                        key={evt.id}
-                        href={evt.repoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/evt p-3.5 rounded-2xl bg-muted/30 border border-border/60 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all flex items-start gap-3 text-xs block shadow-sm"
-                      >
-                        <div className="p-2 rounded-xl bg-blue-500/10 border border-border/20 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
-                          {evt.type === "PushEvent" ? (
-                            <GitCommit className="size-4" />
-                          ) : evt.type === "PullRequestEvent" ? (
-                            <GitPullRequest className="size-4" />
-                          ) : (
-                            <GitBranch className="size-4" />
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-extrabold text-foreground truncate group-hover/evt:text-blue-500 dark:group-hover/evt:text-blue-400 transition-colors">
-                              {evt.repoName}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                              {formatRelativeTime(evt.createdAt)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                            {evt.message}
-                          </p>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            <div
-              className={cn(
-                "grid gap-3",
-                stats?.organizations && stats.organizations.length > 0
-                  ? "grid-cols-1 sm:grid-cols-2"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-              )}
-            >
-              {stats.recentEvents.slice(0, 4).map((evt) => (
-                <a
-                  key={evt.id}
-                  href={evt.repoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group/evt p-4 rounded-2xl bg-muted/20 border border-border/50 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all flex items-start gap-3 text-xs block"
-                >
-                  <div className="p-2 rounded-xl bg-blue-500/10 border border-border/20 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
-                    {evt.type === "PushEvent" ? (
-                      <GitCommit className="size-4" />
-                    ) : evt.type === "PullRequestEvent" ? (
-                      <GitPullRequest className="size-4" />
-                    ) : (
-                      <GitBranch className="size-4" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="font-bold text-foreground truncate group-hover/evt:text-blue-500 dark:group-hover/evt:text-blue-400 transition-colors">
-                        {evt.repoName}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                        {formatRelativeTime(evt.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {evt.message}
-                    </p>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Public Organizations (Occupies 1 column if available) */}
         {stats?.organizations && stats.organizations.length > 0 && (

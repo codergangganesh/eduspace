@@ -1070,50 +1070,71 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                 </div>
 
                 {/* Badges & Achievements Showcase */}
-                {badges.length > 0 && (
-                  <div className="p-4 rounded-2xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-3.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                        <Award className="size-4 text-cyan-400 shrink-0" />
-                        <span className="truncate">Codeforces Badges</span>
-                      </span>
-                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-cyan-500/40 text-cyan-400 bg-cyan-500/10 font-extrabold whitespace-nowrap shrink-0">
-                        {badges.length} Earned
-                      </Badge>
-                    </div>
+                {badges.length > 0 && (() => {
+                  const [visibleBadgesCount, setVisibleBadgesCount] = useState(3);
+                  const visibleBadges = badges.slice(0, visibleBadgesCount);
+                  const hasMore = visibleBadgesCount < badges.length;
 
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {badges.map((b, idx) => (
-                        <div
-                          key={idx}
-                          className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-cyan-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
-                        >
-                          <div className="size-9 rounded-xl border border-cyan-500/30 bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0 transition-transform duration-300 group-hover/badge:scale-110">
-                            <Trophy className="size-4 fill-current/20" />
-                          </div>
+                  return (
+                    <div className="p-4 rounded-2xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                          <Award className="size-4 text-cyan-400 shrink-0" />
+                          <span className="truncate">Codeforces Badges</span>
+                        </span>
+                        <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-cyan-500/40 text-cyan-400 bg-cyan-500/10 font-extrabold whitespace-nowrap shrink-0">
+                          {badges.length} Earned
+                        </Badge>
+                      </div>
 
-                          <div className="min-w-0 flex-1 space-y-0.5">
-                            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                              <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
-                                {b.name}
-                              </h5>
-                              {b.category && (
-                                <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-cyan-500/30 text-cyan-400 bg-cyan-500/10 shrink-0">
-                                  {b.category}
-                                </Badge>
-                              )}
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {visibleBadges.map((b, idx) => (
+                            <div
+                              key={idx}
+                              className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-cyan-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
+                            >
+                              <div className="size-9 rounded-xl border border-cyan-500/30 bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0 transition-transform duration-300 group-hover/badge:scale-110">
+                                <Trophy className="size-4 fill-current/20" />
+                              </div>
+
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                                  <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
+                                    {b.name}
+                                  </h5>
+                                  {b.category && (
+                                    <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-cyan-500/30 text-cyan-400 bg-cyan-500/10 shrink-0">
+                                      {b.category}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {b.description && (
+                                  <p className="text-[11px] text-muted-foreground font-medium leading-normal">
+                                    {b.description}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            {b.description && (
-                              <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-                                {b.description}
-                              </p>
-                            )}
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Load More Button */}
+                      {hasMore && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setVisibleBadgesCount((prev) => Math.min(prev + 5, badges.length))}
+                          className="w-full rounded-xl text-xs font-bold border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all"
+                        >
+                          <MoreHorizontal className="size-3.5 mr-1.5" />
+                          Load More ({badges.length - visibleBadgesCount} more)
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })()
@@ -1334,81 +1355,102 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                 </div>
 
                 {/* Badges & Accomplishments Showcase (Real-time badges only) */}
-                {badges.length > 0 && (
-                  <div className="p-4 rounded-2xl bg-card/40 border border-amber-500/20 backdrop-blur-md space-y-3.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                        <Award className="size-4 text-amber-500 shrink-0" />
-                        <span className="truncate">CodeChef Badges</span>
-                      </span>
-                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-extrabold whitespace-nowrap shrink-0">
-                        {badges.length} Earned
-                      </Badge>
-                    </div>
+                {badges.length > 0 && (() => {
+                  const [visibleBadgesCount, setVisibleBadgesCount] = useState(3);
+                  const visibleBadges = badges.slice(0, visibleBadgesCount);
+                  const hasMore = visibleBadgesCount < badges.length;
 
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {badges.map((b, idx) => {
-                        const catLower = (b.category || "").toLowerCase();
-                        const nameLower = (b.name || "").toLowerCase();
+                  return (
+                    <div className="p-4 rounded-2xl bg-card/40 border border-amber-500/20 backdrop-blur-md space-y-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                          <Award className="size-4 text-amber-500 shrink-0" />
+                          <span className="truncate">CodeChef Badges</span>
+                        </span>
+                        <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-extrabold whitespace-nowrap shrink-0">
+                          {badges.length} Earned
+                        </Badge>
+                      </div>
 
-                        let IconComponent = Star;
-                        let iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
-                        let categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {visibleBadges.map((b, idx) => {
+                            const catLower = (b.category || "").toLowerCase();
+                            const nameLower = (b.name || "").toLowerCase();
 
-                        if (catLower.includes("tier") || nameLower.includes("star") || nameLower.includes("coder")) {
-                          IconComponent = Star;
-                          iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
-                          categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
-                        } else if (catLower.includes("division") || nameLower.includes("div")) {
-                          IconComponent = Trophy;
-                          iconBg = "bg-purple-500/15 border-purple-500/30 text-purple-400";
-                          categoryBg = "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10";
-                        } else if (catLower.includes("milestone") || nameLower.includes("master") || nameLower.includes("contender")) {
-                          IconComponent = Award;
-                          iconBg = "bg-indigo-500/15 border-indigo-500/30 text-indigo-400";
-                          categoryBg = "border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10";
-                        } else if (catLower.includes("contest") || nameLower.includes("regular")) {
-                          IconComponent = Flame;
-                          iconBg = "bg-rose-500/15 border-rose-500/30 text-rose-400";
-                          categoryBg = "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10";
-                        } else {
-                          IconComponent = CheckCircle2;
-                          iconBg = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
-                          categoryBg = "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
-                        }
+                            let IconComponent = Star;
+                            let iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
+                            let categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
 
-                        return (
-                          <div
-                            key={idx}
-                            className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-amber-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
-                          >
-                            <div className={cn("size-9 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover/badge:scale-110", iconBg)}>
-                              <IconComponent className="size-4 fill-current/20" />
-                            </div>
+                            if (catLower.includes("tier") || nameLower.includes("star") || nameLower.includes("coder")) {
+                              IconComponent = Star;
+                              iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
+                              categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
+                            } else if (catLower.includes("division") || nameLower.includes("div")) {
+                              IconComponent = Trophy;
+                              iconBg = "bg-purple-500/15 border-purple-500/30 text-purple-400";
+                              categoryBg = "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10";
+                            } else if (catLower.includes("milestone") || nameLower.includes("master") || nameLower.includes("contender")) {
+                              IconComponent = Award;
+                              iconBg = "bg-indigo-500/15 border-indigo-500/30 text-indigo-400";
+                              categoryBg = "border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10";
+                            } else if (catLower.includes("contest") || nameLower.includes("regular")) {
+                              IconComponent = Flame;
+                              iconBg = "bg-rose-500/15 border-rose-500/30 text-rose-400";
+                              categoryBg = "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10";
+                            } else {
+                              IconComponent = CheckCircle2;
+                              iconBg = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+                              categoryBg = "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
+                            }
 
-                            <div className="min-w-0 flex-1 space-y-0.5">
-                              <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                                <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
-                                  {b.name}
-                                </h5>
-                                {b.category && (
-                                  <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-md font-extrabold shrink-0", categoryBg)}>
-                                    {b.category}
-                                  </Badge>
-                                )}
+                            return (
+                              <div
+                                key={idx}
+                                className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-amber-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
+                              >
+                                <div className={cn("size-9 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover/badge:scale-110", iconBg)}>
+                                  <IconComponent className="size-4 fill-current/20" />
+                                </div>
+
+                                <div className="min-w-0 flex-1 space-y-0.5">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                                    <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
+                                      {b.name}
+                                    </h5>
+                                    {b.category && (
+                                      <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-md font-extrabold shrink-0", categoryBg)}>
+                                        {b.category}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {b.description && (
+                                    <p className="text-[11px] text-muted-foreground font-medium leading-normal">
+                                      {b.description}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              {b.description && (
-                                <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-                                  {b.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Load More Button */}
+                      {hasMore && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setVisibleBadgesCount((prev) => Math.min(prev + 5, badges.length))}
+                          className="w-full rounded-xl text-xs font-bold border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-600 transition-all"
+                        >
+                          <MoreHorizontal className="size-3.5 mr-1.5" />
+                          Load More ({badges.length - visibleBadgesCount} more)
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })()
