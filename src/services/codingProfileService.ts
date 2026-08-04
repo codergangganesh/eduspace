@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchHackerRankStats, fetchHackerEarthStats } from "./additionalPlatformsService";
 import { fetchHuggingFaceStats } from "./huggingFaceService";
 import { fetchChessStats } from "./chessService";
+import { fetchCredlyStats, extractCredlyUsername } from "./credlyService";
+import { fetchWakaTimeStats, extractWakaTimeUsername } from "./wakatimeService";
 import {
   LeetCodeStats,
   LeetCodeBadge,
@@ -64,6 +66,8 @@ export function extractUsername(input: string | null | undefined): string {
 
   return trimmed;
 }
+
+
 
 /**
  * Helper to normalize LeetCode stats.
@@ -1938,6 +1942,9 @@ export async function getCodingProfiles(
   hackerearthUsernameInput?: string | null,
   huggingfaceUsernameInput?: string | null,
   chessUsernameInput?: string | null,
+  credlyUsernameInput?: string | null,
+  wakatimeUsernameInput?: string | null,
+  wakatimeApiKeyInput?: string | null,
   forceRefresh = false
 ): Promise<CodingProfilesResponse> {
   const lcUsername = extractUsername(leetcodeUsernameInput);
@@ -1951,6 +1958,8 @@ export async function getCodingProfiles(
   const heUsername = extractUsername(hackerearthUsernameInput);
   const hfUsername = extractUsername(huggingfaceUsernameInput);
   const chessUsername = extractUsername(chessUsernameInput);
+  const credlyUsername = extractCredlyUsername(credlyUsernameInput);
+  const wakatimeUsername = extractWakaTimeUsername(wakatimeUsernameInput);
 
   const localCacheKey = `eduspace_coding_profile_cache_${userId}`;
 
@@ -2010,6 +2019,8 @@ export async function getCodingProfiles(
   const cachedHe = dbCached?.hackerearth_username || (dbCached?.overall_data as any)?.social_links?.hackerearth || localCached?.hackerearthUsername || "";
   const cachedHf = dbCached?.huggingface_username || localCached?.huggingfaceUsername || "";
   const cachedChess = dbCached?.chess_username || localCached?.chessUsername || "";
+  const cachedCredly = (dbCached as any)?.credly_username || localCached?.credlyUsername || "";
+  const cachedWakatime = (dbCached as any)?.wakatime_username || localCached?.wakatimeUsername || "";
 
   const usernameMatches =
     extractUsername(cachedLc).toLowerCase() === extractUsername(lcUsername).toLowerCase() &&
@@ -2022,7 +2033,9 @@ export async function getCodingProfiles(
     extractUsername(cachedHr).toLowerCase() === extractUsername(hrUsername).toLowerCase() &&
     extractUsername(cachedHe).toLowerCase() === extractUsername(heUsername).toLowerCase() &&
     extractUsername(cachedHf).toLowerCase() === extractUsername(hfUsername).toLowerCase() &&
-    extractUsername(cachedChess).toLowerCase() === extractUsername(chessUsername).toLowerCase();
+    extractUsername(cachedChess).toLowerCase() === extractUsername(chessUsername).toLowerCase() &&
+    extractCredlyUsername(cachedCredly).toLowerCase() === extractCredlyUsername(credlyUsername).toLowerCase() &&
+    extractWakaTimeUsername(cachedWakatime).toLowerCase() === extractWakaTimeUsername(wakatimeUsername).toLowerCase();
 
   let connectedPlatforms = 0;
   if (lcUsername) connectedPlatforms++;
@@ -2036,6 +2049,8 @@ export async function getCodingProfiles(
   if (heUsername) connectedPlatforms++;
   if (hfUsername) connectedPlatforms++;
   if (chessUsername) connectedPlatforms++;
+  if (credlyUsername) connectedPlatforms++;
+  if (wakatimeUsername) connectedPlatforms++;
 
   const gfgNeedsFetch = Boolean(gfgUsername && !(dbCached?.geeksforgeeks_data?.codingScore || localCached?.geeksforgeeks?.codingScore || dbCached?.geeksforgeeks_data?.totalSolved || localCached?.geeksforgeeks?.totalSolved));
   const ccNeedsFetch = Boolean(ccUsername && !(dbCached?.codechef_data?.rating || localCached?.codechef?.rating || dbCached?.codechef_data?.totalSolved || localCached?.codechef?.totalSolved));
@@ -2056,7 +2071,8 @@ export async function getCodingProfiles(
     const heData = dbCached?.hackerearth_data || localCached?.hackerearth || null;
     const hfData = dbCached?.huggingface_data || localCached?.huggingface || null;
     const chessData = dbCached?.chess_data || localCached?.chess || null;
-
+    const credlyData = (dbCached as any)?.credly_data || localCached?.credly || null;
+    const wakatimeData = (dbCached as any)?.wakatime_data || localCached?.wakatime || null;
     const overallTotal =
       (lcData?.totalSolved || 0) +
       (cfData?.totalSolved || 0) +
@@ -2079,6 +2095,8 @@ export async function getCodingProfiles(
       hackerearth: heData,
       huggingface: hfData,
       chess: chessData,
+      credly: credlyData,
+      wakatime: wakatimeData,
       overall: { totalSolved: overallTotal, platformsConnectedCount: connectedPlatforms },
       lastFetchedAt: dbCached?.last_fetched_at || localCached?.lastFetchedAt || new Date().toISOString(),
       leetcodeError: dbCached?.leetcode_error || localCached?.leetcodeError || null,
@@ -2092,6 +2110,8 @@ export async function getCodingProfiles(
       hackerearthError: dbCached?.hackerearth_error || localCached?.hackerearthError || null,
       huggingfaceError: dbCached?.huggingface_error || localCached?.huggingfaceError || null,
       chessError: dbCached?.chess_error || localCached?.chessError || null,
+      credlyError: (dbCached as any)?.credly_error || localCached?.credlyError || null,
+      wakatimeError: (dbCached as any)?.wakatime_error || localCached?.wakatimeError || null,
       leetcodeUsername: lcUsername,
       codeforcesHandle: cfHandle,
       githubUsername: ghUsername,
@@ -2104,22 +2124,27 @@ export async function getCodingProfiles(
       hackerearthUsername: heUsername,
       huggingfaceUsername: hfUsername,
       chessUsername: chessUsername,
+      credlyUsername: credlyUsername,
+      wakatimeUsername: wakatimeUsername,
+      wakatimeApiKey: wakatimeApiKeyInput || null,
     };
   }
 
   // Fetch fresh stats from platforms in parallel
-  const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult, hrResult, heResult, hfResult, chessResult] = await Promise.all([
-    lcUsername ? fetchLeetCodeStats(lcUsername) : Promise.resolve({ data: null, error: null }),
-    cfHandle ? fetchCodeforcesStats(cfHandle) : Promise.resolve({ data: null, error: null }),
-    ghUsername || ghToken ? fetchGitHubStats(ghUsername || "", ghToken) : Promise.resolve({ data: null, error: null }),
-    ccUsername ? fetchCodeChefStats(ccUsername) : Promise.resolve({ data: null, error: null }),
-    cwUsername ? fetchCodewarsStats(cwUsername) : Promise.resolve({ data: null, error: null }),
-    gfgUsername ? fetchGeeksForGeeksStats(gfgUsername) : Promise.resolve({ data: null, error: null }),
-    atcoderUsername ? fetchAtCoderStats(atcoderUsername) : Promise.resolve({ data: null, error: null }),
-    hrUsername ? fetchHackerRankStats(hrUsername) : Promise.resolve({ data: null, error: null }),
-    heUsername ? fetchHackerEarthStats(heUsername) : Promise.resolve({ data: null, error: null }),
-    hfUsername ? fetchHuggingFaceStats(hfUsername) : Promise.resolve({ data: null, error: null }),
-    chessUsername ? fetchChessStats(chessUsername) : Promise.resolve({ data: null, error: null }),
+const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult, hrResult, heResult, hfResult, chessResult, credlyResult, wakatimeResult] = await Promise.all([
+      lcUsername ? fetchLeetCodeStats(lcUsername) : Promise.resolve({ data: null, error: null }),
+      cfHandle ? fetchCodeforcesStats(cfHandle) : Promise.resolve({ data: null, error: null }),
+      ghUsername || ghToken ? fetchGitHubStats(ghUsername || "", ghToken) : Promise.resolve({ data: null, error: null }),
+      ccUsername ? fetchCodeChefStats(ccUsername) : Promise.resolve({ data: null, error: null }),
+      cwUsername ? fetchCodewarsStats(cwUsername) : Promise.resolve({ data: null, error: null }),
+      gfgUsername ? fetchGeeksForGeeksStats(gfgUsername) : Promise.resolve({ data: null, error: null }),
+      atcoderUsername ? fetchAtCoderStats(atcoderUsername) : Promise.resolve({ data: null, error: null }),
+      hrUsername ? fetchHackerRankStats(hrUsername) : Promise.resolve({ data: null, error: null }),
+      heUsername ? fetchHackerEarthStats(heUsername) : Promise.resolve({ data: null, error: null }),
+      hfUsername ? fetchHuggingFaceStats(hfUsername) : Promise.resolve({ data: null, error: null }),
+      chessUsername ? fetchChessStats(chessUsername) : Promise.resolve({ data: null, error: null }),
+      credlyUsername ? fetchCredlyStats(credlyUsername) : Promise.resolve({ data: null, error: null }),
+      wakatimeUsername || wakatimeApiKeyInput ? fetchWakaTimeStats(wakatimeUsername, wakatimeApiKeyInput) : Promise.resolve({ data: null, error: null }),
   ]);
 
   let lcStats = lcResult.data;
@@ -2133,6 +2158,8 @@ export async function getCodingProfiles(
   let heStats = heResult.data;
   let hfStats = hfResult.data;
   let chessStats = chessResult.data;
+  let credlyStats = credlyResult.data;
+  let wakatimeStats = wakatimeResult.data;
 
   let lcErr = lcResult.error;
   let cfErr = cfResult.error;
@@ -2145,6 +2172,8 @@ export async function getCodingProfiles(
   let heErr = heResult.error;
   let hfErr = hfResult.error;
   let chessErr = chessResult.error;
+  let credlyErr = credlyResult.error;
+  let wakatimeErr = wakatimeResult.error;
 
   // Fallback to cached data if network error occurred AND username matches
   const prevGh = dbCached?.github_data || localCached?.github;
@@ -2222,10 +2251,24 @@ export async function getCodingProfiles(
     hfErr = null;
   }
 
+
+
   const prevChess = dbCached?.chess_data || localCached?.chess;
   if (!chessStats && prevChess && extractUsername(prevChess.username) === chessUsername) {
     chessStats = prevChess;
     chessErr = null;
+  }
+
+  const prevCredly = (dbCached as any)?.credly_data || localCached?.credly;
+  if (!credlyStats && prevCredly && extractCredlyUsername(prevCredly.username) === credlyUsername) {
+    credlyStats = prevCredly;
+    credlyErr = null;
+  }
+
+  const prevWakatime = (dbCached as any)?.wakatime_data || localCached?.wakatime;
+  if (!wakatimeStats && prevWakatime && extractWakaTimeUsername(prevWakatime.username) === wakatimeUsername) {
+    wakatimeStats = prevWakatime;
+    wakatimeErr = null;
   }
 
   const resolvedGhUsername = ghStats?.username || ghUsername;
@@ -2253,6 +2296,8 @@ export async function getCodingProfiles(
     hackerearth: heStats,
     huggingface: hfStats,
     chess: chessStats,
+    credly: credlyStats,
+    wakatime: wakatimeStats,
     overall: { totalSolved: overallTotal, platformsConnectedCount: connectedPlatforms },
     lastFetchedAt: fetchedAtIso,
     leetcodeError: lcErr,
@@ -2266,6 +2311,8 @@ export async function getCodingProfiles(
     hackerearthError: heErr,
     huggingfaceError: hfErr,
     chessError: chessErr,
+    credlyError: credlyErr,
+    wakatimeError: wakatimeErr,
     leetcodeUsername: lcUsername,
     codeforcesHandle: cfHandle,
     githubUsername: resolvedGhUsername,
@@ -2278,6 +2325,9 @@ export async function getCodingProfiles(
     hackerearthUsername: heUsername,
     huggingfaceUsername: hfUsername,
     chessUsername: chessUsername,
+    credlyUsername: credlyUsername,
+    wakatimeUsername: wakatimeUsername,
+    wakatimeApiKey: wakatimeApiKeyInput || null,
   };
 
   // Save to localStorage fallback
@@ -2307,6 +2357,8 @@ export async function getCodingProfiles(
           hackerearth_username: heUsername,
           huggingface_username: hfUsername,
           chess_username: chessUsername,
+          credly_username: credlyUsername,
+          wakatime_username: wakatimeUsername,
           leetcode_data: lcStats as any,
           codeforces_data: cfStats as any,
           github_data: ghStats as any,
@@ -2318,6 +2370,8 @@ export async function getCodingProfiles(
           hackerearth_data: heStats as any,
           huggingface_data: hfStats as any,
           chess_data: chessStats as any,
+          credly_data: credlyStats as any,
+          wakatime_data: wakatimeStats as any,
           overall_data: { totalSolved: overallTotal, githubToken: ghToken } as any,
           leetcode_error: lcErr,
           codeforces_error: cfErr,
@@ -2329,6 +2383,8 @@ export async function getCodingProfiles(
           hackerearth_error: heErr,
           huggingface_error: hfErr,
           chess_error: chessErr,
+          credly_error: credlyErr,
+          wakatime_error: wakatimeErr,
           last_fetched_at: fetchedAtIso,
           updated_at: fetchedAtIso,
         },

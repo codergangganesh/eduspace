@@ -59,6 +59,7 @@ export default function Settings() {
   const [githubUsername, setGithubUsername] = useState(
     (profile?.github_url ? extractUsername(profile.github_url) : "") || (profile as any)?.github_username || ""
   );
+  const [linkedinUrl, setLinkedinUrl] = useState(profile?.linkedin_url || "");
   const [codechefUsername, setCodechefUsername] = useState(
     (profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || ""
   );
@@ -87,6 +88,7 @@ export default function Settings() {
       setLeetcodeUsername(profile.leetcode_username || extractUsername(profile.leetcode_url) || "");
       setCodeforcesHandle(profile.codeforces_handle || extractUsername(profile.codeforces_url) || "");
       setGithubUsername((profile.github_url ? extractUsername(profile.github_url) : "") || (profile as any)?.github_username || "");
+      setLinkedinUrl(profile?.linkedin_url || "");
       setCodechefUsername((profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || "");
       setCodewarsUsername((profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || "");
       setGeeksforgeeksUsername((profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || "");
@@ -108,6 +110,7 @@ export default function Settings() {
     const atcoderClean = extractUsername(atcoderUsername);
     const hrClean = extractUsername(hackerrankUsername);
     const heClean = extractUsername(hackerearthUsername);
+    const linkedinClean = linkedinUrl.trim();
     const ghTokenClean = githubToken.trim();
 
     setIsSavingCoding(true);
@@ -129,6 +132,11 @@ export default function Settings() {
       const atcoderUrl = atcoderClean ? `https://atcoder.jp/users/${atcoderClean}` : "";
       const hrUrl = hrClean ? `https://www.hackerrank.com/profile/${hrClean}` : "";
       const heUrl = heClean ? `https://www.hackerearth.com/@${heClean}` : "";
+      const linkedinNormalizedUrl = linkedinClean
+        ? linkedinClean.match(/^https?:\/\//i)
+          ? linkedinClean
+          : `https://www.linkedin.com/in/${linkedinClean.replace(/\/+$/, "")}`
+        : "";
 
       const res = await updateProfile({
         leetcode_username: lcClean || null,
@@ -140,6 +148,7 @@ export default function Settings() {
         atcoder_username: atcoderClean || null,
         hackerrank_username: hrClean || null,
         hackerearth_username: heClean || null,
+        linkedin_url: linkedinNormalizedUrl || null,
         leetcode_url: lcUrl || null,
         codeforces_url: cfUrl || null,
         github_url: ghUrl || null,
@@ -342,6 +351,20 @@ export default function Settings() {
                         placeholder="e.g. octocat or https://github.com/octocat"
                         value={githubUsername}
                         onChange={(e) => setGithubUsername(e.target.value)}
+                        className="bg-background/50 font-mono text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="setting-linkedin" className="text-xs font-semibold flex items-center gap-2">
+                        <PlatformBrandLogo platform="linkedin" className="size-4" />
+                        LinkedIn Profile URL
+                      </Label>
+                      <Input
+                        id="setting-linkedin"
+                        placeholder="e.g. https://www.linkedin.com/in/johndoe/"
+                        value={linkedinUrl}
+                        onChange={(e) => setLinkedinUrl(e.target.value)}
                         className="bg-background/50 font-mono text-xs h-9"
                       />
                     </div>

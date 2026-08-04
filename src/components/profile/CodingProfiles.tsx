@@ -8,6 +8,10 @@ import { HackerRankProfileCard } from "./HackerRankProfileCard";
 import { HackerEarthProfileCard } from "./HackerEarthProfileCard";
 import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
 import { ChessProfileCard } from "./ChessProfileCard";
+import { CredlyProfileCard, CredlyLogo } from "./CredlyProfileCard";
+import { WakaTimeProfileCard } from "./WakaTimeProfileCard";
+import { extractCredlyUsername } from "@/services/credlyService";
+import { extractWakaTimeUsername } from "@/services/wakatimeService";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +84,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [hackerearthInput, setHackerearthInput] = useState<string>("");
   const [huggingfaceInput, setHuggingfaceInput] = useState<string>("");
   const [chessInput, setChessInput] = useState<string>("");
+  const [credlyInput, setCredlyInput] = useState<string>("");
+  const [wakatimeInput, setWakatimeInput] = useState<string>("");
+  const [wakatimeApiKeyInput, setWakatimeApiKeyInput] = useState<string>("");
   const [githubTokenInput, setGithubTokenInput] = useState<string>("");
   const [showGithubToken, setShowGithubToken] = useState<boolean>(false);
 
@@ -94,6 +101,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const heUsername = (profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || data?.hackerearthUsername || "";
   const hfUsername = (profile as any)?.huggingface_username || extractUsername((profile as any)?.huggingface_url) || data?.huggingfaceUsername || "";
   const chessUsername = (profile as any)?.chess_username || extractUsername((profile as any)?.chess_url) || data?.chessUsername || "";
+  const credlyUsername = (profile as any)?.credly_username || extractCredlyUsername((profile as any)?.credly_url) || data?.credlyUsername || (user?.id ? localStorage.getItem(`eduspace_credly_username_${user.id}`) : null) || "";
+  const wakatimeUsername = (profile as any)?.wakatime_username || extractWakaTimeUsername((profile as any)?.wakatime_url) || data?.wakatimeUsername || (user?.id ? localStorage.getItem(`eduspace_wakatime_username_${user.id}`) : null) || "";
+  const wakatimeApiKey = (profile as any)?.wakatime_api_key || data?.wakatimeApiKey || (user?.id ? localStorage.getItem(`eduspace_wakatime_apikey_${user.id}`) : null) || "";
   const ghToken = (profile as any)?.github_token || data?.githubToken || "";
 
   useEffect(() => {
@@ -109,9 +119,12 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       setHackerearthInput((profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || data?.hackerearthUsername || "");
       setHuggingfaceInput((profile as any)?.huggingface_username || extractUsername((profile as any)?.huggingface_url) || data?.huggingfaceUsername || "");
       setChessInput((profile as any)?.chess_username || extractUsername((profile as any)?.chess_url) || data?.chessUsername || "");
+      setCredlyInput((profile as any)?.credly_username || extractCredlyUsername((profile as any)?.credly_url) || data?.credlyUsername || (user?.id ? localStorage.getItem(`eduspace_credly_username_${user.id}`) : null) || "");
+      setWakatimeInput((profile as any)?.wakatime_username || extractWakaTimeUsername((profile as any)?.wakatime_url) || data?.wakatimeUsername || (user?.id ? localStorage.getItem(`eduspace_wakatime_username_${user.id}`) : null) || "");
+      setWakatimeApiKeyInput((profile as any)?.wakatime_api_key || data?.wakatimeApiKey || (user?.id ? localStorage.getItem(`eduspace_wakatime_apikey_${user.id}`) : null) || "");
       setGithubTokenInput((profile as any)?.github_token || data?.githubToken || "");
     }
-  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.hackerrankUsername, data?.hackerearthUsername, data?.huggingfaceUsername, data?.chessUsername, data?.githubToken]);
+  }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.hackerrankUsername, data?.hackerearthUsername, data?.huggingfaceUsername, data?.chessUsername, data?.credlyUsername, data?.githubToken]);
 
   const fetchProfiles = useCallback(
     async (
@@ -120,6 +133,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         lc?: string;
         cf?: string;
         gh?: string;
+        linkedin?: string;
         token?: string;
         cc?: string;
         cw?: string;
@@ -129,6 +143,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         he?: string;
         hf?: string;
         chess?: string;
+        credly?: string;
+        wakatime?: string;
+        wakatimeApiKey?: string;
       }
     ) => {
       if (!user) {
@@ -157,6 +174,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           overrides?.he !== undefined ? overrides.he : heUsername,
           overrides?.hf !== undefined ? overrides.hf : hfUsername,
           overrides?.chess !== undefined ? overrides.chess : chessUsername,
+          overrides?.credly !== undefined ? overrides.credly : credlyUsername,
+          overrides?.wakatime !== undefined ? overrides.wakatime : wakatimeUsername,
+          overrides?.wakatimeApiKey !== undefined ? overrides.wakatimeApiKey : wakatimeApiKey,
           forceRefresh
         );
         setData(res);
@@ -167,7 +187,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         setRefreshing(false);
       }
     },
-    [user?.id, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, hrUsername, heUsername, hfUsername, chessUsername]
+    [user?.id, lcUsername, cfHandle, ghUsername, ghToken, ccUsername, cwUsername, gfgUsername, atcoderUsername, hrUsername, heUsername, hfUsername, chessUsername, credlyUsername, wakatimeUsername, wakatimeApiKey]
   );
 
   useEffect(() => {
@@ -183,6 +203,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     });
   };
 
+
+
   const handleSaveUsernames = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -197,6 +219,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     const cleanHe = hackerearthInput.trim();
     const cleanHf = huggingfaceInput.trim();
     const cleanChess = chessInput.trim();
+    const cleanCredly = credlyInput.trim();
+    const cleanWaka = wakatimeInput.trim();
+    const cleanWakaKey = wakatimeApiKeyInput.trim();
     const cleanGhToken = githubTokenInput.trim();
 
     if (leetcodeInput.length > 0 && !cleanLc) {
@@ -224,6 +249,21 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         } else {
           localStorage.removeItem(`eduspace_github_token_${user.id}`);
         }
+        if (cleanCredly) {
+          localStorage.setItem(`eduspace_credly_username_${user.id}`, cleanCredly);
+        } else {
+          localStorage.removeItem(`eduspace_credly_username_${user.id}`);
+        }
+        if (cleanWaka) {
+          localStorage.setItem(`eduspace_wakatime_username_${user.id}`, cleanWaka);
+        } else {
+          localStorage.removeItem(`eduspace_wakatime_username_${user.id}`);
+        }
+        if (cleanWakaKey) {
+          localStorage.setItem(`eduspace_wakatime_apikey_${user.id}`, cleanWakaKey);
+        } else {
+          localStorage.removeItem(`eduspace_wakatime_apikey_${user.id}`);
+        }
       }
 
       const lcUrl = cleanLc ? `https://leetcode.com/u/${cleanLc}/` : "";
@@ -237,6 +277,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       const heUrl = cleanHe ? `https://www.hackerearth.com/@${cleanHe}` : "";
       const hfUrl = cleanHf ? `https://huggingface.co/${cleanHf}` : "";
       const chessUrl = cleanChess ? `https://www.chess.com/member/${cleanChess}` : "";
+      const credlyUrl = cleanCredly ? `https://www.credly.com/users/${cleanCredly}` : "";
+      const wakaUrl = cleanWaka ? `https://wakatime.com/@${cleanWaka}` : "";
 
       const res = await updateProfile({
         leetcode_username: cleanLc || null,
@@ -252,6 +294,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         hackerearth_username: cleanHe || null,
         huggingface_username: cleanHf || null,
         chess_username: cleanChess || null,
+        credly_username: cleanCredly || null,
+        wakatime_username: cleanWaka || null,
         codechef_url: ccUrl || null,
         codewars_url: cwUrl || null,
         geeksforgeeks_url: gfgUrl || null,
@@ -260,6 +304,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         hackerearth_url: heUrl || null,
         huggingface_url: hfUrl || null,
         chess_url: chessUrl || null,
+        credly_url: credlyUrl || null,
+        wakatime_url: wakaUrl || null,
       } as any);
 
       if (res.success) {
@@ -278,6 +324,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           he: cleanHe,
           hf: cleanHf,
           chess: cleanChess,
+          credly: cleanCredly,
+          wakatime: cleanWaka,
+          wakatimeApiKey: cleanWakaKey,
         });
       } else {
         toast.error(res.error || "Failed to update profile settings.");
@@ -615,11 +664,37 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           />
         )}
 
+
+
         <div id="chess-profile-section" className="col-span-1 scroll-mt-6">
           <ChessProfileCard
             usernameOrHandle={chessUsername}
             stats={data?.chess}
             error={data?.chessError}
+            onConnect={() => setIsDialogOpen(true)}
+            onEditHandle={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
+          />
+        </div>
+
+        <div id="credly-profile-section" className="col-span-1 scroll-mt-6">
+          <CredlyProfileCard
+            usernameOrHandle={credlyUsername}
+            stats={data?.credly}
+            error={data?.credlyError}
+            onConnect={() => setIsDialogOpen(true)}
+            onEditHandle={() => setIsDialogOpen(true)}
+            onRefresh={handleManualRefresh}
+            isRefreshing={refreshing}
+          />
+        </div>
+
+        <div id="wakatime-profile-section" className="col-span-1 scroll-mt-6">
+          <WakaTimeProfileCard
+            usernameOrHandle={wakatimeUsername}
+            stats={data?.wakatime}
+            error={data?.wakatimeError}
             onConnect={() => setIsDialogOpen(true)}
             onEditHandle={() => setIsDialogOpen(true)}
             onRefresh={handleManualRefresh}
@@ -681,6 +756,34 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. hikaru or https://www.chess.com/member/hikaru"
                   value={chessInput}
                   onChange={(e) => setChessInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="credly_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <PlatformBrandLogo platform="credly" className="size-4" />
+                  Credly Username / Profile URL
+                </Label>
+                <Input
+                  id="credly_input"
+                  placeholder="e.g. john_doe or https://www.credly.com/users/john_doe"
+                  value={credlyInput}
+                  onChange={(e) => setCredlyInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="wakatime_input" className="flex items-center gap-2 text-xs font-semibold">
+                  <PlatformBrandLogo platform="wakatime" className="size-4" />
+                  WakaTime Username / Profile URL
+                </Label>
+                <Input
+                  id="wakatime_input"
+                  placeholder="e.g. john_doe or https://wakatime.com/@john_doe"
+                  value={wakatimeInput}
+                  onChange={(e) => setWakatimeInput(e.target.value)}
                   className="rounded-xl font-mono text-xs h-10"
                 />
               </div>
@@ -771,7 +874,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
               <div className="space-y-1.5">
                 <Label htmlFor="hackerrank_input" className="flex items-center gap-2 text-xs font-semibold">
-                  <div className="size-4 rounded-md bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-[9px]">H</div>
+                  <PlatformBrandLogo platform="hackerrank" className="size-4" />
                   HackerRank Username / URL
                 </Label>
                 <Input
@@ -782,6 +885,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   className="rounded-xl font-mono text-xs h-10"
                 />
               </div>
+
+
 
               <div className="space-y-2 pt-2 border-t border-border/50">
                 <div className="flex items-center justify-between">

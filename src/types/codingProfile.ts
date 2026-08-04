@@ -1,8 +1,12 @@
 import { HuggingFaceStats } from "./huggingFaceProfile";
 import { ChessStats } from "./chessProfile";
+import { CredlyStats } from "./credlyProfile";
+import { WakaTimeStats } from "./wakatimeProfile";
 
 export type { HuggingFaceStats } from "./huggingFaceProfile";
 export type { ChessStats } from "./chessProfile";
+export type { CredlyStats } from "./credlyProfile";
+export type { WakaTimeStats } from "./wakatimeProfile";
 
 export interface ContributionDay {
   date: string;   // "YYYY-MM-DD"
@@ -192,6 +196,7 @@ export interface GitHubStats {
 
   lastFetchedAt?: string;
 }
+
 
 export interface CodeChefBadge {
   id?: string;
@@ -390,6 +395,8 @@ export interface CodingProfilesResponse {
   hackerearth?: HackerEarthStats | null;
   huggingface?: HuggingFaceStats | null;
   chess?: ChessStats | null;
+  credly?: CredlyStats | null;
+  wakatime?: WakaTimeStats | null;
   overall: OverallStats;
   lastFetchedAt?: string | null;
   leetcodeError?: string | null;
@@ -403,6 +410,8 @@ export interface CodingProfilesResponse {
   hackerearthError?: string | null;
   huggingfaceError?: string | null;
   chessError?: string | null;
+  credlyError?: string | null;
+  wakatimeError?: string | null;
   leetcodeUsername?: string | null;
   codeforcesHandle?: string | null;
   githubUsername?: string | null;
@@ -416,6 +425,9 @@ export interface CodingProfilesResponse {
   codolioUsername?: string | null;
   huggingfaceUsername?: string | null;
   chessUsername?: string | null;
+  credlyUsername?: string | null;
+  wakatimeUsername?: string | null;
+  wakatimeApiKey?: string | null;
 }
 
 export interface GitHubSearchResultItem {
@@ -441,6 +453,7 @@ export interface UserCodingProfilesRecord {
   codolio_username?: string | null;
   huggingface_username?: string | null;
   chess_username?: string | null;
+  linkedin_username?: string | null;
   leetcode_data?: LeetCodeStats | null;
   codeforces_data?: CodeforcesStats | null;
   github_data?: GitHubStats | null;
@@ -453,6 +466,10 @@ export interface UserCodingProfilesRecord {
   huggingface_data?: HuggingFaceStats | null;
   chess_data?: ChessStats | null;
   overall_data?: OverallStats | null;
+  linkedin_connected_at?: string | null;
+  linkedin_last_synced_at?: string | null;
+  linkedin_oauth_state?: string | null;
+  linkedin_oauth_state_created_at?: string | null;
   leetcode_error?: string | null;
   codeforces_error?: string | null;
   codechef_error?: string | null;
@@ -462,6 +479,7 @@ export interface UserCodingProfilesRecord {
   hackerrank_error?: string | null;
   hackerearth_error?: string | null;
   huggingface_error?: string | null;
+  linkedin_error?: string | null;
   chess_error?: string | null;
   last_fetched_at?: string | null;
   updated_at?: string | null;

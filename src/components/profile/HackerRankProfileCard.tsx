@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { HackerRankStats } from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
+import { UnifiedPlatformLogo } from "./PlatformLogos";
 import { cn } from "@/lib/utils";
 
 interface HackerRankProfileCardProps {
@@ -60,8 +61,8 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
       {/* Platform Header */}
       <div className="flex items-center justify-between gap-4 mb-5 pb-4 border-b border-border/50">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black text-lg">
-            H
+          <div className="size-11 sm:size-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 p-2">
+            <UnifiedPlatformLogo platform="hackerrank" className="size-7 sm:size-8" />
           </div>
           <div className="min-w-0">
             <h3 className="font-extrabold text-lg text-foreground tracking-tight flex items-center gap-2">

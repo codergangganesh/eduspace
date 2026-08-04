@@ -64,6 +64,10 @@ export interface Profile {
   chess_username?: string | null;
   huggingface_url?: string | null;
   huggingface_username?: string | null;
+  credly_url?: string | null;
+  credly_username?: string | null;
+  wakatime_url?: string | null;
+  wakatime_username?: string | null;
   codolio_url?: string | null;
   voice_bio_url?: string | null;
   voice_bio_transcript?: string | null;
@@ -599,6 +603,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         chess_username,
         huggingface_url,
         huggingface_username,
+        credly_url,
+        credly_username,
+        wakatime_url,
+        wakatime_username,
         codolio_url,
         ...dbData
       } = data as any;
@@ -625,6 +633,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         chess_username: chess_username !== undefined ? chess_username : storedSocial.chess_username,
         huggingface_url: huggingface_url !== undefined ? huggingface_url : storedSocial.huggingface_url,
         huggingface_username: huggingface_username !== undefined ? huggingface_username : storedSocial.huggingface_username,
+        credly_url: credly_url !== undefined ? credly_url : storedSocial.credly_url,
+        credly_username: credly_username !== undefined ? credly_username : storedSocial.credly_username,
+        wakatime_url: wakatime_url !== undefined ? wakatime_url : storedSocial.wakatime_url,
+        wakatime_username: wakatime_username !== undefined ? wakatime_username : storedSocial.wakatime_username,
         codolio_url: codolio_url !== undefined ? codolio_url : storedSocial.codolio_url,
       };
       localStorage.setItem(`eduspace_social_extra_${user.id}`, JSON.stringify(updatedSocial));

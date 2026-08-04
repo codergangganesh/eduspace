@@ -36,10 +36,10 @@ import {
   AtCoderStats,
 } from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
+import { UnifiedPlatformLogo } from "./PlatformLogos";
 import { cn } from "@/lib/utils";
 import { GitHubPortfolioDashboard } from "./GitHubPortfolioDashboard";
 
-// Real Brand Image CDN URLs
 const BRAND_LOGOS: Record<string, string> = {
   leetcode: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/leetcode/leetcode-original.svg",
   codeforces: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codeforces/codeforces-original.svg",
@@ -48,6 +48,8 @@ const BRAND_LOGOS: Record<string, string> = {
   codechef: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codechef/codechef-original.svg",
   geeksforgeeks: "https://media.geeksforgeeks.org/wp-content/cdn-uploads/gfg_200X200.png",
   atcoder: "https://img.atcoder.jp/assets/atcoder.png",
+  hackerrank: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/hackerrank/hackerrank-original.svg",
+  credly: "https://www.credly.com/assets/apple-touch-icon-180x180.png",
 };
 
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -97,6 +99,12 @@ const GitHubLogo = ({ className = "size-7" }: { className?: string }) => (
   </svg>
 );
 
+const LinkedInLogo = ({ className = "size-7" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19 3A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H19ZM8.34 18.6V10.8H5.9V18.6H8.34ZM7.12 9.7A1.35 1.35 0 1 0 7.1 6.95A1.35 1.35 0 0 0 7.12 9.7ZM18.1 18.6V14.45C18.1 12.33 17.24 11.55 15.72 11.55C14.76 11.55 14.2 12.1 13.92 12.65H13.88V10.8H11.47C11.5 11.5 11.47 18.6 11.47 18.6H13.92V14.9C13.92 14.2 13.96 13.4 14.86 13.4C15.72 13.4 15.78 14.12 15.78 14.95V18.6H18.1Z" />
+  </svg>
+);
+
 const CodewarsLogo = ({ className = "size-7" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.2L19.5 8 12 11.8 4.5 8 12 4.2zM4.5 9.8l6.75 3.4v6.6L4.5 16.4V9.8zm15 6.6l-6.75 3.4v-6.6l6.75-3.4v6.6z" />
@@ -125,6 +133,7 @@ const PlatformIconMap: Record<string, React.ComponentType<{ className?: string }
   leetcode: LeetCodeLogo,
   codeforces: CodeforcesLogo,
   github: GitHubLogo,
+  linkedin: LinkedInLogo,
   codewars: CodewarsLogo,
   codechef: CodeChefLogo,
   geeksforgeeks: GeeksForGeeksLogo,
@@ -132,23 +141,7 @@ const PlatformIconMap: Record<string, React.ComponentType<{ className?: string }
 };
 
 export function PlatformBrandLogo({ platform, className = "size-7" }: { platform: string; className?: string }) {
-  const [hasError, setHasError] = React.useState(false);
-  const src = BRAND_LOGOS[platform];
-
-  if (src && !hasError) {
-    return (
-      <img
-        src={src}
-        alt={platform}
-        className={cn(className, "object-contain shrink-0 transition-transform duration-200")}
-        onError={() => setHasError(true)}
-        loading="lazy"
-      />
-    );
-  }
-
-  const Fallback = PlatformIconMap[platform] || LeetCodeLogo;
-  return <Fallback className={className} />;
+  return <UnifiedPlatformLogo platform={platform} className={className} />;
 }
 
 interface CFRankConfig {
