@@ -63,6 +63,7 @@ import {
   Terminal,
   Cpu,
   AudioWaveform,
+  MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -71,6 +72,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { ProfileNotificationSettings } from "@/components/ProfileNotificationSettings";
 import { CodingProfiles } from "@/components/profile/CodingProfiles";
+import { ProfileMobileMoreSheet } from "@/components/profile/ProfileMobileMoreSheet";
 import SEO from "@/components/SEO";
 import imageCompression from "browser-image-compression";
 import DOMPurify from "dompurify";
@@ -221,7 +223,7 @@ const profileTabs = [
   { id: "social", label: "Social Links", icon: Share2 },
   { id: "security", label: "Security", icon: Shield },
   { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "preferences", label: "Preferences", icon: Settings },
+  { id: "preferences", label: "Settings", icon: Settings },
 ];
 
 export default function Profile() {
@@ -234,6 +236,7 @@ export default function Profile() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [showPublicProfile, setShowPublicProfile] = useState(false);
+  const [showMoreMobileSheet, setShowMoreMobileSheet] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -244,6 +247,14 @@ export default function Profile() {
   const visibleProfileTabs = profileTabs.filter(
     (tab) => (tab.id !== "social" && tab.id !== "coding") || isStudent
   );
+
+  const primaryMobileTabs = visibleProfileTabs.filter(
+    (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "coding" || tab.id === "social"
+  );
+  const secondaryMobileTabs = visibleProfileTabs.filter(
+    (tab) => !primaryMobileTabs.some((p) => p.id === tab.id)
+  );
+  const isMoreMobileActive = secondaryMobileTabs.some((tab) => tab.id === activeTab);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -1980,7 +1991,7 @@ export default function Profile() {
       {/* Mobile Bottom Navigation for Profile Tabs */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border xl:hidden pb-safe">
         <nav className="flex items-center justify-around h-16 px-2 overflow-x-auto no-scrollbar">
-          {visibleProfileTabs.map((tab) => (
+          {primaryMobileTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
@@ -2010,8 +2021,49 @@ export default function Profile() {
               </span>
             </button>
           ))}
+
+          {/* More (Three-dot) Button */}
+          {secondaryMobileTabs.length > 0 && (
+            <button
+              onClick={() => setShowMoreMobileSheet(true)}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 min-w-[64px] h-full text-[10px] font-medium transition-colors my-1",
+                isMoreMobileActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-label="More options"
+            >
+              <div
+                className={cn(
+                  "p-1.5 rounded-xl transition-all",
+                  isMoreMobileActive && "bg-primary/10"
+                )}
+              >
+                <MoreVertical
+                  className={cn("size-5 transition-all", isMoreMobileActive ? "text-primary" : "text-muted-foreground")}
+                  strokeWidth={isMoreMobileActive ? 2.5 : 2}
+                />
+              </div>
+              <span className={cn("hidden xs:block scale-0 transition-all duration-200", isMoreMobileActive && "scale-100")}>
+                More
+              </span>
+            </button>
+          )}
         </nav>
       </div>
+
+      {/* Mobile More Options Bottom Sheet */}
+      <ProfileMobileMoreSheet
+        open={showMoreMobileSheet}
+        onOpenChange={setShowMoreMobileSheet}
+        tabs={secondaryMobileTabs}
+        activeTab={activeTab}
+        onSelectTab={(tabId) => {
+          setActiveTab(tabId);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
     </DashboardLayout>
   );
 }
