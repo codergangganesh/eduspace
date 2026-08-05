@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Calendar,
   Sparkles,
+  Pin,
 } from "lucide-react";
 import { CredlyStats, CredlyBadge } from "@/types/credlyProfile";
 import { extractCredlyUsername } from "@/services/credlyService";
@@ -28,6 +29,8 @@ export interface CredlyProfileCardProps {
   onEditHandle?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
   className?: string;
 }
 
@@ -39,6 +42,8 @@ export function CredlyProfileCard({
   onEditHandle,
   onRefresh,
   isRefreshing,
+  isPinned,
+  onTogglePin,
   className,
 }: CredlyProfileCardProps) {
   const username = extractCredlyUsername(usernameOrHandle);
@@ -98,27 +103,43 @@ export function CredlyProfileCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            {onTogglePin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onTogglePin}
+                className={cn(
+                  "size-7 rounded-lg transition-all",
+                  isPinned
+                    ? "text-amber-500 hover:text-amber-600 bg-amber-500/10 border border-amber-500/30 shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+                title={isPinned ? "Unpin platform card" : "Pin platform card to top"}
+              >
+                <Pin className={cn("size-3", isPinned && "fill-amber-500")} />
+              </Button>
+            )}
             {onRefresh && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onRefresh}
                 disabled={isRefreshing}
-                className="size-8 rounded-xl hover:bg-accent hover:text-foreground"
+                className="size-7 rounded-lg hover:bg-accent hover:text-foreground"
                 title="Refresh certifications"
               >
-                <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-primary")} />
+                <RefreshCw className={cn("size-3", isRefreshing && "animate-spin text-primary")} />
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
               onClick={onEditHandle}
-              className="size-8 rounded-xl hover:bg-accent"
+              className="size-7 rounded-lg hover:bg-accent"
               title="Edit username"
             >
-              <Edit3 className="size-3.5 text-muted-foreground" />
+              <Edit3 className="size-3 text-muted-foreground" />
             </Button>
           </div>
         </div>

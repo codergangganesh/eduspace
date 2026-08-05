@@ -9,7 +9,6 @@ export const SHELL_IMAGE_ASSETS = [
   "/schedule-icon.png",
   "/assignment-icon.png",
   "/quiz-icon.png",
-  "/edumatrix-icon.png",
   "/ai-icon.png",
   "/ai-tutor.png",
   "/streak-icon.png",

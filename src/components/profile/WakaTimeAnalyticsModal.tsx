@@ -215,14 +215,7 @@ export function WakaTimeAnalyticsModal({
               </div>
             </div>
 
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap shadow-sm hover:shadow-md"
-            >
-              Profile <ExternalLink className="size-3" />
-            </a>
+
           </div>
 
           {/* GitHub-Style Live Profile Search Bar */}

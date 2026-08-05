@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Edit3,
   MoreHorizontal,
+  Pin,
 } from "lucide-react";
 import {
   LeetCodeStats,
@@ -262,7 +263,12 @@ function LeetCodeDonutChart({ easy, medium, hard, total }: { easy: number; mediu
   );
 }
 
-export interface LeetCodeCardProps {
+export interface BaseCardMetaProps {
+  isPinned?: boolean;
+  onTogglePin?: () => void;
+}
+
+export interface LeetCodeCardProps extends BaseCardMetaProps {
   platform: "leetcode";
   username?: string | null;
   stats?: LeetCodeStats | null;
@@ -273,7 +279,7 @@ export interface LeetCodeCardProps {
   className?: string;
 }
 
-export interface CodeforcesCardProps {
+export interface CodeforcesCardProps extends BaseCardMetaProps {
   platform: "codeforces";
   handle?: string | null;
   stats?: CodeforcesStats | null;
@@ -284,7 +290,7 @@ export interface CodeforcesCardProps {
   className?: string;
 }
 
-export interface GitHubCardProps {
+export interface GitHubCardProps extends BaseCardMetaProps {
   platform: "github";
   username?: string | null;
   stats?: GitHubStats | null;
@@ -296,7 +302,7 @@ export interface GitHubCardProps {
   githubToken?: string | null;
 }
 
-export interface CodeChefCardProps {
+export interface CodeChefCardProps extends BaseCardMetaProps {
   platform: "codechef";
   username?: string | null;
   stats?: CodeChefStats | null;
@@ -307,7 +313,7 @@ export interface CodeChefCardProps {
   className?: string;
 }
 
-export interface CodewarsCardProps {
+export interface CodewarsCardProps extends BaseCardMetaProps {
   platform: "codewars";
   username?: string | null;
   stats?: CodewarsStats | null;
@@ -318,7 +324,7 @@ export interface CodewarsCardProps {
   className?: string;
 }
 
-export interface GeeksForGeeksCardProps {
+export interface GeeksForGeeksCardProps extends BaseCardMetaProps {
   platform: "geeksforgeeks";
   username?: string | null;
   stats?: GeeksForGeeksStats | null;
@@ -329,7 +335,7 @@ export interface GeeksForGeeksCardProps {
   className?: string;
 }
 
-export interface AtCoderCardProps {
+export interface AtCoderCardProps extends BaseCardMetaProps {
   platform: "atcoder";
   username?: string | null;
   stats?: AtCoderStats | null;
@@ -479,27 +485,43 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            {props.onTogglePin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={props.onTogglePin}
+                className={cn(
+                  "size-7 rounded-lg transition-all",
+                  props.isPinned
+                    ? "text-amber-500 hover:text-amber-600 bg-amber-500/10 border border-amber-500/30 shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+                title={props.isPinned ? "Unpin platform card" : "Pin platform card to top"}
+              >
+                <Pin className={cn("size-3", props.isPinned && "fill-amber-500")} />
+              </Button>
+            )}
             {props.onRefresh && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={props.onRefresh}
                 disabled={props.isRefreshing}
-                className="size-8 rounded-xl hover:bg-accent hover:text-foreground"
+                className="size-7 rounded-lg hover:bg-accent hover:text-foreground"
                 title="Refresh statistics"
               >
-                <RefreshCw className={cn("size-3.5", props.isRefreshing && "animate-spin text-primary")} />
+                <RefreshCw className={cn("size-3", props.isRefreshing && "animate-spin text-primary")} />
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
               onClick={props.onEdit}
-              className="size-8 rounded-xl hover:bg-accent"
+              className="size-7 rounded-lg hover:bg-accent"
               title="Edit handle"
             >
-              <Edit3 className="size-3.5 text-muted-foreground" />
+              <Edit3 className="size-3 text-muted-foreground" />
             </Button>
           </div>
         </div>

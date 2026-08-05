@@ -26,7 +26,6 @@ import {
     Globe,
     Zap,
     History,
-    Orbit,
     GraduationCap
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,7 +70,6 @@ export function CommandPalette() {
                             { id: 'messages', title: 'Messages', desc: 'Securely communicate with your classmates and instructors in real-time.', icon: MessageSquare },
                             { id: 'feed', title: 'Class Feed', desc: 'Stay updated with global announcements and class-specific news.', icon: MessageSquare },
                             { id: 'schedule', title: 'Schedule', desc: 'Your personalized academic calendar with classes and lab sessions.', icon: Calendar },
-                            { id: 'knowledge-map', title: 'Knowledge Map', desc: 'Visualize your academic connections and learning history in 3D.', icon: Orbit },
                             { id: 'ai-chat', title: 'AI Chat', desc: 'Interact with EduSpace AI for tutoring, brainstorming, and support.', icon: Bot },
                             { id: 'ai-coach', title: 'AI Coach', desc: 'Get personalized academic insights and coaching strategies from your AI mentor.', icon: GraduationCap },
                             { id: 'help', title: 'Help Center', desc: 'Access documentation, tutorials, and contact support for assistance.', icon: HelpCircle },
@@ -174,7 +172,6 @@ export function CommandPalette() {
                     f: '/class-feed',
                     g: '/messages',
                     c: '/schedule',
-                    e: '/student/knowledge-map',
                     j: '/ai-chat',
                     r: () => handleToggleCoach(),
                     t: '/lecturer/timetable',
@@ -293,348 +290,338 @@ export function CommandPalette() {
                                 </div>
                             </Command.Empty>
 
-                    {/* Search Results Sections */}
-                    {results.assignments.length > 0 && (
-                        <Command.Group heading="Assignments" className="p-2">
-                            {results.assignments.map(a => (
-                                <Item key={a.id} value={a.id} onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer/assignments' : '/student/assignments'))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-blue-500/10 mr-3">
-                                        <FileText className="h-4 w-4 text-blue-500" />
-                                    </div>
-                                    <div className="flex flex-col flex-1 truncate">
-                                        <span className="font-bold text-foreground truncate">{a.title}</span>
-                                        <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Assignment</span>
-                                    </div>
-                                    <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-aria-selected:opacity-40" />
-                                </Item>
-                            ))}
-                        </Command.Group>
-                    )}
-
-                    {results.quizzes.length > 0 && (
-                        <Command.Group heading="Quizzes" className="p-2">
-                            {results.quizzes.map(q => (
-                                <Item key={q.id} value={q.id} onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer/quizzes' : '/student/quizzes'))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-purple-500/10 mr-3">
-                                        <BookOpen className="h-4 w-4 text-purple-500" />
-                                    </div>
-                                    <div className="flex flex-col flex-1 truncate">
-                                        <span className="font-bold text-foreground truncate">{q.title}</span>
-                                        <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Academic Quiz</span>
-                                    </div>
-                                    <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-aria-selected:opacity-40" />
-                                </Item>
-                            ))}
-                        </Command.Group>
-                    )}
-
-                    {results.chats.length > 0 && (
-                        <Command.Group heading="AI Conversations" className="p-2">
-                            {results.chats.map(c => (
-                                <Item key={c.id} value={c.id} onSelect={() => runCommand(() => navigate(`/ai-chat?id=${c.id}`))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-emerald-500/10 mr-3">
-                                        <MessageSquare className="h-4 w-4 text-emerald-500" />
-                                    </div>
-                                    <div className="flex flex-col flex-1 truncate">
-                                        <span className="font-bold text-foreground truncate">{c.title}</span>
-                                        <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">AI Conversation</span>
-                                    </div>
-                                    <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-aria-selected:opacity-40" />
-                                </Item>
-                            ))}
-                        </Command.Group>
-                    )}
-
-
-                    <Command.Group heading="AI Intelligence" className="p-2">
-                        <Item value="ai-chat" onSelect={() => runCommand(() => navigate("/ai-chat"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 mr-3 transition-colors group-aria-selected:bg-primary/20">
-                                <Bot className="h-4 w-4 text-primary" />
-                            </div>
-                            <span>EduSpace AI Chat</span>
-                            <div className="flex items-center gap-2 ml-auto">
-                                <Shortcut>Alt + J</Shortcut>
-                            </div>
-                        </Item>
-                        <Item value="ai-coach-toggle" onSelect={() => handleToggleCoach()}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
-                                <GraduationCap className="h-4 w-4 text-indigo-600" />
-                            </div>
-                            <span>Toggle AI Coach Drawer</span>
-                            <Shortcut>Alt + R</Shortcut>
-                        </Item>
-                    </Command.Group>
-
-                    <Command.Group heading="General" className="p-2">
-                        <Item value="dashboard" onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <LayoutDashboard className="h-4 w-4" />
-                            </div>
-                            <span>Dashboard</span>
-                            <Shortcut>Alt + D</Shortcut>
-                        </Item>
-                        <Item value="profile" onSelect={() => runCommand(() => navigate("/profile"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <User className="h-4 w-4" />
-                            </div>
-                            <span>Profile</span>
-                            <Shortcut>Alt + P</Shortcut>
-                        </Item>
-                        <Item value="settings" onSelect={() => runCommand(() => navigate("/settings"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <Settings className="h-4 w-4" />
-                            </div>
-                            <span>Settings</span>
-                            <Shortcut>Alt + S</Shortcut>
-                        </Item>
-                    </Command.Group>
-
-                    <Command.Group heading="Quick Access" className="p-2">
-                        {role === 'student' && (
-                            <>
-                                <Item value="assignments" onSelect={() => runCommand(() => navigate("/student/assignments"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <FileText className="h-4 w-4" />
-                                    </div>
-                                    <span>Assignments</span>
-                                    <Shortcut>Alt + A</Shortcut>
-                                </Item>
-                                <Item value="quizzes" onSelect={() => runCommand(() => navigate("/student/quizzes"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <BookOpen className="h-4 w-4" />
-                                    </div>
-                                    <span>My Quizzes</span>
-                                    <Shortcut>Alt + Q</Shortcut>
-                                </Item>
-                                <Item value="streak" onSelect={() => runCommand(() => navigate("/streak"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <Flame className="h-4 w-4" />
-                                    </div>
-                                    <span>Streak & Momentum</span>
-                                    <Shortcut>Alt + M</Shortcut>
-                                </Item>
-                            </>
-                        )}
-                        {role === 'lecturer' && (
-                            <>
-                                <Item value="assignments" onSelect={() => runCommand(() => navigate("/lecturer/assignments"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <FileText className="h-4 w-4" />
-                                    </div>
-                                    <span>Class Assignments</span>
-                                    <Shortcut>Alt + A</Shortcut>
-                                </Item>
-                                <Item value="quizzes" onSelect={() => runCommand(() => navigate("/lecturer/quizzes"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <Plus className="h-4 w-4" />
-                                    </div>
-                                    <span>Create/Manage Quizzes</span>
-                                    <Shortcut>Alt + Q</Shortcut>
-                                </Item>
-                            </>
-                        )}
-                        <Item value="feed" onSelect={() => runCommand(() => navigate("/class-feed"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <MessageSquare className="h-4 w-4" />
-                            </div>
-                            <span>Class News Feed</span>
-                            <Shortcut>Alt + F</Shortcut>
-                        </Item>
-                        <Item value="messages" onSelect={() => runCommand(() => navigate("/messages"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <MessageSquare className="h-4 w-4" />
-                            </div>
-                            <span>Direct Messages</span>
-                            <Shortcut>Alt + G</Shortcut>
-                        </Item>
-                        <Item value="schedule" onSelect={() => runCommand(() => navigate("/schedule"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <Calendar className="h-4 w-4" />
-                            </div>
-                            <span>Full Schedule</span>
-                            <Shortcut>Alt + C</Shortcut>
-                        </Item>
-                        {role === 'lecturer' && (
-                            <>
-                                <Item value="students" onSelect={() => runCommand(() => navigate("/all-students"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <GraduationCap className="h-4 w-4" />
-                                    </div>
-                                    <span>All Students</span>
-                                    <Shortcut>Alt + U</Shortcut>
-                                </Item>
-                                <Item value="timetable" onSelect={() => runCommand(() => navigate("/lecturer/timetable"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <History className="h-4 w-4" />
-                                    </div>
-                                    <span>Time Table</span>
-                                    <Shortcut>Alt + T</Shortcut>
-                                </Item>
-                                <Item value="ai-gen" onSelect={() => runCommand(() => navigate("/lecturer/create-ai-quiz"))}>
-                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                        <Plus className="h-4 w-4" />
-                                    </div>
-                                    <span>AI Quiz Generator</span>
-                                    <Shortcut>Alt + V</Shortcut>
-                                </Item>
-                            </>
-                        )}
-                        {role === 'student' && (
-                            <Item value="knowledge-map" onSelect={() => runCommand(() => navigate("/student/knowledge-map"))}>
-                                <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                    <BookOpen className="h-4 w-4" />
-                                </div>
-                                <span>Knowledge Map</span>
-                                <Shortcut>Alt + E</Shortcut>
-                            </Item>
-                        )}
-                    </Command.Group>
-
-                    <Command.Group heading="Appearance" className="p-2">
-                        <Item value="light" onSelect={() => setTheme("light")}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <Sun className="h-4 w-4" />
-                            </div>
-                            <span>Light Theme</span>
-                            <div className="flex items-center gap-2 ml-auto">
-                                {theme === "light" && <div className="h-2 w-2 rounded-full bg-primary" />}
-                                <Shortcut>Alt + 1</Shortcut>
-                            </div>
-                        </Item>
-                        <Item value="dark" onSelect={() => setTheme("dark")}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <Moon className="h-4 w-4" />
-                            </div>
-                            <span>Dark Theme</span>
-                            <div className="flex items-center gap-2 ml-auto">
-                                {theme === "dark" && <div className="h-2 w-2 rounded-full bg-primary" />}
-                                <Shortcut>Alt + 2</Shortcut>
-                            </div>
-                        </Item>
-                        <Item value="system" onSelect={() => setTheme("system")}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <Laptop className="h-4 w-4" />
-                            </div>
-                            <span>System Theme</span>
-                            <div className="flex items-center gap-2 ml-auto">
-                                {theme === "system" && <div className="h-2 w-2 rounded-full bg-primary" />}
-                                <Shortcut>Alt + 0</Shortcut>
-                            </div>
-                        </Item>
-                    </Command.Group>
-
-                    <Command.Group heading="Account" className="p-2">
-                        <Item value="help" onSelect={() => runCommand(() => navigate("/help"))}>
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
-                                <HelpCircle className="h-4 w-4" />
-                            </div>
-                            <span>Help Center</span>
-                            <Shortcut>Alt + H</Shortcut>
-                        </Item>
-                        <Item value="logout" onSelect={() => runCommand(() => signOut())} className="text-destructive">
-                            <div className="flex items-center justify-center size-8 rounded-lg bg-destructive/10 mr-3">
-                                <LogOut className="h-4 w-4" />
-                            </div>
-                            <span className="font-bold">Logout</span>
-                            <Shortcut>Alt + X</Shortcut>
-                        </Item>
-                    </Command.Group>
-                </Command.List>
-            </div>
-
-            {/* Right Preview Panel */}
-            <div className="hidden md:flex flex-col flex-1 bg-black/5 dark:bg-black/20 p-8 min-h-[500px]">
-                <AnimatePresence mode="wait">
-                    {selectedItem ? (
-                        <motion.div
-                            key={selectedId}
-                            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="flex flex-col h-full"
-                        >
-                            {/* Entity Icon / Image Large */}
-                            <div className="mb-8">
-                                <div className={cn(
-                                    "size-20 rounded-[2rem] flex items-center justify-center shadow-2xl relative overflow-hidden group",
-                                    selectedItem.icon ? "bg-white dark:bg-slate-800 border border-white/20" : 
-                                    (results.assignments.some(a => a.id === selectedId) ? "bg-blue-600 shadow-blue-500/20" : 
-                                     results.quizzes.some(q => q.id === selectedId) ? "bg-purple-600 shadow-purple-500/20" : "bg-primary shadow-primary/20")
-                                )}>
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
-                                    {selectedItem.icon ? (
-                                        <selectedItem.icon className="size-10 text-primary group-hover:scale-110 transition-transform duration-500" />
-                                    ) : (
-                                        <div className="text-3xl font-black text-white italic drop-shadow-md">
-                                            {selectedItem.title?.substring(0, 1).toUpperCase()}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Title & Metadata */}
-                            <div className="space-y-4 mb-8">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <h2 className="text-2xl font-black tracking-tight text-foreground">{selectedItem.title}</h2>
-                                        {selectedItem.status && (
-                                            <div className="px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-black uppercase text-primary border border-primary/20">
-                                                {selectedItem.status}
+                            {/* Search Results Sections */}
+                            {results.assignments.length > 0 && (
+                                <Command.Group heading="Assignments" className="p-2">
+                                    {results.assignments.map(a => (
+                                        <Item key={a.id} value={a.id} onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer/assignments' : '/student/assignments'))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-blue-500/10 mr-3">
+                                                <FileText className="h-4 w-4 text-blue-500" />
                                             </div>
-                                        )}
-                                    </div>
-                                    <p className="text-sm font-medium text-muted-foreground leading-relaxed">
-                                        {selectedItem.desc || `Access and manage your ${selectedItem.title?.toLowerCase()} development records.`}
-                                    </p>
-                                </div>
+                                            <div className="flex flex-col flex-1 truncate">
+                                                <span className="font-bold text-foreground truncate">{a.title}</span>
+                                                <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Assignment</span>
+                                            </div>
+                                            <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-aria-selected:opacity-40" />
+                                        </Item>
+                                    ))}
+                                </Command.Group>
+                            )}
 
-                                {/* Rich Metadata Bar */}
-                                <div className="flex flex-wrap gap-4 pt-4">
-                                    {results.assignments.some(a => a.id === selectedId) && (
-                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
-                                            <Zap className="size-3 text-blue-500" />
-                                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">PRIORITY TASK</span>
-                                        </div>
-                                    )}
-                                    {results.quizzes.some(q => q.id === selectedId) && (
-                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                                            <Zap className="size-3 text-purple-500" />
-                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">ACADEMIC QUIZ</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/10 border border-white/5">
-                                        <History className="size-3 text-muted-foreground" />
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Recently Updated</span>
-                                    </div>
-                                </div>
-                            </div>
+                            {results.quizzes.length > 0 && (
+                                <Command.Group heading="Quizzes" className="p-2">
+                                    {results.quizzes.map(q => (
+                                        <Item key={q.id} value={q.id} onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer/quizzes' : '/student/quizzes'))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-purple-500/10 mr-3">
+                                                <BookOpen className="h-4 w-4 text-purple-500" />
+                                            </div>
+                                            <div className="flex flex-col flex-1 truncate">
+                                                <span className="font-bold text-foreground truncate">{q.title}</span>
+                                                <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">Academic Quiz</span>
+                                            </div>
+                                            <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-aria-selected:opacity-40" />
+                                        </Item>
+                                    ))}
+                                </Command.Group>
+                            )}
 
-                            {/* Action Hint */}
-                            <div className="mt-auto pt-8 border-t border-white/5">
-                                <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-                                    <div className="flex items-center gap-2">
-                                        <div className="size-5 rounded-md bg-muted/20 flex items-center justify-center font-bold">↵</div>
-                                        <span>Press Enter to Open</span>
+                            {results.chats.length > 0 && (
+                                <Command.Group heading="AI Conversations" className="p-2">
+                                    {results.chats.map(c => (
+                                        <Item key={c.id} value={c.id} onSelect={() => runCommand(() => navigate(`/ai-chat?id=${c.id}`))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-emerald-500/10 mr-3">
+                                                <MessageSquare className="h-4 w-4 text-emerald-500" />
+                                            </div>
+                                            <div className="flex flex-col flex-1 truncate">
+                                                <span className="font-bold text-foreground truncate">{c.title}</span>
+                                                <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground opacity-60">AI Conversation</span>
+                                            </div>
+                                            <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-aria-selected:opacity-40" />
+                                        </Item>
+                                    ))}
+                                </Command.Group>
+                            )}
+
+                            <Command.Group heading="AI Intelligence" className="p-2">
+                                <Item value="ai-chat" onSelect={() => runCommand(() => navigate("/ai-chat"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 mr-3 transition-colors group-aria-selected:bg-primary/20">
+                                        <Bot className="h-4 w-4 text-primary" />
                                     </div>
-                                    <Bot className="size-4 text-primary opacity-30" />
+                                    <span>EduSpace AI Chat</span>
+                                    <div className="flex items-center gap-2 ml-auto">
+                                        <Shortcut>Alt + J</Shortcut>
+                                    </div>
+                                </Item>
+                                <Item value="ai-coach-toggle" onSelect={() => handleToggleCoach()}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-indigo-500/10 mr-3 transition-colors group-aria-selected:bg-indigo-500/20">
+                                        <GraduationCap className="h-4 w-4 text-indigo-600" />
+                                    </div>
+                                    <span>Toggle AI Coach Drawer</span>
+                                    <Shortcut>Alt + R</Shortcut>
+                                </Item>
+                            </Command.Group>
+
+                            <Command.Group heading="General" className="p-2">
+                                <Item value="dashboard" onSelect={() => runCommand(() => navigate(role === 'lecturer' ? '/lecturer-dashboard' : '/dashboard'))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <LayoutDashboard className="h-4 w-4" />
+                                    </div>
+                                    <span>Dashboard</span>
+                                    <Shortcut>Alt + D</Shortcut>
+                                </Item>
+                                <Item value="profile" onSelect={() => runCommand(() => navigate("/profile"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <User className="h-4 w-4" />
+                                    </div>
+                                    <span>Profile</span>
+                                    <Shortcut>Alt + P</Shortcut>
+                                </Item>
+                                <Item value="settings" onSelect={() => runCommand(() => navigate("/settings"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <Settings className="h-4 w-4" />
+                                    </div>
+                                    <span>Settings</span>
+                                    <Shortcut>Alt + S</Shortcut>
+                                </Item>
+                            </Command.Group>
+
+                            <Command.Group heading="Quick Access" className="p-2">
+                                {role === 'student' && (
+                                    <>
+                                        <Item value="assignments" onSelect={() => runCommand(() => navigate("/student/assignments"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <FileText className="h-4 w-4" />
+                                            </div>
+                                            <span>Assignments</span>
+                                            <Shortcut>Alt + A</Shortcut>
+                                        </Item>
+                                        <Item value="quizzes" onSelect={() => runCommand(() => navigate("/student/quizzes"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <BookOpen className="h-4 w-4" />
+                                            </div>
+                                            <span>My Quizzes</span>
+                                            <Shortcut>Alt + Q</Shortcut>
+                                        </Item>
+                                        <Item value="streak" onSelect={() => runCommand(() => navigate("/streak"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <Flame className="h-4 w-4" />
+                                            </div>
+                                            <span>Streak & Momentum</span>
+                                            <Shortcut>Alt + M</Shortcut>
+                                        </Item>
+                                    </>
+                                )}
+                                {role === 'lecturer' && (
+                                    <>
+                                        <Item value="assignments" onSelect={() => runCommand(() => navigate("/lecturer/assignments"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <FileText className="h-4 w-4" />
+                                            </div>
+                                            <span>Class Assignments</span>
+                                            <Shortcut>Alt + A</Shortcut>
+                                        </Item>
+                                        <Item value="quizzes" onSelect={() => runCommand(() => navigate("/lecturer/quizzes"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <Plus className="h-4 w-4" />
+                                            </div>
+                                            <span>Create/Manage Quizzes</span>
+                                            <Shortcut>Alt + Q</Shortcut>
+                                        </Item>
+                                    </>
+                                )}
+                                <Item value="feed" onSelect={() => runCommand(() => navigate("/class-feed"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <MessageSquare className="h-4 w-4" />
+                                    </div>
+                                    <span>Class News Feed</span>
+                                    <Shortcut>Alt + F</Shortcut>
+                                </Item>
+                                <Item value="messages" onSelect={() => runCommand(() => navigate("/messages"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <MessageSquare className="h-4 w-4" />
+                                    </div>
+                                    <span>Direct Messages</span>
+                                    <Shortcut>Alt + G</Shortcut>
+                                </Item>
+                                <Item value="schedule" onSelect={() => runCommand(() => navigate("/schedule"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <Calendar className="h-4 w-4" />
+                                    </div>
+                                    <span>Full Schedule</span>
+                                    <Shortcut>Alt + C</Shortcut>
+                                </Item>
+                                {role === 'lecturer' && (
+                                    <>
+                                        <Item value="students" onSelect={() => runCommand(() => navigate("/all-students"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <GraduationCap className="h-4 w-4" />
+                                            </div>
+                                            <span>All Students</span>
+                                            <Shortcut>Alt + U</Shortcut>
+                                        </Item>
+                                        <Item value="timetable" onSelect={() => runCommand(() => navigate("/lecturer/timetable"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <History className="h-4 w-4" />
+                                            </div>
+                                            <span>Time Table</span>
+                                            <Shortcut>Alt + T</Shortcut>
+                                        </Item>
+                                        <Item value="ai-gen" onSelect={() => runCommand(() => navigate("/lecturer/create-ai-quiz"))}>
+                                            <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                                <Plus className="h-4 w-4" />
+                                            </div>
+                                            <span>AI Quiz Generator</span>
+                                            <Shortcut>Alt + V</Shortcut>
+                                        </Item>
+                                    </>
+                                )}
+                            </Command.Group>
+
+                            <Command.Group heading="Appearance" className="p-2">
+                                <Item value="light" onSelect={() => setTheme("light")}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <Sun className="h-4 w-4" />
+                                    </div>
+                                    <span>Light Theme</span>
+                                    <div className="flex items-center gap-2 ml-auto">
+                                        {theme === "light" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                        <Shortcut>Alt + 1</Shortcut>
+                                    </div>
+                                </Item>
+                                <Item value="dark" onSelect={() => setTheme("dark")}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <Moon className="h-4 w-4" />
+                                    </div>
+                                    <span>Dark Theme</span>
+                                    <div className="flex items-center gap-2 ml-auto">
+                                        {theme === "dark" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                        <Shortcut>Alt + 2</Shortcut>
+                                    </div>
+                                </Item>
+                                <Item value="system" onSelect={() => setTheme("system")}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <Laptop className="h-4 w-4" />
+                                    </div>
+                                    <span>System Theme</span>
+                                    <div className="flex items-center gap-2 ml-auto">
+                                        {theme === "system" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                        <Shortcut>Alt + 0</Shortcut>
+                                    </div>
+                                </Item>
+                            </Command.Group>
+
+                            <Command.Group heading="Account" className="p-2">
+                                <Item value="help" onSelect={() => runCommand(() => navigate("/help"))}>
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-muted/20 mr-3">
+                                        <HelpCircle className="h-4 w-4" />
+                                    </div>
+                                    <span>Help Center</span>
+                                    <Shortcut>Alt + H</Shortcut>
+                                </Item>
+                                <Item value="logout" onSelect={() => runCommand(() => signOut())} className="text-destructive">
+                                    <div className="flex items-center justify-center size-8 rounded-lg bg-destructive/10 mr-3">
+                                        <LogOut className="h-4 w-4" />
+                                    </div>
+                                    <span className="font-bold">Logout</span>
+                                    <Shortcut>Alt + X</Shortcut>
+                                </Item>
+                            </Command.Group>
+                        </Command.List>
+                    </div>
+
+                    {/* Right Preview Panel */}
+                    <div className="hidden md:flex flex-col flex-1 bg-black/5 dark:bg-black/20 p-8 min-h-[500px]">
+                        <AnimatePresence mode="wait">
+                            {selectedItem ? (
+                                <motion.div
+                                    key={selectedId}
+                                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    className="flex flex-col h-full"
+                                >
+                                    {/* Entity Icon / Image Large */}
+                                    <div className="mb-8">
+                                        <div className={cn(
+                                            "size-20 rounded-[2rem] flex items-center justify-center shadow-2xl relative overflow-hidden group",
+                                            selectedItem.icon ? "bg-white dark:bg-slate-800 border border-white/20" : 
+                                            (results.assignments.some(a => a.id === selectedId) ? "bg-blue-600 shadow-blue-500/20" : 
+                                             results.quizzes.some(q => q.id === selectedId) ? "bg-purple-600 shadow-purple-500/20" : "bg-primary shadow-primary/20")
+                                        )}>
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+                                            {selectedItem.icon ? (
+                                                <selectedItem.icon className="size-10 text-primary group-hover:scale-110 transition-transform duration-500" />
+                                            ) : (
+                                                <div className="text-3xl font-black text-white italic drop-shadow-md">
+                                                    {selectedItem.title?.substring(0, 1).toUpperCase()}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Title & Metadata */}
+                                    <div className="space-y-4 mb-8">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <h2 className="text-2xl font-black tracking-tight text-foreground">{selectedItem.title}</h2>
+                                                {selectedItem.status && (
+                                                    <div className="px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-black uppercase text-primary border border-primary/20">
+                                                        {selectedItem.status}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                                                {selectedItem.desc || `Access and manage your ${selectedItem.title?.toLowerCase()} development records.`}
+                                            </p>
+                                        </div>
+
+                                        {/* Rich Metadata Bar */}
+                                        <div className="flex flex-wrap gap-4 pt-4">
+                                            {results.assignments.some(a => a.id === selectedId) && (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                                    <Zap className="size-3 text-blue-500" />
+                                                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">PRIORITY TASK</span>
+                                                </div>
+                                            )}
+                                            {results.quizzes.some(q => q.id === selectedId) && (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                                                    <Zap className="size-3 text-purple-500" />
+                                                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">ACADEMIC QUIZ</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/10 border border-white/5">
+                                                <History className="size-3 text-muted-foreground" />
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Recently Updated</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Hint */}
+                                    <div className="mt-auto pt-8 border-t border-white/5">
+                                        <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+                                            <div className="flex items-center gap-2">
+                                                <div className="size-5 rounded-md bg-muted/20 flex items-center justify-center font-bold">↵</div>
+                                                <span>Press Enter to Open</span>
+                                            </div>
+                                            <Bot className="size-4 text-primary opacity-30" />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-30">
+                                    <div className="size-24 rounded-[2.5rem] bg-muted/20 flex items-center justify-center">
+                                        <History className="size-12" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-lg font-bold">Spotlight Preview</p>
+                                        <p className="text-xs max-w-[200px]">Highlight an item to see detailed information and specific quick actions.</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-30">
-                            <div className="size-24 rounded-[2.5rem] bg-muted/20 flex items-center justify-center">
-                                <History className="size-12" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-lg font-bold">Spotlight Preview</p>
-                                <p className="text-xs max-w-[200px]">Highlight an item to see detailed information and specific quick actions.</p>
-                            </div>
-                        </div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
 
                 <div className="flex items-center justify-between border-t border-white/5 bg-black/10 dark:bg-black/40 px-6 py-4 text-xs text-muted-foreground z-10">
                     <div className="hidden md:flex items-center gap-6">

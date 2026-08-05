@@ -128,8 +128,6 @@ const NotFound = () => {
       navigate(role === "lecturer" ? "/lecturer/classes/quizzes" : "/student/quizzes");
     } else if (q.includes("ai") || q.includes("tutor") || q.includes("voice") || q.includes("chat") || q.includes("bot")) {
       navigate("/voice-tutor");
-    } else if (q.includes("map") || q.includes("knowledge") || q.includes("skill")) {
-      navigate("/knowledge-map");
     } else if (q.includes("streak") || q.includes("rank") || q.includes("points")) {
       navigate("/streak");
     } else if (q.includes("message") || q.includes("chat") || q.includes("inbox") || q.includes("mail")) {

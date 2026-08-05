@@ -26,6 +26,7 @@ import {
   Edit3,
   CheckCircle2,
   Sparkles,
+  Pin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchHuggingFaceStats } from "@/services/huggingFaceService";
@@ -39,6 +40,8 @@ interface HuggingFaceProfileCardProps {
   onEditHandle?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 const POPULAR_HANDLES = ["TheBloke", "meta-llama", "stabilityai", "google", "mistralai"];
@@ -51,6 +54,8 @@ export function HuggingFaceProfileCard({
   onEditHandle,
   onRefresh,
   isRefreshing,
+  isPinned,
+  onTogglePin,
 }: HuggingFaceProfileCardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [searchHandle, setSearchHandle] = useState(usernameOrHandle || initialStats?.username || "");
@@ -199,27 +204,43 @@ export function HuggingFaceProfileCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            {onTogglePin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onTogglePin}
+                className={cn(
+                  "size-7 rounded-lg transition-all",
+                  isPinned
+                    ? "text-amber-500 hover:text-amber-600 bg-amber-500/10 border border-amber-500/30 shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+                title={isPinned ? "Unpin platform card" : "Pin platform card to top"}
+              >
+                <Pin className={cn("size-3", isPinned && "fill-amber-500")} />
+              </Button>
+            )}
             {onRefresh && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onRefresh}
                 disabled={isRefreshing}
-                className="size-8 rounded-xl hover:bg-yellow-500/10 hover:text-yellow-500"
+                className="size-7 rounded-lg hover:bg-yellow-500/10 hover:text-yellow-500"
                 title="Refresh statistics"
               >
-                <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-yellow-500")} />
+                <RefreshCw className={cn("size-3", isRefreshing && "animate-spin text-yellow-500")} />
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
               onClick={onEditHandle || handleOpenSheet}
-              className="size-8 rounded-xl hover:bg-accent"
+              className="size-7 rounded-lg hover:bg-accent"
               title="Edit handle"
             >
-              <Edit3 className="size-3.5 text-muted-foreground" />
+              <Edit3 className="size-3 text-muted-foreground" />
             </Button>
           </div>
         </div>

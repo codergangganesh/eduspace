@@ -20,14 +20,15 @@ import { HeroSection } from "@/components/landing/HeroSection";
 import { MobileOnboarding } from "@/components/landing/MobileOnboarding";
 import { LandingScrollControls } from "@/components/landing/LandingScrollControls";
 import { ReadingProgressBar } from "@/components/landing/ReadingProgressBar";
-
 import { FAQSection } from "@/components/landing/FAQSection";
 
 // Lazy load sections (HeroSection is eager loaded for LCP)
 const AnoAI = lazy(() => import("@/components/ui/animated-shader-background"));
 const FeaturesSection = lazy(() => import("@/components/landing/FeaturesSection").then(module => ({ default: module.FeaturesSection })));
+const ConnectedPlatformsSection = lazy(() => import("@/components/landing/ConnectedPlatformsSection").then(module => ({ default: module.ConnectedPlatformsSection })));
 const TrustedBySection = lazy(() => import("@/components/landing/TrustedBySection").then(module => ({ default: module.TrustedBySection })));
 const StreakSection = lazy(() => import("@/components/landing/StreakSection").then(module => ({ default: module.StreakSection })));
+const GlobalActivitySection = lazy(() => import("@/components/landing/GlobalActivitySection").then(module => ({ default: module.GlobalActivitySection })));
 const StudentSection = lazy(() => import("@/components/landing/StudentSection").then(module => ({ default: module.StudentSection })));
 const LecturerSection = lazy(() => import("@/components/landing/LecturerSection").then(module => ({ default: module.LecturerSection })));
 const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(module => ({ default: module.HowItWorksSection })));
@@ -61,6 +62,10 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
         {
             id: "features",
             label: "Features",
+        },
+        {
+            id: "platforms",
+            label: "Connected Platforms",
         },
         {
             id: "students",
@@ -129,7 +134,7 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
     }, []);
 
     useEffect(() => {
-        const sections = ["features", "students", "lecturers", "faq"];
+        const sections = ["features", "platforms", "students", "lecturers", "faq"];
         const observerOptions = {
             root: null,
             rootMargin: '-20% 0px -60% 0px', // When the section is in the middle-ish of the view
@@ -324,6 +329,19 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                                 )}
                             </a>
                             <a
+                                href="#platforms"
+                                onClick={() => setActiveSection("platforms")}
+                                className={cn(
+                                    "text-xs font-black uppercase tracking-widest transition-all relative py-1",
+                                    activeSection === "platforms" ? "text-blue-500" : "text-slate-200 dark:text-slate-400 hover:text-blue-400"
+                                )}
+                            >
+                                Platforms
+                                {activeSection === "platforms" && (
+                                    <motion.div layoutId="nav-underline" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600" />
+                                )}
+                            </a>
+                            <a
                                 href="#students"
                                 onClick={() => setActiveSection("students")}
                                 className={cn(
@@ -443,7 +461,15 @@ export default function LandingPage({ deferMobileOnboarding = false }: LandingPa
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>
+                    <ConnectedPlatformsSection onOpenRoleSelection={() => setShowRoleDialog(true)} />
+                </Suspense>
+
+                <Suspense fallback={<LoadingFallback />}>
                     <StreakSection onOpenRoleSelection={setShowRoleDialog} />
+                </Suspense>
+
+                <Suspense fallback={<LoadingFallback />}>
+                    <GlobalActivitySection />
                 </Suspense>
 
                 <Suspense fallback={<LoadingFallback />}>

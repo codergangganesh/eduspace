@@ -47,6 +47,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/SEO';
 import { toast } from 'sonner';
+import { ContestCalendarView } from '@/components/contests/ContestCalendarView';
 
 const PLATFORMS: { name: PlatformName | 'ALL'; label: string; bg: string; text: string }[] = [
   { name: 'ALL', label: 'All Platforms', bg: 'bg-primary/10', text: 'text-primary' },
@@ -209,7 +210,7 @@ export default function Contests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | '24H' | 'PAST'>('ALL');
   const [sortBy, setSortBy] = useState<'startTime-asc' | 'startTime-desc' | 'duration-asc' | 'name-asc'>('startTime-asc');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'calendar' | 'timeline'>('grid');
 
   const handleTestNotification = async () => {
     setShowTestBanner(true);
@@ -463,7 +464,7 @@ export default function Contests() {
               )}
             </div>
 
-            {/* Grid / List Layout Toggle - Mobile Only (At the end of Search row) */}
+            {/* Layout Toggle - Mobile Only */}
             <div className="flex items-center border border-border/80 rounded-lg p-0.5 bg-muted/40 h-9 shrink-0 md:hidden">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -482,6 +483,24 @@ export default function Contests() {
                 title="List View"
               >
                 <List className="size-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="size-7 rounded-md"
+                onClick={() => setViewMode('calendar')}
+                title="Month Calendar View"
+              >
+                <CalendarIcon className="size-3.5 text-primary" />
+              </Button>
+              <Button
+                variant={viewMode === 'timeline' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="size-7 rounded-md"
+                onClick={() => setViewMode('timeline')}
+                title="Week Timeline View"
+              >
+                <Clock className="size-3.5 text-amber-500" />
               </Button>
             </div>
           </div>
@@ -611,7 +630,7 @@ export default function Contests() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Grid / List Layout Toggle - Desktop Only */}
+            {/* Layout Toggle - Desktop Only */}
             <div className="hidden md:flex items-center border border-border/80 rounded-lg p-0.5 bg-muted/40 h-9 shrink-0">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -630,6 +649,24 @@ export default function Contests() {
                 title="List View"
               >
                 <List className="size-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="size-7 rounded-md"
+                onClick={() => setViewMode('calendar')}
+                title="Month Calendar View"
+              >
+                <CalendarIcon className="size-3.5 text-primary" />
+              </Button>
+              <Button
+                variant={viewMode === 'timeline' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="size-7 rounded-md"
+                onClick={() => setViewMode('timeline')}
+                title="Week Timeline View"
+              >
+                <Clock className="size-3.5 text-amber-500" />
               </Button>
             </div>
           </div>
@@ -772,6 +809,15 @@ export default function Contests() {
               </Button>
             </div>
           </Card>
+        ) : viewMode === 'calendar' || viewMode === 'timeline' ? (
+          <ContestCalendarView
+            contests={filteredContests}
+            reminders={reminders}
+            calendarAdded={calendarAdded}
+            onToggleReminder={toggleReminder}
+            onMarkCalendarAdded={markCalendarAdded}
+            viewType={viewMode}
+          />
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredContests.map((contest) => {

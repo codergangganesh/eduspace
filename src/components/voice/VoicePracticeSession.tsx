@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic,
+  Bot,
   X,
   Square,
   Loader2,
@@ -1177,46 +1178,48 @@ Be specific and constructive.`;
       </AnimatePresence>
 
       {showMobileFreshShell && (
-        <div className="md:hidden absolute inset-0 z-20 flex flex-col bg-surface text-on-surface overflow-hidden">
-          <header className="w-full shrink-0 px-4 py-2.5 bg-surface/95 backdrop-blur-xl z-30 sticky top-0 border-b border-outline/10">
+        <div className="md:hidden absolute inset-0 z-20 flex flex-col bg-background text-foreground overflow-hidden">
+          <header className="w-full shrink-0 px-4 py-3 bg-card/95 backdrop-blur-xl z-30 sticky top-0 border-b border-border/40">
             <div className="flex justify-between items-center w-full max-w-md mx-auto">
               <div className="flex items-center gap-3 min-w-0">
-                <button className="p-2 rounded-full hover:bg-[#f2f4f6] active:scale-95 duration-200" onClick={() => setMobileOpen(true)}>
-                  <Menu className="size-5 text-[#424655]" />
+                <button className="p-2 rounded-full hover:bg-muted active:scale-95 duration-200" onClick={() => setMobileOpen(true)}>
+                  <Menu className="size-5 text-muted-foreground" />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-primary-fixed overflow-hidden ring-2 ring-white shrink-0">
-                  <img alt="User profile" className="w-full h-full object-cover" src="/favicon.png" />
+                <div className="relative size-9 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-sm shrink-0 flex items-center justify-center">
+                  <div className="size-full rounded-full bg-slate-950 overflow-hidden flex items-center justify-center">
+                    <img src="/ai-tutor.png" alt="AI Tutor" className="size-full object-cover rounded-full" />
+                  </div>
+                  <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-sm font-bold tracking-tighter text-[#0051d4] truncate">Fluid Mentor</h1>
-                  <p className="text-[11px] text-[#424655] truncate">AI Voice Tutor</p>
+                  <h1 className="text-sm font-black tracking-tight text-foreground truncate">AI Tutor</h1>
+                  <p className="text-[11px] text-muted-foreground truncate">Voice Mentor</p>
                 </div>
               </div>
-              <button className="p-2 rounded-full hover:bg-[#f2f4f6] active:scale-95 duration-200" type="button">
-                <Settings className="size-5 text-[#424655]" />
+              <button className="p-2 rounded-full hover:bg-muted active:scale-95 duration-200" type="button" onClick={() => setVoiceSettingsOpen(true)}>
+                <Settings className="size-5 text-muted-foreground" />
               </button>
             </div>
           </header>
 
           <ScrollArea className="flex-1">
-            <main className="px-4 py-4 flex flex-col gap-6 max-w-md mx-auto pb-28">
+            <main className="px-4 py-5 flex flex-col gap-6 max-w-md mx-auto pb-28">
               <section className="flex flex-col gap-2">
-                <div className="inline-flex items-center self-start px-3 py-1 bg-secondary-container text-[#2e4687] rounded-full text-[11px] font-semibold tracking-wide uppercase">
+                <div className="inline-flex items-center self-start px-3 py-1 bg-primary/10 text-primary rounded-full text-[11px] font-extrabold tracking-wide uppercase border border-primary/20">
                   Multi-mode Coach
                 </div>
-                <h2 className="text-4xl font-extrabold tracking-tight text-on-surface whitespace-nowrap">Voice Tutor</h2>
-                <p className="text-on-surface-variant text-sm leading-relaxed">
+                <h2 className="text-3xl font-black tracking-tight text-foreground">Voice Tutor</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   Refine your communication skills with real-time AI feedback tailored to your goals.
                 </p>
               </section>
 
               <section className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <h3 className="text-lg font-bold tracking-tight">Select Mode</h3>
-                  <span className="text-xs font-medium text-primary cursor-pointer">View All</span>
+                  <h3 className="text-base font-bold tracking-tight text-foreground">Select Mode</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  {MODES.slice(0, 4).map((item) => {
+                  {MODES.slice(0, 6).map((item) => {
                     const Icon = item.icon;
                     const active = profile.practiceMode === item.id;
                     return (
@@ -1224,18 +1227,18 @@ Be specific and constructive.`;
                         key={item.id}
                         onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
                         className={cn(
-                          "p-4 rounded-xl flex flex-col gap-3 text-left transition-all active:scale-[0.98]",
+                          "p-3.5 rounded-2xl flex flex-col gap-2.5 text-left transition-all active:scale-[0.98] border",
                           active
-                            ? "bg-surface-container-lowest shadow-sm border-2 border-primary/10"
-                            : "bg-surface-container-low border border-transparent hover:bg-surface-container-high"
+                            ? "bg-primary/10 border-primary shadow-sm"
+                            : "bg-card border-border/40 hover:bg-muted/50"
                         )}
                       >
-                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", active ? "bg-primary/10" : "bg-on-surface-variant/10")}>
-                          <Icon className={cn("size-5", active ? "text-primary" : "text-on-surface-variant")} />
+                        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", active ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                          <Icon className="size-4" />
                         </div>
                         <div>
-                          <p className="font-bold text-sm">{item.label}</p>
-                          <p className="text-[11px] text-on-surface-variant">{item.desc}</p>
+                          <p className="font-extrabold text-xs text-foreground">{item.label}</p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{item.desc}</p>
                         </div>
                       </button>
                     );
@@ -1243,71 +1246,6 @@ Be specific and constructive.`;
                 </div>
               </section>
 
-              <section className="flex flex-col gap-4">
-                <h3 className="text-lg font-bold tracking-tight">Session Setup</h3>
-                <div className="bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-sm flex flex-col gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Focus Area</label>
-                    <input
-                      className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/40 placeholder:text-on-surface-variant/60"
-                      placeholder="e.g. Technical Leadership"
-                      type="text"
-                      value={profile.focusArea}
-                      onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="min-w-0 rounded-2xl border border-border/60 bg-gradient-to-br from-white to-surface-container-low shadow-sm p-4 flex flex-col gap-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Difficulty</label>
-                        <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-600">Mode</span>
-                      </div>
-                      <p className="text-[12px] font-semibold text-on-surface capitalize">{profile.difficulty}</p>
-                      <div className="relative">
-                        <select
-                          className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                          value={profile.difficulty}
-                          onChange={(e) => setProfile((prev) => ({ ...prev, difficulty: e.target.value as Difficulty }))}
-                        >
-                          <option value="beginner">Beginner</option>
-                          <option value="intermediate">Intermediate</option>
-                          <option value="advanced">Advanced</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 rounded-2xl border border-border/60 bg-gradient-to-br from-white to-surface-container-low shadow-sm p-4 flex flex-col gap-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.18em]">Duration</label>
-                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600">Goal</span>
-                      </div>
-                      <p className="text-[12px] font-semibold text-on-surface">{profile.targetDurationMinutes} mins</p>
-                      <div className="relative">
-                        <select
-                          className="w-full appearance-none rounded-xl border border-border/50 bg-surface-container-low px-3 py-3 pr-9 text-sm font-semibold text-on-surface shadow-inner shadow-black/[0.02] outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                          value={String(profile.targetDurationMinutes)}
-                          onChange={(e) => setProfile((prev) => ({ ...prev, targetDurationMinutes: Number(e.target.value) }))}
-                        >
-                          <option value="5">5 mins</option>
-                          <option value="10">10 mins</option>
-                          <option value="15">15 mins</option>
-                          <option value="20">20 mins</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 pt-1">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Initial Prompt</label>
-                    <div className="bg-surface-container-low/50 rounded-xl p-4 italic text-sm text-on-surface-variant leading-relaxed">
-                      "{mode.opening}"
-                    </div>
-                  </div>
-                </div>
-              </section>
 
             </main>
           </ScrollArea>
@@ -1315,12 +1253,10 @@ Be specific and constructive.`;
           <div className="fixed bottom-0 left-0 w-full z-50 pointer-events-none">
             <div className="flex justify-center pb-6 pointer-events-auto">
               <button
-                className="w-20 h-20 rounded-full bg-primary shadow-2xl shadow-primary/35 flex items-center justify-center active:scale-90 transition-transform duration-300 border border-white/20"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] dark:from-indigo-600 dark:to-indigo-800 shadow-2xl shadow-primary/35 flex items-center justify-center active:scale-90 transition-transform duration-300 border border-white/20"
                 onClick={handleSessionToggle}
               >
-                <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  mic
-                </span>
+                <Mic className="size-7 text-white" />
               </button>
             </div>
           </div>
@@ -1344,28 +1280,21 @@ Be specific and constructive.`;
         <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden -ml-2 h-9 w-9" onClick={() => setMobileOpen(true)}><Menu className="h-5 w-5" /></Button>
-            <div className="size-9 rounded-full overflow-hidden border border-border/40 bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-1 shadow-lg shrink-0 relative">
-              <img
-                src="/ai-tutor.png"
-                alt="AI Voice Tutor"
-                className="size-full object-cover rounded-full"
-              />
-              {state === "speaking" && (
-                <span className="absolute inset-0 rounded-full bg-white/40 animate-ping" />
-              )}
+            <div className="relative size-10 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-sm shrink-0 flex items-center justify-center">
+              <div className="size-full rounded-full bg-slate-950 overflow-hidden flex items-center justify-center">
+                <img src="/ai-tutor.png" alt="AI Tutor" className="size-full object-cover rounded-full" />
+              </div>
+              <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-sm md:text-base font-black tracking-tight text-foreground/90 leading-none">Fluid Mentor</h2>
-              <p className="text-[10px] text-muted-foreground font-semibold mt-1">AI Voice Tutor</p>
+              <h2 className="text-sm md:text-base font-black tracking-tight text-foreground leading-none">AI Tutor</h2>
+              <p className="text-[10px] text-muted-foreground font-semibold mt-1">Voice Mentor</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => setVoiceSettingsOpen(true)}>
               <Settings className="size-5" />
             </Button>
-            {!showDesktopFreshStudio && (
-              <Button variant="ghost" size="sm" onClick={endSession} className="text-muted-foreground hover:text-foreground h-9 rounded-xl border border-transparent hover:border-border font-bold hidden sm:flex"><X className="size-4 mr-2" /> End Session</Button>
-            )}
           </div>
         </div>
 
@@ -1477,101 +1406,58 @@ Be specific and constructive.`;
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] text-[#1b1b21]"
+                className="flex min-h-full w-full flex-col overflow-hidden bg-[#fbf8ff] dark:bg-slate-950 text-[#1b1b21] dark:text-slate-100"
               >
                 <section className="relative flex min-h-[520px] flex-1 overflow-hidden px-8 py-12 xl:px-14 xl:py-16 2xl:px-20">
-                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb]" />
-                  <div className="relative z-10 grid w-full items-center gap-10 lg:grid-cols-12">
-                    <div className="lg:col-span-7">
-                      <span className="inline-flex rounded-full bg-[#142283] px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2]">
+                  <div className="absolute right-0 top-0 -z-0 h-full w-2/3 rounded-bl-[9rem] bg-[#f5f2fb] dark:bg-slate-900/60" />
+                  <div className="relative z-10 grid w-full items-center gap-8 lg:gap-12 lg:grid-cols-12">
+                    <div className="relative z-20 lg:col-span-7">
+                      <span className="inline-flex rounded-full bg-[#142283] dark:bg-indigo-900/80 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8390f2] dark:text-indigo-300">
                         Premium Intelligence
                       </span>
-                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] xl:text-7xl">
+                      <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight text-[#000b60] dark:text-indigo-200 xl:text-7xl">
                         Master Your <br /> Next Interview
                       </h1>
-                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] xl:text-lg">
+                      <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-[#454652] dark:text-slate-400 xl:text-lg">
                         Practice DSA, SQL, interviews, presentations, and communication in a calm coaching space built for focused voice sessions.
                       </p>
-
-                      <div className="mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-[minmax(260px,1fr)_minmax(150px,180px)_minmax(150px,180px)]">
-                        <Textarea
-                          value={profile.focusArea}
-                          onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
-                          placeholder="Focus area, e.g. Binary trees, SQL joins, HR interview..."
-                          className="min-h-[58px] rounded-full border-[#c6c5d4] bg-white/90 px-6 py-4 text-sm font-semibold text-[#1b1b21] shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] placeholder:text-[#767683] focus:border-[#000b60] focus:ring-[#000b60]/20 sm:col-span-3 xl:col-span-1"
-                        />
-                        <Select
-                          value={profile.difficulty}
-                          onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
-                        >
-                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
-                            <SelectValue placeholder="Difficulty" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
-                            <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
-                            <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
-                            <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={String(profile.targetDurationMinutes)}
-                          onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
-                        >
-                          <SelectTrigger className="h-[58px] rounded-full border-[#c6c5d4] bg-[#f5f2fb] px-5 text-xs font-extrabold text-[#000b60] shadow-sm focus:ring-[#000b60]/20">
-                            <SelectValue placeholder="Duration" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-[#c6c5d4] bg-white/95 backdrop-blur-3xl z-[60]">
-                            <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
-                            <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
-                            <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
-                            <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
 
                       <div className="mt-8 flex flex-wrap gap-4">
                         <Button
                           onClick={handleSessionToggle}
-                          className="h-14 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60]"
+                          className="h-14 rounded-full bg-gradient-to-r from-[#000b60] to-[#142283] dark:from-indigo-600 dark:to-indigo-800 px-8 text-sm font-extrabold text-white shadow-[0_16px_32px_-8px_rgba(0,11,96,0.22)] hover:from-[#142283] hover:to-[#000b60] dark:hover:from-indigo-700 dark:hover:to-indigo-900"
                         >
                           Begin Your Journey
                         </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="h-14 rounded-full bg-[#eae7ef] px-8 text-sm font-extrabold text-[#000b60] hover:bg-[#e4e1ea] hover:text-[#000b60]"
-                          onClick={() => setProfile((prev) => ({ ...prev, focusArea: prev.focusArea || mode.label }))}
-                        >
-                          Use Current Focus
-                        </Button>
+
                       </div>
                     </div>
 
-                    <div className="relative hidden lg:col-span-5 lg:block">
-                      <div className="aspect-square rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
-                        <div className="flex h-full items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] p-10">
+                    <div className="relative hidden lg:col-span-5 lg:block pl-4">
+                      <div className="aspect-square rotate-3 overflow-hidden rounded-[2rem] bg-[#eae7ef] dark:bg-slate-900/80 p-8 opacity-95 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.12)] transition-all duration-700 hover:rotate-1">
+                        <div className="flex h-full items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-white via-[#f5f2fb] to-[#dfe0ff] dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950/60 p-10">
                           <img src="/ai-tutor.png" alt="AI Voice Tutor" className="h-full max-h-[360px] w-full object-contain drop-shadow-2xl" />
                         </div>
                       </div>
-                      <div className="absolute -bottom-8 -left-8 max-w-[250px] rounded-2xl border border-white/40 bg-white/75 p-6 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.18)] backdrop-blur-2xl">
-                        <div className="mb-3 flex items-center gap-3">
-                          <BarChart2 className="size-5 text-[#5c1800]" />
-                          <span className="text-sm font-extrabold text-[#1b1b21]">Confidence Score</span>
+                      <div className="absolute -bottom-4 left-4 z-20 max-w-[240px] rounded-2xl border border-white/40 dark:border-white/10 bg-white/80 dark:bg-slate-900/90 p-5 shadow-[0_16px_32px_-8px_rgba(0,11,96,0.18)] backdrop-blur-2xl">
+                        <div className="mb-2.5 flex items-center gap-3">
+                          <BarChart2 className="size-5 text-[#5c1800] dark:text-amber-400" />
+                          <span className="text-sm font-extrabold text-[#1b1b21] dark:text-slate-100">Confidence Score</span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ffdbd0]">
-                          <div className="h-full w-[78%] rounded-full bg-[#380b00]" />
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ffdbd0] dark:bg-amber-950">
+                          <div className="h-full w-[78%] rounded-full bg-[#380b00] dark:bg-amber-400" />
                         </div>
-                        <p className="mt-2 text-xs font-semibold text-[#454652]">Focused on {focusTopic}</p>
+                        <p className="mt-2 text-xs font-semibold text-[#454652] dark:text-slate-400 truncate">Focused on {focusTopic}</p>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                <section className="bg-[#efecf5] px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
+                <section className="bg-[#efecf5] dark:bg-slate-900/50 px-8 py-10 xl:px-14 xl:py-12 2xl:px-20">
                   <div className="mb-8 flex items-end justify-between gap-6">
                     <div>
-                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60]">Focus Your Preparation</h2>
-                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652]">
+                      <h2 className="text-3xl font-extrabold tracking-tight text-[#000b60] dark:text-indigo-200">Focus Your Preparation</h2>
+                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#454652] dark:text-slate-400">
                         Choose the coaching area first, then start your voice practice with the selected setup.
                       </p>
                     </div>
@@ -1594,19 +1480,19 @@ Be specific and constructive.`;
                             }
                           }}
                           className={cn(
-                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] transition-all duration-300 hover:-translate-y-1",
-                            active && "ring-2 ring-[#000b60]"
+                            "group flex min-h-[260px] cursor-pointer flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-transparent dark:border-white/10 p-7 text-left shadow-[0_16px_32px_-8px_rgba(0,11,96,0.08)] transition-all duration-300 hover:-translate-y-1",
+                            active && "ring-2 ring-[#000b60] dark:ring-indigo-500"
                           )}
                         >
                           <div>
                             <div className={cn(
-                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 text-[#000b60] transition-transform group-hover:scale-110",
-                              active && "bg-[#000b60] text-white"
+                              "mb-7 flex size-14 items-center justify-center rounded-2xl bg-[#dfe0ff]/70 dark:bg-indigo-950/80 text-[#000b60] dark:text-indigo-300 transition-transform group-hover:scale-110",
+                              active && "bg-[#000b60] dark:bg-indigo-600 text-white"
                             )}>
                               <Icon className="size-7" />
                             </div>
-                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60]">{item.label}</h3>
-                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652]">{item.desc}</p>
+                            <h3 className="text-2xl font-extrabold leading-tight text-[#000b60] dark:text-indigo-200">{item.label}</h3>
+                            <p className="mt-4 text-sm font-medium leading-relaxed text-[#454652] dark:text-slate-400">{item.desc}</p>
                           </div>
                           <button
                             type="button"
@@ -1614,7 +1500,7 @@ Be specific and constructive.`;
                               event.stopPropagation();
                               startPracticeWithMode(item.id);
                             }}
-                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] px-5 py-3 text-sm font-extrabold text-[#000b60] transition-all group-hover:bg-[#000b60] group-hover:text-white"
+                            className="mt-8 flex items-center justify-center gap-2 rounded-full bg-[#eae7ef] dark:bg-slate-800 px-5 py-3 text-sm font-extrabold text-[#000b60] dark:text-indigo-300 transition-all group-hover:bg-[#000b60] dark:group-hover:bg-indigo-600 group-hover:text-white"
                           >
                             Start Practice
                             <ChevronDown className="-rotate-90 size-4" />
@@ -1692,166 +1578,102 @@ Be specific and constructive.`;
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </>
-            )
-            }
 
-            {!showDesktopFreshStudio && (
-              <div className={cn("w-full", state === "idle" && "lg:grid lg:grid-cols-[1fr_380px] lg:gap-8")}>
-                <div className="space-y-6 min-w-0">
-                  {history.length === 0 && state === "idle" && (
-                    <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.18em] text-primary">
-                        <Sparkles className="size-3" /> MULTI-MODE COACH
-                      </div>
-                      <h1 className="text-3xl sm:text-4xl font-black text-foreground uppercase tracking-tight leading-none">Voice Tutor</h1>
-                      <p className="text-muted-foreground max-w-sm font-medium text-[12px] sm:text-[14px] leading-relaxed opacity-70 mt-2">
-                        Refine your communication skills with real-time AI feedback tailored to your goals.
-                      </p>
-                      <div className="flex items-center justify-between mt-6 mb-3 px-1">
-                        <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Select Mode</h2>
-                        <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">View All</button>
-                      </div>
-
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                        {MODES.map((item) => {
-                          const Icon = item.icon;
-                          const active = profile.practiceMode === item.id;
-                          return (
-                            <button
-                              key={item.id}
-                              onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
-                              className={cn(
-                                "group rounded-2xl border p-4 text-left min-w-0 transition-all active:scale-95 shadow-sm relative overflow-hidden flex flex-col items-start gap-4",
-                                active
-                                  ? "border-primary bg-card dark:bg-card/90 ring-1 ring-primary/20"
-                                  : "border-border/60 bg-card/40 hover:bg-muted/30"
-                              )}
-                            >
-                              <div className={cn(
-                                "size-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
-                                active ? "bg-primary text-white shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                              )}>
-                                <Icon className="size-6" />
-                              </div>
-                              <div className="min-w-0">
-                                <span className="font-black text-sm block leading-none mb-1">{item.label}</span>
-                                <p className="text-[10px] text-muted-foreground leading-tight opacity-70 font-medium">{item.desc}</p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {state !== "idle" && history.length === 0 && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-10 space-y-4">
-                      <div className="relative">
-                        <div className={cn("size-24 rounded-full bg-gradient-to-tr from-primary to-fuchsia-600 flex items-center justify-center p-2 shadow-2xl relative z-10 overflow-hidden", state === "speaking" && "animate-speak-pulse")}>
-                          <img
-                            src="/ai-tutor.png"
-                            alt="AI Voice Tutor"
-                            className="size-full object-cover rounded-full"
-                          />
+                <div className={cn("w-full", state === "idle" && "lg:grid lg:grid-cols-[1fr_380px] lg:gap-8")}>
+                  <div className="space-y-6 min-w-0">
+                    {history.length === 0 && state === "idle" && (
+                      <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm">
+                        <h1 className="text-3xl sm:text-4xl font-black text-foreground uppercase tracking-tight leading-none">Voice Tutor</h1>
+                        <p className="text-muted-foreground max-w-sm font-medium text-[12px] sm:text-[14px] leading-relaxed opacity-70 mt-2">
+                          Refine your communication skills with real-time AI feedback tailored to your goals.
+                        </p>
+                        <div className="flex items-center justify-between mt-6 mb-3 px-1">
+                          <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">Select Mode</h2>
+                          <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">View All</button>
                         </div>
-                        {state === "speaking" && (
-                          <motion.div
-                            className="absolute inset-0 rounded-full bg-primary/20 -z-0"
-                            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                          />
-                        )}
-                      </div>
-                      <div className="text-center">
-                        <h3 className="text-lg font-black uppercase tracking-tighter">Fluid Tutor</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mt-1">{state === "speaking" ? "Speaking..." : state === "listening" ? "Listening..." : "Connecting..."}</p>
-                      </div>
-                    </motion.div>
-                  )}
 
-                  {history.map((msg, idx) => (
-                    <motion.div key={idx} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className={cn("flex flex-col mb-4", msg.role === "user" ? "items-end" : "items-start")}>
-                      <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] font-semibold md:text-[16px] leading-relaxed shadow-sm", msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border/40 text-foreground rounded-bl-sm")}>{msg.text}</div>
-                    </motion.div>
-                  ))}
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                          {MODES.map((item) => {
+                            const Icon = item.icon;
+                            const active = profile.practiceMode === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => setProfile((prev) => ({ ...prev, practiceMode: item.id }))}
+                                className={cn(
+                                  "group rounded-2xl border p-4 text-left min-w-0 transition-all active:scale-95 shadow-sm relative overflow-hidden flex flex-col items-start gap-4",
+                                  active
+                                    ? "border-primary bg-card dark:bg-card/90 ring-1 ring-primary/20"
+                                    : "border-border/60 bg-card/40 hover:bg-muted/30"
+                                )}
+                              >
+                                <div className={cn(
+                                  "size-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
+                                  active ? "bg-primary text-white shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                                )}>
+                                  <Icon className="size-6" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="font-black text-sm block leading-none mb-1">{item.label}</span>
+                                  <p className="text-[10px] text-muted-foreground leading-tight opacity-70 font-medium">{item.desc}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
-                  <AnimatePresence>
-                    {(state === "listening" || state === "thinking" || state === "speaking") && (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn("flex flex-col", state === "listening" ? "items-end" : "items-start")}>
-                        {state === "speaking" && (
-                          <div className="mb-2 ml-4 flex items-center gap-2">
-                            <div className="size-2 rounded-full bg-primary animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Tutor is speaking</span>
+                    {state !== "idle" && history.length === 0 && (
+                      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-10 space-y-4">
+                        <div className="relative">
+                          <div className="size-24 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-xl relative z-10 flex items-center justify-center overflow-hidden">
+                            <div className="size-full rounded-full bg-slate-950 overflow-hidden flex items-center justify-center">
+                              <img src="/ai-tutor.png" alt="AI Tutor" className="size-full object-cover rounded-full" />
+                            </div>
                           </div>
-                        )}
-                        <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] md:text-[16px] leading-relaxed flex items-center gap-3", state === "listening" ? "bg-primary/10 text-primary border border-primary/20 rounded-br-sm italic font-bold" : "bg-card border border-border text-foreground rounded-bl-sm font-semibold")}>
-                          {state === "thinking" && <Loader2 className="size-4 animate-spin text-primary shrink-0" />}
-                          <p>{currentText || (state === "listening" ? "Listening..." : state === "speaking" ? "..." : "Thinking...")}</p>
+                        </div>
+                        <div className="text-center">
+                          <h3 className="text-lg font-black uppercase tracking-tighter text-foreground">AI Tutor</h3>
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mt-1">{state === "speaking" ? "Speaking..." : state === "listening" ? "Listening..." : "Connecting..."}</p>
                         </div>
                       </motion.div>
                     )}
-                    {errorMsg && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-2"><p className="text-destructive font-black text-[10px] uppercase tracking-widest bg-destructive/10 border border-destructive/20 px-6 py-2 rounded-full shadow-sm">{errorMsg}</p></motion.div>}
-                  </AnimatePresence>
-                </div>
 
-                {state === "idle" && (
-                  <div className={cn("space-y-4", history.length > 0 && "hidden lg:block")}>
-                    <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm h-fit sticky top-4">
-                      <div className="mt-2 mb-4 px-1">
-                        <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">
-                          {history.length === 0 ? "Session Setup" : "Session Details"}
-                        </h2>
-                      </div>
-                      <div className="rounded-2xl border border-border/40 bg-card/60 p-5 space-y-4 text-left shadow-lg">
+                    {history.map((msg, idx) => (
+                      <motion.div key={idx} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className={cn("flex flex-col mb-4", msg.role === "user" ? "items-end" : "items-start")}>
+                        <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] font-semibold md:text-[16px] leading-relaxed shadow-sm", msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border/40 text-foreground rounded-bl-sm")}>{msg.text}</div>
+                      </motion.div>
+                    ))}
+
+                    <AnimatePresence>
+                      {(state === "listening" || state === "thinking" || state === "speaking") && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={cn("flex flex-col", state === "listening" ? "items-end" : "items-start")}>
+                          {state === "speaking" && (
+                            <div className="mb-2 ml-4 flex items-center gap-2">
+                              <div className="size-2 rounded-full bg-primary animate-pulse" />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Tutor is speaking</span>
+                            </div>
+                          )}
+                          <div className={cn("max-w-[84%] md:max-w-[72%] rounded-3xl px-5 py-4 text-[15px] md:text-[16px] leading-relaxed flex items-center gap-3", state === "listening" ? "bg-primary/10 text-primary border border-primary/20 rounded-br-sm italic font-bold" : "bg-card border border-border text-foreground rounded-bl-sm font-semibold")}>
+                            {state === "thinking" && <Loader2 className="size-4 animate-spin text-primary shrink-0" />}
+                            <p>{currentText || (state === "listening" ? "Listening..." : state === "speaking" ? "..." : "Thinking...")}</p>
+                          </div>
+                        </motion.div>
+                      )}
+                      {errorMsg && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center mt-2"><p className="text-destructive font-black text-[10px] uppercase tracking-widest bg-destructive/10 border border-destructive/20 px-6 py-2 rounded-full shadow-sm">{errorMsg}</p></motion.div>}
+                    </AnimatePresence>
+                  </div>
+
+                  {state === "idle" && (
+                    <div className={cn("space-y-4", history.length > 0 && "hidden lg:block")}>
+                      <div className="rounded-3xl border border-border/40 bg-card/80 p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden shadow-sm h-fit sticky top-4">
+                        <div className="mt-2 mb-4 px-1">
+                          <h2 className="text-base sm:text-lg font-black text-foreground/90 tracking-tight">
+                            {history.length === 0 ? "Session Setup" : "Session Details"}
+                          </h2>
+                        </div>
                         <div className="space-y-2.5">
-                          <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Focus Area</label>
-                          <Textarea
-                            value={profile.focusArea}
-                            onChange={(e) => setProfile((prev) => ({ ...prev, focusArea: e.target.value }))}
-                            placeholder="e.g. Technical Leadership Interview..."
-                            className="min-h-[100px] rounded-2xl bg-background/90 text-sm border-border/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none px-4 py-4 shadow-inner font-medium"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2.5">
-                            <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Difficulty</label>
-                            <Select
-                              value={profile.difficulty}
-                              onValueChange={(val: Difficulty) => setProfile((prev) => ({ ...prev, difficulty: val }))}
-                            >
-                              <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
-                                <SelectValue placeholder="Select Difficulty" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
-                                <SelectItem value="beginner" className="text-xs font-black uppercase tracking-tight py-3">Beginner</SelectItem>
-                                <SelectItem value="intermediate" className="text-xs font-black uppercase tracking-tight py-3">Intermediate</SelectItem>
-                                <SelectItem value="advanced" className="text-xs font-black uppercase tracking-tight py-3">Advanced</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2.5">
-                            <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Duration</label>
-                            <Select
-                              value={String(profile.targetDurationMinutes)}
-                              onValueChange={(val) => setProfile((prev) => ({ ...prev, targetDurationMinutes: parseInt(val) }))}
-                            >
-                              <SelectTrigger className="w-full h-12 rounded-2xl bg-background/90 border-border/80 text-xs font-black px-4 shadow-sm focus:ring-1 focus:ring-primary/20">
-                                <SelectValue placeholder="Select Duration" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-2xl border-border/80 bg-card/95 backdrop-blur-3xl z-[60]">
-                                <SelectItem value="5" className="text-xs font-black py-3">5 Minutes</SelectItem>
-                                <SelectItem value="10" className="text-xs font-black py-3">10 Minutes</SelectItem>
-                                <SelectItem value="15" className="text-xs font-black py-3">15 Minutes</SelectItem>
-                                <SelectItem value="20" className="text-xs font-black py-3">20 Minutes</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2.5 pt-2">
                           <label className="text-[10px] uppercase tracking-[0.22em] font-black text-primary/70 ml-1">Initial Prompt</label>
                           <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-left italic">
                             <p className="text-[12px] sm:text-sm text-foreground/80 leading-relaxed font-medium">"{mode.opening}"</p>
@@ -1866,9 +1688,9 @@ Be specific and constructive.`;
                         </Button>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </>
             )}
             <div ref={endRef} className="h-4" />
           </div>

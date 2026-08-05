@@ -15,6 +15,7 @@ import {
   Layers,
   Cpu,
   Sparkles,
+  Pin,
 } from "lucide-react";
 import { WakaTimeStats } from "@/types/wakatimeProfile";
 import { extractWakaTimeUsername } from "@/services/wakatimeService";
@@ -30,6 +31,8 @@ export interface WakaTimeProfileCardProps {
   onEditHandle?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
   className?: string;
 }
 
@@ -41,6 +44,8 @@ export function WakaTimeProfileCard({
   onEditHandle,
   onRefresh,
   isRefreshing,
+  isPinned,
+  onTogglePin,
   className,
 }: WakaTimeProfileCardProps) {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
@@ -110,6 +115,22 @@ export function WakaTimeProfileCard({
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
+              {onTogglePin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onTogglePin}
+                  className={cn(
+                    "size-7 rounded-lg transition-all",
+                    isPinned
+                      ? "text-amber-500 hover:text-amber-600 bg-amber-500/10 border border-amber-500/30 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
+                  title={isPinned ? "Unpin platform card" : "Pin platform card to top"}
+                >
+                  <Pin className={cn("size-3", isPinned && "fill-amber-500")} />
+                </Button>
+              )}
               {onRefresh && (
                 <Button
                   variant="ghost"

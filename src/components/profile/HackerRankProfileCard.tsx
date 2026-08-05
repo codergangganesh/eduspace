@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Edit3,
   MoreHorizontal,
+  Pin,
 } from "lucide-react";
 import { HackerRankStats } from "@/types/codingProfile";
 import { extractUsername } from "@/services/codingProfileService";
@@ -32,6 +33,8 @@ interface HackerRankProfileCardProps {
   onRefresh?: () => void;
   onEditHandle?: () => void;
   isRefreshing?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
@@ -43,6 +46,8 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
   onRefresh,
   onEditHandle,
   isRefreshing,
+  isPinned,
+  onTogglePin,
 }) => {
   const isConnected = Boolean(usernameOrHandle);
   const cleanHandle = extractUsername(usernameOrHandle).replace(/^@+/, "");
@@ -90,17 +95,33 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
+          {onTogglePin && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onTogglePin}
+              className={cn(
+                "size-7 rounded-lg transition-all",
+                isPinned
+                  ? "text-amber-500 hover:text-amber-600 bg-amber-500/10 border border-amber-500/30 shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+              title={isPinned ? "Unpin platform card" : "Pin platform card to top"}
+            >
+              <Pin className={cn("size-3", isPinned && "fill-amber-500")} />
+            </Button>
+          )}
           {isConnected && onRefresh && (
             <Button
               variant="ghost"
               size="icon"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="size-8 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-500"
+              className="size-7 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500"
               title="Refresh statistics"
             >
-              <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-emerald-500")} />
+              <RefreshCw className={cn("size-3", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
           )}
           {onEditHandle && (
@@ -108,10 +129,10 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
               variant="ghost"
               size="icon"
               onClick={onEditHandle}
-              className="size-8 rounded-xl hover:bg-accent"
+              className="size-7 rounded-lg hover:bg-accent"
               title="Edit handle"
             >
-              <Edit3 className="size-3.5 text-muted-foreground" />
+              <Edit3 className="size-3 text-muted-foreground" />
             </Button>
           )}
         </div>

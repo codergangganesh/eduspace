@@ -32,6 +32,7 @@ import {
   Medal,
   Activity,
   Star,
+  Pin,
 } from "lucide-react";
 
 const POPULAR_CHESS_HANDLES = ["hikaru", "magnuscarlsen", "dannyrench", "gothamchess", "levonaronian"];
@@ -56,6 +57,8 @@ interface ChessProfileCardProps {
   onEditHandle?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export function ChessProfileCard({
@@ -66,6 +69,8 @@ export function ChessProfileCard({
   onEditHandle,
   onRefresh,
   isRefreshing,
+  isPinned,
+  onTogglePin,
 }: ChessProfileCardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [searchHandle, setSearchHandle] = useState(usernameOrHandle || initialStats?.username || "");
@@ -238,17 +243,33 @@ export function ChessProfileCard({
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            {onTogglePin && (
+              <Button
+                onClick={onTogglePin}
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "size-7 rounded-lg transition-all",
+                  isPinned
+                    ? "text-amber-500 hover:text-amber-600 bg-amber-500/10 border border-amber-500/30 shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+                title={isPinned ? "Unpin platform card" : "Pin platform card to top"}
+              >
+                <Pin className={cn("size-3", isPinned && "fill-amber-500")} />
+              </Button>
+            )}
             {onRefresh && (
               <Button
                 onClick={onRefresh}
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg hover:bg-[#81b64c]/10 hover:text-[#81b64c]"
+                className="size-7 rounded-lg hover:bg-[#81b64c]/10 hover:text-[#81b64c]"
                 disabled={isRefreshing}
                 title="Refresh Chess.com data"
               >
-                <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
+                <RefreshCw className={cn("size-3", isRefreshing && "animate-spin")} />
               </Button>
             )}
             {onEditHandle && (
@@ -256,21 +277,13 @@ export function ChessProfileCard({
                 onClick={onEditHandle}
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg hover:bg-muted"
+                className="size-7 rounded-lg hover:bg-muted"
                 title="Edit username"
               >
-                <Edit3 className="size-3.5" />
+                <Edit3 className="size-3" />
               </Button>
             )}
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background/50 hover:bg-[#81b64c] hover:text-white hover:border-[#81b64c] transition-colors"
-              title="View profile on Chess.com"
-            >
-              <ExternalLink className="size-3.5" />
-            </a>
+
           </div>
         </div>
 
