@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AIChatSidebar } from "./AIChatSidebar";
 import { AIChatInput } from "./AIChatInput";
@@ -7,7 +7,7 @@ import { AIChatSkeleton, MessagesSkeleton } from "./AIChatSkeleton";
 import { aiChatService, AIConversation, AIChatMessage, MessageContent, AIMessageFeedback } from "@/lib/aiChatService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle, Link, Layout } from "lucide-react";
+import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle, Link, Layout, Search, ChevronUp, ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,72 @@ export default function AIChatWindow() {
     const lastMessageRef = useRef<HTMLDivElement>(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const chatIdFromUrl = searchParams.get('id');
+
+    // ─── Chat Search State ───────────────────────────────────────────────────
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Keyboard shortcut for Chat Search (Ctrl+F / Cmd+F / Esc)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                setIsSearchOpen(prev => {
+                    const next = !prev;
+                    if (next) {
+                        setTimeout(() => searchInputRef.current?.focus(), 50);
+                    }
+                    return next;
+                });
+            } else if (e.key === 'Escape' && isSearchOpen) {
+                setIsSearchOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isSearchOpen]);
+
+    // Compute list of message IDs that contain the search query
+    const matchedMessageIds = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const q = searchQuery.toLowerCase().trim();
+        return messages.filter(msg => {
+            const raw = typeof msg.content === 'string'
+                ? msg.content
+                : msg.content.map(i => i.type === 'text' ? i.text : '').join(' ');
+            return raw.toLowerCase().includes(q);
+        }).map(msg => msg.id);
+    }, [messages, searchQuery]);
+
+    // Reset match index when search query changes
+    useEffect(() => {
+        setCurrentMatchIndex(0);
+    }, [searchQuery]);
+
+    // Scroll active match into view
+    useEffect(() => {
+        if (matchedMessageIds.length > 0 && isSearchOpen) {
+            const activeId = matchedMessageIds[currentMatchIndex];
+            if (activeId) {
+                const el = document.getElementById(`msg-${activeId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+    }, [currentMatchIndex, matchedMessageIds, isSearchOpen]);
+
+    const handleNextMatch = () => {
+        if (matchedMessageIds.length === 0) return;
+        setCurrentMatchIndex(prev => (prev + 1) % matchedMessageIds.length);
+    };
+
+    const handlePrevMatch = () => {
+        if (matchedMessageIds.length === 0) return;
+        setCurrentMatchIndex(prev => (prev - 1 + matchedMessageIds.length) % matchedMessageIds.length);
+    };
 
     // Typewriter effect for slogans
     // Typewriter effect for slogans with role-specific phrases
@@ -522,53 +588,156 @@ export default function AIChatWindow() {
                 <div className="flex flex-col relative h-full overflow-hidden transition-all duration-300 w-full min-w-0">
                     {/* Chat Header */}
                     <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-30 pt-[var(--safe-top)] w-full min-w-0">
-                        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="md:hidden -ml-2 h-9 w-9 shrink-0"
-                                onClick={() => setIsMobileMenuOpen(true)}
-                            >
-                                <Menu className="h-5 w-5" />
-                            </Button>
-
-                            <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
-                                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <h2 className="text-xs md:text-sm font-bold tracking-tight text-foreground/90 truncate max-w-[150px] md:max-w-none leading-none">
-                                    {isTemporaryMode ? "Temporary Chat" : (currentConversation?.title || "AI Tutor Assistant")}
-                                </h2>
-                                {isTemporaryMode && (
-                                    <div className="flex items-center gap-1.5 mt-1 leading-none">
-                                        <MessageCircleDashed className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
-                                        <span className="text-[10px] text-amber-500/80 font-bold uppercase tracking-wider">Off Record</span>
+                        <AnimatePresence mode="wait">
+                            {isSearchOpen ? (
+                                <motion.div
+                                    key="inline-search"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="flex items-center gap-2 w-full min-w-0"
+                                >
+                                    <div className="relative flex-1 flex items-center min-w-0">
+                                        <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none shrink-0" />
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    if (e.shiftKey) {
+                                                        handlePrevMatch();
+                                                    } else {
+                                                        handleNextMatch();
+                                                    }
+                                                }
+                                            }}
+                                            placeholder="Search in chat... (Ctrl+F)"
+                                            className="w-full pl-9 pr-24 py-1.5 text-xs rounded-xl border border-border/60 bg-background focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60 shadow-inner font-medium"
+                                        />
+                                        <div className="absolute right-2 flex items-center gap-1 text-[11px] font-semibold text-muted-foreground select-none shrink-0">
+                                            {searchQuery.trim() ? (
+                                                matchedMessageIds.length > 0 ? (
+                                                    <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] font-mono bg-primary/10 text-primary border-primary/20">
+                                                        {currentMatchIndex + 1} of {matchedMessageIds.length}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-rose-400 text-[10px] font-medium">0 results</span>
+                                                )
+                                            ) : (
+                                                <span className="text-[10px] opacity-60">Ctrl+F</span>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={handlePrevMatch}
+                                            disabled={matchedMessageIds.length === 0}
+                                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                            title="Previous Match (Shift+Enter)"
+                                        >
+                                            <ChevronUp className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={handleNextMatch}
+                                            disabled={matchedMessageIds.length === 0}
+                                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                            title="Next Match (Enter)"
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                setIsSearchOpen(false);
+                                                setSearchQuery("");
+                                            }}
+                                            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                            title="Close Search (Esc)"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="normal-header"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="flex items-center justify-between w-full min-w-0"
+                                >
+                                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="md:hidden -ml-2 h-9 w-9 shrink-0"
+                                            onClick={() => setIsMobileMenuOpen(true)}
+                                        >
+                                            <Menu className="h-5 w-5" />
+                                        </Button>
 
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleToggleTemporaryMode}
-                                className={cn(
-                                    "h-9 w-9 rounded-xl border transition-all",
-                                    isTemporaryMode
-                                        ? "bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-sm"
-                                        : "text-muted-foreground hover:bg-muted/50 border-transparent"
-                                )}
-                                title={isTemporaryMode ? "Temporary Chat On" : "Start Temporary Chat"}
-                            >
-                                {isTemporaryMode ? (
-                                    <MessageCircleDashed className="h-4 w-4 animate-pulse" />
-                                ) : (
-                                    <MessageCircle className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </div>
+                                        <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
+                                            <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <h2 className="text-xs md:text-sm font-bold tracking-tight text-foreground/90 truncate max-w-[150px] md:max-w-none leading-none">
+                                                {isTemporaryMode ? "Temporary Chat" : (currentConversation?.title || "AI Tutor Assistant")}
+                                            </h2>
+                                            {isTemporaryMode && (
+                                                <div className="flex items-center gap-1.5 mt-1 leading-none">
+                                                    <MessageCircleDashed className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
+                                                    <span className="text-[10px] text-amber-500/80 font-bold uppercase tracking-wider">Off Record</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                setIsSearchOpen(true);
+                                                setTimeout(() => searchInputRef.current?.focus(), 50);
+                                            }}
+                                            className="h-9 w-9 rounded-xl border text-muted-foreground hover:bg-muted/50 border-transparent transition-all"
+                                            title="Search Messages (Ctrl+F)"
+                                        >
+                                            <Search className="h-4 w-4" />
+                                        </Button>
+
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={handleToggleTemporaryMode}
+                                            className={cn(
+                                                "h-9 w-9 rounded-xl border transition-all",
+                                                isTemporaryMode
+                                                    ? "bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-sm"
+                                                    : "text-muted-foreground hover:bg-muted/50 border-transparent"
+                                            )}
+                                            title={isTemporaryMode ? "Temporary Chat On" : "Start Temporary Chat"}
+                                        >
+                                            {isTemporaryMode ? (
+                                                <MessageCircleDashed className="h-4 w-4 animate-pulse" />
+                                            ) : (
+                                                <MessageCircle className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     <ScrollArea className="flex-1 z-10 w-full min-w-0" viewportRef={scrollAreaRef as any}>
@@ -641,6 +810,9 @@ export default function AIChatWindow() {
                                                 ? (typeof prevUserMsg.content === 'string' ? prevUserMsg.content : prevUserMsg.content.map(i => i.type === 'text' ? i.text : '').join(' '))
                                                 : '';
 
+                                            const isMatch = matchedMessageIds.includes(msg.id);
+                                            const isCurrentMatch = matchedMessageIds[currentMatchIndex] === msg.id && isSearchOpen;
+
                                             return (
                                                 <motion.div
                                                     key={msg.id}
@@ -658,6 +830,8 @@ export default function AIChatWindow() {
                                                         onFeedbackChange={handleFeedbackChange}
                                                         onQuickAction={(actionPrompt) => handleSendMessage(actionPrompt)}
                                                         userPromptContext={userPromptText}
+                                                        isSearchMatch={isMatch && isSearchOpen}
+                                                        isCurrentSearchMatch={isCurrentMatch}
                                                     />
                                                 </motion.div>
                                             );

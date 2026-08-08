@@ -29,6 +29,8 @@ interface AIMessageProps {
     onFeedbackChange?: (messageId: string, feedback: 'like' | 'dislike' | null) => void;
     onQuickAction?: (prompt: string) => void;
     userPromptContext?: string;
+    isSearchMatch?: boolean;
+    isCurrentSearchMatch?: boolean;
 }
 
 const TypingCursor = () => (
@@ -589,7 +591,7 @@ function getContextualQuickActions(userPrompt: string, aiResponse: string, hasCo
     ];
 }
 
-export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming, feedbackState, onFeedbackChange, onQuickAction, userPromptContext }: AIMessageProps) {
+export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming, feedbackState, onFeedbackChange, onQuickAction, userPromptContext, isSearchMatch, isCurrentSearchMatch }: AIMessageProps) {
     const [copied, setCopied] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -681,10 +683,15 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
     }, [feedbackState]);
 
     return (
-        <div className={cn(
-            "group w-full py-4 md:py-8 transition-all duration-300 relative overflow-hidden",
-            isAssistant ? "bg-accent/5 md:bg-accent/10" : "bg-transparent"
-        )}>
+        <div
+            id={messageId ? `msg-${messageId}` : undefined}
+            className={cn(
+                "group w-full py-4 md:py-8 transition-all duration-300 relative overflow-hidden rounded-2xl",
+                isAssistant ? "bg-accent/5 md:bg-accent/10" : "bg-transparent",
+                isCurrentSearchMatch && "ring-2 ring-amber-500/90 bg-amber-500/10 shadow-lg shadow-amber-500/10",
+                isSearchMatch && !isCurrentSearchMatch && "ring-1 ring-primary/40 bg-primary/5"
+            )}
+        >
             <div className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 flex gap-2.5 sm:gap-4 md:gap-6 w-full min-w-0">
                 <div className="shrink-0 pt-1">
                     {isAssistant ? (

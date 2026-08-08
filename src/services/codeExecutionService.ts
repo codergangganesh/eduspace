@@ -23,22 +23,22 @@ const WANDBOX_API = 'https://wandbox.org/api/compile.json';
 
 // ─── Wandbox compiler map (verified from live /api/list.json) ─────────────────
 const WANDBOX_COMPILER_MAP: Record<string, { compiler: string; options?: string }> = {
-  python:     { compiler: 'cpython-3.12.2' },
+  python: { compiler: 'cpython-3.12.2' },
   javascript: { compiler: 'nodejs-20.3.1' },
-  java:       { compiler: 'openjdk-jdk-23+37' },
-  c:          { compiler: 'gcc-13.2.0-c' },
-  cpp:        { compiler: 'gcc-13.2.0',   options: 'c++17,warning' },
-  go:         { compiler: 'go-1.22.1' },
-  rust:       { compiler: 'rust-1.76.0' },
-  ruby:       { compiler: 'ruby-3.3.0' },
-  php:        { compiler: 'php-8.3.2' },
-  swift:      { compiler: 'swift-5.9.2' },
-  csharp:     { compiler: 'mono-6.12.0.182' },
-  perl:       { compiler: 'perl-5.38.2' },
-  lua:        { compiler: 'lua-5.4.6' },
-  haskell:    { compiler: 'ghc-9.8.1' },
-  elixir:     { compiler: 'elixir-1.16.1' },
-  bash:       { compiler: 'bash' },
+  java: { compiler: 'openjdk-jdk-23+37' },
+  c: { compiler: 'gcc-13.2.0-c' },
+  cpp: { compiler: 'gcc-13.2.0', options: 'c++17,warning' },
+  go: { compiler: 'go-1.22.1' },
+  rust: { compiler: 'rust-1.76.0' },
+  ruby: { compiler: 'ruby-3.3.0' },
+  php: { compiler: 'php-8.3.2' },
+  swift: { compiler: 'swift-5.9.2' },
+  csharp: { compiler: 'mono-6.12.0.182' },
+  perl: { compiler: 'perl-5.38.2' },
+  lua: { compiler: 'lua-5.4.6' },
+  haskell: { compiler: 'ghc-9.8.1' },
+  elixir: { compiler: 'elixir-1.16.1' },
+  bash: { compiler: 'bash' },
 };
 
 // ─── Alias normalization ───────────────────────────────────────────────────────
