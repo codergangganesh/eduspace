@@ -631,26 +631,37 @@ export default function AIChatWindow() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="pb-32 md:pb-48 px-1 sm:px-4 pt-4 w-full min-w-0 overflow-hidden">
+                            <div className="pb-6 md:pb-8 px-1 sm:px-4 pt-4 w-full min-w-0 overflow-hidden">
                                 <AnimatePresence initial={false}>
-                                    {messages.map((msg) => (
-                                        <motion.div
-                                            key={msg.id}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            className="w-full min-w-0 overflow-hidden"
-                                        >
-                                            <AIMessage
-                                                messageId={msg.id}
-                                                role={msg.role}
-                                                content={msg.content}
-                                                profile={userProfile || undefined}
-                                                onUpdateMessage={handleUpdateMessage}
-                                                feedbackState={msg.role === 'assistant' ? feedbackState[msg.id] || null : null}
-                                                onFeedbackChange={handleFeedbackChange}
-                                            />
-                                        </motion.div>
-                                    ))}
+                                    {messages.map((msg, index) => {
+                                        const prevUserMsg = index > 0
+                                            ? messages.slice(0, index).reverse().find(m => m.role === 'user')
+                                            : (msg.role === 'user' ? msg : undefined);
+                                        const userPromptText = prevUserMsg
+                                            ? (typeof prevUserMsg.content === 'string' ? prevUserMsg.content : prevUserMsg.content.map(i => i.type === 'text' ? i.text : '').join(' '))
+                                            : '';
+
+                                        return (
+                                            <motion.div
+                                                key={msg.id}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="w-full min-w-0 overflow-hidden"
+                                            >
+                                                <AIMessage
+                                                    messageId={msg.id}
+                                                    role={msg.role}
+                                                    content={msg.content}
+                                                    profile={userProfile || undefined}
+                                                    onUpdateMessage={handleUpdateMessage}
+                                                    feedbackState={msg.role === 'assistant' ? feedbackState[msg.id] || null : null}
+                                                    onFeedbackChange={handleFeedbackChange}
+                                                    onQuickAction={(actionPrompt) => handleSendMessage(actionPrompt)}
+                                                    userPromptContext={userPromptText}
+                                                />
+                                            </motion.div>
+                                        );
+                                    })}
                                     {isStreaming && (
                                         <motion.div
                                             key="streaming-message"
@@ -658,7 +669,12 @@ export default function AIChatWindow() {
                                             animate={{ opacity: 1 }}
                                             className="w-full min-w-0 overflow-hidden"
                                         >
-                                            <AIMessage role="assistant" content={streamingMessage} isStreaming={true} />
+                                            <AIMessage
+                                                role="assistant"
+                                                content={streamingMessage}
+                                                isStreaming={true}
+                                                userPromptContext={messages.length > 0 && messages[messages.length - 1].role === 'user' ? (typeof messages[messages.length - 1].content === 'string' ? messages[messages.length - 1].content as string : '') : ''}
+                                            />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -677,12 +693,9 @@ export default function AIChatWindow() {
                     </div>
                 </ScrollArea>
 
-                <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20 w-full min-w-0">
-                    <div className="h-32 bg-gradient-to-t from-background via-background/90 to-transparent" />
-                    <div className="bg-background pb-4 md:pb-6 pt-2 px-2 md:px-6 pointer-events-auto w-full min-w-0">
-                        <div className="max-w-4xl mx-auto w-full min-w-0">
-                            <AIChatInput onSendMessage={handleSendMessage} isLoading={isLoading || isStreaming} />
-                        </div>
+                <div className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-md pb-4 md:pb-6 pt-3 px-2 md:px-6 z-20 w-full min-w-0">
+                    <div className="max-w-4xl mx-auto w-full min-w-0">
+                        <AIChatInput onSendMessage={handleSendMessage} isLoading={isLoading || isStreaming} />
                     </div>
                 </div>
             </div>

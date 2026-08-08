@@ -39,9 +39,9 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const MODELS = [
   'llama-3.3-70b-versatile',
-  'mixtral-8x7b-32768',
   'llama-3.1-8b-instant',
-  'gemma2-9b-it',
+  'mixtral-8x7b-32768',
+  'llama-3.2-3b-preview',
 ];
 
 const VISION_MODELS = [
