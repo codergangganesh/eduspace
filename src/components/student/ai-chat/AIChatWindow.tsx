@@ -7,7 +7,7 @@ import { AIChatSkeleton, MessagesSkeleton } from "./AIChatSkeleton";
 import { aiChatService, AIConversation, AIChatMessage, MessageContent, AIMessageFeedback } from "@/lib/aiChatService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle, Link } from "lucide-react";
+import { Loader2, MessageSquare, Sparkles, ChevronRight, User, Menu, Bot, MessageCircleDashed, MessageCircle, Link, Layout } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -518,186 +518,189 @@ export default function AIChatWindow() {
             </div>
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col relative h-full overflow-hidden w-full min-w-0">
-                {/* Background Marquee for Fresh Session removed as requested */}
+            <div className="flex-1 flex relative h-full overflow-hidden w-full min-w-0">
+                <div className="flex flex-col relative h-full overflow-hidden transition-all duration-300 w-full min-w-0">
+                    {/* Chat Header */}
+                    <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-30 pt-[var(--safe-top)] w-full min-w-0">
+                        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="md:hidden -ml-2 h-9 w-9 shrink-0"
+                                onClick={() => setIsMobileMenuOpen(true)}
+                            >
+                                <Menu className="h-5 w-5" />
+                            </Button>
 
-                {/* Chat Header */}
-                <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-30 pt-[var(--safe-top)] w-full min-w-0">
-                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="md:hidden -ml-2 h-9 w-9 shrink-0"
-                            onClick={() => setIsMobileMenuOpen(true)}
-                        >
-                            <Menu className="h-5 w-5" />
-                        </Button>
-
-                        <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
-                            <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <h2 className="text-xs md:text-sm font-bold tracking-tight text-foreground/90 truncate max-w-[150px] md:max-w-none leading-none">
-                                {isTemporaryMode ? "Temporary Chat" : (currentConversation?.title || "AI Tutor Assistant")}
-                            </h2>
-                            {isTemporaryMode && (
-                                <div className="flex items-center gap-1.5 mt-1 leading-none">
-                                    <MessageCircleDashed className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
-                                    <span className="text-[10px] text-amber-500/80 font-bold uppercase tracking-wider">Off Record</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleToggleTemporaryMode}
-                            className={cn(
-                                "h-9 w-9 rounded-xl border transition-all",
-                                isTemporaryMode
-                                    ? "bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-sm"
-                                    : "text-muted-foreground hover:bg-muted/50 border-transparent"
-                            )}
-                            title={isTemporaryMode ? "Temporary Chat On" : "Start Temporary Chat"}
-                        >
-                            {isTemporaryMode ? (
-                                <MessageCircleDashed className="h-4 w-4 animate-pulse" />
-                            ) : (
-                                <MessageCircle className="h-4 w-4" />
-                            )}
-                        </Button>
-                    </div>
-                </div>
-
-                <ScrollArea className="flex-1 z-10 w-full min-w-0" viewportRef={scrollAreaRef as any}>
-                    <div className="max-w-4xl mx-auto w-full min-h-full min-w-0">
-                        {isLoading && messages.length === 0 ? (
-                            <MessagesSkeleton />
-                        ) : messages.length === 0 && !isStreaming ? (
-                            <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center space-y-12">
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="relative"
-                                >
-                                    <div className="absolute -inset-4 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded-full blur-2xl animate-pulse" />
-                                    <div className="relative h-24 w-24 rounded-3xl overflow-hidden border border-border shadow-2xl mx-auto">
-                                        <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
-                                    </div>
-                                </motion.div>
-
-                                <div className="space-y-6 max-w-2xl mx-auto">
-                                    <h1 className="text-3xl md:text-5xl font-black tracking-tight text-foreground leading-[1.1] min-h-[3.3em] flex flex-wrap justify-center items-center">
-                                        <span className="text-secondary-foreground">{displayText.split(' ').slice(0, -2).join(' ')} </span>
-                                        <span className="text-primary ml-2">
-                                            {displayText.split(' ').slice(-2).join(' ')}
-                                            <span className="inline-block w-1.5 h-8 md:h-12 bg-primary/40 ml-1 animate-pulse align-middle" />
-                                        </span>
-                                    </h1>
-                                </div>
-
-                                <div className="w-full max-w-2xl px-6 mx-auto">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                                        {[
-                                            { label: "Summarize notes", icon: "📝", desc: "Get key takeaways" },
-                                            { label: "Explain concepts", icon: "⚛️", desc: "Simplify complex topics" },
-                                            { label: "Brainstorm ideas", icon: "💡", desc: "Get creative help" },
-                                        ].map((item, i) => (
-                                            <motion.button
-                                                key={i}
-                                                initial={{ opacity: 0, y: 20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: 0.2 + i * 0.1 }}
-                                                onClick={() => handleSendMessage(item.label)}
-                                                className="group flex md:flex-col items-center md:items-start gap-4 p-4 rounded-2xl border border-border/40 bg-card/40 hover:bg-primary/5 hover:border-primary/30 transition-all text-left shadow-sm hover:shadow-md"
-                                            >
-                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl group-hover:scale-110 transition-transform">
-                                                    {item.icon}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-foreground/80 group-hover:text-primary transition-colors">
-                                                        {item.label}
-                                                    </p>
-                                                    <p className="hidden md:block text-[11px] font-medium text-muted-foreground mt-1">
-                                                        {item.desc}
-                                                    </p>
-                                                </div>
-                                                <ChevronRight className="h-4 w-4 text-muted-foreground/30 md:hidden" />
-                                            </motion.button>
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
+                                <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                             </div>
-                        ) : (
-                            <div className="pb-6 md:pb-8 px-1 sm:px-4 pt-4 w-full min-w-0 overflow-hidden">
-                                <AnimatePresence initial={false}>
-                                    {messages.map((msg, index) => {
-                                        const prevUserMsg = index > 0
-                                            ? messages.slice(0, index).reverse().find(m => m.role === 'user')
-                                            : (msg.role === 'user' ? msg : undefined);
-                                        const userPromptText = prevUserMsg
-                                            ? (typeof prevUserMsg.content === 'string' ? prevUserMsg.content : prevUserMsg.content.map(i => i.type === 'text' ? i.text : '').join(' '))
-                                            : '';
+                            <div className="min-w-0 flex-1">
+                                <h2 className="text-xs md:text-sm font-bold tracking-tight text-foreground/90 truncate max-w-[150px] md:max-w-none leading-none">
+                                    {isTemporaryMode ? "Temporary Chat" : (currentConversation?.title || "AI Tutor Assistant")}
+                                </h2>
+                                {isTemporaryMode && (
+                                    <div className="flex items-center gap-1.5 mt-1 leading-none">
+                                        <MessageCircleDashed className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
+                                        <span className="text-[10px] text-amber-500/80 font-bold uppercase tracking-wider">Off Record</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                                        return (
+                        <div className="flex items-center gap-2 shrink-0">
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleToggleTemporaryMode}
+                                className={cn(
+                                    "h-9 w-9 rounded-xl border transition-all",
+                                    isTemporaryMode
+                                        ? "bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-sm"
+                                        : "text-muted-foreground hover:bg-muted/50 border-transparent"
+                                )}
+                                title={isTemporaryMode ? "Temporary Chat On" : "Start Temporary Chat"}
+                            >
+                                {isTemporaryMode ? (
+                                    <MessageCircleDashed className="h-4 w-4 animate-pulse" />
+                                ) : (
+                                    <MessageCircle className="h-4 w-4" />
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <ScrollArea className="flex-1 z-10 w-full min-w-0" viewportRef={scrollAreaRef as any}>
+                        <div className="max-w-4xl mx-auto w-full min-h-full min-w-0">
+                            {isLoading && messages.length === 0 ? (
+                                <MessagesSkeleton />
+                            ) : messages.length === 0 && !isStreaming ? (
+                                <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center space-y-12">
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="relative"
+                                    >
+                                        <div className="absolute -inset-4 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded-full blur-2xl animate-pulse" />
+                                        <div className="relative h-24 w-24 rounded-3xl overflow-hidden border border-border shadow-2xl mx-auto">
+                                            <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
+                                        </div>
+                                    </motion.div>
+
+                                    <div className="space-y-6 max-w-2xl mx-auto">
+                                        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-foreground leading-[1.1] min-h-[3.3em] flex flex-wrap justify-center items-center">
+                                            <span className="text-secondary-foreground">{displayText.split(' ').slice(0, -2).join(' ')} </span>
+                                            <span className="text-primary ml-2">
+                                                {displayText.split(' ').slice(-2).join(' ')}
+                                                <span className="inline-block w-1.5 h-8 md:h-12 bg-primary/40 ml-1 animate-pulse align-middle" />
+                                            </span>
+                                        </h1>
+                                    </div>
+
+                                    <div className="w-full max-w-2xl px-6 mx-auto">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                                            {[
+                                                { label: "Summarize notes", icon: "📝", desc: "Get key takeaways" },
+                                                { label: "Explain concepts", icon: "⚛️", desc: "Simplify complex topics" },
+                                                { label: "Brainstorm ideas", icon: "💡", desc: "Get creative help" },
+                                            ].map((item, i) => (
+                                                <motion.button
+                                                    key={i}
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: 0.2 + i * 0.1 }}
+                                                    onClick={() => handleSendMessage(item.label)}
+                                                    className="group flex md:flex-col items-center md:items-start gap-4 p-4 rounded-2xl border border-border/40 bg-card/40 hover:bg-primary/5 hover:border-primary/30 transition-all text-left shadow-sm hover:shadow-md"
+                                                >
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl group-hover:scale-110 transition-transform">
+                                                        {item.icon}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-foreground/80 group-hover:text-primary transition-colors">
+                                                            {item.label}
+                                                        </p>
+                                                        <p className="hidden md:block text-[11px] font-medium text-muted-foreground mt-1">
+                                                            {item.desc}
+                                                        </p>
+                                                    </div>
+                                                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 md:hidden" />
+                                                </motion.button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="pb-6 md:pb-8 px-1 sm:px-4 pt-4 w-full min-w-0 overflow-hidden">
+                                    <AnimatePresence initial={false}>
+                                        {messages.map((msg, index) => {
+                                            const prevUserMsg = index > 0
+                                                ? messages.slice(0, index).reverse().find(m => m.role === 'user')
+                                                : (msg.role === 'user' ? msg : undefined);
+                                            const userPromptText = prevUserMsg
+                                                ? (typeof prevUserMsg.content === 'string' ? prevUserMsg.content : prevUserMsg.content.map(i => i.type === 'text' ? i.text : '').join(' '))
+                                                : '';
+
+                                            return (
+                                                <motion.div
+                                                    key={msg.id}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="w-full min-w-0 overflow-hidden"
+                                                >
+                                                    <AIMessage
+                                                        messageId={msg.id}
+                                                        role={msg.role}
+                                                        content={msg.content}
+                                                        profile={userProfile || undefined}
+                                                        onUpdateMessage={handleUpdateMessage}
+                                                        feedbackState={msg.role === 'assistant' ? feedbackState[msg.id] || null : null}
+                                                        onFeedbackChange={handleFeedbackChange}
+                                                        onQuickAction={(actionPrompt) => handleSendMessage(actionPrompt)}
+                                                        userPromptContext={userPromptText}
+                                                    />
+                                                </motion.div>
+                                            );
+                                        })}
+                                        {isStreaming && (
                                             <motion.div
-                                                key={msg.id}
+                                                key="streaming-message"
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 className="w-full min-w-0 overflow-hidden"
                                             >
                                                 <AIMessage
-                                                    messageId={msg.id}
-                                                    role={msg.role}
-                                                    content={msg.content}
-                                                    profile={userProfile || undefined}
-                                                    onUpdateMessage={handleUpdateMessage}
-                                                    feedbackState={msg.role === 'assistant' ? feedbackState[msg.id] || null : null}
-                                                    onFeedbackChange={handleFeedbackChange}
-                                                    onQuickAction={(actionPrompt) => handleSendMessage(actionPrompt)}
-                                                    userPromptContext={userPromptText}
+                                                    role="assistant"
+                                                    content={streamingMessage}
+                                                    isStreaming={true}
+                                                    userPromptContext={messages.length > 0 && messages[messages.length - 1].role === 'user' ? (typeof messages[messages.length - 1].content === 'string' ? messages[messages.length - 1].content as string : '') : ''}
                                                 />
                                             </motion.div>
-                                        );
-                                    })}
-                                    {isStreaming && (
-                                        <motion.div
-                                            key="streaming-message"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            className="w-full min-w-0 overflow-hidden"
-                                        >
-                                            <AIMessage
-                                                role="assistant"
-                                                content={streamingMessage}
-                                                isStreaming={true}
-                                                userPromptContext={messages.length > 0 && messages[messages.length - 1].role === 'user' ? (typeof messages[messages.length - 1].content === 'string' ? messages[messages.length - 1].content as string : '') : ''}
-                                            />
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                        )}
+                                    </AnimatePresence>
 
-                                {isLoading && !isStreaming && (
-                                    <div className="p-8 flex justify-center">
-                                        <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-full border border-border/40 animate-pulse">
-                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI is processing...</span>
+                                    {isLoading && !isStreaming && (
+                                        <div className="p-8 flex justify-center">
+                                            <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-full border border-border/40 animate-pulse">
+                                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI is processing...</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                <div ref={lastMessageRef} className="h-4" />
-                            </div>
-                        )}
-                    </div>
-                </ScrollArea>
+                                    )}
+                                    <div ref={lastMessageRef} className="h-4" />
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
 
-                <div className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-md pb-4 md:pb-6 pt-3 px-2 md:px-6 z-20 w-full min-w-0">
-                    <div className="max-w-4xl mx-auto w-full min-w-0">
-                        <AIChatInput onSendMessage={handleSendMessage} isLoading={isLoading || isStreaming} />
+                    <div className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-md pb-4 md:pb-6 pt-3 px-2 md:px-6 z-20 w-full min-w-0">
+                        <div className="max-w-4xl mx-auto w-full min-w-0">
+                            <AIChatInput onSendMessage={handleSendMessage} isLoading={isLoading || isStreaming} />
+                        </div>
                     </div>
                 </div>
+
+
             </div>
         </div>
     );

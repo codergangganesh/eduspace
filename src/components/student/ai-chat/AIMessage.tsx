@@ -1,6 +1,6 @@
 import { MessageRole, MessageContent } from "@/lib/aiChatService";
 import { cn } from "@/lib/utils";
-import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX, Play, Loader2, Terminal, Trash2 } from "lucide-react";
+import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX, Play, Loader2, Terminal, Trash2, Layout } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { aiChatService } from "@/lib/aiChatService";
 import { speakNaturalText } from "@/lib/naturalSpeech";
+import { codeExecutionService, isPistonRunnable, normalizeLang } from "@/services/codeExecutionService";
+
 
 interface AIMessageProps {
     messageId?: string;
@@ -108,6 +110,10 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
     const [history, setHistory] = useState<ExecutionRecord[]>([]);
     const [selectedRecord, setSelectedRecord] = useState<ExecutionRecord | null>(null);
 
+    const runnable = isPistonRunnable(language);
+    const langKey = normalizeLang(language) || language || 'code';
+
+
     const storageKey = useRef<string>('');
     if (!storageKey.current) {
         let hash = 0;
@@ -156,137 +162,38 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
     };
 
     const handleRunCode = async () => {
+        if (!runnable) return;
         setIsRunning(true);
         setShowOutput(true);
         const startTime = performance.now();
-        const cleanLang = (language || 'javascript').toLowerCase().trim();
-        let finalOut = '';
-        let isErr = false;
 
         try {
-            // 1. Local high-speed execution for JavaScript / TypeScript
-            if (cleanLang === 'javascript' || cleanLang === 'js' || cleanLang === 'typescript' || cleanLang === 'ts') {
-                const logs: string[] = [];
-                const customConsole = {
-                    log: (...args: any[]) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ')),
-                    error: (...args: any[]) => logs.push(`[Error] ` + args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ')),
-                    warn: (...args: any[]) => logs.push(`[Warn] ` + args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ')),
-                    info: (...args: any[]) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '))
-                };
+            const res = await codeExecutionService.executeCode({
+                language: langKey,
+                code: code
+            });
 
-                try {
-                    const runFn = new Function('console', code);
-                    const result = runFn(customConsole);
-                    if (result !== undefined && logs.length === 0) {
-                        logs.push(typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result));
-                    }
-                    finalOut = logs.length > 0 ? logs.join('\n') : 'Code executed successfully with zero output.';
-                    isErr = false;
-                } catch (err: any) {
-                    finalOut = err?.message || String(err);
-                    isErr = true;
-                }
-            } else if (cleanLang === 'python' || cleanLang === 'py' || cleanLang === 'python3') {
-                // 2. Real Python 3 Execution (Pyodide WebAssembly Engine)
-                let pySuccess = false;
-                try {
-                    const py = await loadPyodideEngine();
-                    py.runPython(`
-import sys
-import io
-sys.stdout = io.StringIO()
-sys.stderr = io.StringIO()
-                    `);
-
-                    try {
-                        await py.runPythonAsync(code);
-                        const stdout = py.runPython("sys.stdout.getvalue()");
-                        const stderr = py.runPython("sys.stderr.getvalue()");
-                        finalOut = (stdout || stderr || "Code executed successfully with zero output.").trim();
-                        isErr = Boolean(stderr && !stdout);
-                        pySuccess = true;
-                    } catch (pyErr: any) {
-                        const stderr = py.runPython("sys.stderr.getvalue()");
-                        finalOut = (stderr || pyErr?.message || String(pyErr)).trim();
-                        isErr = true;
-                        pySuccess = true;
-                    }
-                } catch (loadErr: any) {
-                    console.warn("Pyodide loading notice...", loadErr);
-                }
-
-                if (!pySuccess) {
-                    // Fallback to Skulpt Engine
-                    try {
-                        await loadSkulpt();
-                        const Sk = (window as any).Sk;
-                        if (Sk) {
-                            const logs: string[] = [];
-                            Sk.configure({
-                                output: (text: string) => logs.push(text),
-                                read: (x: string) => (Sk.builtinFiles?.files?.[x] || ""),
-                                python3: true
-                            });
-
-                            await Sk.misceval.asyncToPromise(() => {
-                                return Sk.importMainWithBody("<stdin>", false, code, true);
-                            });
-
-                            const skOut = logs.join('').trim();
-                            if (skOut) {
-                                finalOut = skOut;
-                                isErr = false;
-                            }
-                        }
-                    } catch (skErr: any) {
-                        console.warn("Skulpt fallback notice...", skErr);
-                    }
-                }
+            // Build rich output combining stdout / stderr / compileOutput with clear labels
+            const parts: string[] = [];
+            if (res.stdout && res.stdout.trim()) parts.push(res.stdout.trim());
+            if (res.compileOutput && res.compileOutput.trim()) {
+                parts.push(`⚠ Compile Output:\n${res.compileOutput.trim()}`);
+            }
+            if (res.stderr && res.stderr.trim()) {
+                parts.push(`✖ Error:\n${res.stderr.trim()}`);
+            }
+            if (parts.length === 0) {
+                parts.push(res.success
+                    ? '✔ Program executed successfully with no output.'
+                    : `Status: ${res.status || 'Unknown'}`
+                );
             }
 
-            // 3. Wandbox Multi-Language Execution API
-            if (!finalOut) {
-                const wandboxCompilers: Record<string, string> = {
-                    python: 'cpython-head', python3: 'cpython-head', py: 'cpython-head',
-                    cpp: 'gcc-head', 'c++': 'gcc-head', c: 'gcc-head-c',
-                    java: 'openjdk-head', javascript: 'nodejs-head', js: 'nodejs-head',
-                    typescript: 'typescript-head', ts: 'typescript-head',
-                    go: 'go-head', rust: 'rust-head', php: 'php-head', ruby: 'ruby-head', sql: 'sqlite-head'
-                };
-
-                const wandboxCompiler = wandboxCompilers[cleanLang];
-                if (wandboxCompiler) {
-                    try {
-                        const res = await fetch('https://wandbox.org/api/compile.json', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ compiler: wandboxCompiler, code })
-                        });
-
-                        if (res.ok) {
-                            const data = await res.json();
-                            const out = (data.program_output || data.compiler_output || '').trim();
-                            if (out) {
-                                finalOut = out;
-                                isErr = Boolean(data.status !== '0' && data.compiler_output);
-                            }
-                        }
-                    } catch (err) {
-                        console.warn("Wandbox error:", err);
-                    }
-                }
-            }
-
-            if (!finalOut) {
-                finalOut = 'Code executed with zero return output.';
-            }
-
-        } catch (error: any) {
-            finalOut = `Execution Error: ${error?.message || 'Could not execute code in sandbox.'}`;
-            isErr = true;
-        } finally {
-            const endTime = performance.now();
-            const timeStr = ((endTime - startTime) / 1000).toFixed(3) + 's';
+            const finalOut = parts.join('\n\n');
+            const isErr = !res.success;
+            const timeStr = (res.time && res.time !== '0.00')
+                ? res.time + 's'
+                : (((performance.now() - startTime) / 1000).toFixed(3) + 's');
             const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
             const newRecord: ExecutionRecord = {
@@ -299,12 +206,23 @@ sys.stderr = io.StringIO()
 
             setHistory(prev => {
                 const updated = [newRecord, ...prev].slice(0, 10);
-                try {
-                    localStorage.setItem(storageKey.current, JSON.stringify(updated));
-                } catch (e) { }
+                try { localStorage.setItem(storageKey.current, JSON.stringify(updated)); } catch (e) { }
                 return updated;
             });
             setSelectedRecord(newRecord);
+        } catch (error: any) {
+            const finalOut = `✖ Execution Error:\n${error?.message || 'Could not execute code in sandbox.'}`;
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const newRecord: ExecutionRecord = {
+                id: crypto.randomUUID(),
+                timestamp,
+                executionTime: '0.00s',
+                output: finalOut,
+                isError: true
+            };
+            setHistory(prev => [newRecord, ...prev].slice(0, 10));
+            setSelectedRecord(newRecord);
+        } finally {
             setIsRunning(false);
         }
     };
@@ -322,45 +240,55 @@ sys.stderr = io.StringIO()
                     <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground ml-1">
                         {language || 'code'}
                     </span>
+                    {!runnable && language && (
+                        <span className="text-[9px] font-semibold text-amber-500/60 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-widest">
+                            view only
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                    {/* Run Code Button */}
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleRunCode}
-                        disabled={isRunning}
-                        className="h-7 px-2 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg flex items-center justify-center transition-all active:scale-95 border border-emerald-500/20 shadow-sm"
-                        title="Run Code"
-                    >
-                        {isRunning ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
-                        ) : (
-                            <Play className="h-3.5 w-3.5 fill-current text-emerald-400" />
-                        )}
-                    </Button>
+                    {/* Run Code Button — only for runnable languages */}
+                    {runnable && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleRunCode}
+                            disabled={isRunning}
+                            className="h-7 px-2.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 border border-emerald-500/20 shadow-sm"
+                            title={`Run ${langKey} code`}
+                        >
+                            {isRunning ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                            ) : (
+                                <Play className="h-3.5 w-3.5 fill-current text-emerald-400" />
+                            )}
+                            <span className="hidden sm:inline">{isRunning ? 'Running...' : 'Run'}</span>
+                        </Button>
+                    )}
 
-                    {/* Terminal Toggle Button */}
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setShowOutput(!showOutput)}
-                        className={cn(
-                            "h-7 px-2 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-all active:scale-95 border relative",
-                            showOutput || history.length > 0
-                                ? "text-primary hover:text-primary hover:bg-primary/10 border-primary/30"
-                                : "text-muted-foreground hover:text-white hover:bg-white/10 border-white/10"
-                        )}
-                        title="Terminal Output"
-                    >
-                        <Terminal className="h-3.5 w-3.5" />
-                        {history.length > 0 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        )}
-                    </Button>
+                    {/* Terminal Toggle Button — only when runnable */}
+                    {runnable && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowOutput(!showOutput)}
+                            className={cn(
+                                "h-7 px-2 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-all active:scale-95 border relative",
+                                showOutput || history.length > 0
+                                    ? "text-primary hover:text-primary hover:bg-primary/10 border-primary/30"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/10 border-white/10"
+                            )}
+                            title="Terminal Output"
+                        >
+                            <Terminal className="h-3.5 w-3.5" />
+                            {history.length > 0 && (
+                                <span className={cn("w-1.5 h-1.5 rounded-full", history[0]?.isError ? "bg-rose-400" : "bg-emerald-400")} />
+                            )}
+                        </Button>
+                    )}
 
                     {/* Copy Code Button */}
                     <Button
@@ -374,13 +302,10 @@ sys.stderr = io.StringIO()
                         {copied ? (
                             <>
                                 <Check className="h-3.5 w-3.5 text-emerald-400" />
-                                <span className="text-emerald-400 font-bold">Copied!</span>
+                                <span className="text-emerald-400 font-bold hidden sm:inline">Copied!</span>
                             </>
                         ) : (
-                            <>
-                                <Copy className="h-3.5 w-3.5" />
-
-                            </>
+                            <Copy className="h-3.5 w-3.5" />
                         )}
                     </Button>
                 </div>
@@ -389,7 +314,7 @@ sys.stderr = io.StringIO()
             {/* Code Content */}
             <SyntaxHighlighter
                 style={vscDarkPlus as any}
-                language={language || 'text'}
+                language={langKey || 'text'}
                 PreTag="div"
                 className="!bg-transparent !p-3 sm:!p-5 !m-0 font-mono text-xs sm:text-sm leading-relaxed max-w-full overflow-x-auto"
             >
@@ -397,19 +322,22 @@ sys.stderr = io.StringIO()
             </SyntaxHighlighter>
 
             {/* Interactive Execution Output Console Drawer */}
-            {showOutput && (
+            {runnable && showOutput && (
                 <div className="border-t border-white/10 bg-[#0c0c0e] p-3 sm:p-4 text-xs font-mono">
                     <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-white/5 flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                             <span className={cn(
                                 "w-2 h-2 rounded-full",
-                                isRunning ? "bg-amber-400 animate-pulse" : (selectedRecord?.isError ? "bg-rose-500" : "bg-emerald-400")
+                                isRunning ? "bg-amber-400 animate-pulse"
+                                    : selectedRecord?.isError ? "bg-rose-500"
+                                        : selectedRecord ? "bg-emerald-400"
+                                            : "bg-white/20"
                             )} />
                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                                Terminal Output
+                                Terminal
                                 {selectedRecord && (
-                                    <span className="text-neutral-400 font-normal">
-                                        ({selectedRecord.executionTime} • {selectedRecord.timestamp})
+                                    <span className="text-neutral-500 font-normal normal-case tracking-normal">
+                                        · {langKey} · {selectedRecord.executionTime} · {selectedRecord.timestamp}
                                     </span>
                                 )}
                             </span>
@@ -442,17 +370,7 @@ sys.stderr = io.StringIO()
                                     className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
                                     title="Copy terminal output"
                                 >
-                                    {copiedOutput ? (
-                                        <>
-                                            <Check className="h-3 w-3 text-emerald-400" />
-
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="h-3 w-3" />
-
-                                        </>
-                                    )}
+                                    {copiedOutput ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                                 </button>
                             )}
 
@@ -465,7 +383,6 @@ sys.stderr = io.StringIO()
                                     title="Clear output history"
                                 >
                                     <Trash2 className="h-3 w-3" />
-
                                 </button>
                             )}
 
@@ -482,10 +399,14 @@ sys.stderr = io.StringIO()
                     </div>
 
                     <pre className={cn(
-                        "max-h-64 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed font-mono p-3 rounded-xl bg-black/60 border border-white/5 shadow-inner selection:bg-primary/30",
-                        selectedRecord?.isError ? "text-rose-400" : "text-emerald-300/90"
+                        "max-h-72 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed font-mono p-3 rounded-xl bg-black/60 border border-white/5 shadow-inner selection:bg-primary/30",
+                        isRunning ? "text-amber-300/70 animate-pulse"
+                            : selectedRecord?.isError ? "text-rose-400"
+                                : "text-emerald-300/90"
                     )}>
-                        {isRunning ? "Executing code in sandbox..." : (selectedRecord?.output || "No output history yet. Click ▶ to run.")}
+                        {isRunning
+                            ? `⏳ Running ${langKey} code in secure sandbox...`
+                            : (selectedRecord?.output || '▸ Click Run ▶ to execute this code.')}
                     </pre>
                 </div>
             )}
@@ -1018,21 +939,6 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                     <ThumbsDown className={cn("h-4 w-4", localFeedback === 'dislike' && "fill-rose-500")} />
                                 </Button>
                             </div>
-
-                            {onQuickAction && (
-                                <div className="pt-2 border-t border-border/15 flex items-center gap-1.5 flex-wrap">
-                                    {contextualQuickActions.map((action, idx) => (
-                                        <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => onQuickAction(action.prompt)}
-                                            className="text-[11px] font-medium px-3 py-1 rounded-full border border-border/60 hover:border-primary/40 bg-card/40 hover:bg-primary/5 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95 shadow-sm"
-                                        >
-                                            {action.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
