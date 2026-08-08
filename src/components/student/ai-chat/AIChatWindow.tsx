@@ -518,16 +518,16 @@ export default function AIChatWindow() {
             </div>
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col relative h-full overflow-hidden">
+            <div className="flex-1 flex flex-col relative h-full overflow-hidden w-full min-w-0">
                 {/* Background Marquee for Fresh Session removed as requested */}
 
                 {/* Chat Header */}
-                <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30 pt-[var(--safe-top)]">
-                    <div className="flex items-center gap-2 md:gap-3">
+                <div className="min-h-16 shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-30 pt-[var(--safe-top)] w-full min-w-0">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="md:hidden -ml-2 h-9 w-9"
+                            className="md:hidden -ml-2 h-9 w-9 shrink-0"
                             onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu className="h-5 w-5" />
@@ -536,7 +536,7 @@ export default function AIChatWindow() {
                         <div className="size-9 rounded-xl overflow-hidden border border-border/60 shadow-lg shrink-0">
                             <img src="/favicon.png" alt="Eduspace Logo" className="size-full object-cover" />
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1">
                             <h2 className="text-xs md:text-sm font-bold tracking-tight text-foreground/90 truncate max-w-[150px] md:max-w-none leading-none">
                                 {isTemporaryMode ? "Temporary Chat" : (currentConversation?.title || "AI Tutor Assistant")}
                             </h2>
@@ -549,7 +549,7 @@ export default function AIChatWindow() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -571,8 +571,8 @@ export default function AIChatWindow() {
                     </div>
                 </div>
 
-                <ScrollArea className="flex-1 z-10" viewportRef={scrollAreaRef as any}>
-                    <div className="max-w-4xl mx-auto w-full min-h-full">
+                <ScrollArea className="flex-1 z-10 w-full min-w-0" viewportRef={scrollAreaRef as any}>
+                    <div className="max-w-4xl mx-auto w-full min-h-full min-w-0">
                         {isLoading && messages.length === 0 ? (
                             <MessagesSkeleton />
                         ) : messages.length === 0 && !isStreaming ? (
@@ -631,13 +631,14 @@ export default function AIChatWindow() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="pb-32 md:pb-48 px-4 pt-4">
+                            <div className="pb-32 md:pb-48 px-1 sm:px-4 pt-4 w-full min-w-0 overflow-hidden">
                                 <AnimatePresence initial={false}>
                                     {messages.map((msg) => (
                                         <motion.div
                                             key={msg.id}
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
+                                            className="w-full min-w-0 overflow-hidden"
                                         >
                                             <AIMessage
                                                 messageId={msg.id}
@@ -655,6 +656,7 @@ export default function AIChatWindow() {
                                             key="streaming-message"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
+                                            className="w-full min-w-0 overflow-hidden"
                                         >
                                             <AIMessage role="assistant" content={streamingMessage} isStreaming={true} />
                                         </motion.div>
@@ -675,10 +677,10 @@ export default function AIChatWindow() {
                     </div>
                 </ScrollArea>
 
-                <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20">
+                <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20 w-full min-w-0">
                     <div className="h-32 bg-gradient-to-t from-background via-background/90 to-transparent" />
-                    <div className="bg-background pb-4 md:pb-6 pt-2 px-4 md:px-6 pointer-events-auto">
-                        <div className="max-w-4xl mx-auto">
+                    <div className="bg-background pb-4 md:pb-6 pt-2 px-2 md:px-6 pointer-events-auto w-full min-w-0">
+                        <div className="max-w-4xl mx-auto w-full min-w-0">
                             <AIChatInput onSendMessage={handleSendMessage} isLoading={isLoading || isStreaming} />
                         </div>
                     </div>

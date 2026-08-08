@@ -40,6 +40,65 @@ const TypingCursor = () => (
     />
 );
 
+function CodeBlock({ language, code }: { language: string; code: string }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyCode = () => {
+        navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="relative group/code my-4 sm:my-6 rounded-2xl overflow-hidden border border-white/10 bg-[#121214] shadow-2xl max-w-full w-full">
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-white/5 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500/40" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40" />
+                    </div>
+                    <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground ml-1">
+                        {language || 'code'}
+                    </span>
+                </div>
+
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleCopyCode}
+                    className="h-7 px-2.5 text-[11px] font-semibold text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-1.5 transition-all active:scale-95"
+                    title="Copy code to clipboard"
+                >
+                    {copied ? (
+                        <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span className="text-emerald-400 font-bold">Copied!</span>
+                        </>
+                    ) : (
+                        <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copy code</span>
+                        </>
+                    )}
+                </Button>
+            </div>
+
+            {/* Code Content */}
+            <SyntaxHighlighter
+                style={vscDarkPlus as any}
+                language={language || 'text'}
+                PreTag="div"
+                className="!bg-transparent !p-3 sm:!p-5 !m-0 font-mono text-xs sm:text-sm leading-relaxed max-w-full overflow-x-auto"
+            >
+                {code}
+            </SyntaxHighlighter>
+        </div>
+    );
+}
+
 export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming, feedbackState, onFeedbackChange }: AIMessageProps) {
     const [copied, setCopied] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -130,31 +189,31 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
 
     return (
         <div className={cn(
-            "group w-full py-6 md:py-8 transition-all duration-300 relative",
+            "group w-full py-4 md:py-8 transition-all duration-300 relative overflow-hidden",
             isAssistant ? "bg-accent/5 md:bg-accent/10" : "bg-transparent"
         )}>
-            <div className="max-w-4xl mx-auto px-4 md:px-6 flex gap-3 md:gap-6">
+            <div className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 flex gap-2.5 sm:gap-4 md:gap-6 w-full min-w-0">
                 <div className="shrink-0 pt-1">
                     {isAssistant ? (
-                        <Avatar className="h-10 w-10 rounded-2xl border border-border/40 shadow-lg ring-1 ring-white/10">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl border border-border/40 shadow-lg ring-1 ring-white/10">
                             <AvatarImage src="/favicon.png" className="object-cover" />
-                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl">
-                                <Sparkles className="h-5 w-5" />
+                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl sm:rounded-2xl">
+                                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
                             </AvatarFallback>
                         </Avatar>
                     ) : (
-                        <Avatar className="h-10 w-10 rounded-2xl border border-border/40 shadow-sm ring-1 ring-black/5">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl border border-border/40 shadow-sm ring-1 ring-black/5">
                             <AvatarImage src={profile?.avatar_url || ''} />
-                            <AvatarFallback className="bg-muted text-muted-foreground rounded-2xl">
-                                {profile?.full_name?.charAt(0) || <User className="h-5 w-5" />}
+                            <AvatarFallback className="bg-muted text-muted-foreground rounded-xl sm:rounded-2xl">
+                                {profile?.full_name?.charAt(0) || <User className="h-4 w-4 sm:h-5 sm:w-5" />}
                             </AvatarFallback>
                         </Avatar>
                     )}
                 </div>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground/80">
+                        <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-foreground/80 truncate">
                             {isAssistant ? "EduSpace AI" : (profile?.full_name || "You")}
                         </span>
 
@@ -196,7 +255,7 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                     e.target.style.height = 'auto';
                                     e.target.style.height = `${e.target.scrollHeight}px`;
                                 }}
-                                className="min-h-[60px] w-full resize-none bg-background/50 border-primary/20 text-sm font-medium focus-visible:ring-primary/20"
+                                className="min-h-[60px] w-full max-w-full resize-none bg-background/50 border-primary/20 text-sm font-medium focus-visible:ring-primary/20 break-words [overflow-wrap:anywhere]"
                             />
                             <div className="flex items-center gap-2">
                                 <Button
@@ -221,44 +280,27 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-4 w-full min-w-0">
                             {Array.isArray(content) ? (
                                 content.map((part, i) => (
-                                    <div key={i}>
+                                    <div key={i} className="w-full min-w-0">
                                         {part.type === 'text' && (
                                             <div className={cn(
                                                 "prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed font-medium",
-                                                "prose-p:mb-4 last:prose-p:mb-0",
-                                                "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl"
+                                                "w-full min-w-0 overflow-hidden break-words [overflow-wrap:anywhere] [word-break:break-word]",
+                                                "prose-p:mb-4 last:prose-p:mb-0 prose-p:break-words prose-p:[overflow-wrap:anywhere]",
+                                                "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl prose-pre:max-w-full prose-pre:overflow-x-auto",
+                                                "prose-code:break-words prose-code:[overflow-wrap:anywhere]"
                                             )}>
                                                 <ReactMarkdown
                                                     components={{
                                                         code({ node, inline, className, children, ...props }: any) {
                                                             const match = /language-(\w+)/.exec(className || '');
-                                                            return !inline && match ? (
-                                                                <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
-                                                                    <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
-                                                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                                            {match[1]}
-                                                                        </span>
-                                                                        <div className="flex gap-1.5">
-                                                                            <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
-                                                                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
-                                                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
-                                                                        </div>
-                                                                    </div>
-                                                                    <SyntaxHighlighter
-                                                                        style={vscDarkPlus as any}
-                                                                        language={match[1]}
-                                                                        PreTag="div"
-                                                                        className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
-                                                                        {...props}
-                                                                    >
-                                                                        {String(children).replace(/\n$/, '')}
-                                                                    </SyntaxHighlighter>
-                                                                </div>
+                                                            const codeString = String(children).replace(/\n$/, '');
+                                                            return !inline ? (
+                                                                <CodeBlock language={match ? match[1] : ''} code={codeString} />
                                                             ) : (
-                                                                <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
+                                                                <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20 break-words [overflow-wrap:anywhere]", className)} {...props}>
                                                                     {children}
                                                                 </code>
                                                             );
@@ -270,9 +312,9 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                             </div>
                                         )}
                                         {part.type === 'image_url' && (
-                                            <div className="my-4 max-w-lg">
+                                            <div className="my-4 max-w-full sm:max-w-lg">
                                                 <div className="rounded-2xl overflow-hidden border border-border/40 shadow-xl ring-1 ring-black/5">
-                                                    <img src={part.image_url?.url} alt="Uploaded content" className="w-full h-auto object-cover" />
+                                                    <img src={part.image_url?.url} alt="Uploaded content" className="w-full h-auto object-cover max-w-full" />
                                                 </div>
                                             </div>
                                         )}
@@ -281,8 +323,10 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                             ) : (
                                 <div className={cn(
                                     "prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed font-medium",
-                                    "prose-p:mb-4 last:prose-p:mb-0",
-                                    "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl"
+                                    "w-full min-w-0 overflow-hidden break-words [overflow-wrap:anywhere] [word-break:break-word]",
+                                    "prose-p:mb-4 last:prose-p:mb-0 prose-p:break-words prose-p:[overflow-wrap:anywhere]",
+                                    "prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl prose-pre:max-w-full prose-pre:overflow-x-auto",
+                                    "prose-code:break-words prose-code:[overflow-wrap:anywhere]"
                                 )}>
                                     {processedText === "" && isStreaming ? (
                                         <div className="flex items-center gap-2 text-muted-foreground/40 py-2">
@@ -307,30 +351,11 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                             components={{
                                                 code({ node, inline, className, children, ...props }: any) {
                                                     const match = /language-(\w+)/.exec(className || '');
-                                                    return !inline && match ? (
-                                                        <div className="relative group/code my-6 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
-                                                            <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                                    {match[1]}
-                                                                </span>
-                                                                <div className="flex gap-1.5">
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500/20" />
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
-                                                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
-                                                                </div>
-                                                            </div>
-                                                            <SyntaxHighlighter
-                                                                style={vscDarkPlus as any}
-                                                                language={match[1]}
-                                                                PreTag="div"
-                                                                className="!bg-transparent !p-5 !m-0 font-mono text-sm leading-relaxed"
-                                                                {...props}
-                                                            >
-                                                                {String(children).replace(/\n$/, '')}
-                                                            </SyntaxHighlighter>
-                                                        </div>
+                                                    const codeString = String(children).replace(/\n$/, '');
+                                                    return !inline ? (
+                                                        <CodeBlock language={match ? match[1] : ''} code={codeString} />
                                                     ) : (
-                                                        <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20", className)} {...props}>
+                                                        <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20 break-words [overflow-wrap:anywhere]", className)} {...props}>
                                                             {children}
                                                         </code>
                                                     );
@@ -348,7 +373,7 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
 
                     {/* Action row: Copy + Like + Dislike — only for completed AI responses */}
                     {isAssistant && !isStreaming && !isReadOnly && (
-                        <div className="mt-3 flex items-center gap-1">
+                        <div className="mt-3 flex items-center gap-1 flex-wrap">
                             {/* Copy */}
                             <Button
                                 size="icon"
