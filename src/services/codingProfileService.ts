@@ -102,18 +102,26 @@ function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
   }
 
   let badges: LeetCodeBadge[] = [];
-  if (Array.isArray(raw.badges)) {
-    badges = raw.badges.map((b: any) =>
-      typeof b === "string"
-        ? { name: b, category: "LeetCode Badge" }
-        : {
-          id: b.id,
-          name: b.displayName || b.name || "Badge",
-          icon: b.icon ? (b.icon.startsWith("http") ? b.icon : `https://leetcode.com${b.icon}`) : undefined,
-          category: b.category || "LeetCode Badge",
-          creationDate: b.creationDate,
+  if (Array.isArray(raw.badges) && raw.badges.length > 0) {
+    badges = raw.badges.map((b: any) => {
+      let iconUrl = b.icon || b.badge?.icon || b.iconUrl;
+      if (iconUrl && typeof iconUrl === "string") {
+        if (!iconUrl.startsWith("http")) {
+          const cleanPath = iconUrl.startsWith("/") ? iconUrl : `/${iconUrl}`;
+          iconUrl = `https://leetcode.com${cleanPath}`;
         }
-    );
+      }
+      return {
+        id: b.id || b.badge?.id,
+        name: b.displayName || b.name || b.badge?.displayName || "LeetCode Badge",
+        shortName: b.shortName || b.badge?.shortName,
+        icon: typeof iconUrl === "string" ? iconUrl : undefined,
+        category: b.category || b.badge?.category || "LeetCode Badge",
+        creationDate: b.creationDate || b.earnedDate || undefined,
+        description: b.hoverText || b.description || b.badge?.hoverText || b.badge?.description || undefined,
+        hoverText: b.hoverText || b.badge?.hoverText || undefined,
+      };
+    });
   }
 
   return {
@@ -190,34 +198,163 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
     }
   }
 
-  // 2. Fetch Contest Ranking & Rating Info
-  try {
-    const contestRes = await fetch(`https://alfa-leetcode-api.onrender.com/userContestRankingInfo/${encodeURIComponent(username)}?_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(6000) });
-    if (contestRes.ok) {
-      const cData = await contestRes.json();
-      const rankingObj = cData?.userContestRanking || cData?.data?.userContestRanking || cData;
-      if (rankingObj && (rankingObj.rating || rankingObj.attendedContestsCount)) {
-        if (rankingObj.rating) mergedData.contestRating = rankingObj.rating;
-        if (rankingObj.globalRanking) mergedData.contestGlobalRanking = rankingObj.globalRanking;
-        if (rankingObj.topPercentage) mergedData.contestTopPercentage = rankingObj.topPercentage;
-        if (rankingObj.attendedContestsCount) mergedData.contestsAttended = rankingObj.attendedContestsCount;
-        if (rankingObj.badge?.name || rankingObj.rating >= 1850) {
-          mergedData.contestBadge = rankingObj.badge?.name || (rankingObj.rating >= 1850 ? "Knight" : null);
+  // 2. Fetch Live Contest Ranking & Rating Info (LeetCode Official GraphQL via CORS Proxies + Alfa + Vercel)
+  let contestDataFetched = false;
+
+  const contestGraphQLQuery = {
+    query: `
+      query getUserContestRanking($username: String!) {
+        userContestRanking(username: $username) {
+          attendedContestsCount
+          rating
+          globalRanking
+          totalParticipants
+          topPercentage
+          badge {
+            name
+          }
         }
       }
-    }
-  } catch { }
+    `,
+    variables: { username },
+  };
 
-  // 3. Fetch Badges Info
-  try {
-    const badgesRes = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/badges?_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(6000) });
-    if (badgesRes.ok) {
-      const bData = await badgesRes.json();
-      if (bData && Array.isArray(bData.badges) && bData.badges.length > 0) {
-        mergedData.badges = bData.badges;
+  const contestCorsProxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent("https://leetcode.com/graphql")}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent("https://leetcode.com/graphql")}`,
+  ];
+
+  for (const proxyUrl of contestCorsProxies) {
+    try {
+      const cRes = await fetch(proxyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contestGraphQLQuery),
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      });
+      if (cRes.ok) {
+        const cJson = await cRes.json();
+        const rankingObj = cJson?.data?.userContestRanking;
+        if (rankingObj && (rankingObj.rating || typeof rankingObj.attendedContestsCount === "number")) {
+          if (rankingObj.rating) mergedData.contestRating = Math.round(rankingObj.rating);
+          if (rankingObj.globalRanking) mergedData.contestGlobalRanking = rankingObj.globalRanking;
+          if (typeof rankingObj.topPercentage === "number") mergedData.contestTopPercentage = rankingObj.topPercentage;
+          if (typeof rankingObj.attendedContestsCount === "number") mergedData.contestsAttended = rankingObj.attendedContestsCount;
+          if (rankingObj.badge?.name || rankingObj.rating >= 1850) {
+            mergedData.contestBadge = rankingObj.badge?.name || (rankingObj.rating >= 2200 ? "Guardian" : rankingObj.rating >= 1850 ? "Knight" : null);
+          }
+          contestDataFetched = true;
+          break;
+        }
       }
+    } catch {
+      // Try next proxy
     }
-  } catch { }
+  }
+
+  // Fallback to Alfa or Vercel if GraphQL proxy timed out
+  if (!contestDataFetched) {
+    const contestEndpoints = [
+      `https://alfa-leetcode-api.onrender.com/userContestRankingInfo/${encodeURIComponent(username)}?_t=${timestamp}`,
+      `https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/contest?_t=${timestamp}`,
+      `https://leetcode-api-faisalshohag.vercel.app/${encodeURIComponent(username)}?_t=${timestamp}`,
+    ];
+
+    for (const url of contestEndpoints) {
+      try {
+        const contestRes = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(5000) });
+        if (contestRes.ok) {
+          const cData = await contestRes.json();
+          const rankingObj = cData?.userContestRanking || cData?.data?.userContestRanking || cData;
+          if (rankingObj && (rankingObj.rating || rankingObj.attendedContestsCount || rankingObj.contestRating)) {
+            const ratingVal = rankingObj.rating || rankingObj.contestRating;
+            if (ratingVal) mergedData.contestRating = Math.round(ratingVal);
+            if (rankingObj.globalRanking || rankingObj.contestGlobalRanking) {
+              mergedData.contestGlobalRanking = rankingObj.globalRanking || rankingObj.contestGlobalRanking;
+            }
+            if (rankingObj.topPercentage || rankingObj.contestTopPercentage) {
+              mergedData.contestTopPercentage = rankingObj.topPercentage || rankingObj.contestTopPercentage;
+            }
+            if (rankingObj.attendedContestsCount || rankingObj.contestsAttended) {
+              mergedData.contestsAttended = rankingObj.attendedContestsCount || rankingObj.contestsAttended;
+            }
+            if (rankingObj.badge?.name || rankingObj.contestBadge || (ratingVal && ratingVal >= 1850)) {
+              mergedData.contestBadge = rankingObj.badge?.name || rankingObj.contestBadge || (ratingVal >= 2200 ? "Guardian" : ratingVal >= 1850 ? "Knight" : null);
+            }
+            break;
+          }
+        }
+      } catch { }
+    }
+  }
+
+  // 3. Fetch Live Badges Info (LeetCode Official GraphQL via CORS Proxies + Alfa)
+  const badgesGraphQLQuery = {
+    query: `
+      query getUserBadges($username: String!) {
+        matchedUser(username: $username) {
+          badges {
+            id
+            name
+            displayName
+            icon
+            category
+            creationDate
+          }
+          activeBadge {
+            id
+            displayName
+            icon
+          }
+        }
+      }
+    `,
+    variables: { username },
+  };
+
+  const badgeCorsProxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent("https://leetcode.com/graphql")}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent("https://leetcode.com/graphql")}`,
+  ];
+
+  let badgesFetched = false;
+
+  for (const proxyUrl of badgeCorsProxies) {
+    try {
+      const bRes = await fetch(proxyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(badgesGraphQLQuery),
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      });
+      if (bRes.ok) {
+        const bJson = await bRes.json();
+        const rawBadges = bJson?.data?.matchedUser?.badges;
+        if (Array.isArray(rawBadges) && rawBadges.length > 0) {
+          mergedData.badges = rawBadges;
+          badgesFetched = true;
+          break;
+        }
+      }
+    } catch {
+      // try next proxy
+    }
+  }
+
+  if (!badgesFetched) {
+    try {
+      const badgesRes = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/badges?_t=${timestamp}`, { cache: "no-store", signal: AbortSignal.timeout(6000) });
+      if (badgesRes.ok) {
+        const bData = await badgesRes.json();
+        const badgeList = bData?.badges || bData?.data?.badges;
+        if (Array.isArray(badgeList) && badgeList.length > 0) {
+          mergedData.badges = badgeList;
+        }
+      }
+    } catch { }
+  }
 
   const totalSolvedNum = parseInt(String(mergedData.totalSolved || mergedData.solvedProblem || mergedData.allSolved || 0)) || 0;
   const easyNum = parseInt(String(mergedData.easySolved || mergedData.easy || 0)) || 0;
@@ -2131,20 +2268,20 @@ export async function getCodingProfiles(
   }
 
   // Fetch fresh stats from platforms in parallel
-const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult, hrResult, heResult, hfResult, chessResult, credlyResult, wakatimeResult] = await Promise.all([
-      lcUsername ? fetchLeetCodeStats(lcUsername) : Promise.resolve({ data: null, error: null }),
-      cfHandle ? fetchCodeforcesStats(cfHandle) : Promise.resolve({ data: null, error: null }),
-      ghUsername || ghToken ? fetchGitHubStats(ghUsername || "", ghToken) : Promise.resolve({ data: null, error: null }),
-      ccUsername ? fetchCodeChefStats(ccUsername) : Promise.resolve({ data: null, error: null }),
-      cwUsername ? fetchCodewarsStats(cwUsername) : Promise.resolve({ data: null, error: null }),
-      gfgUsername ? fetchGeeksForGeeksStats(gfgUsername) : Promise.resolve({ data: null, error: null }),
-      atcoderUsername ? fetchAtCoderStats(atcoderUsername) : Promise.resolve({ data: null, error: null }),
-      hrUsername ? fetchHackerRankStats(hrUsername) : Promise.resolve({ data: null, error: null }),
-      heUsername ? fetchHackerEarthStats(heUsername) : Promise.resolve({ data: null, error: null }),
-      hfUsername ? fetchHuggingFaceStats(hfUsername) : Promise.resolve({ data: null, error: null }),
-      chessUsername ? fetchChessStats(chessUsername) : Promise.resolve({ data: null, error: null }),
-      credlyUsername ? fetchCredlyStats(credlyUsername) : Promise.resolve({ data: null, error: null }),
-      wakatimeUsername || wakatimeApiKeyInput ? fetchWakaTimeStats(wakatimeUsername, wakatimeApiKeyInput) : Promise.resolve({ data: null, error: null }),
+  const [lcResult, cfResult, ghResult, ccResult, cwResult, gfgResult, atcoderResult, hrResult, heResult, hfResult, chessResult, credlyResult, wakatimeResult] = await Promise.all([
+    lcUsername ? fetchLeetCodeStats(lcUsername) : Promise.resolve({ data: null, error: null }),
+    cfHandle ? fetchCodeforcesStats(cfHandle) : Promise.resolve({ data: null, error: null }),
+    ghUsername || ghToken ? fetchGitHubStats(ghUsername || "", ghToken) : Promise.resolve({ data: null, error: null }),
+    ccUsername ? fetchCodeChefStats(ccUsername) : Promise.resolve({ data: null, error: null }),
+    cwUsername ? fetchCodewarsStats(cwUsername) : Promise.resolve({ data: null, error: null }),
+    gfgUsername ? fetchGeeksForGeeksStats(gfgUsername) : Promise.resolve({ data: null, error: null }),
+    atcoderUsername ? fetchAtCoderStats(atcoderUsername) : Promise.resolve({ data: null, error: null }),
+    hrUsername ? fetchHackerRankStats(hrUsername) : Promise.resolve({ data: null, error: null }),
+    heUsername ? fetchHackerEarthStats(heUsername) : Promise.resolve({ data: null, error: null }),
+    hfUsername ? fetchHuggingFaceStats(hfUsername) : Promise.resolve({ data: null, error: null }),
+    chessUsername ? fetchChessStats(chessUsername) : Promise.resolve({ data: null, error: null }),
+    credlyUsername ? fetchCredlyStats(credlyUsername) : Promise.resolve({ data: null, error: null }),
+    wakatimeUsername || wakatimeApiKeyInput ? fetchWakaTimeStats(wakatimeUsername, wakatimeApiKeyInput) : Promise.resolve({ data: null, error: null }),
   ]);
 
   let lcStats = lcResult.data;

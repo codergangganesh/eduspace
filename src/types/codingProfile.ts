@@ -16,9 +16,12 @@ export interface ContributionDay {
 export interface LeetCodeBadge {
   id?: string;
   name: string;
+  shortName?: string;
   icon?: string;
   category?: string;
   creationDate?: string;
+  description?: string;
+  hoverText?: string;
 }
 
 export interface LeetCodeStats {

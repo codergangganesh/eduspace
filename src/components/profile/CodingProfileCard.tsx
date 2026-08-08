@@ -634,11 +634,11 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                 )}
 
                 {/* Hero Rating / Contest Rank Banner */}
-                {(contestRating || contestBadge || topPercentage || globalRanking) && (
+                {(contestRating || contestBadge || topPercentage || globalRanking || badges.length > 0) && (
                   <div className="p-5 sm:p-6 rounded-2xl border border-[#FFA116]/30 bg-gradient-to-br from-[#FFA116]/20 to-[#FFA116]/5 flex items-center justify-between gap-4 shadow-sm">
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                        LeetCode Competitive Standings
+                        LeetCode Competitive Standings & Badges
                       </span>
                       <div className="flex items-center gap-2 flex-wrap">
                         {contestBadge ? (
@@ -655,17 +655,42 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                             Top {topPercentage}%
                           </Badge>
                         )}
+                        {/* Mini Badge Images Strip */}
+                        {badges.length > 0 && (
+                          <div className="flex items-center gap-1.5 pl-1 border-l border-[#FFA116]/30">
+                            {badges.slice(0, 5).map((b, i) =>
+                              b.icon ? (
+                                <img
+                                  key={i}
+                                  src={b.icon}
+                                  alt={b.name}
+                                  title={`${b.name}${b.creationDate ? ` (Earned: ${b.creationDate})` : ''}`}
+                                  referrerPolicy="no-referrer"
+                                  className="size-7 object-contain drop-shadow-md hover:scale-125 transition-transform"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (target.src.includes("leetcode.com")) {
+                                      target.src = target.src.replace("leetcode.com", "assets.leetcode.com");
+                                    } else {
+                                      target.style.display = "none";
+                                    }
+                                  }}
+                                />
+                              ) : null
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     {contestRating ? (
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="text-3xl sm:text-4xl font-extrabold font-mono text-[#FFA116] tracking-tight block">
                           {contestRating}
                         </span>
                         <span className="text-xs text-muted-foreground font-semibold">Contest Rating</span>
                       </div>
                     ) : globalRanking ? (
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="text-2xl sm:text-3xl font-extrabold font-mono text-foreground tracking-tight block">
                           #{globalRanking.toLocaleString()}
                         </span>
@@ -837,77 +862,77 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                 </div>
 
                 {/* Real Badges & Achievements Showcase */}
-                {badges.length > 0 && (() => {
-                  const [visibleBadgesCount, setVisibleBadgesCount] = useState(3);
-                  const visibleBadges = badges.slice(0, visibleBadgesCount);
-                  const hasMore = visibleBadgesCount < badges.length;
-                  
-                  return (
-                    <div className="p-4 rounded-2xl bg-card/40 border border-[#FFA116]/20 backdrop-blur-md space-y-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                          <Award className="size-4 text-[#FFA116] shrink-0" />
-                          <span className="truncate">LeetCode Badges</span>
-                        </span>
-                        <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10 font-extrabold whitespace-nowrap shrink-0">
-                          {badges.length} Earned
-                        </Badge>
-                      </div>
+                {badges.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-card/40 border border-[#FFA116]/20 backdrop-blur-md space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-4 text-[#FFA116] shrink-0" />
+                        <span className="truncate">LeetCode Badges</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10 font-extrabold whitespace-nowrap shrink-0">
+                        {badges.length} Earned
+                      </Badge>
+                    </div>
 
-                      {/* Vertical Scrollable Container for Badges */}
-                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                        {visibleBadges.map((b, idx) => (
-                          <div
-                            key={idx}
-                            className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-[#FFA116]/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
-                          >
-                            {b.icon ? (
-                              <img
-                                src={b.icon}
-                                alt={b.name}
-                                className="size-9 object-contain shrink-0 transition-transform duration-300 group-hover/badge:scale-110"
-                                onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                              />
-                            ) : (
-                              <div className="size-9 rounded-xl border border-[#FFA116]/30 bg-[#FFA116]/15 flex items-center justify-center text-[#FFA116] shrink-0">
-                                <Award className="size-4" />
-                              </div>
+                    {/* Scrollable Container for All Earned Badges */}
+                    <div className="max-h-[280px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                      {badges.map((b, idx) => (
+                        <div
+                          key={idx}
+                          className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-[#FFA116]/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
+                        >
+                          {b.icon ? (
+                            <img
+                              src={b.icon}
+                              alt={b.name}
+                              referrerPolicy="no-referrer"
+                              className="size-11 sm:size-12 object-contain shrink-0 transition-transform duration-300 group-hover/badge:scale-110 drop-shadow-md"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (target.src.includes("leetcode.com")) {
+                                  target.src = target.src.replace("leetcode.com", "assets.leetcode.com");
+                                } else if (target.src.includes("assets.leetcode.com")) {
+                                  target.src = target.src.replace("assets.leetcode.com", "leetcode.com");
+                                } else {
+                                  target.onerror = null;
+                                  target.style.display = "none";
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="size-11 sm:size-12 rounded-xl border border-[#FFA116]/30 bg-[#FFA116]/15 flex items-center justify-center text-[#FFA116] shrink-0 shadow-sm">
+                              <Award className="size-5" />
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                              <h5 className="text-xs sm:text-sm font-extrabold text-foreground truncate">
+                                {b.name}
+                              </h5>
+                              <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-[#FFA116]/30 text-[#FFA116] bg-[#FFA116]/10 shrink-0 whitespace-nowrap">
+                                {b.category || "LeetCode Badge"}
+                              </Badge>
+                            </div>
+
+                            {(b.description || b.hoverText || b.shortName) && (
+                              <p className="text-[11px] text-muted-foreground/90 leading-tight line-clamp-2">
+                                {b.description || b.hoverText || b.shortName}
+                              </p>
                             )}
 
-                            <div className="min-w-0 flex-1 space-y-0.5">
-                              <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                                <h5 className="text-xs sm:text-sm font-extrabold text-foreground truncate">
-                                  {b.name}
-                                </h5>
-                                <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-[#FFA116]/30 text-[#FFA116] bg-[#FFA116]/10 shrink-0 whitespace-nowrap">
-                                  LeetCode Badge
-                                </Badge>
+                            {b.creationDate && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium pt-0.5">
+                                <Clock className="size-3 text-[#FFA116] shrink-0" />
+                                <span>Earned on {b.creationDate}</span>
                               </div>
-                              {b.creationDate && (
-                                <p className="text-[11px] text-muted-foreground font-medium truncate">
-                                  Earned on {b.creationDate}
-                                </p>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
-
-                      {/* Load More Button */}
-                      {hasMore && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setVisibleBadgesCount((prev) => Math.min(prev + 5, badges.length))}
-                          className="w-full rounded-xl text-xs font-bold border-[#FFA116]/30 hover:bg-[#FFA116]/10 hover:text-[#FFA116] transition-all"
-                        >
-                          <MoreHorizontal className="size-3.5 mr-1.5" />
-                          Load More ({badges.length - visibleBadgesCount} more)
-                        </Button>
-                      )}
+                        </div>
+                      ))}
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
               </div>
             );
           })()

@@ -260,6 +260,16 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     return DEFAULT_PLATFORM_KEYS;
   });
 
+  const sortedPlatformKeys = useMemo(() => {
+    return [...customOrder].sort((a, b) => {
+      const aPinned = pinnedPlatforms.includes(a);
+      const bPinned = pinnedPlatforms.includes(b);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return customOrder.indexOf(a) - customOrder.indexOf(b);
+    });
+  }, [customOrder, pinnedPlatforms]);
+
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
@@ -608,15 +618,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     "github",
   ];
 
-  const sortedPlatformKeys = useMemo(() => {
-    return [...customOrder].sort((a, b) => {
-      const aPinned = pinnedPlatforms.includes(a);
-      const bPinned = pinnedPlatforms.includes(b);
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
-      return customOrder.indexOf(a) - customOrder.indexOf(b);
-    });
-  }, [customOrder, pinnedPlatforms]);
+
 
   const renderCardByKey = (key: string) => {
     const isPinned = pinnedPlatforms.includes(key);
@@ -1059,6 +1061,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           cwUsername={cwUsername}
           hrUsername={hrUsername}
           hrStats={data?.hackerrank}
+          lcStats={data?.leetcode}
           ccContests={data?.codechef?.recentContests}
           selectedPlatformFilter={activeTab}
         />

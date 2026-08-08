@@ -17,7 +17,7 @@ import {
   MergedRatingPoint,
   RatingPoint,
 } from "@/services/ratingHistoryService";
-import { CodeChefContestHistory, HackerRankStats } from "@/types/codingProfile";
+import { CodeChefContestHistory, HackerRankStats, LeetCodeStats } from "@/types/codingProfile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +38,7 @@ interface RatingTrajectoryGraphProps {
   cwUsername?: string;
   hrUsername?: string;
   hrStats?: HackerRankStats | null;
+  lcStats?: LeetCodeStats | null;
   ccContests?: CodeChefContestHistory[];
   selectedPlatformFilter?: "all" | "competitive" | "opensource" | "hackerrank" | "codewars";
   className?: string;
@@ -52,6 +53,7 @@ export function RatingTrajectoryGraph({
   cwUsername,
   hrUsername,
   hrStats,
+  lcStats,
   ccContests,
   selectedPlatformFilter = "all",
   className,
@@ -90,7 +92,7 @@ export function RatingTrajectoryGraph({
     try {
       const [cfPoints, lcPoints, ccPoints, hrPoints] = await Promise.all([
         cfHandle ? fetchCodeforcesRatingHistory(cfHandle) : Promise.resolve([]),
-        lcUsername ? fetchLeetCodeRatingHistory(lcUsername) : Promise.resolve([]),
+        lcUsername ? fetchLeetCodeRatingHistory(lcUsername, lcStats) : Promise.resolve([]),
         fetchCodeChefRatingHistory(ccUsername || "", ccContests),
         (hrUsername || hrStats) ? fetchHackerRankRatingHistory(hrUsername || "", hrStats) : Promise.resolve([]),
       ]);
@@ -112,7 +114,7 @@ export function RatingTrajectoryGraph({
 
   useEffect(() => {
     loadData();
-  }, [cfHandle, lcUsername, ccUsername, hrUsername, hrStats, ccContests?.length]);
+  }, [cfHandle, lcUsername, ccUsername, hrUsername, hrStats, lcStats, ccContests?.length]);
 
   // Compute Peak Ratings and Activity Counts across platforms
   const stats = useMemo(() => {

@@ -1,6 +1,6 @@
 import { MessageRole, MessageContent } from "@/lib/aiChatService";
 import { cn } from "@/lib/utils";
-import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown } from "lucide-react";
+import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { aiChatService } from "@/lib/aiChatService";
+import { speakNaturalText } from "@/lib/naturalSpeech";
 
 interface AIMessageProps {
     messageId?: string;
@@ -41,6 +42,7 @@ const TypingCursor = () => (
 
 export function AIMessage({ messageId, role, content, profile, onUpdateMessage, isReadOnly, isStreaming, feedbackState, onFeedbackChange }: AIMessageProps) {
     const [copied, setCopied] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(typeof content === 'string' ? content : '');
     const [localFeedback, setLocalFeedback] = useState<'like' | 'dislike' | null>(feedbackState || null);
@@ -63,6 +65,29 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    const speechRef = useRef<{ stop: () => void } | null>(null);
+
+    const handleSpeak = () => {
+        if (isSpeaking) {
+            speechRef.current?.stop();
+            setIsSpeaking(false);
+            return;
+        }
+
+        setIsSpeaking(true);
+        speechRef.current = speakNaturalText(
+            processedText,
+            () => setIsSpeaking(false),
+            () => setIsSpeaking(false)
+        );
+    };
+
+    useEffect(() => {
+        return () => {
+            speechRef.current?.stop();
+        };
+    }, []);
 
     const handleSave = () => {
         if (!editValue.trim() || editValue === content) {
@@ -331,11 +356,33 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                 onClick={handleCopy}
                                 className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-200"
                                 aria-label="Copy message"
+                                title="Copy message"
                             >
                                 {copied ? (
                                     <Check className="h-4 w-4 text-emerald-500" />
                                 ) : (
                                     <Copy className="h-4 w-4" />
+                                )}
+                            </Button>
+
+                            {/* Speaker (Text to Speech) */}
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={handleSpeak}
+                                className={cn(
+                                    "h-8 w-8 rounded-lg transition-all duration-200",
+                                    isSpeaking
+                                        ? "text-primary bg-primary/15 border border-primary/40 shadow-[0_0_12px_rgba(99,102,241,0.5)]"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                )}
+                                aria-label={isSpeaking ? "Stop speaking" : "Read message aloud"}
+                                title={isSpeaking ? "Stop speaking" : "Read message aloud"}
+                            >
+                                {isSpeaking ? (
+                                    <VolumeX className="h-4 w-4 text-primary" />
+                                ) : (
+                                    <Volume2 className="h-4 w-4" />
                                 )}
                             </Button>
 

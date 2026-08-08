@@ -30,7 +30,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
   const [toolsExpanded, setToolsExpanded] = useState<boolean>(true);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  
+
   const isLecturer = role === "lecturer";
 
   // Persistent header tools state
@@ -115,7 +115,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
   );
 
   const streakBadge = (
-    <div 
+    <div
       className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-gradient-to-br from-orange-500/10 to-amber-500/10 dark:from-orange-500/20 dark:to-amber-500/20 backdrop-blur-xl shadow-lg shadow-black/5 border border-orange-200/40 dark:border-orange-500/20 transition-all"
       title="Current Daily Streak"
     >
@@ -156,9 +156,9 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
       </div>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
-        <button 
-           className="hidden lg:block text-[14px] leading-tight font-medium text-primary hover:text-primary/80 transition-colors mr-2"
-           onClick={() => window.dispatchEvent(new CustomEvent("open-feedback"))}
+        <button
+          className="hidden lg:block text-[14px] leading-tight font-medium text-primary hover:text-primary/80 transition-colors mr-2"
+          onClick={() => window.dispatchEvent(new CustomEvent("open-feedback"))}
         >
           Feedback
         </button>

@@ -146,3 +146,5 @@ export async function sendTestNotification(): Promise<boolean> {
   toast.error('Unable to display notification. Check Windows Do Not Disturb or browser notification permissions.');
   return false;
 }
+
+

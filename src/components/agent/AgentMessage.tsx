@@ -1,9 +1,12 @@
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "@/types/agent";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef } from "react";
+import { speakNaturalText } from "@/lib/naturalSpeech";
 
 interface AgentMessageBubbleProps {
   message: AgentMessage;
@@ -29,10 +32,33 @@ const renderContent = (text: string) => {
 
 export const AgentMessageBubble = ({ message }: AgentMessageBubbleProps) => {
   const { profile } = useAuth();
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechRef = useRef<{ stop: () => void } | null>(null);
   const isUser = message.role === "user";
   const isSuccess = message.type === "success";
   const isError = message.type === "error";
   const isConfirmation = message.type === "confirmation";
+
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      speechRef.current?.stop();
+      setIsSpeaking(false);
+      return;
+    }
+
+    setIsSpeaking(true);
+    speechRef.current = speakNaturalText(
+      message.content,
+      () => setIsSpeaking(false),
+      () => setIsSpeaking(false)
+    );
+  };
+
+  useEffect(() => {
+    return () => {
+      speechRef.current?.stop();
+    };
+  }, []);
 
   return (
     <div
@@ -92,16 +118,37 @@ export const AgentMessageBubble = ({ message }: AgentMessageBubbleProps) => {
           {renderContent(message.content)}
         </div>
 
-        {/* Timestamp */}
+        {/* Timestamp & Speak Button */}
         <div
           className={cn(
-            "mt-2.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest",
+            "mt-2.5 flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-widest",
             isUser
               ? "text-primary-foreground/40 justify-end"
-              : "text-muted-foreground/30"
+              : "text-muted-foreground/40"
           )}
         >
-          {format(message.timestamp, "h:mm a")}
+          <span>{format(message.timestamp, "h:mm a")}</span>
+          {!isUser && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleSpeak}
+              className={cn(
+                "h-6 w-6 rounded-md p-0.5 transition-all duration-200",
+                isSpeaking
+                  ? "text-primary bg-primary/15 border border-primary/40 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                  : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60"
+              )}
+              aria-label={isSpeaking ? "Stop speaking" : "Read message aloud"}
+              title={isSpeaking ? "Stop speaking" : "Read message aloud"}
+            >
+              {isSpeaking ? (
+                <VolumeX className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <Volume2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
