@@ -65,7 +65,7 @@ export function MonacoCodeEditor({
   const editorRef = useRef<any>(null);
   const [copied, setCopied] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'vs-dark' | 'light'>(theme);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => typeof window !== 'undefined' && !(window as any).monaco);
   const [loadError, setLoadError] = useState(false);
 
   const monacoLang = getMonacoLanguage(language);
@@ -234,11 +234,11 @@ export function MonacoCodeEditor({
             variant="ghost"
             size="sm"
             onClick={handleFind}
-            className="h-7 px-2 text-xs hover:bg-accent hover:text-accent-foreground"
+            className="h-7 px-1.5 sm:px-2 text-xs hover:bg-accent hover:text-accent-foreground"
             title="Search Code (Ctrl+F)"
           >
-            <Search className="w-3.5 h-3.5 mr-1" />
-            Find
+            <Search className="w-3.5 h-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Find</span>
           </Button>
 
           <Button
@@ -246,11 +246,11 @@ export function MonacoCodeEditor({
             variant="ghost"
             size="sm"
             onClick={handleFormat}
-            className="h-7 px-2 text-xs hover:bg-accent hover:text-accent-foreground"
+            className="h-7 px-1.5 sm:px-2 text-xs hover:bg-accent hover:text-accent-foreground"
             title="Format Code"
           >
-            <AlignLeft className="w-3.5 h-3.5 mr-1" />
-            Format
+            <AlignLeft className="w-3.5 h-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Format</span>
           </Button>
 
           <Button
@@ -258,10 +258,11 @@ export function MonacoCodeEditor({
             variant="ghost"
             size="sm"
             onClick={handleSelectAll}
-            className="h-7 px-2 text-xs hover:bg-accent hover:text-accent-foreground"
-            title="Select All"
+            className="h-7 px-1.5 sm:px-2 text-xs hover:bg-accent hover:text-accent-foreground"
+            title="Select All Code"
           >
-            Select All
+            <span className="text-[11px] font-mono sm:hidden">ALL</span>
+            <span className="hidden sm:inline">Select All</span>
           </Button>
 
           <Button
@@ -294,7 +295,7 @@ export function MonacoCodeEditor({
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10 text-muted-foreground text-xs space-x-2">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Loading Monaco Editor...</span>
+
           </div>
         )}
 

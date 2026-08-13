@@ -1,11 +1,12 @@
 import { MessageRole, MessageContent } from "@/lib/aiChatService";
 import { cn } from "@/lib/utils";
-import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX, Play, Loader2, Terminal, Trash2, Layout, Code2, RotateCcw, GitCompare, Globe, Wand2, Eye } from "lucide-react";
+import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX, Play, Loader2, Terminal, Trash2, Layout, Code2, RotateCcw, GitCompare, Globe, Wand2, Eye, Maximize2, AlertTriangle } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
@@ -13,6 +14,7 @@ import { aiChatService } from "@/lib/aiChatService";
 import { speakNaturalText } from "@/lib/naturalSpeech";
 import { codeExecutionService, isPistonRunnable, normalizeLang } from "@/services/codeExecutionService";
 import { MonacoCodeEditor } from "./MonacoCodeEditor";
+import { AISandboxWorkspace } from "./AISandboxWorkspace";
 import { toast } from "sonner";
 
 
@@ -181,11 +183,23 @@ function DiffView({ originalCode, editedCode }: { originalCode: string; editedCo
 function InSpaceCodeEditor({
     value,
     language,
-    onChange
+    onChange,
+    onExpandFullscreen,
+    onRun,
+    onReset,
+    isRunning,
+    isModified,
+    runnable
 }: {
     value: string;
     language: string;
     onChange: (val: string) => void;
+    onExpandFullscreen?: () => void;
+    onRun?: () => void;
+    onReset?: () => void;
+    isRunning?: boolean;
+    isModified?: boolean;
+    runnable?: boolean;
 }) {
     const lineNumbersRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -213,15 +227,28 @@ function InSpaceCodeEditor({
     const lineCount = Math.max((value || '').split('\n').length, 1);
 
     return (
-        <div className="w-full rounded-xl border border-white/10 overflow-hidden bg-[#09090b] shadow-inner font-mono text-xs flex flex-col">
-            <div className="flex items-center justify-between px-3 py-1.5 bg-[#121216] border-b border-white/5 text-[11px] text-muted-foreground select-none">
+        <div className="w-full rounded-xl border border-white/10 overflow-hidden bg-[#09090b] shadow-inner font-mono text-xs flex flex-col relative">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-[#121216] border-b border-white/5 text-[11px] text-muted-foreground select-none flex-wrap gap-1.5">
                 <span className="font-mono uppercase font-bold text-indigo-400 tracking-wider flex items-center gap-1.5">
                     <Code2 className="w-3.5 h-3.5 text-indigo-400" />
                     {language || 'code'} Editor &mdash; Modify inputs or code logic:
                 </span>
-                <span className="text-[10px] text-neutral-400 font-mono hidden sm:inline">
-                    {lineCount} {lineCount === 1 ? 'line' : 'lines'} · {value.length} chars · Tab supported
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-neutral-400 font-mono hidden sm:inline">
+                        {lineCount} {lineCount === 1 ? 'line' : 'lines'} · {value.length} chars
+                    </span>
+                    {onExpandFullscreen && (
+                        <button
+                            type="button"
+                            onClick={onExpandFullscreen}
+                            title="Expand to Fullscreen Sandbox Workspace"
+                            className="flex items-center gap-1 text-[10px] font-semibold text-indigo-300 hover:text-white bg-indigo-500/20 hover:bg-indigo-500/30 px-2 py-0.5 rounded border border-indigo-500/30 transition-all active:scale-95 shadow-sm"
+                        >
+                            <Maximize2 className="w-3 h-3 text-indigo-300" />
+                            <span>Expand Workspace</span>
+                        </button>
+                    )}
+                </div>
             </div>
             <div className="relative flex w-full h-[280px] overflow-hidden">
                 <div
@@ -238,10 +265,41 @@ function InSpaceCodeEditor({
                     onChange={(e) => onChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onScroll={handleScroll}
-                    className="w-full h-full p-3 bg-transparent font-mono text-xs sm:text-sm leading-relaxed text-emerald-400 focus:text-white resize-none focus:outline-none scrollbar-thin selection:bg-indigo-500/30"
+                    className="w-full h-full p-3 pb-12 bg-transparent font-mono text-xs sm:text-sm leading-relaxed text-emerald-400 focus:text-white resize-none focus:outline-none scrollbar-thin selection:bg-indigo-500/30"
                     placeholder="Type or edit code here..."
                     spellCheck={false}
                 />
+
+                {/* Bottom-Right Edge Action Bar: Reset & Run buttons */}
+                <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2">
+                    {isModified && onReset && (
+                        <button
+                            type="button"
+                            onClick={onReset}
+                            className="h-7 px-2.5 text-[11px] font-semibold text-amber-300 bg-[#1a150e]/90 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center gap-1.5 shadow-lg backdrop-blur-md transition-all active:scale-95"
+                            title="Reset code to original AI response"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Reset</span>
+                        </button>
+                    )}
+                    {runnable && onRun && (
+                        <button
+                            type="button"
+                            onClick={onRun}
+                            disabled={isRunning}
+                            className="h-7 px-3.5 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg flex items-center gap-1.5 shadow-lg backdrop-blur-md transition-all active:scale-95"
+                            title={`Run ${language} code`}
+                        >
+                            {isRunning ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                            ) : (
+                                <Play className="w-3.5 h-3.5 fill-current text-white" />
+                            )}
+                            <span>{isRunning ? 'Running...' : 'Run Code'}</span>
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -265,42 +323,103 @@ function CodeBlock({ language, code, onQuickAction }: { language: string; code: 
     const [history, setHistory] = useState<ExecutionRecord[]>([]);
     const [selectedRecord, setSelectedRecord] = useState<ExecutionRecord | null>(null);
 
+    // Compute deterministic storage keys based on code snippet hash
+    const storageKeys = useRef<{ term: string; edited: string; modal: string }>({ term: '', edited: '', modal: '' });
+    if (!storageKeys.current.term) {
+        let hash = 0;
+        for (let i = 0; i < (code || '').length; i++) {
+            hash = (hash << 5) - hash + (code || '').charCodeAt(i);
+            hash |= 0;
+        }
+        const absHash = Math.abs(hash);
+        storageKeys.current = {
+            term: `eduspace_term_${absHash}`,
+            edited: `eduspace_edited_code_${absHash}`,
+            modal: `eduspace_workspace_open_${absHash}`
+        };
+    }
+
+    // In-Space Code Editor state (restores edited code from localStorage if available)
+    const [currentCode, setCurrentCode] = useState<string>(() => {
+        try {
+            const saved = localStorage.getItem(storageKeys.current.edited);
+            return saved !== null ? saved : code;
+        } catch (e) {
+            return code;
+        }
+    });
+
+    // Fullscreen Sandbox Workspace state (restores modal open state from localStorage)
+    const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem(storageKeys.current.modal) === 'true';
+        } catch (e) {
+            return false;
+        }
+    });
+
+    // Custom Reset Confirmation Modal state
+    const [showResetModal, setShowResetModal] = useState(false);
+
     // Language switcher state
     const [selectedLang, setSelectedLang] = useState<string>(language || 'python');
 
     // View mode state: 'preview' | 'editor' | 'diff'
-    const [viewMode, setViewMode] = useState<'preview' | 'editor' | 'diff'>('preview');
-
-    // In-Space Code Editor state
-    const [currentCode, setCurrentCode] = useState<string>(code);
+    const [viewMode, setViewMode] = useState<'preview' | 'editor' | 'diff'>(() => {
+        return currentCode !== code ? 'editor' : 'preview';
+    });
 
     // Sync state when props update
     useEffect(() => {
         if (language) setSelectedLang(language);
     }, [language]);
 
+    // Persist edited code changes to localStorage
     useEffect(() => {
-        setCurrentCode(code);
-    }, [code]);
+        try {
+            if (currentCode !== code) {
+                localStorage.setItem(storageKeys.current.edited, currentCode);
+            } else {
+                localStorage.removeItem(storageKeys.current.edited);
+            }
+        } catch (e) { }
+    }, [currentCode, code]);
+
+    // Persist workspace modal open state to localStorage
+    useEffect(() => {
+        try {
+            if (isFullscreenModalOpen) {
+                localStorage.setItem(storageKeys.current.modal, 'true');
+            } else {
+                localStorage.removeItem(storageKeys.current.modal);
+            }
+        } catch (e) { }
+    }, [isFullscreenModalOpen]);
 
     const isModified = currentCode !== code;
     const runnable = isPistonRunnable(selectedLang);
     const langKey = normalizeLang(selectedLang) || selectedLang || 'code';
 
-    const storageKey = useRef<string>('');
-    if (!storageKey.current) {
-        let hash = 0;
-        for (let i = 0; i < code.length; i++) {
-            hash = (hash << 5) - hash + code.charCodeAt(i);
-            hash |= 0;
-        }
-        storageKey.current = `eduspace_term_${Math.abs(hash)}`;
-    }
+    // Warn user before refreshing if code is modified or workspace is open
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isModified || isFullscreenModalOpen) {
+                e.preventDefault();
+                e.returnValue = "Your written code changes will be affected if you refresh the page!";
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isModified, isFullscreenModalOpen]);
 
     // Load persistent execution history on mount
     useEffect(() => {
         try {
-            const saved = localStorage.getItem(storageKey.current);
+            const saved = localStorage.getItem(storageKeys.current.term);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) {
@@ -320,8 +439,17 @@ function CodeBlock({ language, code, onQuickAction }: { language: string; code: 
     };
 
     const handleResetCode = () => {
+        setShowResetModal(true);
+    };
+
+    const handleConfirmReset = () => {
         setCurrentCode(code);
         setViewMode('preview');
+        try {
+            localStorage.removeItem(storageKeys.current.edited);
+            localStorage.removeItem(storageKeys.current.modal);
+        } catch (e) { }
+        toast.success("Reset code back to original AI response");
     };
 
     const handleCopyOutput = () => {
@@ -335,7 +463,7 @@ function CodeBlock({ language, code, onQuickAction }: { language: string; code: 
         setHistory([]);
         setSelectedRecord(null);
         try {
-            localStorage.removeItem(storageKey.current);
+            localStorage.removeItem(storageKeys.current.term);
         } catch (e) { }
     };
 
@@ -384,7 +512,7 @@ function CodeBlock({ language, code, onQuickAction }: { language: string; code: 
 
             setHistory(prev => {
                 const updated = [newRecord, ...prev].slice(0, 10);
-                try { localStorage.setItem(storageKey.current, JSON.stringify(updated)); } catch (e) { }
+                try { localStorage.setItem(storageKeys.current.term, JSON.stringify(updated)); } catch (e) { }
                 return updated;
             });
             setSelectedRecord(newRecord);
@@ -565,6 +693,12 @@ function CodeBlock({ language, code, onQuickAction }: { language: string; code: 
                         value={currentCode}
                         language={langKey || 'python'}
                         onChange={(val) => setCurrentCode(val)}
+                        onExpandFullscreen={() => setIsFullscreenModalOpen(true)}
+                        onRun={handleRunCode}
+                        onReset={handleResetCode}
+                        isRunning={isRunning}
+                        isModified={isModified}
+                        runnable={runnable}
                     />
                 </div>
             ) : viewMode === 'diff' ? (
@@ -693,6 +827,86 @@ function CodeBlock({ language, code, onQuickAction }: { language: string; code: 
                             : (selectedRecord?.output || '▸ Click Run ▶ to execute this code.')}
                     </pre>
                 </div>
+            )}
+
+            {/* Fullscreen Sandbox Workspace Modal Overlay mounted to document.body via Portal */}
+            {isFullscreenModalOpen && createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md p-2 sm:p-6 flex flex-col items-center justify-center select-none"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div
+                        className="w-full h-full max-w-7xl max-h-[96vh] rounded-2xl border border-border bg-background text-foreground overflow-hidden shadow-2xl flex flex-col relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <AISandboxWorkspace
+                            initialCode={currentCode}
+                            initialLanguage={selectedLang}
+                            onCodeChange={(updatedCode) => setCurrentCode(updatedCode)}
+                            onClose={(updatedCode, updatedLang) => {
+                                if (typeof updatedCode === 'string') {
+                                    setCurrentCode(updatedCode);
+                                }
+                                if (updatedLang) {
+                                    setSelectedLang(updatedLang);
+                                }
+                                setIsFullscreenModalOpen(false);
+                            }}
+                            onQuickAiAction={onQuickAction}
+                            className="h-full w-full border-none rounded-none"
+                        />
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Custom EduSpace Reset Code Warning Modal Popup */}
+            {showResetModal && createPortal(
+                <div
+                    className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+                    onClick={() => setShowResetModal(false)}
+                >
+                    <div
+                        className="w-full max-w-md bg-[#121216] border border-amber-500/30 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 text-white relative animate-in zoom-in-95 duration-150"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-white">Reset Code Changes?</h3>
+                                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                                    Your custom code edits will be reset back to the original AI code. This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowResetModal(false)}
+                                className="h-8 px-3 text-xs text-muted-foreground hover:text-white"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => {
+                                    handleConfirmReset();
+                                    setShowResetModal(false);
+                                }}
+                                className="h-8 px-4 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-black rounded-lg shadow-md transition-all active:scale-95"
+                            >
+                                Yes, Reset Code
+                            </Button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );
