@@ -73,9 +73,19 @@ export function MonacoCodeEditor({
   // Initialize Monaco Editor instance
   useEffect(() => {
     let isMounted = true;
+    let timerId: any = null;
+
+    // Timeout safety: automatically switch to lightweight editor if Monaco CDN load is slow (>1.5s)
+    timerId = setTimeout(() => {
+      if (isMounted && isLoading) {
+        setLoadError(true);
+        setIsLoading(false);
+      }
+    }, 1500);
 
     loadMonacoCdn()
       .then((monaco) => {
+        if (timerId) clearTimeout(timerId);
         if (!isMounted || !containerRef.current) return;
 
         // Destroy existing editor if any
@@ -88,7 +98,7 @@ export function MonacoCodeEditor({
           language: monacoLang,
           theme: currentTheme,
           readOnly: readOnly,
-          fontSize: 14,
+          fontSize: 13,
           fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
           automaticLayout: true,
           lineNumbers: 'on',
@@ -119,6 +129,7 @@ export function MonacoCodeEditor({
 
     return () => {
       isMounted = false;
+      if (timerId) clearTimeout(timerId);
       if (editorRef.current) {
         editorRef.current.dispose();
         editorRef.current = null;

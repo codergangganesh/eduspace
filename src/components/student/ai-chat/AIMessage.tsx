@@ -1,6 +1,6 @@
 import { MessageRole, MessageContent } from "@/lib/aiChatService";
 import { cn } from "@/lib/utils";
-import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX, Play, Loader2, Terminal, Trash2, Layout } from "lucide-react";
+import { User, Sparkles, Copy, Check, Pencil, ThumbsUp, ThumbsDown, Volume2, VolumeX, Play, Loader2, Terminal, Trash2, Layout, Code2, RotateCcw, GitCompare, Globe, Wand2, Eye } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -12,6 +12,10 @@ import { motion } from "framer-motion";
 import { aiChatService } from "@/lib/aiChatService";
 import { speakNaturalText } from "@/lib/naturalSpeech";
 import { codeExecutionService, isPistonRunnable, normalizeLang } from "@/services/codeExecutionService";
+import { MonacoCodeEditor } from "./MonacoCodeEditor";
+import { toast } from "sonner";
+
+
 
 
 interface AIMessageProps {
@@ -104,7 +108,156 @@ interface ExecutionRecord {
     isError: boolean;
 }
 
-function CodeBlock({ language, code }: { language: string; code: string }) {
+function computeLineDiff(originalText: string, editedText: string) {
+    const origLines = (originalText || '').split('\n');
+    const editLines = (editedText || '').split('\n');
+    const result: { type: 'add' | 'remove' | 'same'; text: string; origNum?: number; editNum?: number }[] = [];
+
+    let i = 0, j = 0;
+    while (i < origLines.length || j < editLines.length) {
+        if (i < origLines.length && j < editLines.length && origLines[i] === editLines[j]) {
+            result.push({ type: 'same', text: origLines[i], origNum: i + 1, editNum: j + 1 });
+            i++;
+            j++;
+        } else if (j < editLines.length && (!origLines.slice(i, i + 6).includes(editLines[j]))) {
+            result.push({ type: 'add', text: editLines[j], editNum: j + 1 });
+            j++;
+        } else if (i < origLines.length && (!editLines.slice(j, j + 6).includes(origLines[i]))) {
+            result.push({ type: 'remove', text: origLines[i], origNum: i + 1 });
+            i++;
+        } else {
+            if (i < origLines.length) {
+                result.push({ type: 'remove', text: origLines[i], origNum: i + 1 });
+                i++;
+            }
+            if (j < editLines.length) {
+                result.push({ type: 'add', text: editLines[j], editNum: j + 1 });
+                j++;
+            }
+        }
+    }
+    return result;
+}
+
+function DiffView({ originalCode, editedCode }: { originalCode: string; editedCode: string }) {
+    const diffLines = computeLineDiff(originalCode, editedCode);
+    const additions = diffLines.filter(l => l.type === 'add').length;
+    const deletions = diffLines.filter(l => l.type === 'remove').length;
+
+    return (
+        <div className="w-full rounded-xl border border-white/10 overflow-hidden bg-[#09090b] shadow-inner font-mono text-xs flex flex-col">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-[#121216] border-b border-white/5 text-[11px] select-none">
+                <span className="font-mono uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5">
+                    <GitCompare className="w-3.5 h-3.5 text-amber-400" />
+                    Visual Code Diff &mdash; Original vs Edited:
+                </span>
+                <span className="text-[10px] font-mono flex items-center gap-2">
+                    <span className="text-emerald-400 font-semibold">+{additions} additions</span>
+                    <span className="text-rose-400 font-semibold">-{deletions} deletions</span>
+                </span>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto p-2.5 font-mono text-xs leading-relaxed space-y-0.5 scrollbar-thin">
+                {diffLines.map((line, idx) => (
+                    <div
+                        key={idx}
+                        className={cn(
+                            "px-2 py-0.5 rounded flex items-start gap-2.5 whitespace-pre-wrap break-words transition-colors",
+                            line.type === 'add' && "bg-emerald-500/15 text-emerald-300 border-l-2 border-emerald-500 font-medium",
+                            line.type === 'remove' && "bg-rose-500/15 text-rose-300 border-l-2 border-rose-500 line-through opacity-75 font-medium",
+                            line.type === 'same' && "text-neutral-400"
+                        )}
+                    >
+                        <span className="select-none text-[10px] w-6 text-neutral-600 shrink-0 text-right">
+                            {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : (line.editNum || line.origNum)}
+                        </span>
+                        <span className="flex-1">{line.text}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function InSpaceCodeEditor({
+    value,
+    language,
+    onChange
+}: {
+    value: string;
+    language: string;
+    onChange: (val: string) => void;
+}) {
+    const lineNumbersRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const textarea = e.currentTarget;
+            const { selectionStart, selectionEnd, value: text } = textarea;
+            const indent = '    ';
+            const newValue = text.substring(0, selectionStart) + indent + text.substring(selectionEnd);
+            onChange(newValue);
+            setTimeout(() => {
+                textarea.selectionStart = textarea.selectionEnd = selectionStart + 4;
+            }, 0);
+        }
+    };
+
+    const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+        if (lineNumbersRef.current) {
+            lineNumbersRef.current.scrollTop = e.currentTarget.scrollTop;
+        }
+    };
+
+    const lineCount = Math.max((value || '').split('\n').length, 1);
+
+    return (
+        <div className="w-full rounded-xl border border-white/10 overflow-hidden bg-[#09090b] shadow-inner font-mono text-xs flex flex-col">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-[#121216] border-b border-white/5 text-[11px] text-muted-foreground select-none">
+                <span className="font-mono uppercase font-bold text-indigo-400 tracking-wider flex items-center gap-1.5">
+                    <Code2 className="w-3.5 h-3.5 text-indigo-400" />
+                    {language || 'code'} Editor &mdash; Modify inputs or code logic:
+                </span>
+                <span className="text-[10px] text-neutral-400 font-mono hidden sm:inline">
+                    {lineCount} {lineCount === 1 ? 'line' : 'lines'} · {value.length} chars · Tab supported
+                </span>
+            </div>
+            <div className="relative flex w-full h-[280px] overflow-hidden">
+                <div
+                    ref={lineNumbersRef}
+                    className="py-3 pl-3 pr-2 text-right select-none text-neutral-600 bg-[#0d0d11] border-r border-white/5 min-w-[3.2em] shrink-0 font-mono text-xs leading-relaxed overflow-hidden"
+                >
+                    {Array.from({ length: lineCount }).map((_, i) => (
+                        <div key={i} className="h-[1.375rem]">{i + 1}</div>
+                    ))}
+                </div>
+                <textarea
+                    ref={textareaRef}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onScroll={handleScroll}
+                    className="w-full h-full p-3 bg-transparent font-mono text-xs sm:text-sm leading-relaxed text-emerald-400 focus:text-white resize-none focus:outline-none scrollbar-thin selection:bg-indigo-500/30"
+                    placeholder="Type or edit code here..."
+                    spellCheck={false}
+                />
+            </div>
+        </div>
+    );
+}
+
+const SUPPORTED_LANGUAGES = [
+    { id: 'python', label: 'Python' },
+    { id: 'javascript', label: 'JavaScript' },
+    { id: 'cpp', label: 'C++' },
+    { id: 'c', label: 'C' },
+    { id: 'java', label: 'Java' },
+    { id: 'go', label: 'Go' },
+    { id: 'rust', label: 'Rust' }
+];
+
+function CodeBlock({ language, code, onQuickAction }: { language: string; code: string; onQuickAction?: (prompt: string) => void }) {
     const [copied, setCopied] = useState(false);
     const [copiedOutput, setCopiedOutput] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
@@ -112,9 +265,27 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
     const [history, setHistory] = useState<ExecutionRecord[]>([]);
     const [selectedRecord, setSelectedRecord] = useState<ExecutionRecord | null>(null);
 
-    const runnable = isPistonRunnable(language);
-    const langKey = normalizeLang(language) || language || 'code';
+    // Language switcher state
+    const [selectedLang, setSelectedLang] = useState<string>(language || 'python');
 
+    // View mode state: 'preview' | 'editor' | 'diff'
+    const [viewMode, setViewMode] = useState<'preview' | 'editor' | 'diff'>('preview');
+
+    // In-Space Code Editor state
+    const [currentCode, setCurrentCode] = useState<string>(code);
+
+    // Sync state when props update
+    useEffect(() => {
+        if (language) setSelectedLang(language);
+    }, [language]);
+
+    useEffect(() => {
+        setCurrentCode(code);
+    }, [code]);
+
+    const isModified = currentCode !== code;
+    const runnable = isPistonRunnable(selectedLang);
+    const langKey = normalizeLang(selectedLang) || selectedLang || 'code';
 
     const storageKey = useRef<string>('');
     if (!storageKey.current) {
@@ -143,9 +314,14 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
     }, []);
 
     const handleCopyCode = () => {
-        navigator.clipboard.writeText(code);
+        navigator.clipboard.writeText(currentCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleResetCode = () => {
+        setCurrentCode(code);
+        setViewMode('preview');
     };
 
     const handleCopyOutput = () => {
@@ -172,7 +348,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
         try {
             const res = await codeExecutionService.executeCode({
                 language: langKey,
-                code: code
+                code: currentCode
             });
 
             // Build rich output combining stdout / stderr / compileOutput with clear labels
@@ -232,24 +408,83 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
     return (
         <div className="relative group/code my-4 sm:my-6 rounded-2xl overflow-hidden border border-white/10 bg-[#121214] shadow-2xl max-w-full w-full">
             {/* Header bar */}
-            <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-white/5 border-b border-white/5">
-                <div className="flex items-center gap-2">
-                    <div className="flex gap-1.5">
+            <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-white/5 border-b border-white/5 gap-1 sm:gap-2 select-none w-full min-w-0">
+                <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
+                    <div className="hidden sm:flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-rose-500/40" />
                         <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40" />
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40" />
                     </div>
-                    <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground ml-1">
-                        {language || 'code'}
-                    </span>
-                    {!runnable && language && (
-                        <span className="text-[9px] font-semibold text-amber-500/60 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-widest">
+
+                    {/* Language Switcher Dropdown */}
+                    <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg px-1.5 sm:px-2 py-0.5 text-[10px] text-muted-foreground hover:border-white/20 transition-colors shrink-0">
+                        <Globe className="h-3 w-3 text-indigo-400 shrink-0" />
+                        <select
+                            value={selectedLang}
+                            onChange={(e) => setSelectedLang(e.target.value)}
+                            className="bg-transparent text-white font-mono text-[10px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer"
+                        >
+                            {SUPPORTED_LANGUAGES.map(l => (
+                                <option key={l.id} value={l.id} className="bg-[#121214] text-white font-normal normal-case">
+                                    {l.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {!runnable && selectedLang && (
+                        <span className="text-[9px] font-semibold text-amber-500/60 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded uppercase tracking-widest shrink-0">
                             view only
+                        </span>
+                    )}
+                    {isModified && (
+                        <span className="text-[9px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1 shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                            <span className="hidden sm:inline">edited</span>
                         </span>
                     )}
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    {/* View Modes Selector: Preview / Edit / Diff */}
+                    <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/5 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('preview')}
+                            title="Preview Code"
+                            className={cn(
+                                "h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded transition-all",
+                                viewMode === 'preview' ? "bg-white/15 text-white shadow-sm" : "text-muted-foreground hover:text-white"
+                            )}
+                        >
+                            <Eye className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('editor')}
+                            title="In-Space Code Editor"
+                            className={cn(
+                                "h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded transition-all",
+                                viewMode === 'editor' ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm" : "text-muted-foreground hover:text-white"
+                            )}
+                        >
+                            <Code2 className="h-3.5 w-3.5" />
+                        </button>
+                        {isModified && (
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('diff')}
+                                title="Visual Code Diff"
+                                className={cn(
+                                    "h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded transition-all",
+                                    viewMode === 'diff' ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm" : "text-amber-400/80 hover:text-amber-300"
+                                )}
+                            >
+                                <GitCompare className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+
                     {/* Run Code Button — only for runnable languages */}
                     {runnable && (
                         <Button
@@ -258,15 +493,28 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
                             variant="ghost"
                             onClick={handleRunCode}
                             disabled={isRunning}
-                            className="h-7 px-2.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 border border-emerald-500/20 shadow-sm"
-                            title={`Run ${langKey} code`}
+                            className="h-6 w-6 sm:h-7 sm:w-7 p-0 flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-all active:scale-95 border border-emerald-500/20 shadow-sm shrink-0"
+                            title={isRunning ? `Running ${langKey} code...` : `Run ${langKey} code`}
                         >
                             {isRunning ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
                             ) : (
                                 <Play className="h-3.5 w-3.5 fill-current text-emerald-400" />
                             )}
-                            <span className="hidden sm:inline">{isRunning ? 'Running...' : 'Run'}</span>
+                        </Button>
+                    )}
+
+                    {/* Reset Code Button — visible if code has been edited */}
+                    {isModified && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleResetCode}
+                            className="h-6 w-6 sm:h-7 sm:w-7 p-0 flex items-center justify-center text-amber-400/90 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-all active:scale-95 border border-amber-500/20 shrink-0"
+                            title="Reset to original AI code"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
                         </Button>
                     )}
 
@@ -278,7 +526,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
                             variant="ghost"
                             onClick={() => setShowOutput(!showOutput)}
                             className={cn(
-                                "h-7 px-2 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-all active:scale-95 border relative",
+                                "h-6 w-6 sm:h-7 sm:w-7 p-0 flex items-center justify-center rounded-lg transition-all active:scale-95 border relative shrink-0",
                                 showOutput || history.length > 0
                                     ? "text-primary hover:text-primary hover:bg-primary/10 border-primary/30"
                                     : "text-muted-foreground hover:text-white hover:bg-white/10 border-white/10"
@@ -287,7 +535,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
                         >
                             <Terminal className="h-3.5 w-3.5" />
                             {history.length > 0 && (
-                                <span className={cn("w-1.5 h-1.5 rounded-full", history[0]?.isError ? "bg-rose-400" : "bg-emerald-400")} />
+                                <span className={cn("absolute top-1 right-1 w-1.5 h-1.5 rounded-full", history[0]?.isError ? "bg-rose-400" : "bg-emerald-400")} />
                             )}
                         </Button>
                     )}
@@ -298,14 +546,11 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
                         size="sm"
                         variant="ghost"
                         onClick={handleCopyCode}
-                        className="h-7 px-2.5 text-[11px] font-semibold text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-1.5 transition-all active:scale-95"
-                        title="Copy code to clipboard"
+                        className="h-6 w-6 sm:h-7 sm:w-7 p-0 flex items-center justify-center text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg transition-all active:scale-95 shrink-0"
+                        title={copied ? "Code copied!" : "Copy code"}
                     >
                         {copied ? (
-                            <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" />
-                                <span className="text-emerald-400 font-bold hidden sm:inline">Copied!</span>
-                            </>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
                         ) : (
                             <Copy className="h-3.5 w-3.5" />
                         )}
@@ -313,15 +558,29 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
                 </div>
             </div>
 
-            {/* Code Content */}
-            <SyntaxHighlighter
-                style={vscDarkPlus as any}
-                language={langKey || 'text'}
-                PreTag="div"
-                className="!bg-transparent !p-3 sm:!p-5 !m-0 font-mono text-xs sm:text-sm leading-relaxed max-w-full overflow-x-auto"
-            >
-                {code}
-            </SyntaxHighlighter>
+            {/* Code View: Preview vs In-Space Editor vs Visual Diff */}
+            {viewMode === 'editor' ? (
+                <div className="p-2 sm:p-3 bg-[#0d0d0f] border-b border-white/5">
+                    <InSpaceCodeEditor
+                        value={currentCode}
+                        language={langKey || 'python'}
+                        onChange={(val) => setCurrentCode(val)}
+                    />
+                </div>
+            ) : viewMode === 'diff' ? (
+                <div className="p-2 sm:p-3 bg-[#0d0d0f] border-b border-white/5">
+                    <DiffView originalCode={code} editedCode={currentCode} />
+                </div>
+            ) : (
+                <SyntaxHighlighter
+                    style={vscDarkPlus as any}
+                    language={langKey || 'text'}
+                    PreTag="div"
+                    className="!bg-transparent !p-3 sm:!p-5 !m-0 font-mono text-xs sm:text-sm leading-relaxed max-w-full overflow-x-auto"
+                >
+                    {currentCode}
+                </SyntaxHighlighter>
+            )}
 
             {/* Interactive Execution Output Console Drawer */}
             {runnable && showOutput && (
@@ -346,6 +605,29 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {/* AI Auto-Fix Error Button — shown on error outputs */}
+                            {selectedRecord?.isError && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                        const prompt = `I ran the following ${selectedLang} code in EduSpace AI sandbox and got an error:\n\n\`\`\`${selectedLang}\n${currentCode}\n\`\`\`\n\nError output:\n${selectedRecord?.output || 'Execution error'}\n\nPlease debug the exact runtime error, explain what caused it, and provide the complete fixed code.`;
+                                        if (onQuickAction) {
+                                            onQuickAction(prompt);
+                                            toast.success("Sent code and error output to EduSpace AI for automated debugging!");
+                                        } else {
+                                            navigator.clipboard.writeText(prompt);
+                                            toast.success("Copied debug prompt to clipboard!");
+                                        }
+                                    }}
+                                    className="h-6 px-2 text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg flex items-center gap-1 transition-all active:scale-95 shadow-sm"
+                                    title="Ask EduSpace AI to debug & fix this error"
+                                >
+                                    <Sparkles className="h-3 w-3 text-amber-300 animate-pulse" />
+                                    <span>Fix Error with AI</span>
+                                </Button>
+                            )}
+
                             {/* History selector */}
                             {history.length > 1 && (
                                 <select
@@ -798,7 +1080,7 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                                             const match = /language-(\w+)/.exec(className || '');
                                                             const codeString = String(children).replace(/\n$/, '');
                                                             return !inline ? (
-                                                                <CodeBlock language={match ? match[1] : ''} code={codeString} />
+                                                                <CodeBlock language={match ? match[1] : ''} code={codeString} onQuickAction={onQuickAction} />
                                                             ) : (
                                                                 <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20 break-words [overflow-wrap:anywhere]", className)} {...props}>
                                                                     {children}
@@ -853,7 +1135,7 @@ export function AIMessage({ messageId, role, content, profile, onUpdateMessage, 
                                                     const match = /language-(\w+)/.exec(className || '');
                                                     const codeString = String(children).replace(/\n$/, '');
                                                     return !inline ? (
-                                                        <CodeBlock language={match ? match[1] : ''} code={codeString} />
+                                                        <CodeBlock language={match ? match[1] : ''} code={codeString} onQuickAction={onQuickAction} />
                                                     ) : (
                                                         <code className={cn("bg-muted/50 px-1.5 py-0.5 rounded-md text-primary font-mono text-xs border border-border/20 break-words [overflow-wrap:anywhere]", className)} {...props}>
                                                             {children}
