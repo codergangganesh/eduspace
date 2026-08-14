@@ -535,11 +535,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       });
 
       if (res.ok) {
-        const userData = await res.json();
-        const remaining = res.headers.get("x-ratelimit-remaining") || "5000";
-        toast.success(
-          `✓ Token Verified! Linked as @${userData.login}. Rate Limit: ${remaining}/5000 req/hr remaining.`
-        );
+        toast.success("GitHub token verified successfully!");
       } else if (res.status === 401) {
         toast.error("Invalid token. Check your token and try again.");
       } else {
@@ -1171,6 +1167,85 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. ganesh"
                   value={hackerrankInput}
                   onChange={(e) => setHackerrankInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="atcoder_input" className="text-xs font-semibold">
+                  AtCoder Handle
+                </Label>
+                <Input
+                  id="atcoder_input"
+                  placeholder="e.g. tourist"
+                  value={atcoderInput}
+                  onChange={(e) => setAtcoderInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="huggingface_input" className="text-xs font-semibold">
+                  HuggingFace Username
+                </Label>
+                <Input
+                  id="huggingface_input"
+                  placeholder="e.g. ganesh"
+                  value={huggingfaceInput}
+                  onChange={(e) => setHuggingfaceInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="chess_input" className="text-xs font-semibold">
+                  Chess.com Username
+                </Label>
+                <Input
+                  id="chess_input"
+                  placeholder="e.g. magnuscarlsen"
+                  value={chessInput}
+                  onChange={(e) => setChessInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="credly_input" className="text-xs font-semibold">
+                  Credly Username / Profile URL
+                </Label>
+                <Input
+                  id="credly_input"
+                  placeholder="e.g. ganesh or full credly URL"
+                  value={credlyInput}
+                  onChange={(e) => setCredlyInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="wakatime_input" className="text-xs font-semibold">
+                  WakaTime Username
+                </Label>
+                <Input
+                  id="wakatime_input"
+                  placeholder="e.g. ganesh"
+                  value={wakatimeInput}
+                  onChange={(e) => setWakatimeInput(e.target.value)}
+                  className="rounded-xl font-mono text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="wakatime_api_key_input" className="text-xs font-semibold">
+                  WakaTime Secret API Key (Optional)
+                </Label>
+                <Input
+                  id="wakatime_api_key_input"
+                  type="password"
+                  placeholder="waka_sec_..."
+                  value={wakatimeApiKeyInput}
+                  onChange={(e) => setWakatimeApiKeyInput(e.target.value)}
                   className="rounded-xl font-mono text-xs h-10"
                 />
               </div>

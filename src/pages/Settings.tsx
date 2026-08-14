@@ -5,11 +5,9 @@ import { deleteUserAccount } from "@/lib/accountService";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlatformBrandLogo } from "@/components/profile/CodingProfileCard";
-import { extractUsername } from "@/services/codingProfileService";
 import { motion } from "framer-motion";
 import {
   Trash2,
@@ -22,7 +20,6 @@ import {
   Database,
   Mail,
   ShieldCheck,
-  Code2
 } from "lucide-react";
 import {
   AlertDialog,
@@ -39,146 +36,13 @@ import SEO from "@/components/SEO";
 
 export default function Settings() {
   const { toast } = useToast();
-  const { user, profile, signOut, updateProfile, role } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const isLecturer = role === "lecturer" || profile?.role === "lecturer";
-  const isStudent = !isLecturer;
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
-
-  // Coding Profiles State
-  const [leetcodeUsername, setLeetcodeUsername] = useState(
-    profile?.leetcode_username || extractUsername(profile?.leetcode_url) || ""
-  );
-  const [codeforcesHandle, setCodeforcesHandle] = useState(
-    profile?.codeforces_handle || extractUsername(profile?.codeforces_url) || ""
-  );
-  const [githubUsername, setGithubUsername] = useState(
-    (profile?.github_url ? extractUsername(profile.github_url) : "") || (profile as any)?.github_username || ""
-  );
-  const [linkedinUrl, setLinkedinUrl] = useState(profile?.linkedin_url || "");
-  const [codechefUsername, setCodechefUsername] = useState(
-    (profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || ""
-  );
-  const [codewarsUsername, setCodewarsUsername] = useState(
-    (profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || ""
-  );
-  const [geeksforgeeksUsername, setGeeksforgeeksUsername] = useState(
-    (profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || ""
-  );
-  const [atcoderUsername, setAtcoderUsername] = useState(
-    (profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || ""
-  );
-  const [hackerrankUsername, setHackerrankUsername] = useState(
-    (profile as any)?.hackerrank_username || extractUsername(profile?.hackerrank_url) || ""
-  );
-  const [hackerearthUsername, setHackerearthUsername] = useState(
-    (profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || ""
-  );
-  const [githubToken, setGithubToken] = useState(
-    (profile as any)?.github_token || (user?.id ? localStorage.getItem(`eduspace_github_token_${user.id}`) : "") || ""
-  );
-  const [isSavingCoding, setIsSavingCoding] = useState(false);
-
-  useEffect(() => {
-    if (profile) {
-      setLeetcodeUsername(profile.leetcode_username || extractUsername(profile.leetcode_url) || "");
-      setCodeforcesHandle(profile.codeforces_handle || extractUsername(profile.codeforces_url) || "");
-      setGithubUsername((profile.github_url ? extractUsername(profile.github_url) : "") || (profile as any)?.github_username || "");
-      setLinkedinUrl(profile?.linkedin_url || "");
-      setCodechefUsername((profile as any)?.codechef_username || extractUsername((profile as any)?.codechef_url) || "");
-      setCodewarsUsername((profile as any)?.codewars_username || extractUsername((profile as any)?.codewars_url) || "");
-      setGeeksforgeeksUsername((profile as any)?.geeksforgeeks_username || extractUsername((profile as any)?.geeksforgeeks_url) || "");
-      setAtcoderUsername((profile as any)?.atcoder_username || extractUsername((profile as any)?.atcoder_url) || "");
-      setHackerrankUsername((profile as any)?.hackerrank_username || extractUsername(profile?.hackerrank_url) || "");
-      setHackerearthUsername((profile as any)?.hackerearth_username || extractUsername((profile as any)?.hackerearth_url) || "");
-      setGithubToken((profile as any)?.github_token || (user?.id ? localStorage.getItem(`eduspace_github_token_${user.id}`) : "") || "");
-    }
-  }, [profile, user?.id]);
-
-  const handleSaveCodingUsernames = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const lcClean = extractUsername(leetcodeUsername);
-    const cfClean = extractUsername(codeforcesHandle);
-    const ghClean = extractUsername(githubUsername);
-    const ccClean = extractUsername(codechefUsername);
-    const cwClean = extractUsername(codewarsUsername);
-    const gfgClean = extractUsername(geeksforgeeksUsername);
-    const atcoderClean = extractUsername(atcoderUsername);
-    const hrClean = extractUsername(hackerrankUsername);
-    const heClean = extractUsername(hackerearthUsername);
-    const linkedinClean = linkedinUrl.trim();
-    const ghTokenClean = githubToken.trim();
-
-    setIsSavingCoding(true);
-    try {
-      if (user?.id) {
-        if (ghTokenClean) {
-          localStorage.setItem(`eduspace_github_token_${user.id}`, ghTokenClean);
-        } else {
-          localStorage.removeItem(`eduspace_github_token_${user.id}`);
-        }
-      }
-
-      const lcUrl = lcClean ? `https://leetcode.com/u/${lcClean}/` : "";
-      const cfUrl = cfClean ? `https://codeforces.com/profile/${cfClean}` : "";
-      const ghUrl = ghClean ? `https://github.com/${ghClean}` : "";
-      const ccUrl = ccClean ? `https://www.codechef.com/users/${ccClean}` : "";
-      const cwUrl = cwClean ? `https://www.codewars.com/users/${cwClean}` : "";
-      const gfgUrl = gfgClean ? `https://www.geeksforgeeks.org/user/${gfgClean}/` : "";
-      const atcoderUrl = atcoderClean ? `https://atcoder.jp/users/${atcoderClean}` : "";
-      const hrUrl = hrClean ? `https://www.hackerrank.com/profile/${hrClean}` : "";
-      const heUrl = heClean ? `https://www.hackerearth.com/@${heClean}` : "";
-      const linkedinNormalizedUrl = linkedinClean
-        ? linkedinClean.match(/^https?:\/\//i)
-          ? linkedinClean
-          : `https://www.linkedin.com/in/${linkedinClean.replace(/\/+$/, "")}`
-        : "";
-
-      const res = await updateProfile({
-        leetcode_username: lcClean || null,
-        codeforces_handle: cfClean || null,
-        github_username: ghClean || null,
-        codechef_username: ccClean || null,
-        codewars_username: cwClean || null,
-        geeksforgeeks_username: gfgClean || null,
-        atcoder_username: atcoderClean || null,
-        hackerrank_username: hrClean || null,
-        hackerearth_username: heClean || null,
-        linkedin_url: linkedinNormalizedUrl || null,
-        leetcode_url: lcUrl || null,
-        codeforces_url: cfUrl || null,
-        github_url: ghUrl || null,
-        codechef_url: ccUrl || null,
-        codewars_url: cwUrl || null,
-        geeksforgeeks_url: gfgUrl || null,
-        atcoder_url: atcoderUrl || null,
-        hackerrank_url: hrUrl || null,
-        hackerearth_url: heUrl || null,
-        github_token: ghTokenClean || null,
-      } as any);
-
-      if (res.success) {
-        toast({
-          title: "Profiles Saved",
-          description: "Coding profile handles & URLs updated successfully.",
-        });
-      } else {
-        throw new Error(res.error || "Failed to update coding profiles");
-      }
-    } catch (err: any) {
-      toast({
-        title: "Update Failed",
-        description: err.message || "Could not save coding profiles.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingCoding(false);
-    }
-  };
 
   const handleDeleteAccount = async () => {
     if (!user || !user.email) return;
@@ -296,194 +160,6 @@ export default function Settings() {
               </div>
             </div>
           </section>
-
-          {/* Coding Profiles Settings Section (Students Only) */}
-          {isStudent && (
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
-              <div className="md:col-span-1">
-                <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
-                  <Code2 className="size-5 text-amber-500" />
-                  Coding Profiles
-                </h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Connect your competitive programming & open-source platform handles or URLs to showcase real-time statistics across all coding platforms.
-                </p>
-              </div>
-
-              <div className="md:col-span-2">
-                <form onSubmit={handleSaveCodingUsernames} className="bg-secondary/10 border border-border/50 rounded-2xl p-6 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-leetcode" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="leetcode" className="size-4" />
-                        LeetCode Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-leetcode"
-                        placeholder="e.g. johndoe or https://leetcode.com/u/johndoe/"
-                        value={leetcodeUsername}
-                        onChange={(e) => setLeetcodeUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-codeforces" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="codeforces" className="size-4" />
-                        Codeforces Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-codeforces"
-                        placeholder="e.g. tourist or https://codeforces.com/profile/tourist"
-                        value={codeforcesHandle}
-                        onChange={(e) => setCodeforcesHandle(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-github" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="github" className="size-4" />
-                        GitHub Username / URL
-                      </Label>
-                      <Input
-                        id="setting-github"
-                        placeholder="e.g. octocat or https://github.com/octocat"
-                        value={githubUsername}
-                        onChange={(e) => setGithubUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-linkedin" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="linkedin" className="size-4" />
-                        LinkedIn Profile URL
-                      </Label>
-                      <Input
-                        id="setting-linkedin"
-                        placeholder="e.g. https://www.linkedin.com/in/johndoe/"
-                        value={linkedinUrl}
-                        onChange={(e) => setLinkedinUrl(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-codechef" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="codechef" className="size-4" />
-                        CodeChef Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-codechef"
-                        placeholder="e.g. chef123 or https://www.codechef.com/users/chef123"
-                        value={codechefUsername}
-                        onChange={(e) => setCodechefUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-codewars" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="codewars" className="size-4" />
-                        Codewars Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-codewars"
-                        placeholder="e.g. ninja or https://www.codewars.com/users/ninja"
-                        value={codewarsUsername}
-                        onChange={(e) => setCodewarsUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-geeksforgeeks" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="geeksforgeeks" className="size-4" />
-                        GeeksforGeeks Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-geeksforgeeks"
-                        placeholder="e.g. gfg_user or https://geeksforgeeks.org/user/gfg_user/"
-                        value={geeksforgeeksUsername}
-                        onChange={(e) => setGeeksforgeeksUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-atcoder" className="text-xs font-semibold flex items-center gap-2">
-                        <PlatformBrandLogo platform="atcoder" className="size-4" />
-                        AtCoder Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-atcoder"
-                        placeholder="e.g. tourist or https://atcoder.jp/users/tourist"
-                        value={atcoderUsername}
-                        onChange={(e) => setAtcoderUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-hackerrank" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-                        <div className="size-4 rounded bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-[9px]">H</div>
-                        HackerRank Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-hackerrank"
-                        placeholder="e.g. hr_user or https://hackerrank.com/profile/hr_user"
-                        value={hackerrankUsername}
-                        onChange={(e) => setHackerrankUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="setting-hackerearth" className="text-xs font-semibold flex items-center gap-2 text-foreground">
-                        <div className="size-4 rounded bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-[9px]">HE</div>
-                        HackerEarth Handle / URL
-                      </Label>
-                      <Input
-                        id="setting-hackerearth"
-                        placeholder="e.g. he_user or https://hackerearth.com/@he_user"
-                        value={hackerearthUsername}
-                        onChange={(e) => setHackerearthUsername(e.target.value)}
-                        className="bg-background/50 font-mono text-xs h-9"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 pt-2 border-t border-border/40">
-                    <Label htmlFor="setting-github-token" className="text-xs font-semibold flex items-center gap-2">
-                      <PlatformBrandLogo platform="github" className="size-4" />
-                      GitHub Personal Access Token (Optional - Increases Rate Limit)
-                    </Label>
-                    <Input
-                      id="setting-github-token"
-                      type="password"
-                      placeholder="ghp_..."
-                      value={githubToken}
-                      onChange={(e) => setGithubToken(e.target.value)}
-                      className="bg-background/50 font-mono text-xs h-9"
-                    />
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <Button type="submit" disabled={isSavingCoding} size="sm" className="rounded-xl font-bold text-xs px-5">
-                      {isSavingCoding ? (
-                        <>
-                          <Loader2 className="size-3.5 mr-2 animate-spin" /> Saving Profiles...
-                        </>
-                      ) : (
-                        "Save All Profiles"
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </section>
-          )}
 
           {/* Privacy & Governance */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
