@@ -436,7 +436,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
   return (
     <div
       className={cn(
-        "group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[380px] w-full max-w-full",
+        "group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full",
         "bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1",
         brandGlow,
         props.className

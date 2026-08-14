@@ -112,24 +112,39 @@ export function HuggingFaceProfileCard({
   if (!isLinked) {
     return (
       <>
-        <div className="col-span-1 rounded-3xl border border-dashed border-border/80 p-6 sm:p-8 bg-card/40 backdrop-blur-xl flex flex-col items-center justify-center text-center gap-4 hover:border-yellow-500/50 transition-all group">
-          <div className="size-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform">
-            <span className="text-2xl">🤗</span>
+        <div className="group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1 group-hover:border-yellow-500/50 group-hover:shadow-[0_0_30px_rgba(234,179,8,0.18)]">
+          {/* Header Bar */}
+          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="size-13 sm:size-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-2xl shrink-0 p-2.5 shadow-sm">
+                🤗
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight">Hugging Face</h3>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">Not connected</p>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-foreground">Hugging Face Profile</h3>
-            <p className="text-xs text-muted-foreground max-w-xs">
-              Connect your Hugging Face account to showcase your Models, Datasets, Spaces, Likes, and Downloads.
-            </p>
+
+          <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-6">
+            <div className="size-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 transition-transform">
+              <span className="text-2xl">🤗</span>
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-bold text-sm text-foreground">Connect Hugging Face Profile</h4>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                Showcase your Models, Datasets, Spaces, Likes, and Downloads.
+              </p>
+            </div>
+            <Button
+              onClick={onConnect || handleOpenSheet}
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-yellow-500/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 text-xs font-semibold gap-2"
+            >
+              <span>🤗</span> Connect Profile
+            </Button>
           </div>
-          <Button
-            onClick={onConnect || handleOpenSheet}
-            variant="outline"
-            size="sm"
-            className="rounded-xl border-yellow-500/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 text-xs font-semibold gap-2"
-          >
-            <span>🤗</span> Connect Hugging Face
-          </Button>
         </div>
 
         <HuggingFaceSheet
@@ -157,17 +172,19 @@ export function HuggingFaceProfileCard({
 
   if (initialError && !initialStats) {
     return (
-      <div className="col-span-1 rounded-3xl border border-destructive/30 p-6 bg-card/60 backdrop-blur-xl flex flex-col items-center text-center gap-3">
-        <div className="size-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center text-xl font-bold">
-          🤗
+      <div className="group relative rounded-3xl border border-destructive/30 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md">
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-6">
+          <div className="size-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center text-xl font-bold">
+            🤗
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-foreground">Hugging Face Error</h4>
+            <p className="text-xs text-muted-foreground max-w-xs mt-1">{initialError}</p>
+          </div>
+          <Button onClick={onEditHandle || handleOpenSheet} variant="outline" size="sm" className="rounded-xl text-xs">
+            Edit Handle
+          </Button>
         </div>
-        <div>
-          <h4 className="text-sm font-bold text-foreground">Hugging Face Error</h4>
-          <p className="text-xs text-muted-foreground max-w-xs mt-1">{initialError}</p>
-        </div>
-        <Button onClick={onEditHandle || handleOpenSheet} variant="outline" size="sm" className="rounded-xl text-xs">
-          Edit Handle
-        </Button>
       </div>
     );
   }
@@ -179,17 +196,20 @@ export function HuggingFaceProfileCard({
 
   return (
     <>
-      <div className="col-span-1 rounded-3xl border border-border/70 p-5 sm:p-6 bg-card/90 shadow-sm backdrop-blur-xl space-y-5 hover:border-yellow-500/40 transition-all">
+      <div className="group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1 group-hover:border-yellow-500/50 group-hover:shadow-[0_0_30px_rgba(234,179,8,0.18)]">
+        {/* Background Glow */}
+        <div className="absolute -top-32 -right-32 size-64 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none bg-yellow-500" />
+
         {/* Header Bar */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-500/20 border border-yellow-500/30 flex items-center justify-center text-xl shrink-0">
+        <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5 mb-5">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="size-13 sm:size-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-2xl shrink-0 p-2.5 shadow-sm transition-transform duration-300 group-hover:scale-105">
               🤗
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-foreground tracking-tight">Hugging Face</h3>
-                <span className="inline-flex items-center px-1.5 py-px rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 w-fit whitespace-nowrap leading-tight">
+                <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight">Hugging Face</h3>
+                <span className="inline-flex items-center px-1.5 py-px rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 w-fit whitespace-nowrap leading-tight shrink-0">
                   <CheckCircle2 className="size-2.5 mr-0.5" />Linked
                 </span>
               </div>
@@ -197,9 +217,9 @@ export function HuggingFaceProfileCard({
                 href={profileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-yellow-500 font-mono flex items-center gap-1 transition-colors"
+                className="text-xs text-muted-foreground hover:text-yellow-500 font-mono mt-0.5 flex items-center gap-1 transition-colors truncate max-w-[180px] sm:max-w-[240px]"
               >
-                @{currentStats?.username || usernameOrHandle} <ExternalLink className="size-3" />
+                @{currentStats?.username || usernameOrHandle} <ExternalLink className="size-3 shrink-0" />
               </a>
             </div>
           </div>

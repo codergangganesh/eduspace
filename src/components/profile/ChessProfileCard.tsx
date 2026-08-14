@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ChessStats, ChessGame } from "@/types/chessProfile";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -131,22 +132,35 @@ export function ChessProfileCard({
   // 1. Unlinked Empty State
   if (!isLinked && !currentStats) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-[#81b64c]/20 bg-card/60 p-6 backdrop-blur-xl transition-all duration-300 hover:border-[#81b64c]/40 hover:shadow-lg hover:shadow-[#81b64c]/5">
-        <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
+      <div className="group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1 group-hover:border-[#81b64c]/50 group-hover:shadow-[0_0_30px_rgba(129,182,76,0.18)]">
+        {/* Card Header */}
+        <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="size-13 sm:size-14 rounded-2xl bg-[#81b64c]/10 border border-[#81b64c]/20 flex items-center justify-center text-[#81b64c] shrink-0 p-2.5 shadow-sm">
+              <ChessPawnIcon className="size-7 sm:size-8" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight">Chess.com</h3>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">Not connected</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-6">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#81b64c]/20 to-[#538b32]/10 border border-[#81b64c]/30 shadow-inner">
             <ChessPawnIcon className="size-7 text-[#81b64c]" />
           </div>
           <div className="space-y-1.5 max-w-sm">
-            <h3 className="text-base font-bold text-foreground">Chess.com Integration</h3>
+            <h4 className="font-bold text-sm text-foreground">Connect Chess.com Profile</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Connect your Chess.com account to showcase your ratings (Bullet, Blitz, Rapid, Daily, Chess, Puzzles), overall statistics, achievements, FIDE titles, and recent match activity.
+              Showcase your ratings (Bullet, Blitz, Rapid, Daily, Chess, Puzzles), overall statistics, achievements, FIDE titles, and match activity.
             </p>
           </div>
           <Button
             onClick={onConnect}
-            className="h-9 px-5 text-xs font-semibold bg-[#81b64c] hover:bg-[#6fa03d] text-white shadow-md shadow-[#81b64c]/25 gap-2"
+            className="h-9 px-5 text-xs font-semibold bg-[#81b64c] hover:bg-[#6fa03d] text-white shadow-md shadow-[#81b64c]/25 gap-2 rounded-xl"
           >
-            <ChessPawnIcon className="size-3.5" /> Connect Chess.com
+            <ChessPawnIcon className="size-3.5" /> Connect Profile
           </Button>
         </div>
       </div>
@@ -156,8 +170,8 @@ export function ChessProfileCard({
   // 2. Error State
   if (currentError && !currentStats) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-destructive/30 bg-destructive/5 p-6 backdrop-blur-xl">
-        <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
+      <div className="group relative rounded-3xl border border-destructive/30 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md">
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 py-6">
           <div className="flex size-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive border border-destructive/20">
             <ShieldAlert className="size-6" />
           </div>
@@ -167,12 +181,12 @@ export function ChessProfileCard({
           </div>
           <div className="flex items-center gap-2 pt-1">
             {onEditHandle && (
-              <Button onClick={onEditHandle} variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+              <Button onClick={onEditHandle} variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-xl">
                 <Edit3 className="size-3.5" /> Edit Username
               </Button>
             )}
             {onRefresh && (
-              <Button onClick={onRefresh} variant="ghost" size="sm" className="h-8 text-xs gap-1.5" disabled={isRefreshing}>
+              <Button onClick={onRefresh} variant="ghost" size="sm" className="h-8 text-xs gap-1.5 rounded-xl" disabled={isRefreshing}>
                 <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} /> Retry
               </Button>
             )}
@@ -194,23 +208,23 @@ export function ChessProfileCard({
 
   return (
     <>
-      <div className="group relative overflow-hidden rounded-2xl border border-[#81b64c]/25 bg-card/70 p-5 backdrop-blur-xl transition-all duration-300 hover:border-[#81b64c]/45 hover:shadow-xl hover:shadow-[#81b64c]/5">
-        {/* Decorative Top Accent Bar */}
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#81b64c] via-[#538b32] to-[#81b64c]" />
+      <div className="group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1 group-hover:border-[#81b64c]/50 group-hover:shadow-[0_0_30px_rgba(129,182,76,0.18)]">
+        {/* Background Glow */}
+        <div className="absolute -top-32 -right-32 size-64 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none bg-[#81b64c]" />
 
         {/* Card Header */}
-        <div className="flex items-start justify-between gap-4 mb-4 pt-1">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5 mb-5">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="relative shrink-0">
               {currentStats?.avatar ? (
                 <img
                   src={currentStats.avatar}
                   alt={currentStats.username}
-                  className="size-11 rounded-xl object-cover border border-[#81b64c]/30 shadow-md"
+                  className="size-13 sm:size-14 rounded-2xl object-cover border border-[#81b64c]/30 shadow-sm"
                 />
               ) : (
-                <div className="flex size-11 items-center justify-center rounded-xl bg-[#81b64c]/15 border border-[#81b64c]/30 text-[#81b64c]">
-                  <ChessPawnIcon className="size-6" />
+                <div className="size-13 sm:size-14 flex items-center justify-center rounded-2xl bg-[#81b64c]/10 border border-[#81b64c]/20 text-[#81b64c] p-2.5 shadow-sm transition-transform duration-300 group-hover:scale-105">
+                  <ChessPawnIcon className="size-7 sm:size-8" />
                 </div>
               )}
               {currentStats?.countryFlagUrl && (
@@ -222,23 +236,33 @@ export function ChessProfileCard({
                 />
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h3 className="text-base font-bold text-foreground tracking-tight flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight flex items-center gap-1.5 truncate">
                   {currentStats?.name || currentStats?.username || usernameOrHandle}
                 </h3>
                 {currentStats?.title && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#81b64c] text-white tracking-wider uppercase">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#81b64c] text-white tracking-wider uppercase shrink-0">
                     {currentStats.title}
                   </span>
                 )}
                 {currentStats?.verified && (
-                  <span title="Verified Account">
+                  <span title="Verified Account" className="shrink-0">
                     <CheckCircle2 className="size-4 text-[#81b64c] fill-[#81b64c]/20" />
                   </span>
                 )}
+                <Badge variant="outline" className="text-[10px] px-1.5 py-px rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold w-fit whitespace-nowrap leading-tight shrink-0">
+                  <CheckCircle2 className="size-2.5 mr-0.5" />Linked
+                </Badge>
               </div>
-              <p className="text-xs text-muted-foreground font-mono">@{currentStats?.username || usernameOrHandle}</p>
+              <a
+                href={`https://www.chess.com/member/${currentStats?.username || usernameOrHandle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-[#81b64c] font-mono mt-0.5 flex items-center gap-1 transition-colors truncate max-w-[180px] sm:max-w-[240px]"
+              >
+                @{currentStats?.username || usernameOrHandle} <ExternalLink className="size-3 shrink-0" />
+              </a>
             </div>
           </div>
 

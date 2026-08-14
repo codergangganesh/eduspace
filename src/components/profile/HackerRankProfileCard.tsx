@@ -62,15 +62,18 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
   const globalRank = stats?.globalRank;
 
   return (
-    <div className="group relative rounded-3xl border border-emerald-500/20 bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/5">
+    <div className="group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1 group-hover:border-emerald-500/50 group-hover:shadow-[0_0_30px_rgba(16,185,129,0.18)]">
+      {/* Background Glow */}
+      <div className="absolute -top-32 -right-32 size-64 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none bg-emerald-500" />
+
       {/* Platform Header */}
-      <div className="flex items-center justify-between gap-4 mb-5 pb-4 border-b border-border/50">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="size-11 sm:size-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 p-2">
+      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5 mb-5">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="size-13 sm:size-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 p-2.5 shadow-sm transition-transform duration-300 group-hover:scale-105">
             <UnifiedPlatformLogo platform="hackerrank" className="size-7 sm:size-8" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-extrabold text-lg text-foreground tracking-tight flex items-center gap-2">
+            <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight flex items-center gap-2">
               <span className="truncate">HackerRank</span>
               {isConnected && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-px rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold w-fit whitespace-nowrap leading-tight shrink-0">
@@ -83,12 +86,12 @@ export const HackerRankProfileCard: React.FC<HackerRankProfileCardProps> = ({
                 href={profileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-emerald-500 font-mono flex items-center gap-1 transition-colors truncate"
+                className="text-xs text-muted-foreground hover:text-emerald-500 font-mono mt-0.5 flex items-center gap-1 transition-colors truncate max-w-[180px] sm:max-w-[240px]"
               >
                 @{cleanHandle || usernameOrHandle} <ExternalLink className="size-3 shrink-0" />
               </a>
             ) : (
-              <p className="text-xs text-muted-foreground font-mono truncate">
+              <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate max-w-[180px] sm:max-w-[240px]">
                 Not connected
               </p>
             )}

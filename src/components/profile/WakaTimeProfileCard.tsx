@@ -68,7 +68,7 @@ export function WakaTimeProfileCard({
     <>
       <div
         className={cn(
-          "group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-5 sm:p-6 backdrop-blur-xl min-h-[420px] w-full max-w-full",
+          "group relative rounded-3xl border border-border/80 transition-all duration-300 overflow-hidden flex flex-col justify-between p-6 sm:p-7 backdrop-blur-xl min-h-[420px] w-full max-w-full",
           "bg-gradient-to-b from-card via-card/95 to-card/90 shadow-md hover:shadow-2xl hover:-translate-y-1",
           "group-hover:border-[#00E5FF]/50 group-hover:shadow-[0_0_30px_rgba(0,229,255,0.18)]",
           className
@@ -77,21 +77,21 @@ export function WakaTimeProfileCard({
         {/* Background Glow */}
         <div className="absolute -top-32 -right-32 size-64 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none bg-[#00E5FF]" />
 
-        <div className="space-y-4 font-sans">
+        <div className="space-y-6 font-sans">
           {/* Card Header */}
-          <div className="flex items-center justify-between gap-2.5 border-b border-border/50 pb-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="size-11 sm:size-12 rounded-2xl flex items-center justify-center border transition-transform duration-300 group-hover:scale-105 shadow-sm p-2 shrink-0 bg-[#00E5FF]/10 border-[#00E5FF]/20 text-[#00E5FF]">
-                <UnifiedPlatformLogo platform="wakatime" className="size-6 sm:size-7" />
+          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5 mb-5">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="size-13 sm:size-14 rounded-2xl flex items-center justify-center border transition-transform duration-300 group-hover:scale-105 shadow-sm p-2.5 shrink-0 bg-[#00E5FF]/10 border-[#00E5FF]/20 text-[#00E5FF]">
+                <UnifiedPlatformLogo platform="wakatime" className="size-7 sm:size-8" />
               </div>
 
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-extrabold text-base sm:text-lg text-foreground tracking-tight flex items-center gap-1 leading-none">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight flex items-center gap-1 leading-none">
                     WakaTime
                   </h3>
                   {hasLinked && (
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold shrink-0">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-px rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold shrink-0">
                       <CheckCircle2 className="size-2.5 mr-0.5" />Linked
                     </Badge>
                   )}
@@ -102,12 +102,12 @@ export function WakaTimeProfileCard({
                     href={profileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] text-muted-foreground hover:text-primary font-mono mt-0.5 flex items-center gap-1 transition-colors truncate max-w-[160px] sm:max-w-[220px]"
+                    className="text-xs text-muted-foreground hover:text-primary font-mono mt-0.5 flex items-center gap-1 transition-colors truncate max-w-[180px] sm:max-w-[240px]"
                   >
-                    @{username} <ExternalLink className="size-2.5 shrink-0" />
+                    @{username} <ExternalLink className="size-3 shrink-0" />
                   </a>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate max-w-[180px] sm:max-w-[240px]">
                     Not connected
                   </p>
                 )}

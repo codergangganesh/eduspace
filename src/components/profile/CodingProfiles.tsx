@@ -827,7 +827,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         onDrop={(e) => handleDrop(e, key)}
         onDragEnd={handleDragEnd}
         className={cn(
-          "transition-all duration-300 relative group/drag cursor-grab active:cursor-grabbing",
+          "transition-all duration-300 relative group/drag cursor-grab active:cursor-grabbing h-full flex flex-col",
           isGithub ? "lg:col-span-2" : "col-span-1",
           draggedKey === key && "opacity-40 scale-95 border-2 border-dashed border-primary rounded-3xl",
           dragOverKey === key && draggedKey !== key && "ring-2 ring-primary/60 scale-[1.01] rounded-3xl shadow-xl"
