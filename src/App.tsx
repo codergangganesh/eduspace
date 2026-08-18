@@ -48,6 +48,7 @@ const LecturerRegister = lazy(() => import("./pages/LecturerRegister"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const VercelCallback = lazy(() => import("./pages/VercelCallback"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const Assignments = lazy(() => import("./pages/Assignments"));
 const AssignmentSubmit = lazy(() => import("./pages/AssignmentSubmit"));
@@ -189,6 +190,7 @@ const AnimatedRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/update-password" element={<UpdatePassword />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/vercel/callback" element={<VercelCallback />} />
 
       {/* Persistent Layout Wrapper */}
       <Route element={

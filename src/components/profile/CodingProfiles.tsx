@@ -24,6 +24,7 @@ import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
 import { ChessProfileCard } from "./ChessProfileCard";
 import { CredlyProfileCard } from "./CredlyProfileCard";
 import { WakaTimeProfileCard } from "./WakaTimeProfileCard";
+import { VercelProfileCard, getVercelConnection, VercelConnectionData, VercelConnectButton } from "@/features/vercel";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { RatingTrajectoryGraph } from "./RatingTrajectoryGraph";
 import { PlatformErrorBoundary } from "./PlatformErrorBoundary";
@@ -94,6 +95,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [wakatimeApiKeyInput, setWakatimeApiKeyInput] = useState<string>("");
   const [githubTokenInput, setGithubTokenInput] = useState<string>("");
   const [showGithubToken, setShowGithubToken] = useState<boolean>(false);
+  const [vercelData, setVercelData] = useState<VercelConnectionData | null>(null);
 
   const lcUsername = profile?.leetcode_username || extractUsername(profile?.leetcode_url) || data?.leetcodeUsername || "";
   const cfHandle = profile?.codeforces_handle || extractUsername(profile?.codeforces_url) || data?.codeforcesHandle || "";
@@ -199,6 +201,16 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     fetchProfiles(false);
   }, [fetchProfiles]);
 
+  useEffect(() => {
+    if (user?.id) {
+      getVercelConnection(user.id).then((res) => {
+        if (res.success && res.data) {
+          setVercelData(res.data);
+        }
+      });
+    }
+  }, [user?.id]);
+
   const [cardRefreshing, setCardRefreshing] = useState<Record<string, boolean>>({});
   const [pinnedPlatforms, setPinnedPlatforms] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -242,6 +254,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     "chess",
     "credly",
     "wakatime",
+    "vercel",
     "github",
   ];
 
@@ -371,6 +384,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       } else if (platformKey === "wakatime") {
         const res = await fetchWakaTimeStats(wakatimeUsername, wakatimeApiKey);
         updatePatch = { wakatime: res.data, wakatimeError: res.error };
+      } else if (platformKey === "vercel") {
+        const res = await syncVercelProfile();
+        if (res.success && res.data) {
+          setVercelData(res.data);
+        }
       }
 
       setData((prev) => {
@@ -584,6 +602,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const isChessMatch = (activeTab === "all" || activeTab === "competitive") && matchesSearch("chess", "Chess.com", chessUsername);
   const isCredlyMatch = (activeTab === "all" || activeTab === "opensource") && matchesSearch("credly", "Credly", credlyUsername);
   const isWakaTimeMatch = (activeTab === "all" || activeTab === "opensource") && matchesSearch("wakatime", "WakaTime", wakatimeUsername);
+  const isVercelMatch = (activeTab === "all" || activeTab === "opensource") && matchesSearch("vercel", "Vercel", vercelData?.vercelUsername);
   const isGitHubMatch = (activeTab === "all" || activeTab === "opensource") && matchesSearch("github", "GitHub", ghUsername);
 
   const hasAnyVisibleCard = Boolean(
@@ -597,6 +616,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     isChessMatch ||
     isCredlyMatch ||
     isWakaTimeMatch ||
+    isVercelMatch ||
     isGitHubMatch
   );
 
@@ -611,6 +631,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     "chess",
     "credly",
     "wakatime",
+    "vercel",
     "github",
   ];
 
@@ -787,6 +808,32 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               onEditHandle={() => setIsDialogOpen(true)}
               onRefresh={() => handleSingleCardRefresh("wakatime")}
               isRefreshing={Boolean(cardRefreshing.wakatime || refreshing)}
+              isPinned={isPinned}
+              onTogglePin={onTogglePin}
+            />
+          </PlatformErrorBoundary>
+        </div>
+      );
+    } else if (key === "vercel" && isVercelMatch) {
+      rawCard = (
+        <div id="vercel-profile-section" className="col-span-1 scroll-mt-6">
+          <PlatformErrorBoundary
+            platformName="Vercel"
+            onRetry={() => {
+              if (user?.id) {
+                getVercelConnection(user.id).then((r) => r.data && setVercelData(r.data));
+              }
+            }}
+          >
+            <VercelProfileCard
+              usernameOrHandle={vercelData?.vercelUsername}
+              connectionData={vercelData}
+              onConnect={() => setIsDialogOpen(true)}
+              onEditHandle={() => setIsDialogOpen(true)}
+              onRefresh={() => handleSingleCardRefresh("vercel")}
+              onRefreshSuccess={(newData) => setVercelData(newData)}
+              onDisconnectSuccess={() => setVercelData({ connected: false })}
+              isRefreshing={Boolean(cardRefreshing.vercel || refreshing)}
               isPinned={isPinned}
               onTogglePin={onTogglePin}
             />
@@ -1325,6 +1372,29 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                       Click <strong>Generate token</strong> at the bottom, copy the code starting with <code>ghp_</code>, and paste above!
                     </li>
                   </ol>
+                </div>
+              </div>
+
+              {/* Vercel OAuth Connection Row */}
+              <div className="space-y-2 pt-2 border-t border-border/40">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <svg className="size-3.5 fill-current" viewBox="0 0 116 100">
+                      <polygon points="58 0, 116 100, 0 100" />
+                    </svg>
+                    Vercel Account
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">
+                    {vercelData?.connected ? `@${vercelData.vercelUsername}` : "Not Connected"}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-muted-foreground">
+                    {vercelData?.connected ? "Connected via Vercel OAuth" : "1-Click Connect with Vercel"}
+                  </span>
+                  {!vercelData?.connected && (
+                    <VercelConnectButton size="sm" className="h-8 text-xs rounded-xl px-3" />
+                  )}
                 </div>
               </div>
             </div>

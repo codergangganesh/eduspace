@@ -125,6 +125,12 @@ const GeeksForGeeksIcon = ({ className = "size-4" }: { className?: string }) => 
   </svg>
 );
 
+const VercelIcon = ({ className = "size-4" }: { className?: string }) => (
+  <svg className={cn("fill-current", className)} viewBox="0 0 116 100">
+    <polygon points="58 0, 116 100, 0 100" />
+  </svg>
+);
+
 const BRAND_ICON_URLS: Record<string, string> = {
   leetcode: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/leetcode/leetcode-original.svg",
   codeforces: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/codeforces/codeforces-original.svg",
@@ -137,6 +143,7 @@ const BRAND_ICON_URLS: Record<string, string> = {
   github: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg",
   chess: "https://images.chesscomfiles.com/uploads/v1/user/29371584.582ecb3d.50x50o.a1a0989f64bf.png",
   twitter: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/twitter/twitter-original.svg",
+  vercel: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vercel/vercel-original.svg",
 };
 
 const RealBrandIcon = ({
@@ -168,7 +175,7 @@ const RealBrandIcon = ({
   );
 };
 
-const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'codewars', 'geeksforgeeks', 'chess', 'codolio', 'twitter', 'portfolio'];
+const DEFAULT_CORE_PLATFORMS = ['linkedin', 'github', 'leetcode', 'codeforces', 'hackerrank', 'codechef', 'codewars', 'geeksforgeeks', 'chess', 'vercel', 'codolio', 'twitter', 'portfolio'];
 
 interface SocialPlatformItem {
   id: string;
@@ -192,6 +199,7 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = false): S
     { id: 'codewars', label: 'Codewars', url: data.codewars_url, icon: CodewarsIcon, bg: 'bg-rose-500/10 hover:bg-rose-500/20', border: 'border-rose-500/30', text: 'text-rose-500', shadow: 'hover:shadow-[0_0_12px_rgba(244,63,94,0.35)]' },
     { id: 'geeksforgeeks', label: 'GeeksforGeeks', url: data.geeksforgeeks_url, icon: GeeksForGeeksIcon, bg: 'bg-emerald-500/10 hover:bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-500', shadow: 'hover:shadow-[0_0_12px_rgba(16,185,129,0.35)]' },
     { id: 'chess', label: 'Chess.com', url: data.chess_url, icon: ChessIcon, bg: 'bg-[#81b64c]/10 hover:bg-[#81b64c]/20', border: 'border-[#81b64c]/30', text: 'text-[#81b64c]', shadow: 'hover:shadow-[0_0_12px_rgba(129,182,76,0.35)]' },
+    { id: 'vercel', label: 'Vercel', url: data.vercel_url, icon: VercelIcon, bg: 'bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20', border: 'border-black/30 dark:border-white/30', text: 'text-foreground', shadow: 'hover:shadow-[0_0_12px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_0_12px_rgba(255,255,255,0.35)]' },
     { id: 'codolio', label: 'Codolio', url: data.codolio_url, icon: CodolioIcon, bg: 'bg-[#FF5722]/10 hover:bg-[#FF5722]/20', border: 'border-[#FF5722]/30', text: 'text-[#FF5722]', shadow: 'hover:shadow-[0_0_12px_rgba(255,87,34,0.35)]' },
     { id: 'twitter', label: 'Twitter / X', url: data.twitter_url, icon: Twitter, bg: 'bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20', border: 'border-[#1DA1F2]/30', text: 'text-[#1DA1F2]', shadow: 'hover:shadow-[0_0_12px_rgba(29,161,242,0.35)]' },
     { id: 'portfolio', label: 'Portfolio', url: data.portfolio_url, icon: Globe, bg: 'bg-purple-500/10 hover:bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-500', shadow: 'hover:shadow-[0_0_12px_rgba(139,92,246,0.35)]' },
