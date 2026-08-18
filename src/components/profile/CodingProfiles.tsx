@@ -24,7 +24,7 @@ import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
 import { ChessProfileCard } from "./ChessProfileCard";
 import { CredlyProfileCard } from "./CredlyProfileCard";
 import { WakaTimeProfileCard } from "./WakaTimeProfileCard";
-import { VercelProfileCard, getVercelConnection, VercelConnectionData, VercelConnectButton } from "@/features/vercel";
+import { VercelProfileCard, getVercelConnection, syncVercelProfile, VercelConnectionData, VercelConnectButton } from "@/features/vercel";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { RatingTrajectoryGraph } from "./RatingTrajectoryGraph";
 import { PlatformErrorBoundary } from "./PlatformErrorBoundary";

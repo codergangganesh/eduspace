@@ -411,17 +411,26 @@ export function VercelProfileCard({
                                 size="sm"
                                 variant="ghost"
                                 asChild
-                                className="h-6 px-2 text-[10px] rounded-lg text-primary hover:bg-primary/10 gap-1 shrink-0"
+                                className="h-6 px-2.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground gap-1 shrink-0 transition-colors"
                               >
                                 <a href={liveUrl} target="_blank" rel="noopener noreferrer">
-                                  <Globe className="size-2.5" /> Live
-                                  <ExternalLink className="size-2 opacity-60" />
+                                  <Globe className="size-2.5" />
+                                  <span>Live</span>
                                 </a>
                               </Button>
                             )}
                           </div>
                         );
                       })
+                    )}
+                    {projects.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowProjectsModal(true)}
+                        className="w-full py-1.5 px-2 text-[11px] font-semibold text-center text-primary hover:text-primary/80 bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors"
+                      >
+                        View all {projects.length} deployed projects
+                      </button>
                     )}
                   </div>
                 )}
@@ -500,10 +509,11 @@ export function VercelProfileCard({
                                 size="sm"
                                 variant="ghost"
                                 asChild
-                                className="h-6 px-2 text-[10px] rounded-lg text-primary hover:bg-primary/10 gap-1 shrink-0"
+                                className="h-6 px-2.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground gap-1 shrink-0 transition-colors"
                               >
                                 <a href={d.url} target="_blank" rel="noopener noreferrer">
-                                  <Globe className="size-2.5" /> Visit
+                                  <Globe className="size-2.5" />
+                                  <span>Visit</span>
                                 </a>
                               </Button>
                             )}
@@ -529,10 +539,9 @@ export function VercelProfileCard({
               variant="ghost"
               size="sm"
               onClick={() => setShowProjectsModal(true)}
-              className="text-[11px] font-bold text-foreground hover:bg-muted h-6 px-2 rounded-lg gap-0.5"
+              className="text-[11px] font-bold text-foreground hover:bg-muted h-6 px-2 rounded-lg"
             >
-              Explore {projects.length} Project{projects.length !== 1 ? "s" : ""}{" "}
-              <ChevronRight className="size-3" />
+              Explore {projects.length} Project{projects.length !== 1 ? "s" : ""}
             </Button>
           )}
         </div>
