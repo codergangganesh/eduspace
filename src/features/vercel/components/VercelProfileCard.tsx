@@ -251,12 +251,22 @@ export function VercelProfileCard({
                 Connect your Vercel account to showcase your live web apps, frameworks, and deployment activity.
               </p>
               {!readOnly && (
-                <div className="pt-1">
+                <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
                   <VercelConnectButton
                     size="sm"
-                    label="Connect Vercel"
+                    label="1-Click Connect"
                     className="h-8 text-xs rounded-xl font-bold px-4"
                   />
+                  {onConnect && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onConnect}
+                      className="h-8 text-xs rounded-xl font-medium px-3"
+                    >
+                      Connect with Token
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

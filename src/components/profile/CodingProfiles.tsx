@@ -24,7 +24,7 @@ import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
 import { ChessProfileCard } from "./ChessProfileCard";
 import { CredlyProfileCard } from "./CredlyProfileCard";
 import { WakaTimeProfileCard } from "./WakaTimeProfileCard";
-import { VercelProfileCard, getVercelConnection, syncVercelProfile, VercelConnectionData, VercelConnectButton } from "@/features/vercel";
+import { VercelProfileCard, getVercelConnection, syncVercelProfile, VercelConnectionData, VercelConnectButton, connectVercelWithToken } from "@/features/vercel";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { RatingTrajectoryGraph } from "./RatingTrajectoryGraph";
 import { PlatformErrorBoundary } from "./PlatformErrorBoundary";
@@ -95,6 +95,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [wakatimeApiKeyInput, setWakatimeApiKeyInput] = useState<string>("");
   const [githubTokenInput, setGithubTokenInput] = useState<string>("");
   const [showGithubToken, setShowGithubToken] = useState<boolean>(false);
+  const [vercelTokenInput, setVercelTokenInput] = useState<string>("");
+  const [connectingVercelToken, setConnectingVercelToken] = useState<boolean>(false);
+  const [showVercelToken, setShowVercelToken] = useState<boolean>(false);
   const [vercelData, setVercelData] = useState<VercelConnectionData | null>(null);
 
   const lcUsername = profile?.leetcode_username || extractUsername(profile?.leetcode_url) || data?.leetcodeUsername || "";
@@ -563,6 +566,29 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       toast.error("Token test failed: " + (err?.message || "Network error"));
     } finally {
       setTestingToken(false);
+    }
+  };
+
+  const handleConnectVercelToken = async () => {
+    const token = vercelTokenInput.trim();
+    if (!token) {
+      toast.error("Please enter a Vercel Personal Access Token.");
+      return;
+    }
+    setConnectingVercelToken(true);
+    try {
+      const res = await connectVercelWithToken(token);
+      if (res.success && res.data) {
+        setVercelData(res.data);
+        toast.success("Vercel account connected successfully!");
+        setVercelTokenInput("");
+      } else {
+        toast.error(res.error || "Failed to connect Vercel with token.");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Connection failed.");
+    } finally {
+      setConnectingVercelToken(false);
     }
   };
 
@@ -1375,8 +1401,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                 </div>
               </div>
 
-              {/* Vercel OAuth Connection Row */}
-              <div className="space-y-2 pt-2 border-t border-border/40">
+              {/* Vercel OAuth & Token Connection Row */}
+              <div className="space-y-2.5 pt-2 border-t border-border/40">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <svg className="size-3.5 fill-current" viewBox="0 0 116 100">
@@ -1384,16 +1410,68 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                     </svg>
                     Vercel Account
                   </Label>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[10px] text-muted-foreground font-medium">
                     {vercelData?.connected ? `@${vercelData.vercelUsername}` : "Not Connected"}
                   </span>
                 </div>
-                <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-muted-foreground">
-                    {vercelData?.connected ? "Connected via Vercel OAuth" : "1-Click Connect with Vercel"}
-                  </span>
+
+                <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      {vercelData?.connected ? "Connected to Vercel" : "1-Click OAuth Connection"}
+                    </span>
+                    {!vercelData?.connected && (
+                      <VercelConnectButton size="sm" className="h-8 text-xs rounded-xl px-3" />
+                    )}
+                  </div>
+
                   {!vercelData?.connected && (
-                    <VercelConnectButton size="sm" className="h-8 text-xs rounded-xl px-3" />
+                    <div className="space-y-2 pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-foreground">
+                          Or Connect with Personal Access Token
+                        </span>
+                        <a
+                          href="https://vercel.com/account/tokens"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                        >
+                          Get Token <ExternalLink className="size-2.5" />
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="relative flex-1">
+                          <Input
+                            type={showVercelToken ? "text" : "password"}
+                            placeholder="Paste Vercel Token (e.g. oac_... / token)"
+                            value={vercelTokenInput}
+                            onChange={(e) => setVercelTokenInput(e.target.value)}
+                            className="h-8 text-xs pr-8 rounded-xl font-mono bg-background"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowVercelToken((p) => !p)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showVercelToken ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                          </button>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={connectingVercelToken || !vercelTokenInput.trim()}
+                          onClick={handleConnectVercelToken}
+                          className="h-8 text-xs px-3 rounded-xl font-semibold shrink-0"
+                        >
+                          {connectingVercelToken ? (
+                            <RefreshCw className="size-3 animate-spin" />
+                          ) : (
+                            "Connect"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

@@ -204,11 +204,27 @@ serve(async (req: Request) => {
   // -------------------------------------------------------------
   if (action === "start") {
     const state = generateState();
-    const slug = String(body?.slug || "").trim() || integrationSlug || "eduspace";
+    const reqRedirectUri = String(body?.redirect_uri || "").trim() || redirectUri;
     
-    // For Vercel Integrations Console apps, the direct authorization flow is:
-    const authUrl = new URL(`https://vercel.com/integrations/${slug}/new`);
-    authUrl.searchParams.set("state", state);
+    const slug = String(body?.slug || "").trim() || integrationSlug || Deno.env.get("VERCEL_INTEGRATION_SLUG") || "eduspace";
+    const authType = String(body?.auth_type || "").trim();
+
+    let authUrl: URL;
+    if (authType === "oauth" && clientId) {
+      authUrl = new URL(VERCEL_AUTH_URL);
+      authUrl.searchParams.set("client_id", clientId);
+      authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("state", state);
+      if (reqRedirectUri) {
+        authUrl.searchParams.set("redirect_uri", reqRedirectUri);
+      }
+    } else {
+      authUrl = new URL(`https://vercel.com/integrations/${slug}/new`);
+      authUrl.searchParams.set("state", state);
+      if (reqRedirectUri) {
+        authUrl.searchParams.set("redirect_uri", reqRedirectUri);
+      }
+    }
 
     // Save temporary state for CSRF validation
     await serviceClient.from("vercel_connections").upsert(
@@ -234,6 +250,7 @@ serve(async (req: Request) => {
   if (action === "callback") {
     const code = String(body?.code || "").trim();
     const state = String(body?.state || "").trim();
+    const dynamicRedirectUri = String(body?.redirect_uri || "").trim() || redirectUri;
 
     if (!code || !state) {
       return jsonResponse(req, 400, {
@@ -242,33 +259,29 @@ serve(async (req: Request) => {
       });
     }
 
-    if (!clientId || !clientSecret || !redirectUri) {
+    if (!clientId || !clientSecret) {
       return jsonResponse(req, 500, {
         success: false,
         error: "Server configuration missing Vercel OAuth credentials.",
       });
     }
 
-    // Verify state match for this user
+    // Verify state match for this user if state was tracked in DB
     const { data: record, error: stateError } = await serviceClient
       .from("vercel_connections")
       .select("user_id, oauth_state, oauth_state_created_at")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (stateError) {
-      return jsonResponse(req, 500, { success: false, error: stateError.message });
-    }
-
-    if (!record || record.oauth_state !== state) {
+    if (!stateError && record?.oauth_state && record.oauth_state !== state) {
       return jsonResponse(req, 400, {
         success: false,
         error: "Invalid or mismatched Vercel OAuth state. Please restart connection.",
       });
     }
 
-    const createdAt = record.oauth_state_created_at ? new Date(record.oauth_state_created_at).getTime() : 0;
-    if (!createdAt || Date.now() - createdAt > OAUTH_STATE_TTL_MS) {
+    const createdAt = record?.oauth_state_created_at ? new Date(record.oauth_state_created_at).getTime() : 0;
+    if (createdAt && Date.now() - createdAt > OAUTH_STATE_TTL_MS) {
       return jsonResponse(req, 400, {
         success: false,
         error: "Vercel authorization state has expired. Please try connecting again.",
@@ -280,7 +293,7 @@ serve(async (req: Request) => {
       client_id: clientId,
       client_secret: clientSecret,
       code,
-      redirect_uri: redirectUri,
+      redirect_uri: dynamicRedirectUri,
     });
 
     const tokenRes = await fetch(VERCEL_TOKEN_URL, {

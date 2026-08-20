@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { completeVercelOAuth } from "@/features/vercel";
+import { completeVercelOAuth, startVercelOAuth } from "@/features/vercel";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ export default function VercelCallback() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -66,6 +67,21 @@ export default function VercelCallback() {
     };
   }, [searchParams, navigate]);
 
+  const handleRetry = async () => {
+    try {
+      setRetrying(true);
+      const res = await startVercelOAuth();
+      if (res.success && res.authUrl) {
+        window.location.href = res.authUrl;
+      } else {
+        toast.error(res.error || "Failed to initialize Vercel connection");
+        setRetrying(false);
+      }
+    } catch {
+      setRetrying(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full p-8 rounded-3xl border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl text-center space-y-6">
@@ -116,12 +132,29 @@ export default function VercelCallback() {
                 {errorMessage}
               </p>
             </div>
-            <Button
-              onClick={() => navigate("/profile", { replace: true })}
-              className="w-full rounded-2xl h-10 text-xs font-semibold"
-            >
-              Return to Profile
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="flex-1 rounded-2xl h-10 text-xs font-semibold bg-black hover:bg-neutral-900 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black gap-1.5"
+              >
+                {retrying ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>Try Again</>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/profile", { replace: true })}
+                className="flex-1 rounded-2xl h-10 text-xs font-semibold"
+              >
+                Return to Profile
+              </Button>
+            </div>
           </div>
         )}
       </div>
