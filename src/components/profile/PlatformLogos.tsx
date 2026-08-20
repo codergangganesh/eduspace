@@ -94,7 +94,7 @@ export const WakaTimeLogo = ({ className = "size-7" }: { className?: string }) =
 );
 
 export const VercelLogo = ({ className = "size-7" }: { className?: string }) => (
-  <svg className={cn("shrink-0 fill-current", className)} viewBox="0 0 116 100">
+  <svg className={cn("shrink-0 fill-current", className)} viewBox="0 0 116 100" fill="currentColor">
     <polygon points="58 0, 116 100, 0 100" />
   </svg>
 );
@@ -116,7 +116,6 @@ export const BRAND_IMAGE_URLS: Record<string, string> = {
   hackerrank: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/hackerrank/hackerrank-original.svg",
   credly: "https://www.credly.com/assets/apple-touch-icon-180x180.png",
   wakatime: "https://wakatime.com/static/img/wakatime.svg",
-  vercel: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vercel/vercel-original.svg",
   linkedin: "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/linkedin/linkedin-original.svg",
 };
 

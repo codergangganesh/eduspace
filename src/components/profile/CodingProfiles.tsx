@@ -75,6 +75,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [focusedPlatform, setFocusedPlatform] = useState<string | null>(null);
   const [savingUsernames, setSavingUsernames] = useState<boolean>(false);
   const [testingToken, setTestingToken] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"all" | "competitive" | "opensource" | "codewars" | "hackerrank">("all");
@@ -220,6 +221,56 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       });
     }
   }, [user?.id]);
+
+  const handleOpenEdit = (platformKey?: string) => {
+    setFocusedPlatform(platformKey || null);
+    setIsDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isDialogOpen || !focusedPlatform) return;
+
+    const platformInputMap: Record<string, string> = {
+      leetcode: "leetcode_input",
+      codeforces: "codeforces_input",
+      codechef: "codechef_input",
+      codewars: "codewars_input",
+      hackerrank: "hackerrank_input",
+      atcoder: "atcoder_input",
+      huggingface: "huggingface_input",
+      chess: "chess_input",
+      credly: "credly_input",
+      wakatime: "wakatime_input",
+      github: "github_input",
+      vercel: "vercel_token_input",
+      geeksforgeeks: "geeksforgeeks_input",
+      hackerearth: "hackerearth_input",
+    };
+
+    const targetId = platformInputMap[focusedPlatform.toLowerCase()] || `${focusedPlatform}_input`;
+
+    const focusAndScroll = () => {
+      const el = document.getElementById(targetId) as HTMLInputElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus({ preventScroll: true });
+        return true;
+      }
+      return false;
+    };
+
+    const r0 = requestAnimationFrame(focusAndScroll);
+    const t1 = setTimeout(focusAndScroll, 60);
+    const t2 = setTimeout(focusAndScroll, 180);
+    const t3 = setTimeout(focusAndScroll, 320);
+
+    return () => {
+      cancelAnimationFrame(r0);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isDialogOpen, focusedPlatform]);
 
   const [cardRefreshing, setCardRefreshing] = useState<Record<string, boolean>>({});
   const [pinnedPlatforms, setPinnedPlatforms] = useState<string[]>(() => {
@@ -723,7 +774,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             username={lcUsername}
             stats={data?.leetcode}
             error={data?.leetcodeError}
-            onEdit={() => setIsDialogOpen(true)}
+            onEdit={() => handleOpenEdit("leetcode")}
             onRefresh={() => handleSingleCardRefresh("leetcode")}
             isRefreshing={Boolean(cardRefreshing.leetcode || refreshing)}
             isPinned={isPinned}
@@ -740,7 +791,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             handle={cfHandle}
             stats={data?.codeforces}
             error={data?.codeforcesError}
-            onEdit={() => setIsDialogOpen(true)}
+            onEdit={() => handleOpenEdit("codeforces")}
             onRefresh={() => handleSingleCardRefresh("codeforces")}
             isRefreshing={Boolean(cardRefreshing.codeforces || refreshing)}
             isPinned={isPinned}
@@ -757,7 +808,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             username={ccUsername}
             stats={data?.codechef}
             error={data?.codechefError}
-            onEdit={() => setIsDialogOpen(true)}
+            onEdit={() => handleOpenEdit("codechef")}
             onRefresh={() => handleSingleCardRefresh("codechef")}
             isRefreshing={Boolean(cardRefreshing.codechef || refreshing)}
             isPinned={isPinned}
@@ -774,7 +825,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             username={cwUsername}
             stats={data?.codewars}
             error={data?.codewarsError}
-            onEdit={() => setIsDialogOpen(true)}
+            onEdit={() => handleOpenEdit("codewars")}
             onRefresh={() => handleSingleCardRefresh("codewars")}
             isRefreshing={Boolean(cardRefreshing.codewars || refreshing)}
             isPinned={isPinned}
@@ -791,7 +842,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             username={atcoderUsername}
             stats={data?.atcoder}
             error={data?.atcoderError}
-            onEdit={() => setIsDialogOpen(true)}
+            onEdit={() => handleOpenEdit("atcoder")}
             onRefresh={() => handleSingleCardRefresh("atcoder")}
             isRefreshing={Boolean(cardRefreshing.atcoder || refreshing)}
             isPinned={isPinned}
@@ -807,8 +858,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             usernameOrHandle={hrUsername}
             stats={data?.hackerrank}
             error={data?.hackerrankError}
-            onConnect={() => setIsDialogOpen(true)}
-            onEditHandle={() => setIsDialogOpen(true)}
+            onConnect={() => handleOpenEdit("hackerrank")}
+            onEditHandle={() => handleOpenEdit("hackerrank")}
             onRefresh={() => handleSingleCardRefresh("hackerrank")}
             isRefreshing={Boolean(cardRefreshing.hackerrank || refreshing)}
             isPinned={isPinned}
@@ -823,8 +874,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             usernameOrHandle={hfUsername}
             stats={data?.huggingface}
             error={data?.huggingfaceError}
-            onConnect={() => setIsDialogOpen(true)}
-            onEditHandle={() => setIsDialogOpen(true)}
+            onConnect={() => handleOpenEdit("huggingface")}
+            onEditHandle={() => handleOpenEdit("huggingface")}
             onRefresh={() => handleSingleCardRefresh("huggingface")}
             isRefreshing={Boolean(cardRefreshing.huggingface || refreshing)}
             isPinned={isPinned}
@@ -840,8 +891,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               usernameOrHandle={chessUsername}
               stats={data?.chess}
               error={data?.chessError}
-              onConnect={() => setIsDialogOpen(true)}
-              onEditHandle={() => setIsDialogOpen(true)}
+              onConnect={() => handleOpenEdit("chess")}
+              onEditHandle={() => handleOpenEdit("chess")}
               onRefresh={() => handleSingleCardRefresh("chess")}
               isRefreshing={Boolean(cardRefreshing.chess || refreshing)}
               isPinned={isPinned}
@@ -858,8 +909,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               usernameOrHandle={credlyUsername}
               stats={data?.credly}
               error={data?.credlyError}
-              onConnect={() => setIsDialogOpen(true)}
-              onEditHandle={() => setIsDialogOpen(true)}
+              onConnect={() => handleOpenEdit("credly")}
+              onEditHandle={() => handleOpenEdit("credly")}
               onRefresh={() => handleSingleCardRefresh("credly")}
               isRefreshing={Boolean(cardRefreshing.credly || refreshing)}
               isPinned={isPinned}
@@ -876,8 +927,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               usernameOrHandle={wakatimeUsername}
               stats={data?.wakatime}
               error={data?.wakatimeError}
-              onConnect={() => setIsDialogOpen(true)}
-              onEditHandle={() => setIsDialogOpen(true)}
+              onConnect={() => handleOpenEdit("wakatime")}
+              onEditHandle={() => handleOpenEdit("wakatime")}
               onRefresh={() => handleSingleCardRefresh("wakatime")}
               isRefreshing={Boolean(cardRefreshing.wakatime || refreshing)}
               isPinned={isPinned}
@@ -900,8 +951,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             <VercelProfileCard
               usernameOrHandle={vercelData?.vercelUsername}
               connectionData={vercelData}
-              onConnect={() => setIsDialogOpen(true)}
-              onEditHandle={() => setIsDialogOpen(true)}
+              onConnect={() => handleOpenEdit("vercel")}
+              onEditHandle={() => handleOpenEdit("vercel")}
               onRefresh={() => handleSingleCardRefresh("vercel")}
               onRefreshSuccess={(newData) => setVercelData(newData)}
               onDisconnectSuccess={() => {
@@ -929,7 +980,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               username={ghUsername}
               stats={data?.github}
               error={data?.githubError}
-              onEdit={() => setIsDialogOpen(true)}
+              onEdit={() => handleOpenEdit("github")}
               onRefresh={() => handleSingleCardRefresh("github")}
               isRefreshing={Boolean(cardRefreshing.github || refreshing)}
               isPinned={isPinned}
@@ -1027,7 +1078,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsDialogOpen(true)}
+                onClick={() => handleOpenEdit()}
                 className="size-8 rounded-xl border-border/80 hover:bg-accent shadow-sm"
                 title="Edit Handles"
               >
@@ -1112,7 +1163,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsDialogOpen(true)}
+                onClick={() => handleOpenEdit()}
                 className="size-9 rounded-xl border-border/80 hover:bg-accent shadow-sm"
                 title="Edit Handles"
               >
@@ -1219,8 +1270,24 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       )}
 
       {/* Edit Usernames Slide-Over Sheet */}
-      <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-l border-slate-200/50 dark:border-slate-800/50 p-0 overflow-hidden flex flex-col z-[70]">
+      <Sheet
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setFocusedPlatform(null);
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-l border-slate-200/50 dark:border-slate-800/50 p-0 overflow-hidden flex flex-col z-[70]"
+          onOpenAutoFocus={(e) => {
+            if (focusedPlatform) {
+              e.preventDefault();
+            }
+          }}
+        >
           <form onSubmit={handleSaveUsernames} className="flex flex-col h-full overflow-y-auto p-6 space-y-4">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 text-lg font-bold">
@@ -1242,7 +1309,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. tourist"
                   value={leetcodeInput}
                   onChange={(e) => setLeetcodeInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("leetcode")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "leetcode" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1255,7 +1326,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. tourist"
                   value={codeforcesInput}
                   onChange={(e) => setCodeforcesInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("codeforces")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "codeforces" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1268,7 +1343,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. tourist"
                   value={codechefInput}
                   onChange={(e) => setCodechefInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("codechef")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "codechef" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1281,7 +1360,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. ganesh"
                   value={codewarsInput}
                   onChange={(e) => setCodewarsInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("codewars")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "codewars" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1294,7 +1377,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. ganesh"
                   value={hackerrankInput}
                   onChange={(e) => setHackerrankInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("hackerrank")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "hackerrank" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1307,7 +1394,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. tourist"
                   value={atcoderInput}
                   onChange={(e) => setAtcoderInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("atcoder")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "atcoder" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1320,7 +1411,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. ganesh"
                   value={huggingfaceInput}
                   onChange={(e) => setHuggingfaceInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("huggingface")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "huggingface" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1333,7 +1428,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. magnuscarlsen"
                   value={chessInput}
                   onChange={(e) => setChessInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("chess")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "chess" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1346,7 +1445,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. ganesh or full credly URL"
                   value={credlyInput}
                   onChange={(e) => setCredlyInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("credly")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "credly" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1359,7 +1462,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. ganesh"
                   value={wakatimeInput}
                   onChange={(e) => setWakatimeInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("wakatime")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "wakatime" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1373,6 +1480,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="waka_sec_..."
                   value={wakatimeApiKeyInput}
                   onChange={(e) => setWakatimeApiKeyInput(e.target.value)}
+                  onFocus={() => setFocusedPlatform("wakatime")}
                   className="rounded-xl font-mono text-xs h-10"
                 />
               </div>
@@ -1386,7 +1494,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   placeholder="e.g. torvalds"
                   value={githubInput}
                   onChange={(e) => setGithubInput(e.target.value)}
-                  className="rounded-xl font-mono text-xs h-10"
+                  onFocus={() => setFocusedPlatform("github")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "github" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
                 />
               </div>
 
@@ -1413,7 +1525,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                           onClick={handleRemoveGithubToken}
                           className="h-5 text-[10px] font-semibold text-destructive hover:bg-destructive/10 px-1.5 rounded shrink-0 whitespace-nowrap"
                         >
-                          Remove
+                          Disconnect
                         </Button>
                       </div>
                     ) : (
@@ -1436,6 +1548,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                       }
                       value={githubTokenInput}
                       onChange={(e) => setGithubTokenInput(e.target.value)}
+                      onFocus={() => setFocusedPlatform("github")}
                       className="rounded-xl font-mono text-xs h-10 pr-10"
                     />
                     <button
@@ -1551,7 +1664,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                       }
                       value={vercelTokenInput}
                       onChange={(e) => setVercelTokenInput(e.target.value)}
-                      className="rounded-xl font-mono text-xs h-10 pr-10"
+                      onFocus={() => setFocusedPlatform("vercel")}
+                      className={cn(
+                        "rounded-xl font-mono text-xs h-10 pr-10 transition-all duration-300",
+                        focusedPlatform === "vercel" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                      )}
                     />
                     <button
                       type="button"
