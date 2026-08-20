@@ -15,7 +15,6 @@ import {
   Rocket,
   PlusCircle,
   Globe,
-  Trash2,
   Cpu,
   Calendar,
 } from "lucide-react";
@@ -227,15 +226,17 @@ export function VercelProfileCard({
                 </Button>
               )}
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onEditHandle || onConnect || (() => setShowConfirmDisconnect(true))}
-                className="size-7 rounded-xl hover:bg-accent"
-                title={hasLinked ? "Manage connection" : "Connect Vercel"}
-              >
-                <Edit3 className="size-3 text-muted-foreground" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onEditHandle || onConnect}
+                  className="size-7 rounded-xl hover:bg-accent"
+                  title={hasLinked ? "Manage connection" : "Connect Vercel"}
+                >
+                  <Edit3 className="size-3 text-muted-foreground" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -251,22 +252,17 @@ export function VercelProfileCard({
                 Connect your Vercel account to showcase your live web apps, frameworks, and deployment activity.
               </p>
               {!readOnly && (
-                <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
-                  <VercelConnectButton
+                <div className="pt-1 flex justify-center">
+                  <Button
                     size="sm"
-                    label="1-Click Connect"
-                    className="h-8 text-xs rounded-xl font-bold px-4"
-                  />
-                  {onConnect && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onConnect}
-                      className="h-8 text-xs rounded-xl font-medium px-3"
-                    >
-                      Connect with Token
-                    </Button>
-                  )}
+                    onClick={onConnect}
+                    className="h-9 text-xs rounded-xl font-bold px-5 gap-2 bg-black hover:bg-neutral-900 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black shadow-sm transition-all duration-200"
+                  >
+                    <svg className="size-3.5 fill-current" viewBox="0 0 116 100">
+                      <polygon points="58 0, 116 100, 0 100" />
+                    </svg>
+                    <span>Connect Vercel Account</span>
+                  </Button>
                 </div>
               )}
             </div>

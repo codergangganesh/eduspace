@@ -24,7 +24,7 @@ import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
 import { ChessProfileCard } from "./ChessProfileCard";
 import { CredlyProfileCard } from "./CredlyProfileCard";
 import { WakaTimeProfileCard } from "./WakaTimeProfileCard";
-import { VercelProfileCard, getVercelConnection, syncVercelProfile, VercelConnectionData, VercelConnectButton, connectVercelWithToken } from "@/features/vercel";
+import { VercelProfileCard, getVercelConnection, syncVercelProfile, VercelConnectionData, VercelConnectButton, connectVercelWithToken, disconnectVercel } from "@/features/vercel";
 import { CodingProfilesSkeleton } from "./CodingProfilesSkeleton";
 import { RatingTrajectoryGraph } from "./RatingTrajectoryGraph";
 import { PlatformErrorBoundary } from "./PlatformErrorBoundary";
@@ -113,7 +113,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const chessUsername = (profile as any)?.chess_username || extractUsername((profile as any)?.chess_url) || data?.chessUsername || "";
   const credlyUsername = (profile as any)?.credly_username || extractCredlyUsername((profile as any)?.credly_url) || data?.credlyUsername || (user?.id ? localStorage.getItem(`eduspace_credly_username_${user.id}`) : null) || "";
   const wakatimeUsername = (profile as any)?.wakatime_username || extractWakaTimeUsername((profile as any)?.wakatime_url) || data?.wakatimeUsername || (user?.id ? localStorage.getItem(`eduspace_wakatime_username_${user.id}`) : null) || "";
-  const wakatimeApiKey = (profile as any)?.wakatime_api_key || data?.wakatimeApiKey || (user?.id ? localStorage.getItem(`eduspace_wakatime_apikey_${user.id}`) : null) || "";
+  const wakatimeApiKey = (profile as any)?.wakatime_api_key || data?.wakatimeApiKey || "";
   const ghToken = (profile as any)?.github_token || data?.githubToken || "";
 
   useEffect(() => {
@@ -131,8 +131,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       setChessInput((profile as any)?.chess_username || extractUsername((profile as any)?.chess_url) || data?.chessUsername || "");
       setCredlyInput((profile as any)?.credly_username || extractCredlyUsername((profile as any)?.credly_url) || data?.credlyUsername || (user?.id ? localStorage.getItem(`eduspace_credly_username_${user.id}`) : null) || "");
       setWakatimeInput((profile as any)?.wakatime_username || extractWakaTimeUsername((profile as any)?.wakatime_url) || data?.wakatimeUsername || (user?.id ? localStorage.getItem(`eduspace_wakatime_username_${user.id}`) : null) || "");
-      setWakatimeApiKeyInput((profile as any)?.wakatime_api_key || data?.wakatimeApiKey || (user?.id ? localStorage.getItem(`eduspace_wakatime_apikey_${user.id}`) : null) || "");
-      setGithubTokenInput((profile as any)?.github_token || data?.githubToken || "");
+      setWakatimeApiKeyInput("");
+      setGithubTokenInput("");
     }
   }, [profile, data?.leetcodeUsername, data?.codeforcesHandle, data?.githubUsername, data?.codechefUsername, data?.codewarsUsername, data?.geeksforgeeksUsername, data?.atcoderUsername, data?.hackerrankUsername, data?.hackerearthUsername, data?.huggingfaceUsername, data?.chessUsername, data?.credlyUsername, data?.githubToken]);
 
@@ -206,6 +206,13 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
   useEffect(() => {
     if (user?.id) {
+      // Purge any legacy secret tokens from localStorage
+      try {
+        localStorage.removeItem(`eduspace_github_token_${user.id}`);
+        localStorage.removeItem(`eduspace_wakatime_apikey_${user.id}`);
+        localStorage.removeItem(`eduspace_vercel_token_${user.id}`);
+      } catch {}
+
       getVercelConnection(user.id).then((res) => {
         if (res.success && res.data) {
           setVercelData(res.data);
@@ -234,7 +241,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
       try {
         localStorage.setItem("eduspace_pinned_platforms", JSON.stringify(updated));
-      } catch {}
+      } catch { }
 
       const platformLabel = platformKey.charAt(0).toUpperCase() + platformKey.slice(1);
       if (isAlreadyPinned) {
@@ -272,7 +279,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           return [...parsed, ...missing];
         }
       }
-    } catch {}
+    } catch { }
     return DEFAULT_PLATFORM_KEYS;
   });
 
@@ -323,7 +330,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
       try {
         localStorage.setItem("eduspace_card_order", JSON.stringify(newOrder));
-      } catch {}
+      } catch { }
 
       toast.success("📌 Dashboard card order saved!");
       return newOrder;
@@ -413,7 +420,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         if (user?.id) {
           try {
             localStorage.setItem(`eduspace_coding_profile_cache_${user.id}`, JSON.stringify(updated));
-          } catch {}
+          } catch { }
         }
         return updated;
       });
@@ -452,7 +459,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     const cleanCredly = credlyInput.trim();
     const cleanWaka = wakatimeInput.trim();
     const cleanWakaKey = wakatimeApiKeyInput.trim();
-    const cleanGhToken = githubTokenInput.trim();
+    const cleanGhToken = githubTokenInput.trim() ? githubTokenInput.trim() : ghToken;
 
     if (leetcodeInput.length > 0 && !cleanLc) {
       toast.error("LeetCode Username cannot be empty spaces.");
@@ -474,11 +481,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     setSavingUsernames(true);
     try {
       if (user?.id) {
-        if (cleanGhToken) {
-          localStorage.setItem(`eduspace_github_token_${user.id}`, cleanGhToken);
-        } else {
-          localStorage.removeItem(`eduspace_github_token_${user.id}`);
-        }
+        // Clean up any token keys from localStorage so secrets are never stored in browser storage
+        localStorage.removeItem(`eduspace_github_token_${user.id}`);
+        localStorage.removeItem(`eduspace_wakatime_apikey_${user.id}`);
+        localStorage.removeItem(`eduspace_vercel_token_${user.id}`);
+
         if (cleanCredly) {
           localStorage.setItem(`eduspace_credly_username_${user.id}`, cleanCredly);
         } else {
@@ -488,11 +495,6 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           localStorage.setItem(`eduspace_wakatime_username_${user.id}`, cleanWaka);
         } else {
           localStorage.removeItem(`eduspace_wakatime_username_${user.id}`);
-        }
-        if (cleanWakaKey) {
-          localStorage.setItem(`eduspace_wakatime_apikey_${user.id}`, cleanWakaKey);
-        } else {
-          localStorage.removeItem(`eduspace_wakatime_apikey_${user.id}`);
         }
       }
 
@@ -513,6 +515,16 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         wakatime_api_key: cleanWakaKey || null,
         github_token: cleanGhToken || null,
       } as any);
+
+      if (vercelTokenInput.trim()) {
+        try {
+          const vRes = await connectVercelWithToken(vercelTokenInput.trim());
+          if (vRes.success && vRes.data) {
+            setVercelData(vRes.data);
+            setVercelTokenInput("");
+          }
+        } catch { }
+      }
 
       toast.success("Usernames updated successfully!");
       setIsDialogOpen(false);
@@ -556,7 +568,12 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       });
 
       if (res.ok) {
-        toast.success("GitHub token verified successfully!");
+        await updateProfile({
+          github_token: token,
+        } as any);
+        toast.success("GitHub token verified and saved successfully!");
+        setGithubTokenInput("");
+        fetchProfiles(true, { token });
       } else if (res.status === 401) {
         toast.error("Invalid token. Check your token and try again.");
       } else {
@@ -566,6 +583,22 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       toast.error("Token test failed: " + (err?.message || "Network error"));
     } finally {
       setTestingToken(false);
+    }
+  };
+
+  const handleRemoveGithubToken = async () => {
+    try {
+      if (user?.id) {
+        localStorage.removeItem(`eduspace_github_token_${user.id}`);
+      }
+      await updateProfile({
+        github_token: null,
+      } as any);
+      setGithubTokenInput("");
+      toast.success("GitHub token removed.");
+      fetchProfiles(true, { token: "" });
+    } catch (err: any) {
+      toast.error("Failed to remove token: " + (err?.message || "Unknown error"));
     }
   };
 
@@ -589,6 +622,19 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       toast.error(err?.message || "Connection failed.");
     } finally {
       setConnectingVercelToken(false);
+    }
+  };
+
+  const handleDisconnectVercel = async () => {
+    try {
+      const res = await disconnectVercel();
+      if (res.success) {
+        setVercelData({ connected: false });
+        setVercelTokenInput("");
+        toast.success("Vercel account disconnected.");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to disconnect Vercel.");
     }
   };
 
@@ -858,7 +904,15 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               onEditHandle={() => setIsDialogOpen(true)}
               onRefresh={() => handleSingleCardRefresh("vercel")}
               onRefreshSuccess={(newData) => setVercelData(newData)}
-              onDisconnectSuccess={() => setVercelData({ connected: false })}
+              onDisconnectSuccess={() => {
+                setVercelData({ connected: false });
+                setVercelTokenInput("");
+                if (user?.id) {
+                  try {
+                    localStorage.removeItem(`eduspace_vercel_token_${user.id}`);
+                  } catch { }
+                }
+              }}
               isRefreshing={Boolean(cardRefreshing.vercel || refreshing)}
               isPinned={isPinned}
               onTogglePin={onTogglePin}
@@ -1337,38 +1391,79 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
               </div>
 
               {/* GitHub Token Field */}
-              <div className="space-y-1.5 pt-2 border-t border-border/40">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="github_token_input" className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    GitHub Personal Access Token
+              <div className="space-y-3 pt-2 border-t border-border/40">
+                <div className="flex items-center justify-between gap-1.5 w-full flex-nowrap min-w-0">
+                  <Label htmlFor="github_token_input" className="text-xs font-bold text-foreground flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                    <span>
+                      GitHub <span className="hidden sm:inline">Personal Access </span>Token
+                    </span>
                   </Label>
+
+                  <div className="flex items-center gap-1.5 shrink min-w-0 flex-nowrap">
+                    {ghToken ? (
+                      <div className="flex items-center gap-1.5 shrink min-w-0 flex-nowrap">
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+                          <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
+                          Configured
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveGithubToken}
+                          className="h-5 text-[10px] font-semibold text-destructive hover:bg-destructive/10 px-1.5 rounded shrink-0 whitespace-nowrap"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
+                        Optional
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="github_token_input"
+                      type={showGithubToken ? "text" : "password"}
+                      placeholder={
+                        ghToken
+                          ? "•••••••••••••••• (configured — paste new token to update)"
+                          : "Paste GitHub Token (ghp_...)"
+                      }
+                      value={githubTokenInput}
+                      onChange={(e) => setGithubTokenInput(e.target.value)}
+                      className="rounded-xl font-mono text-xs h-10 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGithubToken(!showGithubToken)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showGithubToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleTestGithubToken}
                     disabled={testingToken || !githubTokenInput.trim()}
-                    className="h-6 text-[10px] font-bold px-2 rounded-lg text-primary hover:text-primary/80"
+                    onClick={handleTestGithubToken}
+                    className="h-10 text-xs px-4 rounded-xl font-bold gap-1.5 shadow-sm shrink-0 bg-black hover:bg-neutral-900 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black"
                   >
-                    {testingToken ? "Testing..." : "Verify Token"}
+                    {testingToken ? (
+                      <>
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="size-3.5" />
+                        <span>{ghToken ? "Update" : "Verify"}</span>
+                      </>
+                    )}
                   </Button>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="github_token_input"
-                    type={showGithubToken ? "text" : "password"}
-                    placeholder="ghp_..."
-                    value={githubTokenInput}
-                    onChange={(e) => setGithubTokenInput(e.target.value)}
-                    className="rounded-xl font-mono text-xs h-10 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGithubToken(!showGithubToken)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                  >
-                    {showGithubToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
                 </div>
 
                 {/* Step-by-Step Instructions Card */}
@@ -1376,7 +1471,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   <div className="flex items-center justify-between text-[11px] font-extrabold text-foreground">
                     <span className="flex items-center gap-1.5">
                       <HelpCircle className="size-3.5 text-blue-500" />
-                      How to get your free 5,000 req/hr GitHub Token:
+                      How to get your free GitHub Token:
                     </span>
                     <a
                       href="https://github.com/settings/tokens"
@@ -1401,78 +1496,118 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                 </div>
               </div>
 
-              {/* Vercel OAuth & Token Connection Row */}
-              <div className="space-y-2.5 pt-2 border-t border-border/40">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <svg className="size-3.5 fill-current" viewBox="0 0 116 100">
+              {/* Vercel Token Connection Section */}
+              <div className="space-y-3 pt-2 border-t border-border/40">
+                <div className="flex items-center justify-between gap-1.5 w-full flex-nowrap min-w-0">
+                  <Label
+                    htmlFor="vercel_token_input"
+                    className="text-xs font-bold text-foreground flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+                  >
+                    <svg className="size-3.5 fill-current shrink-0" viewBox="0 0 116 100">
                       <polygon points="58 0, 116 100, 0 100" />
                     </svg>
-                    Vercel Account
-                  </Label>
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {vercelData?.connected ? `@${vercelData.vercelUsername}` : "Not Connected"}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      {vercelData?.connected ? "Connected to Vercel" : "1-Click OAuth Connection"}
+                    <span>
+                      Vercel <span className="hidden sm:inline">Personal Access </span>Token
                     </span>
-                    {!vercelData?.connected && (
-                      <VercelConnectButton size="sm" className="h-8 text-xs rounded-xl px-3" />
-                    )}
-                  </div>
+                  </Label>
 
-                  {!vercelData?.connected && (
-                    <div className="space-y-2 pt-2 border-t border-border/40">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-foreground">
-                          Or Connect with Personal Access Token
-                        </span>
-                        <a
-                          href="https://vercel.com/account/tokens"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                  <div className="flex items-center gap-1.5 shrink min-w-0 flex-nowrap">
+                    {vercelData?.connected ? (
+                      <div className="flex items-center gap-1.5 shrink min-w-0 flex-nowrap">
+                        <span
+                          className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 min-w-0 truncate max-w-[120px] sm:max-w-[190px]"
+                          title={`@${vercelData.vercelUsername}`}
                         >
-                          Get Token <ExternalLink className="size-2.5" />
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="relative flex-1">
-                          <Input
-                            type={showVercelToken ? "text" : "password"}
-                            placeholder="Paste Vercel Token (e.g. oac_... / token)"
-                            value={vercelTokenInput}
-                            onChange={(e) => setVercelTokenInput(e.target.value)}
-                            className="h-8 text-xs pr-8 rounded-xl font-mono bg-background"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowVercelToken((p) => !p)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          >
-                            {showVercelToken ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-                          </button>
-                        </div>
+                          <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
+                          <span className="truncate">@{vercelData.vercelUsername}</span>
+                        </span>
                         <Button
                           type="button"
+                          variant="ghost"
                           size="sm"
-                          disabled={connectingVercelToken || !vercelTokenInput.trim()}
-                          onClick={handleConnectVercelToken}
-                          className="h-8 text-xs px-3 rounded-xl font-semibold shrink-0"
+                          onClick={handleDisconnectVercel}
+                          className="h-5 text-[10px] font-semibold text-destructive hover:bg-destructive/10 px-1.5 rounded shrink-0 whitespace-nowrap"
                         >
-                          {connectingVercelToken ? (
-                            <RefreshCw className="size-3 animate-spin" />
-                          ) : (
-                            "Connect"
-                          )}
+                          Disconnect
                         </Button>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
+                        Optional
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="vercel_token_input"
+                      type={showVercelToken ? "text" : "password"}
+                      placeholder={
+                        vercelData?.connected
+                          ? "•••••••••••••••• (configured — paste new token to update)"
+                          : "Paste Vercel Token (from vercel.com/account/tokens)"
+                      }
+                      value={vercelTokenInput}
+                      onChange={(e) => setVercelTokenInput(e.target.value)}
+                      className="rounded-xl font-mono text-xs h-10 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowVercelToken(!showVercelToken)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showVercelToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    disabled={connectingVercelToken || !vercelTokenInput.trim()}
+                    onClick={handleConnectVercelToken}
+                    className="h-10 text-xs px-4 rounded-xl font-bold gap-1.5 shadow-sm shrink-0 bg-black hover:bg-neutral-900 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black"
+                  >
+                    {connectingVercelToken ? (
+                      <>
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="size-3.5" />
+                        <span>{vercelData?.connected ? "Update" : "Connect"}</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Step-by-Step Instructions Card */}
+                <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 text-xs space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <HelpCircle className="size-3.5 text-blue-500" />
+                      How to get your free Vercel Token:
+                    </span>
+                    <a
+                      href="https://vercel.com/account/tokens"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 text-[10px] font-bold"
+                    >
+                      Open Settings <ExternalLink className="size-2.5" />
+                    </a>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-muted-foreground leading-relaxed">
+                    <li>
+                      Go to <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline font-medium">vercel.com/account/tokens</a> → click <strong>Create Token</strong>.
+                    </li>
+                    <li>
+                      Type a description (e.g. <code>EduSpace</code>) and choose expiration (e.g. <strong>No Expiration</strong>).
+                    </li>
+                    <li>
+                      Click <strong>Create</strong>, copy the generated token, and paste it above!
+                    </li>
+                  </ol>
                 </div>
               </div>
             </div>

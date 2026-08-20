@@ -2134,7 +2134,6 @@ export async function getCodingProfiles(
     dbCached?.overall_data?.githubToken ||
     dbCached?.github_token ||
     localCached?.githubToken ||
-    (userId ? localStorage.getItem(`eduspace_github_token_${userId}`) : null) ||
     null;
 
   const now = Date.now();
@@ -2470,8 +2469,8 @@ export async function getCodingProfiles(
   // Save to localStorage fallback
   try {
     localStorage.setItem(localCacheKey, JSON.stringify(response));
-    if (ghToken && userId) {
-      localStorage.setItem(`eduspace_github_token_${userId}`, ghToken);
+    if (userId) {
+      localStorage.removeItem(`eduspace_github_token_${userId}`);
     }
   } catch {
     // Ignore storage quota error

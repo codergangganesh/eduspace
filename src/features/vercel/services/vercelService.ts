@@ -259,6 +259,12 @@ export async function connectVercelWithToken(
     };
 
     if (userId) {
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          window.localStorage.removeItem(`eduspace_vercel_token_${userId}`);
+        }
+      } catch {}
+
       await supabase.from("vercel_connections" as any).upsert(
         {
           user_id: userId,
@@ -427,7 +433,7 @@ export async function getVercelConnection(
     if (targetUserId) {
       const { data: dbData, error: dbError } = await supabase
         .from("vercel_connections" as any)
-        .select("user_id, vercel_user_id, vercel_username, vercel_name, vercel_avatar_url, connected_at, last_synced_at, cached_data")
+        .select("user_id, vercel_user_id, vercel_username, vercel_name, vercel_avatar_url, connected_at, last_synced_at, cached_data, access_token")
         .eq("user_id", targetUserId)
         .maybeSingle();
 
@@ -487,52 +493,37 @@ export async function syncVercelProfile(): Promise<VercelActionResponse<VercelCo
   try {
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id;
+    if (!userId) {
+      return { success: false, error: "Please log in to synchronize Vercel." };
+    }
 
-    // 1. Try Edge Function
-    try {
-      const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, {
-        body: { action: "sync" },
-      });
+    // 1. Direct Token Sync from RLS-protected database
+    const { data: conn } = await supabase
+      .from("vercel_connections" as any)
+      .select("access_token")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const storedToken = (conn as any)?.access_token || null;
 
-      if (!error && data?.success && data?.data) {
+    if (storedToken) {
+      const tokenRes = await connectVercelWithToken(storedToken);
+      if (tokenRes.success && tokenRes.data) {
         return {
           success: true,
-          data: data.data,
+          data: tokenRes.data,
           message: "Vercel profile synchronized successfully",
         };
       }
-    } catch {}
+    }
 
-    // 2. Try Local Dev Endpoint
-    try {
-      const res = await fetch("/api/vercel-oauth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sync", userId }),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          return {
-            success: true,
-            data: json.data,
-            message: "Vercel profile synchronized successfully",
-          };
-        }
-      }
-    } catch {}
-
-    // 3. Fallback: Return existing cached connection data
-    if (userId) {
-      const current = await getVercelConnection(userId);
-      if (current.success && current.data?.connected) {
-        return {
-          success: true,
-          data: current.data,
-          message: "Vercel profile up to date",
-        };
-      }
+    // 2. Fallback: Return existing cached connection data
+    const current = await getVercelConnection(userId);
+    if (current.success && current.data?.connected) {
+      return {
+        success: true,
+        data: current.data,
+        message: "Vercel profile up to date",
+      };
     }
 
     return {
@@ -562,6 +553,12 @@ export async function disconnectVercel(): Promise<VercelActionResponse<null>> {
       } catch (dbErr) {
         console.warn("[Vercel OAuth] Direct DB delete notice:", dbErr);
       }
+
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          window.localStorage.removeItem(`eduspace_vercel_token_${userId}`);
+        }
+      } catch {}
     }
 
     // 2. Notify Edge Function / local API in background
