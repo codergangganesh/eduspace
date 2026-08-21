@@ -24,6 +24,17 @@ import { SystemOverview } from "@/pages/SystemOverview";
 import { Settings } from "@/pages/Settings";
 import { AdminProfile } from "@/pages/AdminProfile";
 
+// Wipe legacy localStorage caches on boot
+try {
+  [
+    "eduspace_admin_students_list_cache",
+    "eduspace_admin_lecturers_list_cache",
+    "eduspace_admin_stats_persistent_cache",
+    "eduspace_admin_activity_persistent_cache",
+    "eduspace_suspended_accounts",
+  ].forEach((k) => localStorage.removeItem(k));
+} catch (_) {}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

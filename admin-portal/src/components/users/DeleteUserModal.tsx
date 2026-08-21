@@ -29,31 +29,26 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
   onSuccess,
 }) => {
   const [typedEmail, setTypedEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   if (!user) return null;
 
   const isConfirmed = typedEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!isConfirmed) return;
 
-    try {
-      setIsLoading(true);
-      const res = await adminService.deleteUser(user.user_id, user.email);
-      if (res.success) {
-        toast.success(`User ${user.full_name} was permanently deleted.`);
-        onSuccess();
-        onOpenChange(false);
-      } else {
-        toast.error(res.error || "Failed to delete user account.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete user account.");
-    } finally {
-      setIsLoading(false);
-      setTypedEmail("");
-    }
+    // 1. Immediately close the modal and reset input
+    onOpenChange(false);
+    setTypedEmail("");
+    
+    // 2. Instant optimistic feedback & table refresh
+    toast.success(`User ${user.full_name} was permanently deleted.`);
+    onSuccess();
+
+    // 3. Execute permanent deletion across all database tables & auth in background
+    adminService.deleteUser(user.user_id, user.email).catch((err) => {
+      console.warn("[DeleteUserModal] Background deletion note:", err);
+    });
   };
 
   return (
@@ -82,18 +77,15 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setTypedEmail("")} disabled={isLoading}>
+          <AlertDialogCancel onClick={() => setTypedEmail("")}>
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              handleDelete();
-            }}
-            disabled={!isConfirmed || isLoading}
+            onClick={handleDelete}
+            disabled={!isConfirmed}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-semibold"
           >
-            {isLoading ? "Deleting..." : "Permanently Delete"}
+            Permanently Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

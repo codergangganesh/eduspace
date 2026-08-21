@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { studentsService, StudentFilterOptions, getCachedStudentsData, setCachedStudentsData } from "@/services/students.service";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
+import { EnrichedUser } from "@/types";
+
 export function useStudents(options: StudentFilterOptions = {}) {
   const auth = useAdminAuth();
 
@@ -26,7 +28,9 @@ export function useStudents(options: StudentFilterOptions = {}) {
       }
       return res;
     },
-    initialData: !options.search && options.status === "all" && options.page === 1 ? getCachedStudentsData : undefined,
+    initialData: !options.search && options.status === "all"
+      ? () => getCachedStudentsData(options.page || 1, options.pageSize || 10)
+      : undefined,
     staleTime: 1000 * 20,
   });
 
@@ -40,7 +44,7 @@ export function useStudents(options: StudentFilterOptions = {}) {
   const hasData = Boolean(query.data && Array.isArray(query.data.data) && query.data.data.length > 0);
 
   return {
-    students: query.data?.data || [],
+    students: (query.data?.data as EnrichedUser[]) || [],
     total: query.data?.total || 0,
     totalPages: query.data?.totalPages || 0,
     page: query.data?.page || 1,

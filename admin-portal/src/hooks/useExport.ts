@@ -1,12 +1,22 @@
 import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import { toast } from "sonner";
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", fileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+}
 
 export function useExport() {
   const exportToExcel = async (
     data: Record<string, any>[],
     columns: { header: string; key: string; width?: number }[],
-    filename: string = "eduspace_export"
+    filename: string = "eduspace-export"
   ) => {
     try {
       if (!data || data.length === 0) {
@@ -18,7 +28,7 @@ export function useExport() {
       workbook.creator = "Eduspace Admin Portal";
       workbook.created = new Date();
 
-      const worksheet = workbook.addWorksheet("Data");
+      const worksheet = workbook.addWorksheet("Sheet1");
 
       worksheet.columns = columns.map((c) => ({
         header: c.header,
@@ -45,14 +55,17 @@ export function useExport() {
         worksheet.addRow(rowData);
       });
 
-      // Generate buffer and trigger download
+      // Generate buffer and trigger download into Downloads folder
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
-      saveAs(blob, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      toast.success(`Exported ${data.length} records successfully!`);
+      const baseName = filename.replace(/\.(xlsx|csv|json)$/i, "");
+      const fullFileName = `${baseName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      downloadBlob(blob, fullFileName);
+      toast.success(`Downloaded ${data.length} records as Excel (${fullFileName})`);
     } catch (err) {
       console.error("[useExport] Excel export failed:", err);
       toast.error("Failed to export Excel file.");
@@ -62,7 +75,7 @@ export function useExport() {
   const exportToCsv = (
     data: Record<string, any>[],
     columns: { header: string; key: string }[],
-    filename: string = "eduspace_export"
+    filename: string = "eduspace-export"
   ) => {
     try {
       if (!data || data.length === 0) {
@@ -80,16 +93,43 @@ export function useExport() {
           .join(",")
       );
 
-      const csvContent = [headers, ...rows].join("\n");
+      const csvContent = "\uFEFF" + [headers, ...rows].join("\n"); // UTF-8 BOM for Excel compatibility
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 
-      saveAs(blob, `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
-      toast.success(`Exported ${data.length} records to CSV!`);
+      const baseName = filename.replace(/\.(xlsx|csv|json)$/i, "");
+      const fullFileName = `${baseName}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+      downloadBlob(blob, fullFileName);
+      toast.success(`Downloaded ${data.length} records as CSV (${fullFileName})`);
     } catch (err) {
       console.error("[useExport] CSV export failed:", err);
       toast.error("Failed to export CSV file.");
     }
   };
 
-  return { exportToExcel, exportToCsv };
+  const exportToJson = (
+    data: Record<string, any>[],
+    filename: string = "eduspace-export"
+  ) => {
+    try {
+      if (!data || data.length === 0) {
+        toast.error("No data available to export.");
+        return;
+      }
+
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json;charset=utf-8;" });
+
+      const baseName = filename.replace(/\.(xlsx|csv|json)$/i, "");
+      const fullFileName = `${baseName}_${new Date().toISOString().slice(0, 10)}.json`;
+
+      downloadBlob(blob, fullFileName);
+      toast.success(`Downloaded ${data.length} records as JSON (${fullFileName})`);
+    } catch (err) {
+      console.error("[useExport] JSON export failed:", err);
+      toast.error("Failed to export JSON file.");
+    }
+  };
+
+  return { exportToExcel, exportToCsv, exportToJson };
 }

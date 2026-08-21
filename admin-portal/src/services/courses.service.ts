@@ -10,7 +10,7 @@ const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, fallbackValue: 
 
 export const coursesService = {
   async getCourses(options: { search?: string; page?: number; pageSize?: number } = {}) {
-    const { search = "", page = 1, pageSize = 15 } = options;
+    const { search = "", page = 1, pageSize = 10 } = options;
 
     try {
       const queryPromise = (async () => {
@@ -50,7 +50,7 @@ export const coursesService = {
   },
 
   async getClasses(options: { search?: string; page?: number; pageSize?: number } = {}) {
-    const { search = "", page = 1, pageSize = 15 } = options;
+    const { search = "", page = 1, pageSize = 10 } = options;
 
     try {
       const queryPromise = (async () => {
@@ -92,7 +92,7 @@ export const coursesService = {
   },
 
   async getAssignments(options: { search?: string; page?: number; pageSize?: number } = {}) {
-    const { search = "", page = 1, pageSize = 15 } = options;
+    const { search = "", page = 1, pageSize = 10 } = options;
 
     try {
       const queryPromise = (async () => {
@@ -132,7 +132,7 @@ export const coursesService = {
   },
 
   async getQuizzes(options: { search?: string; page?: number; pageSize?: number } = {}) {
-    const { search = "", page = 1, pageSize = 15 } = options;
+    const { search = "", page = 1, pageSize = 10 } = options;
 
     try {
       const queryPromise = (async () => {

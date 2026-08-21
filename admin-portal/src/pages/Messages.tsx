@@ -4,9 +4,9 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { Pagination } from "@/components/common/Pagination";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { EmptyState, LoadingState, ErrorState } from "@/components/common/EmptyState";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Shield, Clock, Paperclip, RefreshCw } from "lucide-react";
+import { MessageSquare, Shield, Clock, Paperclip, RefreshCw, ChevronRight } from "lucide-react";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { ConversationItem } from "@/types";
 
@@ -23,13 +23,28 @@ export const MessagesModeration: React.FC = () => {
   } = useConversations({
     search,
     page,
-    pageSize: 15,
+    pageSize: 10,
   });
 
   const {
     data: messages,
     isLoading: loadingMessages,
   } = useConversationMessages(selectedConversation?.id || null);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success("Messages feed refreshed successfully!");
+    } catch (err) {
+      toast.error("Failed to refresh messages feed.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const conversations = convData?.data || [];
   const total = convData?.total || 0;
@@ -42,7 +57,7 @@ export const MessagesModeration: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight text-foreground">Message Moderation</h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center gap-1">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center gap-1">
               <Shield className="h-3 w-3" />
               Full Governance Access
             </span>
@@ -55,11 +70,12 @@ export const MessagesModeration: React.FC = () => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetch()}
-          className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent self-start sm:self-auto"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent min-w-[95px] self-start sm:self-auto"
         >
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-          Refresh
+          <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 
@@ -99,25 +115,28 @@ export const MessagesModeration: React.FC = () => {
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv)}
-                    className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+                    className={`group p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
                       isSelected ? "bg-primary/10 border-l-4 border-l-primary" : ""
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center space-x-2.5 min-w-0">
                         <UserAvatar name={p1} size="sm" />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-foreground truncate">
+                          <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
                             {p1} <span className="text-muted-foreground font-normal">↔</span> {p2}
                           </p>
-                          <p className="text-[11px] text-muted-foreground truncate max-w-[220px]">
+                          <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">
                             {conv.last_message || "No message content"}
                           </p>
                         </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {formatRelativeTime(conv.last_message_at)}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {formatRelativeTime(conv.last_message_at)}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                      </div>
                     </div>
                   </div>
                 );
@@ -131,7 +150,7 @@ export const MessagesModeration: React.FC = () => {
                 currentPage={page}
                 totalPages={totalPages}
                 totalRecords={total}
-                pageSize={15}
+                pageSize={10}
                 onPageChange={(p) => setPage(p)}
               />
             </div>

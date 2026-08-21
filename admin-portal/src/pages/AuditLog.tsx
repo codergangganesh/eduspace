@@ -7,18 +7,33 @@ import { EmptyState, LoadingState, ErrorState } from "@/components/common/EmptyS
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History, RefreshCw, ShieldCheck } from "lucide-react";
+import { History, RefreshCw, ShieldCheck, ChevronRight } from "lucide-react";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const AuditLog: React.FC = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data, isLoading, isError, refetch } = useAuditLog({
     search,
     page,
-    pageSize: 20,
+    pageSize: 10,
   });
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success("Audit trail refreshed successfully!");
+    } catch (err) {
+      toast.error("Failed to refresh audit trail.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const logs = data?.data || [];
   const total = data?.total || 0;
@@ -52,7 +67,7 @@ export const AuditLog: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight text-foreground">Administrator Audit Trail</h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
               <ShieldCheck className="h-3 w-3" />
               {total} Logged Events
             </span>
@@ -66,14 +81,15 @@ export const AuditLog: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent min-w-[95px]"
           >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-            Refresh
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
 
-          <ExportButton data={exportData} columns={exportCols} filename="eduspace_audit_logs" />
+          <ExportButton data={exportData} columns={exportCols} filename="eduspace-audit-logs" />
         </div>
       </div>
 
@@ -89,10 +105,10 @@ export const AuditLog: React.FC = () => {
         />
       </div>
 
-      {isLoading ? (
+      {isLoading && logs.length === 0 ? (
         <LoadingState count={8} />
-      ) : isError ? (
-        <ErrorState onRetry={() => refetch()} />
+      ) : isError && logs.length === 0 ? (
+        <ErrorState onRetry={handleRefresh} />
       ) : logs.length === 0 ? (
         <EmptyState
           icon={History}
@@ -108,14 +124,15 @@ export const AuditLog: React.FC = () => {
                 <TableHead>Action</TableHead>
                 <TableHead>Target User</TableHead>
                 <TableHead>Details</TableHead>
-                <TableHead className="text-right">Timestamp</TableHead>
+                <TableHead>Timestamp</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {logs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-muted/50">
+                <TableRow key={log.id} className="group hover:bg-muted/50 transition-colors">
                   <TableCell>
-                    <p className="font-semibold text-sm text-foreground">{log.admin_name}</p>
+                    <p className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{log.admin_name}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">{log.admin_email}</p>
                   </TableCell>
                   <TableCell>
@@ -129,26 +146,36 @@ export const AuditLog: React.FC = () => {
                   <TableCell className="text-xs text-muted-foreground font-mono max-w-xs truncate">
                     {JSON.stringify(log.details)}
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     <span title={formatDate(log.created_at, "PPP p")}>
                       {formatRelativeTime(log.created_at)}
                     </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 gap-1 rounded-lg transition-all"
+                    >
+                      <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-
-          <div className="px-4 pb-4">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              totalRecords={total}
-              pageSize={20}
-              onPageChange={(p) => setPage(p)}
-            />
-          </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRecords={total}
+          pageSize={10}
+          onPageChange={(p) => setPage(p)}
+        />
       )}
     </div>
   );

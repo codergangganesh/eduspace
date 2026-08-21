@@ -17,9 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Megaphone, Send, Users, CheckCircle2, History } from "lucide-react";
+import { Megaphone, Send, Users, CheckCircle2, History, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ExportButton } from "@/components/common/ExportButton";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -34,6 +34,7 @@ export const Announcements: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadPrerequisites();
@@ -65,6 +66,19 @@ export const Announcements: React.FC = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.all([loadPrerequisites(), loadHistory()]);
+      toast.success("Announcements data refreshed successfully!");
+    } catch (err) {
+      toast.error("Failed to refresh announcements data.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Recalculate recipient count whenever audience or targetId changes
   useEffect(() => {
     const fetchCount = async () => {
@@ -89,8 +103,8 @@ export const Announcements: React.FC = () => {
     try {
       setIsSending(true);
       const res = await announcementsService.sendAnnouncement({
-        title: title.trim(),
-        message: message.trim(),
+        title,
+        message,
         audience,
         targetId: targetId || undefined,
       });
@@ -112,19 +126,45 @@ export const Announcements: React.FC = () => {
     }
   };
 
+  const exportCols = [
+    { header: "Title", key: "title", width: 25 },
+    { header: "Message", key: "message", width: 35 },
+    { header: "Audience", key: "audience", width: 15 },
+    { header: "Recipients", key: "total", width: 12 },
+    { header: "Read Count", key: "read", width: 12 },
+    { header: "Sent At", key: "created_at", width: 20 },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Platform Announcements</h1>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-            Targeted Broadcasts
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Platform Announcements</h1>
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+              Targeted Broadcasts
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Dispatch official notifications to students, lecturers, departments, or individual classes.
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Dispatch official notifications to students, lecturers, departments, or individual classes.
-        </p>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent min-w-[95px]"
+          >
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+
+          <ExportButton data={history} columns={exportCols} filename="eduspace-announcements" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -146,7 +186,7 @@ export const Announcements: React.FC = () => {
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Scheduled System Maintenance Notice"
+                  placeholder="e.g., End of Semester Exam Schedule Released"
                   className="h-10 text-sm"
                   required
                 />
@@ -156,20 +196,20 @@ export const Announcements: React.FC = () => {
                 <Label className="text-xs font-semibold">Target Audience</Label>
                 <Select
                   value={audience}
-                  onValueChange={(val) => {
-                    setAudience(val as AnnouncementAudience);
+                  onValueChange={(val: AnnouncementAudience) => {
+                    setAudience(val);
                     setTargetId("");
                   }}
                 >
                   <SelectTrigger className="h-10 text-sm">
-                    <SelectValue placeholder="Select target audience" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">🌍 All Users (Students & Lecturers)</SelectItem>
-                    <SelectItem value="students">🎓 Students Only</SelectItem>
-                    <SelectItem value="lecturers">👨‍🏫 Lecturers Only</SelectItem>
-                    <SelectItem value="department">🏛️ Specific Department</SelectItem>
-                    <SelectItem value="class">📚 Specific Classroom</SelectItem>
+                    <SelectItem value="all">Everyone (All Students & Faculty)</SelectItem>
+                    <SelectItem value="students">All Enrolled Students Only</SelectItem>
+                    <SelectItem value="lecturers">All Faculty / Lecturers Only</SelectItem>
+                    <SelectItem value="department">Specific Academic Department</SelectItem>
+                    <SelectItem value="class">Specific Class Section</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

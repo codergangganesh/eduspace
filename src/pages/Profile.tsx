@@ -684,6 +684,29 @@ export default function Profile() {
         title="Your Profile"
         description="Manage your academic and personal information, notification preferences, and account settings."
       />
+      {profile?.status === "suspended" && (
+        <div className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white px-5 py-3.5 rounded-xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 mb-6 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-full shrink-0">
+              <Shield className="size-5 text-white" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black tracking-tight leading-tight">
+                Your account has been suspended
+              </h4>
+              <p className="text-xs text-white/90 leading-snug">
+                An administrator has suspended your platform access. Please contact support or your institution administrator for assistance.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("open-contact-support"))}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-rose-700 hover:bg-white/90 transition-all shrink-0 shadow-sm"
+          >
+            Contact Support
+          </button>
+        </div>
+      )}
       <div className="flex flex-col xl:flex-row gap-8 w-full animate-in fade-in duration-500 pb-24 xl:pb-0">
         {/* Left Sidebar - Profile Navigation (Desktop Only) */}
         <div className="hidden xl:block w-80 shrink-0">

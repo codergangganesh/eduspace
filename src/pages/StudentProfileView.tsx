@@ -124,9 +124,59 @@ export default function StudentProfileView() {
         }
     };
 
+    // Fetch user profile status
+    const { data: userProfile } = useQuery({
+        queryKey: ['student-profile-user-status', student?.email, student?.student_id],
+        queryFn: async () => {
+            if (!student) return null;
+            if (student.email) {
+                const { data } = await (supabase as any)
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', student.email)
+                    .maybeSingle();
+                if (data) return data;
+            }
+            if (student.student_id) {
+                const { data } = await (supabase as any)
+                    .from('profiles')
+                    .select('*')
+                    .eq('user_id', student.student_id)
+                    .maybeSingle();
+                if (data) return data;
+            }
+            return null;
+        },
+        enabled: !!student,
+    });
+
+    const isSuspended = (student as any)?.status === 'suspended' || (userProfile as any)?.status === 'suspended';
+
     return (
         <DashboardLayout>
             <div className="w-full max-w-5xl mx-auto flex flex-col gap-6 pb-10 animate-in fade-in duration-300">
+
+                {/* Suspension Banner */}
+                {isSuspended && (
+                    <div className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white px-4 py-3.5 rounded-xl shadow-md flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-full shrink-0">
+                                <XCircle className="size-5 text-white" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black tracking-tight leading-tight">
+                                    Account Suspended
+                                </h4>
+                                <p className="text-xs text-white/90 leading-snug">
+                                    This student's platform access has been suspended by an administrator.
+                                </p>
+                            </div>
+                        </div>
+                        <Badge className="bg-white text-rose-700 font-bold border-0 text-xs px-2.5 py-1">
+                            Suspended
+                        </Badge>
+                    </div>
+                )}
 
                 {/* Back */}
                 <button

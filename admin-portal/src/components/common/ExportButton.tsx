@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,11 +20,11 @@ interface ExportButtonProps {
 export const ExportButton: React.FC<ExportButtonProps> = ({
   data,
   columns,
-  filename = "eduspace_export",
+  filename = "eduspace-export",
   className = "",
   disabled = false,
 }) => {
-  const { exportToExcel, exportToCsv } = useExport();
+  const { exportToExcel, exportToCsv, exportToJson } = useExport();
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExcel = async () => {
@@ -35,6 +35,10 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
   const handleCsv = () => {
     exportToCsv(data, columns, filename);
+  };
+
+  const handleJson = () => {
+    exportToJson(data, filename);
   };
 
   return (
@@ -50,7 +54,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
           {isExporting ? "Exporting..." : "Export"}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="bg-card border-border shadow-lg">
         <DropdownMenuItem onClick={handleExcel} className="text-xs cursor-pointer">
           <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           Export as Excel (.xlsx)
@@ -58,6 +62,10 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         <DropdownMenuItem onClick={handleCsv} className="text-xs cursor-pointer">
           <FileText className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
           Export as CSV (.csv)
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleJson} className="text-xs cursor-pointer">
+          <FileCode className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" />
+          Export as JSON (.json)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

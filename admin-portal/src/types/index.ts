@@ -73,6 +73,7 @@ export interface StudentProfile {
 }
 
 export interface EnrichedUser {
+  id?: string;
   user_id: string;
   full_name: string;
   email: string;
@@ -83,7 +84,7 @@ export interface EnrichedUser {
   register_number?: string | null;
   program?: string | null;
   year?: string | null;
-  avatar_url: string | null;
+  avatar_url?: string | null;
   verified: boolean;
   created_at: string;
   updated_at: string;
@@ -163,6 +164,24 @@ export interface AdminAuditLog {
   created_at: string;
 }
 
+export interface UserGrowthPoint {
+  date: string;
+  timestamp?: number;
+  students: number;
+  lecturers: number;
+  total: number;
+  newStudents?: number;
+  newLecturers?: number;
+  newTotal?: number;
+}
+
+export interface UserGrowthDatasets {
+  "7d": UserGrowthPoint[];
+  "30d": UserGrowthPoint[];
+  "6m": UserGrowthPoint[];
+  "12m": UserGrowthPoint[];
+}
+
 export interface DashboardStats {
   totalStudents: number;
   activeStudents: number;
@@ -176,7 +195,8 @@ export interface DashboardStats {
   totalQuizzes: number;
   totalMessages: number;
   newUsersLast30Days: number;
-  userGrowth: Array<{ date: string; students: number; lecturers: number; total: number }>;
+  userGrowth: UserGrowthPoint[];
+  userGrowthDatasets?: UserGrowthDatasets;
   userDistribution: Array<{ name: string; value: number; color: string }>;
   activitySummary: Array<{ name: string; count: number }>;
 }

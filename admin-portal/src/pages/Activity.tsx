@@ -5,16 +5,31 @@ import { ExportButton } from "@/components/common/ExportButton";
 import { EmptyState, LoadingState, ErrorState } from "@/components/common/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Activity, RefreshCw, Radio } from "lucide-react";
+import { Activity, RefreshCw, Radio, ChevronRight } from "lucide-react";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const ActivityPage: React.FC = () => {
   const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data, isLoading, isError, refetch } = useActivityLogs({
     page,
-    pageSize: 20,
+    pageSize: 10,
   });
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success("Activity stream refreshed successfully!");
+    } catch (err) {
+      toast.error("Failed to refresh activity stream.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const logs = data?.data || [];
   const total = data?.total || 0;
@@ -54,21 +69,22 @@ export const ActivityPage: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent min-w-[95px]"
           >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-            Refresh
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
 
-          <ExportButton data={exportData} columns={exportCols} filename="eduspace_activity_log" />
+          <ExportButton data={exportData} columns={exportCols} filename="eduspace-activity" />
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && logs.length === 0 ? (
         <LoadingState count={8} />
-      ) : isError ? (
-        <ErrorState onRetry={() => refetch()} />
+      ) : isError && logs.length === 0 ? (
+        <ErrorState onRetry={handleRefresh} />
       ) : logs.length === 0 ? (
         <EmptyState
           icon={Activity}
@@ -83,14 +99,15 @@ export const ActivityPage: React.FC = () => {
                 <TableHead>User</TableHead>
                 <TableHead>Action Type</TableHead>
                 <TableHead>Activity Date</TableHead>
-                <TableHead className="text-right">Recorded Time</TableHead>
+                <TableHead>Recorded Time</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {logs.map((log: any) => (
-                <TableRow key={log.id} className="hover:bg-muted/50">
+                <TableRow key={log.id} className="group hover:bg-muted/50 transition-colors">
                   <TableCell>
-                    <p className="font-semibold text-sm text-foreground">
+                    <p className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
                       {log.user?.full_name || "Active Student / User"}
                     </p>
                     <p className="text-xs text-muted-foreground font-mono">
@@ -106,24 +123,34 @@ export const ActivityPage: React.FC = () => {
                   <TableCell className="text-xs font-mono font-medium text-foreground">
                     {formatDate(log.action_date)}
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {formatRelativeTime(log.created_at)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 gap-1 rounded-lg transition-all"
+                    >
+                      <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-
-          <div className="px-4 pb-4">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              totalRecords={total}
-              pageSize={20}
-              onPageChange={(p) => setPage(p)}
-            />
-          </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRecords={total}
+          pageSize={10}
+          onPageChange={(p) => setPage(p)}
+        />
       )}
     </div>
   );

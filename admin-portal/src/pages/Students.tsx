@@ -33,6 +33,7 @@ import {
   Trash2,
   Users,
   RefreshCw,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +49,7 @@ export const Students: React.FC = () => {
   const [deleteModalUser, setDeleteModalUser] = useState<EnrichedUser | null>(null);
   const [bulkSuspendOpen, setBulkSuspendOpen] = useState(false);
   const [bulkActivateOpen, setBulkActivateOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const {
     students,
@@ -62,12 +64,25 @@ export const Students: React.FC = () => {
     status: statusFilter,
     department: deptFilter,
     page,
-    pageSize: 15,
+    pageSize: 10,
   });
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success("Student records refreshed successfully!");
+    } catch (err) {
+      toast.error("Failed to refresh student records.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedUserIds(students.map((s) => s.user_id));
+      setSelectedUserIds(students.map((s: EnrichedUser) => s.user_id));
     } else {
       setSelectedUserIds([]);
     }
@@ -98,22 +113,21 @@ export const Students: React.FC = () => {
   const handleBulkStatus = async (status: "active" | "suspended") => {
     const res = await adminService.bulkSetStatus(selectedUserIds, status);
     if (res.success) {
-      toast.success(`${selectedUserIds.length} accounts marked as ${status}!`);
+      toast.success(`Updated status for ${selectedUserIds.length} students.`);
       setSelectedUserIds([]);
       refetch();
     } else {
-      toast.error(res.error || "Bulk update failed.");
+      toast.error(res.error || "Bulk action failed.");
     }
   };
 
-  // Export column format
   const exportColumns = [
-    { header: "Name", key: "full_name", width: 25 },
+    { header: "User ID", key: "user_id", width: 36 },
+    { header: "Full Name", key: "full_name", width: 25 },
     { header: "Email", key: "email", width: 30 },
     { header: "Student ID", key: "student_id", width: 15 },
-    { header: "Department", key: "department", width: 20 },
-    { header: "Program", key: "program", width: 20 },
-    { header: "Status", key: "status", width: 15 },
+    { header: "Department", key: "department", width: 25 },
+    { header: "Status", key: "status", width: 12 },
     { header: "Joined Date", key: "created_at", width: 20 },
   ];
 
@@ -124,12 +138,12 @@ export const Students: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight text-foreground">Students Directory</h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              {total} Total
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+              {total} Enrolled
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Monitor, inspect, and manage student enrollments, statuses, and profiles.
+            Monitor, inspect, and manage student enrollments, statuses, and academic records.
           </p>
         </div>
 
@@ -137,17 +151,18 @@ export const Students: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent min-w-[95px]"
           >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-            Refresh
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
 
           <ExportButton
             data={students}
             columns={exportColumns}
-            filename="eduspace_students_list"
+            filename="eduspace-students"
           />
         </div>
       </div>
@@ -198,7 +213,7 @@ export const Students: React.FC = () => {
       {isLoading && students.length === 0 ? (
         <LoadingState count={6} />
       ) : isError && students.length === 0 ? (
-        <ErrorState onRetry={() => refetch()} />
+        <ErrorState onRetry={handleRefresh} />
       ) : students.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -225,7 +240,7 @@ export const Students: React.FC = () => {
                     className="rounded border-border"
                   />
                 </TableHead>
-                <TableHead>Student</TableHead>
+                <TableHead>Student Name & Email</TableHead>
                 <TableHead>Department / Program</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined Date</TableHead>
@@ -233,12 +248,12 @@ export const Students: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((student) => {
+              {students.map((student: EnrichedUser) => {
                 const isSelected = selectedUserIds.includes(student.user_id);
                 return (
                   <TableRow
                     key={student.user_id}
-                    className={`cursor-pointer hover:bg-muted/50 ${
+                    className={`group cursor-pointer hover:bg-muted/50 transition-colors ${
                       isSelected ? "bg-primary/5" : ""
                     }`}
                     onClick={() => handleOpenDrawer(student)}
@@ -255,7 +270,7 @@ export const Students: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <UserAvatar name={student.full_name} avatarUrl={student.avatar_url} size="md" />
                         <div>
-                          <p className="font-semibold text-foreground text-sm leading-tight">
+                          <p className="font-semibold text-foreground text-sm leading-tight group-hover:text-primary transition-colors">
                             {student.full_name}
                           </p>
                           <p className="text-xs text-muted-foreground font-mono mt-0.5">
@@ -284,140 +299,172 @@ export const Students: React.FC = () => {
                       {formatDate(student.created_at)}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-card border-border">
-                          <DropdownMenuItem
-                            onClick={() => handleOpenDrawer(student)}
-                            className="text-xs cursor-pointer"
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Full Profile
-                          </DropdownMenuItem>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenDrawer(student)}
+                          className="h-8 px-2.5 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 gap-1 rounded-lg transition-all"
+                          title="View Profile Details"
+                        >
+                          <span className="hidden sm:inline">Profile</span>
+                          <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                        </Button>
 
-                          <DropdownMenuItem
-                            onClick={() => handleQuickStatusToggle(student)}
-                            className="text-xs cursor-pointer"
-                          >
-                            {student.status === "suspended" ? (
-                              <>
-                                <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" />
-                                Activate Account
-                              </>
-                            ) : (
-                              <>
-                                <ShieldAlert className="mr-2 h-4 w-4 text-destructive" />
-                                Suspend Account
-                              </>
-                            )}
-                          </DropdownMenuItem>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 bg-card border-border">
+                            <DropdownMenuItem
+                              onClick={() => handleOpenDrawer(student)}
+                              className="text-xs cursor-pointer"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Full Profile
+                            </DropdownMenuItem>
 
-                          <DropdownMenuItem
-                            onClick={() => setRoleModalUser(student)}
-                            className="text-xs cursor-pointer"
-                          >
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            Change Role
-                          </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleQuickStatusToggle(student)}
+                              className="text-xs cursor-pointer"
+                            >
+                              {student.status === "suspended" ? (
+                                <>
+                                  <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" />
+                                  Reactivate Student
+                                </>
+                              ) : (
+                                <>
+                                  <ShieldAlert className="mr-2 h-4 w-4 text-destructive" />
+                                  Suspend Student
+                                </>
+                              )}
+                            </DropdownMenuItem>
 
-                          <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setRoleModalUser(student)}
+                              className="text-xs cursor-pointer"
+                            >
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              Change Role
+                            </DropdownMenuItem>
 
-                          <DropdownMenuItem
-                            onClick={() => setDeleteModalUser(student)}
-                            className="text-xs cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Account
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              onClick={() => setDeleteModalUser(student)}
+                              className="text-xs cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
-
-          {/* Pagination Footer */}
-          <div className="px-4 pb-4">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              totalRecords={total}
-              pageSize={15}
-              onPageChange={(p) => setPage(p)}
-            />
-          </div>
         </div>
       )}
 
-      {/* Floating Bulk Actions Bar */}
+      {/* Pagination */}
+      {total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={(p) => setPage(p)}
+          totalRecords={total}
+          pageSize={10}
+        />
+      )}
+
+      {/* Bulk Action Bar */}
       <BulkActionBar
         selectedCount={selectedUserIds.length}
         onClear={() => setSelectedUserIds([])}
         actions={[
           {
-            label: "Suspend Selected",
-            icon: ShieldAlert,
-            variant: "destructive",
-            onClick: () => setBulkSuspendOpen(true),
-          },
-          {
             label: "Activate Selected",
             icon: ShieldCheck,
             onClick: () => setBulkActivateOpen(true),
+            variant: "secondary",
+          },
+          {
+            label: "Suspend Selected",
+            icon: ShieldAlert,
+            onClick: () => setBulkSuspendOpen(true),
+            variant: "destructive",
           },
         ]}
       />
 
-      {/* Detail Profile Drawer */}
+      {/* Drawers and Modals */}
       <ProfileDrawer
         user={activeUser}
         open={drawerOpen}
-        onOpenChange={setDrawerOpen}
+        onOpenChange={(isOpen) => {
+          setDrawerOpen(isOpen);
+          if (!isOpen) setActiveUser(null);
+        }}
         onUserUpdated={() => refetch()}
       />
 
-      {/* Role Change Modal */}
-      <RoleChangeModal
-        user={roleModalUser}
-        open={!!roleModalUser}
-        onOpenChange={(open) => !open && setRoleModalUser(null)}
-        onSuccess={() => refetch()}
-      />
+      {roleModalUser && (
+        <RoleChangeModal
+          user={roleModalUser}
+          open={Boolean(roleModalUser)}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setRoleModalUser(null);
+          }}
+          onSuccess={() => {
+            setRoleModalUser(null);
+            refetch();
+          }}
+        />
+      )}
 
-      {/* Delete Confirmation Modal */}
-      <DeleteUserModal
-        user={deleteModalUser}
-        open={!!deleteModalUser}
-        onOpenChange={(open) => !open && setDeleteModalUser(null)}
-        onSuccess={() => refetch()}
-      />
+      {deleteModalUser && (
+        <DeleteUserModal
+          user={deleteModalUser}
+          open={Boolean(deleteModalUser)}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setDeleteModalUser(null);
+          }}
+          onSuccess={() => {
+            setDeleteModalUser(null);
+            refetch();
+          }}
+        />
+      )}
 
-      {/* Bulk Suspend Confirmation */}
       <ConfirmationModal
         open={bulkSuspendOpen}
-        onOpenChange={setBulkSuspendOpen}
-        title={`Suspend ${selectedUserIds.length} accounts?`}
-        description="Selected students will immediately lose login access until manually reactivated by an administrator."
-        confirmText="Suspend Accounts"
+        onOpenChange={(isOpen) => setBulkSuspendOpen(isOpen)}
+        onConfirm={() => {
+          handleBulkStatus("suspended");
+          setBulkSuspendOpen(false);
+        }}
+        title={`Suspend ${selectedUserIds.length} Students?`}
+        description="Suspended students will immediately lose access to their classes, assignments, and discussions."
+        confirmText="Suspend All"
         variant="destructive"
-        onConfirm={() => handleBulkStatus("suspended")}
       />
 
-      {/* Bulk Activate Confirmation */}
       <ConfirmationModal
         open={bulkActivateOpen}
-        onOpenChange={setBulkActivateOpen}
-        title={`Activate ${selectedUserIds.length} accounts?`}
-        description="Selected students will regain full platform access."
-        confirmText="Activate Accounts"
-        variant="default"
-        onConfirm={() => handleBulkStatus("active")}
+        onOpenChange={(isOpen) => setBulkActivateOpen(isOpen)}
+        onConfirm={() => {
+          handleBulkStatus("active");
+          setBulkActivateOpen(false);
+        }}
+        title={`Reactivate ${selectedUserIds.length} Students?`}
+        description="All selected students will have their platform access restored immediately."
+        confirmText="Reactivate All"
       />
     </div>
   );

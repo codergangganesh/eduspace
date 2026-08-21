@@ -10,6 +10,8 @@ import { useLayout } from "@/contexts/LayoutContext";
 import PageTransition from "./PageTransition";
 import { CommandPalette } from "./CommandPalette";
 import { AICoachWidget } from "@/components/dashboard/AICoachWidget";
+import { SuspensionBanner } from "@/components/common/SuspensionBanner";
+import { SuspensionModal } from "@/components/common/SuspensionModal";
 
 
 export function RootLayout() {
@@ -102,6 +104,7 @@ export function RootLayout() {
     return (
         <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
             <CommandPalette />
+            <SuspensionModal />
             {!options.hideSidebar && (
                 <>
                     <Sidebar
@@ -118,6 +121,9 @@ export function RootLayout() {
                 "flex-1 flex flex-col min-h-0 w-full transition-all duration-300",
                 options.hideSidebar ? "lg:pl-0" : (isCollapsed ? "lg:pl-20" : "lg:pl-72")
             )}>
+                {/* Account Suspension Banner */}
+                <SuspensionBanner />
+
                 {/* Header visibility logic - Show only on dashboard page (both mobile and desktop), hide on other pages (both mobile and desktop). */}
                 {!globalHideDashboardHeader && (
                     <div className={cn(!isDashboard && "hidden")}>

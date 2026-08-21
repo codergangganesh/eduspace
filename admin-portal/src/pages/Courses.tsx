@@ -7,18 +7,33 @@ import { EmptyState, LoadingState, ErrorState } from "@/components/common/EmptyS
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, RefreshCw } from "lucide-react";
+import { BookOpen, RefreshCw, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const Courses: React.FC = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data, isLoading, isError, refetch } = useCourses({
     search,
     page,
-    pageSize: 15,
+    pageSize: 10,
   });
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success("Course catalog refreshed successfully!");
+    } catch (err) {
+      toast.error("Failed to refresh courses.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const courses = data?.data || [];
   const total = data?.total || 0;
@@ -39,7 +54,7 @@ export const Courses: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight text-foreground">Course Catalog</h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
               {total} Courses
             </span>
           </div>
@@ -52,14 +67,15 @@ export const Courses: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent min-w-[95px]"
           >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-            Refresh
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
 
-          <ExportButton data={courses} columns={exportCols} filename="eduspace_courses" />
+          <ExportButton data={courses} columns={exportCols} filename="eduspace-courses" />
         </div>
       </div>
 
@@ -75,10 +91,10 @@ export const Courses: React.FC = () => {
         />
       </div>
 
-      {isLoading ? (
+      {isLoading && courses.length === 0 ? (
         <LoadingState count={6} />
-      ) : isError ? (
-        <ErrorState onRetry={() => refetch()} />
+      ) : isError && courses.length === 0 ? (
+        <ErrorState onRetry={handleRefresh} />
       ) : courses.length === 0 ? (
         <EmptyState
           icon={BookOpen}
@@ -98,16 +114,17 @@ export const Courses: React.FC = () => {
                 <TableHead>Credits</TableHead>
                 <TableHead>Semester</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Created</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {courses.map((course) => (
-                <TableRow key={course.id} className="hover:bg-muted/50">
+                <TableRow key={course.id} className="group hover:bg-muted/50 transition-colors">
                   <TableCell className="font-mono font-bold text-xs text-primary">
                     {course.course_code}
                   </TableCell>
-                  <TableCell className="font-semibold text-sm text-foreground">
+                  <TableCell className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
                     {course.title}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
@@ -124,24 +141,34 @@ export const Courses: React.FC = () => {
                       {course.is_active !== false ? "Active" : "Archived"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {formatDate(course.created_at)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 gap-1 rounded-lg transition-all"
+                    >
+                      <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-
-          <div className="px-4 pb-4">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              totalRecords={total}
-              pageSize={15}
-              onPageChange={(p) => setPage(p)}
-            />
-          </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRecords={total}
+          pageSize={10}
+          onPageChange={(p) => setPage(p)}
+        />
       )}
     </div>
   );

@@ -43,11 +43,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const isConfirmed = !requireInput || inputValue.trim().toLowerCase() === requireInput.trim().toLowerCase();
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!isConfirmed) return;
-    await onConfirm();
-    setInputValue("");
     onOpenChange(false);
+    setInputValue("");
+    // Execute onConfirm immediately
+    void onConfirm();
   };
 
   return (
@@ -80,18 +81,15 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              handleConfirm();
-            }}
-            disabled={!isConfirmed || isLoading}
+            onClick={handleConfirm}
+            disabled={!isConfirmed}
             className={
               variant === "destructive"
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary/90"
             }
           >
-            {isLoading ? "Processing..." : confirmText}
+            {confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

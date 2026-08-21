@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 
 export const activityService = {
   async getActivityLogs(options: { page?: number; pageSize?: number } = {}) {
-    const { page = 1, pageSize = 20 } = options;
+    const { page = 1, pageSize = 10 } = options;
 
     try {
       const from = (page - 1) * pageSize;

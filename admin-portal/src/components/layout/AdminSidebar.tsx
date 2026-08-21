@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Users,
   GraduationCap,
-  BookOpen,
   FolderKanban,
   ClipboardList,
   FileCheck,
@@ -14,13 +13,10 @@ import {
   History,
   Settings,
   User,
-  Shield,
-  ShieldCheck,
   Server,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import {
   Tooltip,
@@ -71,7 +67,6 @@ const navSections: NavSection[] = [
   {
     title: "Academic Resources",
     items: [
-      { label: "Courses", path: "/courses", icon: BookOpen },
       { label: "Classes", path: "/classes", icon: FolderKanban },
       { label: "Assignments", path: "/assignments", icon: ClipboardList },
       { label: "Quizzes", path: "/quizzes", icon: FileCheck },

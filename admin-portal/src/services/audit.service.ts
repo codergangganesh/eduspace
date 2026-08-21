@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import { AdminAuditLog } from "@/types";
+import { supabase } from "../lib/supabase";
+import { AdminAuditLog } from "../types";
 
 export const auditService = {
   async logAction(params: {
@@ -25,7 +25,7 @@ export const auditService = {
   },
 
   async getAuditLogs(options: { page?: number; pageSize?: number; search?: string } = {}) {
-    const { page = 1, pageSize = 20, search = "" } = options;
+    const { page = 1, pageSize = 10, search = "" } = options;
 
     try {
       let query = supabase.from("admin_audit_logs").select("*", { count: "exact" });
@@ -45,7 +45,7 @@ export const auditService = {
       if (error) throw error;
 
       // Fetch admin names
-      const adminIds = Array.from(new Set((data || []).map((d) => d.admin_id)));
+      const adminIds = Array.from(new Set((data || []).map((d: any) => d.admin_id)));
       let adminMap: Record<string, { full_name: string; email: string }> = {};
 
       if (adminIds.length > 0) {
@@ -54,7 +54,7 @@ export const auditService = {
           .select("user_id, full_name, email")
           .in("user_id", adminIds);
 
-        (adminProfiles || []).forEach((p) => {
+        (adminProfiles || []).forEach((p: any) => {
           adminMap[p.user_id] = {
             full_name: p.full_name || "Admin",
             email: p.email || "",
@@ -62,7 +62,7 @@ export const auditService = {
         });
       }
 
-      const enriched: AdminAuditLog[] = (data || []).map((item) => ({
+      const enriched: AdminAuditLog[] = (data || []).map((item: any) => ({
         id: item.id,
         admin_id: item.admin_id,
         admin_name: adminMap[item.admin_id]?.full_name || "Admin",

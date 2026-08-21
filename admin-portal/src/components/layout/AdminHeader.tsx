@@ -16,9 +16,7 @@ import {
   Moon,
   LogOut,
   User,
-  ExternalLink,
   Menu,
-  Bell,
   Settings,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -62,19 +60,16 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onToggleMobileSidebar 
       </div>
 
       {/* Right Action Icons & User Dropdown */}
-      <div className="flex items-center space-x-2.5">
-        {/* Main App Link */}
-        <Button
-          variant="outline"
-          size="sm"
-          asChild
-          className="hidden md:flex text-xs font-medium h-8 gap-1.5 border-border/80"
+      <div className="flex items-center space-x-3">
+        {/* Modern Open Student App Button */}
+        <a
+          href="http://localhost:8080"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:inline-flex items-center justify-center text-xs font-semibold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground border border-primary/25 hover:border-primary px-3.5 py-1.5 rounded-full shadow-xs hover:shadow-md hover:shadow-primary/20 transition-all duration-200"
         >
-          <a href="http://localhost:8080" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-            Open Student App
-          </a>
-        </Button>
+          Open Student App
+        </a>
 
         {/* Theme Toggle */}
         <Button
@@ -90,29 +85,25 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onToggleMobileSidebar 
           )}
         </Button>
 
-        {/* Admin Profile Dropdown */}
+        {/* Admin Profile Dropdown (Only Avatar Image) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2.5 px-2 h-9 rounded-full hover:bg-muted/80">
+            <button
+              className="relative flex items-center justify-center p-0.5 rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all outline-none focus-visible:ring-primary focus-visible:ring-2"
+              title="Admin Account Options"
+            >
               <UserAvatar
-                name={profile?.full_name || user?.email}
+                name={profile?.full_name || user?.email || "Admin"}
                 avatarUrl={profile?.avatar_url}
-                size="sm"
+                size="md"
+                className="cursor-pointer shadow-sm hover:scale-105 transition-transform"
               />
-              <div className="hidden sm:block text-left text-xs">
-                <p className="font-semibold text-foreground leading-tight">
-                  {profile?.full_name || "Administrator"}
-                </p>
-                <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                  {user?.email}
-                </p>
-              </div>
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-card border-border">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-semibold leading-none">{profile?.full_name || "Admin"}</p>
+                <p className="text-sm font-semibold leading-none">{profile?.full_name || "Administrator"}</p>
                 <p className="text-xs leading-none text-muted-foreground truncate font-mono">
                   {user?.email}
                 </p>

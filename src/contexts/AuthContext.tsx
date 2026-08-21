@@ -73,6 +73,7 @@ export interface Profile {
   voice_bio_transcript?: string | null;
   voice_bio_tags?: string[] | null;
   role?: string | null;
+  status?: string | null;
   verified: boolean | null;
   fcm_token: string | null; // Added
   email_notifications: boolean | null;

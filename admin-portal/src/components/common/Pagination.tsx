@@ -19,22 +19,17 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   className = "",
 }) => {
-  if (totalPages <= 1 && totalRecords <= pageSize) {
-    return (
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-4">
-        <span>Showing all {totalRecords} records</span>
-      </div>
-    );
-  }
+  if (totalRecords === 0) return null;
 
-  const startRecord = Math.min((currentPage - 1) * pageSize + 1, totalRecords);
+  const effectiveTotalPages = Math.max(1, totalPages);
+  const startRecord = totalRecords > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endRecord = Math.min(currentPage * pageSize, totalRecords);
 
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
+    let end = Math.min(effectiveTotalPages, start + maxVisible - 1);
 
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
@@ -46,8 +41,11 @@ export const Pagination: React.FC<PaginationProps> = ({
     return pages;
   };
 
+  const isNextDisabled = currentPage >= effectiveTotalPages || totalRecords <= pageSize;
+  const isPrevDisabled = currentPage <= 1;
+
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 text-xs text-muted-foreground ${className}`}>
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 text-xs text-muted-foreground ${className}`}>
       <div>
         Showing <span className="font-semibold text-foreground">{startRecord}</span> to{" "}
         <span className="font-semibold text-foreground">{endRecord}</span> of{" "}
@@ -60,7 +58,8 @@ export const Pagination: React.FC<PaginationProps> = ({
           size="icon"
           className="h-8 w-8 text-xs"
           onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
+          disabled={isPrevDisabled}
+          title="First Page"
         >
           <ChevronsLeft className="h-3.5 w-3.5" />
         </Button>
@@ -69,7 +68,8 @@ export const Pagination: React.FC<PaginationProps> = ({
           size="icon"
           className="h-8 w-8 text-xs"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
+          disabled={isPrevDisabled}
+          title="Previous Page"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
@@ -81,6 +81,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             size="sm"
             className="h-8 w-8 p-0 text-xs font-medium"
             onClick={() => onPageChange(p)}
+            disabled={effectiveTotalPages <= 1}
           >
             {p}
           </Button>
@@ -91,7 +92,8 @@ export const Pagination: React.FC<PaginationProps> = ({
           size="icon"
           className="h-8 w-8 text-xs"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages || totalPages === 0}
+          disabled={isNextDisabled}
+          title="Next Page"
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
@@ -99,8 +101,9 @@ export const Pagination: React.FC<PaginationProps> = ({
           variant="outline"
           size="icon"
           className="h-8 w-8 text-xs"
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages || totalPages === 0}
+          onClick={() => onPageChange(effectiveTotalPages)}
+          disabled={isNextDisabled}
+          title="Last Page"
         >
           <ChevronsRight className="h-3.5 w-3.5" />
         </Button>

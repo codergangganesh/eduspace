@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { lecturersService, LecturerFilterOptions, getCachedLecturersData, setCachedLecturersData } from "@/services/lecturers.service";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { EnrichedUser } from "@/types";
 
 export function useLecturers(options: LecturerFilterOptions = {}) {
   const auth = useAdminAuth();
@@ -31,7 +32,7 @@ export function useLecturers(options: LecturerFilterOptions = {}) {
   const hasData = Boolean(query.data && Array.isArray(query.data.data) && query.data.data.length > 0);
 
   return {
-    lecturers: query.data?.data || [],
+    lecturers: (query.data?.data as EnrichedUser[]) || [],
     total: query.data?.total || 0,
     totalPages: query.data?.totalPages || 0,
     page: query.data?.page || 1,

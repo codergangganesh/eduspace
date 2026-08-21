@@ -5,20 +5,19 @@ import { supabase } from "@/lib/supabase";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { DashboardStats } from "@/types";
 
-const STATS_STORAGE_KEY = "eduspace_admin_stats_persistent_cache";
-const ACTIVITY_STORAGE_KEY = "eduspace_admin_activity_persistent_cache";
+const STATS_CACHE_KEY = "eduspace_admin_dashboard_stats_v2";
+const ACTIVITY_CACHE_KEY = "eduspace_admin_dashboard_activity_v2";
 
 export const getCachedStats = (): DashboardStats | undefined => {
   try {
-    const raw = localStorage.getItem(STATS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.totalStudents === "number") {
-        return parsed;
-      }
+    const raw = localStorage.getItem(STATS_CACHE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.totalStudents === "number") {
+      return parsed;
     }
-  } catch (e) {
-    console.warn("[useDashboardStats] Cache parse:", e);
+  } catch (err) {
+    console.warn("[DashboardStats] Cache parse error:", err);
   }
   return undefined;
 };
@@ -26,24 +25,27 @@ export const getCachedStats = (): DashboardStats | undefined => {
 export const setCachedStats = (stats: DashboardStats) => {
   try {
     if (stats && typeof stats.totalStudents === "number") {
-      localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
+      localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(stats));
     }
-  } catch (e) {
-    console.warn("[useDashboardStats] Cache write:", e);
+  } catch (err) {
+    console.warn("[DashboardStats] Cache set error:", err);
   }
 };
 
-export const getCachedActivity = (): any | undefined => {
+export const getCachedActivity = () => {
   try {
-    const raw = localStorage.getItem(ACTIVITY_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return undefined;
+    const raw = localStorage.getItem(ACTIVITY_CACHE_KEY);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 export const setCachedActivity = (act: any) => {
   try {
-    if (act) localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify(act));
+    if (act) {
+      localStorage.setItem(ACTIVITY_CACHE_KEY, JSON.stringify(act));
+    }
   } catch {}
 };
 
@@ -77,15 +79,57 @@ export function useDashboardStats() {
     staleTime: 1000 * 30,
   });
 
-  // Setup Realtime subscriptions to invalidate cache on new entries
+  // Setup Realtime subscriptions to invalidate cache on new entries across all tables
   useEffect(() => {
     if (!isReady) return;
 
     const channel = supabase
-      .channel("admin-dashboard-realtime")
+      .channel("admin-dashboard-realtime-all")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "student_profiles" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lecturer_profiles" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "class_students" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "classes" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "courses" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
         }
@@ -100,6 +144,34 @@ export function useDashboardStats() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "quizzes" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "announcements" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "admin_audit_logs" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "assignment_submissions" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
         }
