@@ -1,0 +1,304 @@
+import React, { useState } from "react";
+import { useLecturers } from "@/hooks/useLecturers";
+import { SearchBar } from "@/components/common/SearchBar";
+import { FilterDropdown } from "@/components/common/FilterDropdown";
+import { Pagination } from "@/components/common/Pagination";
+import { ExportButton } from "@/components/common/ExportButton";
+import { EmptyState, LoadingState, ErrorState } from "@/components/common/EmptyState";
+import { StatusBadge } from "@/components/users/StatusBadge";
+import { UserAvatar } from "@/components/users/UserAvatar";
+import { ProfileDrawer } from "@/components/users/ProfileDrawer";
+import { RoleChangeModal } from "@/components/users/RoleChangeModal";
+import { DeleteUserModal } from "@/components/users/DeleteUserModal";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EnrichedUser } from "@/types";
+import { adminService } from "@/services/admin.service";
+import { formatDate } from "@/lib/utils";
+import {
+  MoreVertical,
+  Eye,
+  ShieldAlert,
+  ShieldCheck,
+  RotateCcw,
+  Trash2,
+  GraduationCap,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
+
+export const Lecturers: React.FC = () => {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [activeUser, setActiveUser] = useState<EnrichedUser | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [roleModalUser, setRoleModalUser] = useState<EnrichedUser | null>(null);
+  const [deleteModalUser, setDeleteModalUser] = useState<EnrichedUser | null>(null);
+
+  const {
+    lecturers,
+    total,
+    totalPages,
+    isLoading,
+    isError,
+    refetch,
+  } = useLecturers({
+    search,
+    status: statusFilter,
+    page,
+    pageSize: 15,
+  });
+
+  const handleOpenDrawer = (user: EnrichedUser) => {
+    setActiveUser(user);
+    setDrawerOpen(true);
+  };
+
+  const handleQuickStatusToggle = async (user: EnrichedUser) => {
+    const newStatus = user.status === "suspended" ? "active" : "suspended";
+    const res = await adminService.setUserStatus(user.user_id, newStatus, user.email);
+    if (res.success) {
+      toast.success(`${user.full_name} is now ${newStatus}.`);
+      refetch();
+    } else {
+      toast.error(res.error || "Failed to update status.");
+    }
+  };
+
+  const exportColumns = [
+    { header: "Name", key: "full_name", width: 25 },
+    { header: "Email", key: "email", width: 30 },
+    { header: "Department", key: "department", width: 20 },
+    { header: "Status", key: "status", width: 15 },
+    { header: "Joined Date", key: "created_at", width: 20 },
+  ];
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Faculty & Lecturers</h1>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              {total} Total
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manage faculty instructors, courses handled, and administrative permissions.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="h-9 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent"
+          >
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+            Refresh
+          </Button>
+
+          <ExportButton
+            data={lecturers}
+            columns={exportColumns}
+            filename="eduspace_lecturers_list"
+          />
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border">
+        <SearchBar
+          value={search}
+          onChange={(val) => {
+            setSearch(val);
+            setPage(1);
+          }}
+          placeholder="Search by lecturer name, email, or department..."
+          className="flex-1 max-w-md"
+        />
+
+        <div className="flex items-center gap-2.5">
+          <FilterDropdown
+            value={statusFilter}
+            onChange={(val) => {
+              setStatusFilter(val);
+              setPage(1);
+            }}
+            options={[
+              { label: "All Statuses", value: "all" },
+              { label: "Active Only", value: "active" },
+              { label: "Suspended Only", value: "suspended" },
+            ]}
+            placeholder="Status"
+          />
+        </div>
+      </div>
+
+      {/* Data Table */}
+      {isLoading && lecturers.length === 0 ? (
+        <LoadingState count={6} />
+      ) : isError && lecturers.length === 0 ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : lecturers.length === 0 ? (
+        <EmptyState
+          icon={GraduationCap}
+          title="No faculty members found"
+          description="Try adjusting your search query or status filter."
+          actionLabel="Clear Filters"
+          onAction={() => {
+            setSearch("");
+            setStatusFilter("all");
+            setPage(1);
+          }}
+        />
+      ) : (
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead>Lecturer</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lecturers.map((lecturer) => (
+                <TableRow
+                  key={lecturer.user_id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleOpenDrawer(lecturer)}
+                >
+                  <TableCell>
+                    <div className="flex items-center space-x-3">
+                      <UserAvatar name={lecturer.full_name} avatarUrl={lecturer.avatar_url} size="md" />
+                      <div>
+                        <p className="font-semibold text-foreground text-sm leading-tight">
+                          {lecturer.full_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                          {lecturer.email}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-xs font-medium text-foreground">
+                      {lecturer.department || "Academic Department"}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={lecturer.status} />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(lecturer.created_at)}
+                  </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                          <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-card border-border">
+                        <DropdownMenuItem
+                          onClick={() => handleOpenDrawer(lecturer)}
+                          className="text-xs cursor-pointer"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Full Profile
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => handleQuickStatusToggle(lecturer)}
+                          className="text-xs cursor-pointer"
+                        >
+                          {lecturer.status === "suspended" ? (
+                            <>
+                              <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" />
+                              Activate Faculty
+                            </>
+                          ) : (
+                            <>
+                              <ShieldAlert className="mr-2 h-4 w-4 text-destructive" />
+                              Suspend Faculty
+                            </>
+                          )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => setRoleModalUser(lecturer)}
+                          className="text-xs cursor-pointer"
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Change Role
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                          onClick={() => setDeleteModalUser(lecturer)}
+                          className="text-xs cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Account
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          {/* Pagination Footer */}
+          <div className="px-4 pb-4">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRecords={total}
+              pageSize={15}
+              onPageChange={(p) => setPage(p)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Detail Profile Drawer */}
+      <ProfileDrawer
+        user={activeUser}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onUserUpdated={() => refetch()}
+      />
+
+      {/* Role Change Modal */}
+      <RoleChangeModal
+        user={roleModalUser}
+        open={!!roleModalUser}
+        onOpenChange={(open) => !open && setRoleModalUser(null)}
+        onSuccess={() => refetch()}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteUserModal
+        user={deleteModalUser}
+        open={!!deleteModalUser}
+        onOpenChange={(open) => !open && setDeleteModalUser(null)}
+        onSuccess={() => refetch()}
+      />
+    </div>
+  );
+};

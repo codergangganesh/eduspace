@@ -1,0 +1,102 @@
+import React, { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { EnrichedUser } from "@/types";
+import { adminService } from "@/services/admin.service";
+import { toast } from "sonner";
+
+interface DeleteUserModalProps {
+  user: EnrichedUser | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
+  user,
+  open,
+  onOpenChange,
+  onSuccess,
+}) => {
+  const [typedEmail, setTypedEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  if (!user) return null;
+
+  const isConfirmed = typedEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
+
+  const handleDelete = async () => {
+    if (!isConfirmed) return;
+
+    try {
+      setIsLoading(true);
+      const res = await adminService.deleteUser(user.user_id, user.email);
+      if (res.success) {
+        toast.success(`User ${user.full_name} was permanently deleted.`);
+        onSuccess();
+        onOpenChange(false);
+      } else {
+        toast.error(res.error || "Failed to delete user account.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user account.");
+    } finally {
+      setIsLoading(false);
+      setTypedEmail("");
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="sm:max-w-md bg-card border-border">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-destructive flex items-center gap-2">
+            <span>🗑️</span> Permanently Delete User
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+            You are about to permanently delete <span className="font-semibold text-foreground">{user.full_name}</span>. This will erase all profiles, submissions, quiz attempts, and messaging history. <strong className="text-destructive">This action CANNOT be undone.</strong>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-2 py-2">
+          <Label className="text-xs font-semibold">
+            Type the user's email <span className="font-mono text-primary font-bold">{user.email}</span> to confirm:
+          </Label>
+          <Input
+            value={typedEmail}
+            onChange={(e) => setTypedEmail(e.target.value)}
+            placeholder={user.email}
+            className="h-9 text-xs font-mono"
+            autoFocus
+          />
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setTypedEmail("")} disabled={isLoading}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              handleDelete();
+            }}
+            disabled={!isConfirmed || isLoading}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-semibold"
+          >
+            {isLoading ? "Deleting..." : "Permanently Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};

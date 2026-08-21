@@ -8,6 +8,8 @@
     "dev:ssl": "vite --mode ssl",
     "dev:testsprite": "vite --host 0.0.0.0 --port 4173",
     "dev:force": "vite --force",
+    "admin:dev": "vite --config ./admin-portal/vite.config.ts ./admin-portal",
+    "admin:build": "vite build --config ./admin-portal/vite.config.ts ./admin-portal",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
