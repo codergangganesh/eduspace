@@ -299,15 +299,33 @@ export function AICoachWidget() {
                     setDeepDive(finalDeepDive);
                 });
 
-                // Save for today
-                await supabase.from('knowledge_nodes').upsert({
-                    user_id: user.id,
-                    entity_type: 'chat',
-                    source_id: user.id,
-                    label: personalKey,
-                    metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id,label' });
+                // Save for today safely
+                try {
+                    const { data: existingNode } = await supabase
+                        .from('knowledge_nodes')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .eq('label', personalKey)
+                        .maybeSingle();
+
+                    if (existingNode?.id) {
+                        await supabase.from('knowledge_nodes').update({
+                            metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
+                            updated_at: new Date().toISOString()
+                        }).eq('id', existingNode.id);
+                    } else {
+                        await supabase.from('knowledge_nodes').insert({
+                            user_id: user.id,
+                            entity_type: 'chat',
+                            source_id: user.id,
+                            label: personalKey,
+                            metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
+                            updated_at: new Date().toISOString()
+                        });
+                    }
+                } catch (saveErr) {
+                    console.warn("Could not cache knowledge node:", saveErr);
+                }
 
                 lastFetchedDateRef.current = todayStr;
             } catch (err) {

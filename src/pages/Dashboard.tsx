@@ -89,7 +89,7 @@ export default function Dashboard() {
           .from('knowledge_nodes')
           .select('metadata')
           .eq('user_id', user.id)
-          .eq('entity_type', 'dashboard_snapshot')
+          .eq('entity_type', 'chat')
           .eq('label', snapshotKey)
           .maybeSingle();
 
@@ -168,10 +168,10 @@ export default function Dashboard() {
         console.log('[Dashboard] Creating fresh snapshot for today');
         try {
             await supabase.from('knowledge_nodes').insert({
-                user_id: user.id || '',
-                entity_type: 'dashboard_snapshot',
+                user_id: user.id,
+                entity_type: 'chat',
                 label: snapshotKey,
-                source_id: '00000000-0000-0000-0000-000000000000',
+                source_id: user.id || '00000000-0000-0000-0000-000000000000',
                 metadata: newSnapshot as any,
                 updated_at: new Date().toISOString()
             });

@@ -215,7 +215,7 @@ export const aiChatService = {
         if (!user) throw new Error('User not authenticated');
 
         // First, check if there's an existing feedback
-        const { data: existing, error: fetchError } = await supabase
+        const { data: existing, error: fetchError } = await (supabase as any)
             .from('ai_message_feedback')
             .select('id, feedback_type')
             .eq('message_id', messageId)
@@ -227,7 +227,7 @@ export const aiChatService = {
         if (existing) {
             // If same feedback, delete it (toggle off)
             if (existing.feedback_type === feedbackType) {
-                const { error: deleteError } = await supabase
+                const { error: deleteError } = await (supabase as any)
                     .from('ai_message_feedback')
                     .delete()
                     .eq('id', existing.id);
@@ -236,7 +236,7 @@ export const aiChatService = {
                 return null;
             } else {
                 // Switch to new feedback
-                const { error: updateError } = await supabase
+                const { error: updateError } = await (supabase as any)
                     .from('ai_message_feedback')
                     .update({ feedback_type: feedbackType, updated_at: new Date().toISOString() })
                     .eq('id', existing.id);
@@ -246,7 +246,7 @@ export const aiChatService = {
             }
         } else {
             // Create new feedback
-            const { error: insertError } = await supabase
+            const { error: insertError } = await (supabase as any)
                 .from('ai_message_feedback')
                 .insert({
                     message_id: messageId,
@@ -309,12 +309,15 @@ export const aiChatService = {
                 } catch {
                     errorData = { error: errorText };
                 }
-                console.error('AI Chat Error Diagnostics:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: functionUrl,
-                    error: errorData
-                });
+                if (response.status === 503) {
+                    console.warn('[AI Chat] AI provider temporarily busy or rate limited (503). Using cached/fallback response.');
+                } else {
+                    console.error('AI Chat Error:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorData
+                    });
+                }
                 throw new Error(errorData.details || errorData.error || `AI Service Error (${response.status})`);
             }
 

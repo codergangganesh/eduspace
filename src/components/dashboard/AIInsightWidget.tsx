@@ -121,14 +121,32 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
                 });
 
                 if (finalBriefing) {
-                    await supabase.from('knowledge_nodes').upsert({
-                        user_id: SYSTEM_USER_ID,
-                        entity_type: 'chat',
-                        source_id: '00000000-0000-0000-0000-000000000000',
-                        label: globalKey,
-                        metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id,label' });
+                    try {
+                        const { data: existingNode } = await supabase
+                            .from('knowledge_nodes')
+                            .select('id')
+                            .eq('user_id', SYSTEM_USER_ID)
+                            .eq('label', globalKey)
+                            .maybeSingle();
+
+                        if (existingNode?.id) {
+                            await supabase.from('knowledge_nodes').update({
+                                metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
+                                updated_at: new Date().toISOString()
+                            }).eq('id', existingNode.id);
+                        } else {
+                            await supabase.from('knowledge_nodes').insert({
+                                user_id: SYSTEM_USER_ID,
+                                entity_type: 'chat',
+                                source_id: '00000000-0000-0000-0000-000000000000',
+                                label: globalKey,
+                                metadata: { briefing: finalBriefing, deepDive: finalDeepDive },
+                                updated_at: new Date().toISOString()
+                            });
+                        }
+                    } catch (saveErr) {
+                        console.warn("Could not cache knowledge node:", saveErr);
+                    }
                     lastFetchedDateRef.current = todayStr;
                 }
             } catch (error) {
@@ -212,14 +230,33 @@ export function AIInsightWidget({ data }: AIInsightWidgetProps) {
             });
 
             const todayStr = new Date().toISOString().split('T')[0];
-            await supabase.from('knowledge_nodes').upsert({
-                user_id: profile?.id,
-                entity_type: 'daily_chat_history',
-                source_id: '00000000-0000-0000-0000-000000000000',
-                label: `daily_chat_${todayStr}`,
-                metadata: { messages: [...chatMessages, newMessage, { role: 'assistant', content: aiResponse }] },
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,label' });
+            const chatLabel = `daily_chat_${todayStr}`;
+            try {
+                const { data: existingChat } = await supabase
+                    .from('knowledge_nodes')
+                    .select('id')
+                    .eq('user_id', profile?.id)
+                    .eq('label', chatLabel)
+                    .maybeSingle();
+
+                if (existingChat?.id) {
+                    await supabase.from('knowledge_nodes').update({
+                        metadata: { messages: [...chatMessages, newMessage, { role: 'assistant', content: aiResponse }] },
+                        updated_at: new Date().toISOString()
+                    }).eq('id', existingChat.id);
+                } else {
+                    await supabase.from('knowledge_nodes').insert({
+                        user_id: profile?.id,
+                        entity_type: 'daily_chat_history',
+                        source_id: '00000000-0000-0000-0000-000000000000',
+                        label: chatLabel,
+                        metadata: { messages: [...chatMessages, newMessage, { role: 'assistant', content: aiResponse }] },
+                        updated_at: new Date().toISOString()
+                    });
+                }
+            } catch (saveErr) {
+                console.warn("Could not cache chat history:", saveErr);
+            }
 
         } catch (error) {
             console.error("AI streaming error:", error);

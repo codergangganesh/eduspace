@@ -57,8 +57,9 @@ export function useStreakDuels() {
   useEffect(() => {
     if (!user?.id) return;
 
+    const channelId = `streak_duels_changes_${user.id}_${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
-      .channel(`streak_duels_changes_${user.id}`)
+      .channel(channelId)
       .on(
         'postgres_changes',
         {
