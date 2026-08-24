@@ -20,6 +20,13 @@ import {
   Database,
   Mail,
   ShieldCheck,
+  Fingerprint,
+  Laptop,
+  Smartphone,
+  Key,
+  Plus,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -32,7 +39,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import SEO from "@/components/SEO";
+import {
+  passkeyService,
+  PasskeyFactor,
+  isPasskeySupported,
+  getSuggestedPasskeyName,
+} from "@/services/passkey.service";
+import { useEffect } from "react";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -43,6 +67,115 @@ export default function Settings() {
   const [password, setPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // Passkeys state
+  const [passkeys, setPasskeys] = useState<PasskeyFactor[]>([]);
+  const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
+  const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false);
+  const [passkeyName, setPasskeyName] = useState("");
+  const [isAddPasskeyOpen, setIsAddPasskeyOpen] = useState(false);
+  const [deletingPasskey, setDeletingPasskey] = useState<PasskeyFactor | null>(null);
+  const [isDeletingPasskey, setIsDeletingPasskey] = useState(false);
+
+  useEffect(() => {
+    fetchPasskeys();
+  }, []);
+
+  const fetchPasskeys = async () => {
+    try {
+      setIsLoadingPasskeys(true);
+      const { data, error } = await passkeyService.listPasskeys();
+      if (!error && data) {
+        setPasskeys(data);
+      }
+    } catch (err) {
+      console.error("Error fetching passkeys:", err);
+    } finally {
+      setIsLoadingPasskeys(false);
+    }
+  };
+
+  const handleOpenAddPasskey = () => {
+    setPasskeyName(getSuggestedPasskeyName());
+    setIsAddPasskeyOpen(true);
+  };
+
+  const handleRegisterPasskey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passkeyName.trim()) {
+      toast({
+        title: "Device Name Required",
+        description: "Please enter a recognizable name for this passkey.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsRegisteringPasskey(true);
+      const { data, error } = await passkeyService.registerPasskey(passkeyName.trim());
+
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Passkey Registered",
+        description: "Your passkey has been added. You can now use it to sign in without a password.",
+      });
+
+      setIsAddPasskeyOpen(false);
+      setPasskeyName("");
+      await fetchPasskeys();
+    } catch (err: any) {
+      toast({
+        title: "Registration Error",
+        description: err.message || "Failed to register passkey.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegisteringPasskey(false);
+    }
+  };
+
+  const handleConfirmDeletePasskey = async () => {
+    if (!deletingPasskey) return;
+
+    try {
+      setIsDeletingPasskey(true);
+      const { success, error } = await passkeyService.removePasskey(deletingPasskey.id);
+
+      if (!success || error) {
+        toast({
+          title: "Failed to Remove",
+          description: error || "Could not delete passkey.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Passkey Removed",
+        description: `Passkey "${deletingPasskey.friendly_name}" was successfully removed.`,
+      });
+
+      setDeletingPasskey(null);
+      await fetchPasskeys();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to delete passkey.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingPasskey(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (!user || !user.email) return;
@@ -157,6 +290,152 @@ export default function Settings() {
                 <p className="text-xs text-muted-foreground mt-2 italic">
                   All administrative notifications and security alerts are dispatched to this address.
                 </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Passkeys & Biometric Security Section */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
+            <div className="md:col-span-1">
+              <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+                <Fingerprint className="size-5 text-blue-500" />
+                Passkeys & Biometrics
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Sign in to EduSpace faster and more securely using Windows Hello, Touch ID, Face ID, or Google Password Manager.
+              </p>
+            </div>
+
+            <div className="md:col-span-2 space-y-4">
+              <div className="bg-secondary/10 border border-border/50 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                      <span>Saved Passkeys</span>
+                      <Badge variant="outline" className="text-[10px] font-bold text-blue-500 border-blue-500/30">
+                        FIDO2
+                      </Badge>
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Devices and security keys registered for passwordless sign-in.
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleOpenAddPasskey}
+                    className="text-xs font-semibold gap-1.5 h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                  >
+                    <Plus className="size-3.5" />
+                    Add Passkey
+                  </Button>
+                </div>
+
+                {/* Passkeys List */}
+                {isLoadingPasskeys ? (
+                  <div className="space-y-2 py-2">
+                    <div className="h-16 bg-secondary/30 animate-pulse rounded-xl" />
+                  </div>
+                ) : passkeys.length === 0 ? (
+                  <div className="text-center py-6 px-4 rounded-xl border border-dashed border-border/70 bg-secondary/5 space-y-3">
+                    <div className="mx-auto size-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                      <Key className="size-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">No passkeys added yet</p>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                        Add a passkey to sign in instantly with biometrics or Google Password Manager without typing your password.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenAddPasskey}
+                      className="text-xs font-semibold gap-1.5 h-8"
+                    >
+                      <Fingerprint className="size-3.5 text-blue-500" />
+                      Register This Device
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {passkeys.map((factor) => {
+                      const nameLower = factor.friendly_name.toLowerCase();
+                      const isGoogle = nameLower.includes("google") || nameLower.includes("password manager") || nameLower.includes("chrome");
+                      const isApple = nameLower.includes("apple") || nameLower.includes("mac") || nameLower.includes("iphone") || nameLower.includes("ipad");
+                      const isWindows = nameLower.includes("windows");
+                      const isMobile = nameLower.includes("phone") || nameLower.includes("android");
+
+                      const DeviceIcon = isWindows ? Laptop : isMobile ? Smartphone : isApple ? Fingerprint : Key;
+
+                      return (
+                        <div
+                          key={factor.id}
+                          className="flex items-center justify-between p-3.5 rounded-xl bg-background border border-border/60 hover:border-blue-500/40 transition-all shadow-xs"
+                        >
+                          <div className="flex items-center space-x-3 min-w-0">
+                            <div className={cn(
+                              "size-10 rounded-xl flex items-center justify-center shrink-0",
+                              isGoogle
+                                ? "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs"
+                                : "bg-blue-500/10 text-blue-600"
+                            )}>
+                              {isGoogle ? (
+                                <svg className="size-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    fill="#4285F4"
+                                  />
+                                  <path
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    fill="#34A853"
+                                  />
+                                  <path
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                                    fill="#FBBC05"
+                                  />
+                                  <path
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                                    fill="#EA4335"
+                                  />
+                                </svg>
+                              ) : (
+                                <DeviceIcon className="size-5" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-sm text-foreground truncate">
+                                  {factor.friendly_name}
+                                </p>
+                                <Badge variant="outline" className="text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5">
+                                  Active
+                                </Badge>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                Added {new Date(factor.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingPasskey(factor)}
+                            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2.5 shrink-0 gap-1"
+                            title="Remove passkey"
+                          >
+                            <Trash2 className="size-3.5" />
+                            <span className="hidden sm:inline">Remove</span>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -329,6 +608,122 @@ export default function Settings() {
               </div>
             </div>
           </section>
+
+          {/* Add Passkey Modal Dialog */}
+          <Dialog open={isAddPasskeyOpen} onOpenChange={setIsAddPasskeyOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-base font-bold flex items-center gap-2">
+                  <Fingerprint className="size-5 text-blue-600" />
+                  Register New Passkey
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Give this device or key a name, then complete the biometric verification prompt.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleRegisterPasskey} className="space-y-4 py-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="passkey-device-name" className="text-xs font-semibold">
+                    Device Label
+                  </Label>
+                  <Input
+                    id="passkey-device-name"
+                    value={passkeyName}
+                    onChange={(e) => setPasskeyName(e.target.value)}
+                    placeholder="e.g. My Phone / Windows Hello"
+                    className="h-10 text-sm"
+                    disabled={isRegisteringPasskey}
+                    autoFocus
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    This helps you recognize this authenticator in your account security settings.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-xs text-muted-foreground flex items-start gap-2.5">
+                  <Sparkles className="size-4 text-blue-500 shrink-0 mt-0.5" />
+                  <span>
+                    When you click Continue, your device will prompt you with Windows Hello, Touch ID, Face ID, or Google Password Manager.
+                  </span>
+                </div>
+
+                <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddPasskeyOpen(false)}
+                    disabled={isRegisteringPasskey}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isRegisteringPasskey || !passkeyName.trim()}
+                    className="text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isRegisteringPasskey ? (
+                      <>
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint className="size-3.5" />
+                        Continue to Verify
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Passkey Confirmation Dialog */}
+          <AlertDialog open={Boolean(deletingPasskey)} onOpenChange={(open) => !open && setDeletingPasskey(null)}>
+            <AlertDialogContent className="sm:max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-base font-bold flex items-center gap-2 text-destructive">
+                  <Trash2 className="size-5" />
+                  Remove Passkey?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-xs leading-relaxed">
+                  Are you sure you want to remove <strong>"{deletingPasskey?.friendly_name}"</strong>? You will no longer be able to sign in using this biometric device until you re-register it.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+                <AlertDialogCancel
+                  disabled={isDeletingPasskey}
+                  onClick={() => setDeletingPasskey(null)}
+                  className="text-xs"
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleConfirmDeletePasskey();
+                  }}
+                  disabled={isDeletingPasskey}
+                  className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeletingPasskey ? (
+                    <>
+                      <RefreshCw className="size-3.5 animate-spin mr-1.5" />
+                      Removing...
+                    </>
+                  ) : (
+                    "Remove Passkey"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </motion.div>
     </DashboardLayout>

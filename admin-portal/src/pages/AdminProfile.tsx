@@ -29,6 +29,11 @@ import {
   X,
   ShieldCheck,
   Sparkles,
+  Fingerprint,
+  Key,
+  Plus,
+  ShieldAlert,
+  Smartphone,
 } from "lucide-react";
 import {
   Card,
@@ -51,9 +56,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn, getInitials, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminAuditLog } from "@/types";
+import {
+  passkeyService,
+  PasskeyFactor,
+  isPasskeySupported,
+  getSuggestedPasskeyName,
+} from "@/services/passkey.service";
 
 type ProfileTab = "personal" | "preferences" | "security" | "activity";
 
@@ -98,6 +127,15 @@ export const AdminProfile: React.FC = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Passkey & WebAuthn states
+  const [passkeys, setPasskeys] = useState<PasskeyFactor[]>([]);
+  const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
+  const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false);
+  const [passkeyName, setPasskeyName] = useState("");
+  const [isAddPasskeyOpen, setIsAddPasskeyOpen] = useState(false);
+  const [deletingPasskey, setDeletingPasskey] = useState<PasskeyFactor | null>(null);
+  const [isDeletingPasskey, setIsDeletingPasskey] = useState(false);
+
   // Activity logs
   const [recentLogs, setRecentLogs] = useState<AdminAuditLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
@@ -133,8 +171,96 @@ export const AdminProfile: React.FC = () => {
   useEffect(() => {
     if (activeTab === "activity") {
       fetchAdminLogs();
+    } else if (activeTab === "security") {
+      fetchPasskeys();
     }
   }, [activeTab]);
+
+  const fetchPasskeys = async () => {
+    try {
+      setIsLoadingPasskeys(true);
+      const { data, error } = await passkeyService.listPasskeys();
+      if (!error && data) {
+        setPasskeys(data);
+      }
+    } catch (err) {
+      console.error("Error fetching passkeys:", err);
+    } finally {
+      setIsLoadingPasskeys(false);
+    }
+  };
+
+  const handleOpenAddPasskey = () => {
+    setPasskeyName(getSuggestedPasskeyName());
+    setIsAddPasskeyOpen(true);
+  };
+
+  const handleRegisterPasskey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passkeyName.trim()) {
+      toast.error("Please enter a device name for this passkey.");
+      return;
+    }
+
+    try {
+      setIsRegisteringPasskey(true);
+      const { data, error } = await passkeyService.registerPasskey(passkeyName.trim());
+
+      if (error) {
+        toast.error(error);
+        return;
+      }
+
+      toast.success("Passkey registered successfully! You can now sign in using your biometric sensor or security key.");
+      setIsAddPasskeyOpen(false);
+      setPasskeyName("");
+      await fetchPasskeys();
+
+      if (user) {
+        await auditService.logAction({
+          action: "REGISTER_PASSKEY" as any,
+          targetUserId: user.id,
+          targetEmail: user.email,
+          details: { friendly_name: passkeyName.trim() },
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to register passkey.");
+    } finally {
+      setIsRegisteringPasskey(false);
+    }
+  };
+
+  const handleConfirmDeletePasskey = async () => {
+    if (!deletingPasskey) return;
+
+    try {
+      setIsDeletingPasskey(true);
+      const { success, error } = await passkeyService.removePasskey(deletingPasskey.id);
+
+      if (!success || error) {
+        toast.error(error || "Failed to remove passkey.");
+        return;
+      }
+
+      toast.success(`Passkey "${deletingPasskey.friendly_name}" removed successfully.`);
+      setDeletingPasskey(null);
+      await fetchPasskeys();
+
+      if (user) {
+        await auditService.logAction({
+          action: "REMOVE_PASSKEY" as any,
+          targetUserId: user.id,
+          targetEmail: user.email,
+          details: { friendly_name: deletingPasskey.friendly_name },
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete passkey.");
+    } finally {
+      setIsDeletingPasskey(false);
+    }
+  };
 
   const fetchAdminLogs = async () => {
     try {
@@ -880,108 +1006,376 @@ export const AdminProfile: React.FC = () => {
             </Card>
           )}
 
-          {/* TAB 3: Security & Password */}
+          {/* TAB 3: Security & Password + Passkeys */}
           {activeTab === "security" && (
-            <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
-              <CardHeader className="pb-3 sm:pb-4 border-b border-border/40">
-                <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
-                  <Lock className="h-4 w-4 text-primary shrink-0" />
-                  Security & Password Management
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Update your administrator account password and review active security policies.
-                </CardDescription>
-              </CardHeader>
-
-              <form onSubmit={handlePasswordChange}>
-                <CardContent className="space-y-4 pt-4 sm:pt-5 max-w-lg">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Current Password</Label>
-                    <div className="relative">
-                      <Input
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="h-9 sm:h-10 text-sm pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Card 1: Passkeys & Biometric Security */}
+              <Card className="border-border shadow-sm bg-card overflow-hidden">
+                <CardHeader className="pb-3 sm:pb-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                        <Fingerprint className="h-4 w-4 text-primary shrink-0" />
+                        Passkeys & Biometric Authentication
+                      </CardTitle>
+                      <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/30 py-0 px-2 uppercase tracking-wider">
+                        FIDO2 / WebAuthn
+                      </Badge>
                     </div>
+                    <CardDescription className="text-xs mt-1">
+                      Log in to the Admin Portal instantly using Windows Hello, Touch ID, Face ID, or a hardware security key (YubiKey).
+                    </CardDescription>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">New Administrator Password</Label>
-                    <div className="relative">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleOpenAddPasskey}
+                    className="text-xs font-semibold shadow-sm gap-1.5 h-8 sm:h-9 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Register New Passkey
+                  </Button>
+                </CardHeader>
+
+                <CardContent className="pt-4 sm:pt-5 space-y-4">
+                  {/* Browser Compatibility Notice */}
+                  {!isPasskeySupported() ? (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2.5">
+                      <ShieldAlert className="h-4 w-4 shrink-0" />
+                      <span>
+                        WebAuthn / Passkeys are not supported on this browser. You can continue using password authentication.
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {/* Passkeys List */}
+                  {isLoadingPasskeys ? (
+                    <div className="space-y-2.5 py-2">
+                      {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="h-16 bg-muted/50 animate-pulse rounded-xl" />
+                      ))}
+                    </div>
+                  ) : passkeys.length === 0 ? (
+                    <div className="text-center py-8 px-4 rounded-2xl border-2 border-dashed border-border/70 bg-muted/10 space-y-3">
+                      <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Key className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-sm text-foreground">No Passkeys Registered</h4>
+                        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                          Add a passkey to enable biometric authentication on this workstation or hardware security keys.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenAddPasskey}
+                        className="text-xs font-semibold gap-1.5 h-8"
+                      >
+                        <Fingerprint className="h-3.5 w-3.5 text-primary" />
+                        Create Your First Passkey
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {passkeys.map((factor) => {
+                        const nameLower = factor.friendly_name.toLowerCase();
+                        const isGoogle = nameLower.includes("google") || nameLower.includes("password manager") || nameLower.includes("chrome");
+                        const isApple = nameLower.includes("apple") || nameLower.includes("mac") || nameLower.includes("iphone") || nameLower.includes("ipad");
+                        const isWindows = nameLower.includes("windows");
+                        const isMobile = nameLower.includes("phone") || nameLower.includes("android");
+
+                        const DeviceIcon = isWindows ? Laptop : isMobile ? Smartphone : isApple ? Fingerprint : Key;
+
+                        return (
+                          <div
+                            key={factor.id}
+                            className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border/80 hover:border-primary/40 transition-all shadow-xs"
+                          >
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                                isGoogle
+                                  ? "bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-xs"
+                                  : "bg-primary/10 text-primary"
+                              )}>
+                                {isGoogle ? (
+                                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                      fill="#4285F4"
+                                    />
+                                    <path
+                                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                      fill="#34A853"
+                                    />
+                                    <path
+                                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                                      fill="#FBBC05"
+                                    />
+                                    <path
+                                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                                      fill="#EA4335"
+                                    />
+                                  </svg>
+                                ) : (
+                                  <DeviceIcon className="h-5 w-5" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-bold text-sm text-foreground truncate">
+                                    {factor.friendly_name}
+                                  </p>
+                                  <Badge variant="outline" className="text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5">
+                                    Active
+                                  </Badge>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  Added on {formatDate(factor.created_at)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingPasskey(factor)}
+                              className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2.5 shrink-0 gap-1"
+                              title="Delete this passkey"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Remove</span>
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Card 2: Security & Password Management */}
+              <Card className="border-border shadow-sm bg-card">
+                <CardHeader className="pb-3 sm:pb-4 border-b border-border/40">
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                    <Lock className="h-4 w-4 text-primary shrink-0" />
+                    Account Password Management
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Update your administrator account password as a fallback sign-in method.
+                  </CardDescription>
+                </CardHeader>
+
+                <form onSubmit={handlePasswordChange}>
+                  <CardContent className="space-y-4 pt-4 sm:pt-5 max-w-lg">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Current Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="h-9 sm:h-10 text-sm pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">New Administrator Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="h-9 sm:h-10 text-sm pr-10"
+                          required
+                          minLength={8}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Minimum 8 characters with uppercase, lowercase, and numbers.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Confirm New Password</Label>
                       <Input
                         type={showPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="••••••••••••"
-                        className="h-9 sm:h-10 text-sm pr-10"
+                        className="h-9 sm:h-10 text-sm"
                         required
-                        minLength={8}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Minimum 8 characters with uppercase, lowercase, and numbers.
-                    </p>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Confirm New Password</Label>
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="h-9 sm:h-10 text-sm"
-                      required
-                    />
-                  </div>
+                    <div className="p-3.5 rounded-xl bg-muted/40 border border-border/80 flex items-start gap-2.5 text-xs text-muted-foreground">
+                      <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <span>
+                        Administrative credentials provide privileged access to institutional data. Use a strong, unique password.
+                      </span>
+                    </div>
+                  </CardContent>
 
-                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/80 flex items-start gap-2.5 text-xs text-muted-foreground">
-                    <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <span>
-                      Administrative credentials provide privileged access to institutional data. Use a strong, unique password.
-                    </span>
-                  </div>
-                </CardContent>
+                  <CardFooter className="pt-2 pb-4 border-t border-border/40 flex items-center justify-end">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={isUpdatingPassword || !newPassword}
+                      className="text-xs font-semibold shadow-md shadow-primary/20 gap-1.5"
+                    >
+                      {isUpdatingPassword ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          Updating Password...
+                        </>
+                      ) : (
+                        <>
+                          <KeyRound className="h-3.5 w-3.5" />
+                          Update Password
+                        </>
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
 
-                <CardFooter className="pt-2 pb-4 border-t border-border/40 flex items-center justify-end">
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={isUpdatingPassword || !newPassword}
-                    className="text-xs font-semibold shadow-md shadow-primary/20 gap-1.5"
-                  >
-                    {isUpdatingPassword ? (
-                      <>
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        Updating Password...
-                      </>
-                    ) : (
-                      <>
-                        <KeyRound className="h-3.5 w-3.5" />
-                        Update Password
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
+              {/* Add Passkey Modal Dialog */}
+              <Dialog open={isAddPasskeyOpen} onOpenChange={setIsAddPasskeyOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-bold flex items-center gap-2">
+                      <Fingerprint className="h-5 w-5 text-primary" />
+                      Register New Passkey
+                    </DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Enter a recognizable name for this device or security key, then complete the biometric prompt.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <form onSubmit={handleRegisterPasskey} className="space-y-4 py-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="passkey-name" className="text-xs font-semibold">
+                        Passkey Device Name
+                      </Label>
+                      <Input
+                        id="passkey-name"
+                        value={passkeyName}
+                        onChange={(e) => setPasskeyName(e.target.value)}
+                        placeholder="e.g. MacBook Pro Touch ID / Windows Hello"
+                        className="h-10 text-sm"
+                        disabled={isRegisteringPasskey}
+                        autoFocus
+                        required
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        This label helps you identify this authenticator in your security settings.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-muted/40 border border-border text-xs text-muted-foreground flex items-start gap-2.5">
+                      <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <span>
+                        When you click continue, your operating system will display its native Windows Hello / Touch ID / Security Key verification dialog.
+                      </span>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAddPasskeyOpen(false)}
+                        disabled={isRegisteringPasskey}
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={isRegisteringPasskey || !passkeyName.trim()}
+                        className="text-xs font-semibold gap-1.5 shadow-md"
+                      >
+                        {isRegisteringPasskey ? (
+                          <>
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            Verifying Device...
+                          </>
+                        ) : (
+                          <>
+                            <Fingerprint className="h-3.5 w-3.5" />
+                            Continue to Verify
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Delete Passkey Confirmation Dialog */}
+              <AlertDialog open={Boolean(deletingPasskey)} onOpenChange={(open) => !open && setDeletingPasskey(null)}>
+                <AlertDialogContent className="sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-base font-bold flex items-center gap-2 text-destructive">
+                      <Trash2 className="h-5 w-5" />
+                      Remove Passkey?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-xs leading-relaxed">
+                      Are you sure you want to remove <strong>"{deletingPasskey?.friendly_name}"</strong>? You will no longer be able to sign in using this biometric authenticator until you re-register it.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+
+                  <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+                    <AlertDialogCancel
+                      disabled={isDeletingPasskey}
+                      onClick={() => setDeletingPasskey(null)}
+                      className="text-xs"
+                    >
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleConfirmDeletePasskey();
+                      }}
+                      disabled={isDeletingPasskey}
+                      className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeletingPasskey ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                          Removing...
+                        </>
+                      ) : (
+                        "Remove Passkey"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           )}
 
           {/* TAB 4: Admin Activity Log */}

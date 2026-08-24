@@ -297,6 +297,9 @@ export default defineConfig(({ mode }) => {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    force: true,
+  },
   build: {
     chunkSizeWarningLimit: 1000,
     minify: 'esbuild',
@@ -345,6 +348,3 @@ export default defineConfig(({ mode }) => {
   },
 };
 });
-
-
-

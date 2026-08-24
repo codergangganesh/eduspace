@@ -56,30 +56,6 @@ export const SuspensionModal: React.FC = () => {
             return;
           }
 
-          // 4. Query Supabase student_profiles by email
-          const { data: sp } = await (supabase as any)
-            .from("student_profiles")
-            .select("status")
-            .ilike("email", cleanEmail)
-            .maybeSingle();
-
-          if (sp?.status === "suspended") {
-            setIsOpen(true);
-            return;
-          }
-
-          // 5. Query Supabase class_students by email
-          const { data: cs } = await (supabase as any)
-            .from("class_students")
-            .select("status")
-            .ilike("email", cleanEmail)
-            .maybeSingle();
-
-          if (cs?.status === "suspended") {
-            setIsOpen(true);
-            return;
-          }
-
           // 6. Query Supabase notifications for ACCOUNT_SUSPENDED record
           const { data: notif } = await (supabase as any)
             .from("notifications")

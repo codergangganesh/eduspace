@@ -28,12 +28,13 @@ export const supabase = createClient<Database>(
   SUPABASE_URL || FALLBACK_SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_ANON_KEY,
   {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    // // Disable lock manager to prevent NavigatorLockAcquireTimeoutError
-    // storageKey: 'eduspace-auth-token',
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      experimental: {
+        passkey: true,
+      },
+    } as any,
   }
-}
 );

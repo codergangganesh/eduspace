@@ -49,30 +49,6 @@ export const SuspensionBanner: React.FC = () => {
             return;
           }
 
-          // 4. Query Supabase student_profiles by user.email
-          const { data: sp } = await (supabase as any)
-            .from("student_profiles")
-            .select("status")
-            .ilike("email", cleanEmail)
-            .maybeSingle();
-
-          if (sp?.status === "suspended") {
-            setIsSuspended(true);
-            return;
-          }
-
-          // 5. Query Supabase class_students by user.email
-          const { data: cs } = await (supabase as any)
-            .from("class_students")
-            .select("status")
-            .ilike("email", cleanEmail)
-            .maybeSingle();
-
-          if (cs?.status === "suspended") {
-            setIsSuspended(true);
-            return;
-          }
-
           // 6. Query Supabase notifications table
           const { data: notif } = await (supabase as any)
             .from("notifications")

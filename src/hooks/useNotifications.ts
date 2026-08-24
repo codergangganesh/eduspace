@@ -106,9 +106,10 @@ export function useNotifications() {
 
         fetchNotifications();
 
-        // Subscribe to real-time updates
+        // Subscribe to real-time updates with unique channel identifier
+        const channelId = `notifications-${user.id}-${Math.random().toString(36).substring(2, 9)}`;
         const subscription = supabase
-            .channel(`notifications-${user.id}`) // Unique channel per user
+            .channel(channelId)
             .on(
                 "postgres_changes",
                 {

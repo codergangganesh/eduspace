@@ -114,6 +114,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithPasskey: (captchaToken?: string) => Promise<{ success: boolean; error?: string; role?: AppRole | null }>;
   signUp: (email: string, password: string, fullName: string, role: AppRole, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
   signInWithNotion: (selectedRole: AppRole) => Promise<{ success: boolean; error?: string }>;
@@ -393,6 +394,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error("Sign in exception:", error);
       return { success: false, error: error.message || "Network error. Please check your connection and try again." };
+    }
+  };
+
+  const signInWithPasskey = async (captchaToken?: string) => {
+    try {
+      const auth = supabase.auth as any;
+
+      if (typeof auth.signInWithPasskey !== "function") {
+        return { success: false, error: "Passkey authentication is not supported on this client." };
+      }
+
+      const res = await auth.signInWithPasskey(
+        captchaToken ? { options: { captchaToken } } : undefined
+      );
+
+      if (res?.error) {
+        return { success: false, error: res.error.message || "Passkey authentication failed." };
+      }
+
+      const currentUser = res?.data?.user;
+      if (currentUser) {
+        const [userRole] = await Promise.all([
+          fetchRole(currentUser.id),
+          fetchProfile(currentUser.id),
+        ]);
+        return { success: true, role: userRole };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      if (error.name === "NotAllowedError") {
+        return { success: false, error: "Passkey verification was cancelled." };
+      }
+      return { success: false, error: error.message || "Passkey authentication error." };
     }
   };
 
@@ -746,6 +781,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         signIn,
+        signInWithPasskey,
         signUp,
         signInWithGoogle,
         signInWithNotion,

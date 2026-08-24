@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Mail, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Mail, Eye, EyeOff, Loader2, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,13 +11,15 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
+import { isPasskeySupported } from "@/services/passkey.service";
 
 export default function LecturerLogin() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { signIn, isAuthenticated, role } = useAuth();
+    const { signIn, signInWithPasskey, isAuthenticated, role } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
     const isCaptchaVerified = Boolean(captchaToken);
 
@@ -53,6 +55,30 @@ export default function LecturerLogin() {
         } else {
             toast.error(result.error || "Login failed");
             setIsLoading(false);
+        }
+    };
+
+    const handlePasskeySignIn = async () => {
+        if (!isPasskeySupported()) {
+            toast.error("WebAuthn / Passkeys are not supported by this browser.");
+            return;
+        }
+        if (!captchaToken) {
+            toast.error("Please complete the security verification check first.");
+            return;
+        }
+        try {
+            setIsPasskeyLoading(true);
+            const result = await signInWithPasskey(captchaToken);
+            if (result.success) {
+                toast.success("Welcome back!");
+            } else {
+                toast.error(result.error || "Passkey sign-in failed");
+                setIsPasskeyLoading(false);
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Passkey sign-in error");
+            setIsPasskeyLoading(false);
         }
     };
 
@@ -149,7 +175,7 @@ export default function LecturerLogin() {
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={!isCaptchaVerified || isLoading}>
+                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="size-5 mr-2 animate-spin" />
@@ -158,6 +184,22 @@ export default function LecturerLogin() {
                         ) : (
                             "Sign In"
                         )}
+                    </Button>
+
+                    {/* Passkey Sign In Button */}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePasskeySignIn}
+                        disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}
+                        className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-sm font-bold border-border/80 hover:bg-secondary/40 gap-2 mt-2"
+                    >
+                        {isPasskeyLoading ? (
+                            <Loader2 className="size-4 animate-spin text-blue-600" />
+                        ) : (
+                            <Fingerprint className="size-4 text-blue-600" />
+                        )}
+                        <span>Sign in with Passkey / Biometrics</span>
                     </Button>
                 </form>
 

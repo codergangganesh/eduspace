@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useTheme } from "next-themes";
-import { Eye, EyeOff, AlertCircle, Loader2, Sun, Moon, ArrowLeft, CheckCircle2, Mail, Lock, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Loader2, Sun, Moon, ArrowLeft, CheckCircle2, Mail, Lock, ShieldCheck, Fingerprint, Key } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { hasAcceptedCurrentAgreements } from "@/services/legal.service";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { isPasskeySupported } from "@/services/passkey.service";
 
 const ROTATING_MESSAGES = [
   "Manage your institution effortlessly.",
@@ -21,6 +22,7 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -53,7 +55,7 @@ export const Login: React.FC = () => {
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { signIn, user, isAdmin, isLoading: isAuthChecking } = useAdminAuth();
+  const { signIn, signInWithPasskey, user, isAdmin, isLoading: isAuthChecking } = useAdminAuth();
   const navigate = useNavigate();
 
   // Typing Effect Logic
@@ -123,6 +125,43 @@ export const Login: React.FC = () => {
       setErrorMsg(err.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasskeySignIn = async () => {
+    try {
+      setIsPasskeyLoading(true);
+      setErrorMsg("");
+
+      if (!isPasskeySupported()) {
+        setErrorMsg("WebAuthn / Passkeys are not supported by this browser.");
+        setIsPasskeyLoading(false);
+        return;
+      }
+
+      if (!captchaToken) {
+        setErrorMsg("Please verify the security check (CAPTCHA) above before signing in with Passkey.");
+        setIsPasskeyLoading(false);
+        return;
+      }
+
+      const res = await signInWithPasskey(captchaToken);
+
+      if (res.success) {
+        toast.success("Authenticated with Passkey! Welcome to Eduspace Admin.");
+        const currentUserId = res.user?.id || user?.id;
+        if (hasAcceptedCurrentAgreements(currentUserId)) {
+          navigate("/dashboard", { replace: true });
+        } else {
+          navigate("/agreement", { replace: true });
+        }
+      } else {
+        setErrorMsg(res.error || "Passkey verification was cancelled or failed.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to authenticate with passkey.");
+    } finally {
+      setIsPasskeyLoading(false);
     }
   };
 
@@ -326,10 +365,10 @@ export const Login: React.FC = () => {
                   </div>
 
                   {/* Sign In Button */}
-                  <div className="pt-1">
+                  <div className="pt-1 space-y-3">
                     <button
                       type="submit"
-                      disabled={isLoading || !captchaToken}
+                      disabled={isLoading || isPasskeyLoading || !captchaToken}
                       className="w-full h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {isLoading ? (
@@ -337,6 +376,30 @@ export const Login: React.FC = () => {
                       ) : (
                         "Sign in"
                       )}
+                    </button>
+
+                    {/* Passkey Sign In Option (Mobile) */}
+                    <div className="relative my-2">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+                      </div>
+                      <div className="relative flex justify-center text-[10px] uppercase">
+                        <span className="bg-white dark:bg-[#0B0F1A] px-2 text-slate-400 font-bold tracking-wider">OR</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handlePasskeySignIn}
+                      disabled={isLoading || isPasskeyLoading || !captchaToken}
+                      className="w-full h-12 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold rounded-2xl border border-slate-300 dark:border-slate-700 shadow-xs text-xs tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isPasskeyLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : (
+                        <Fingerprint className="h-4 w-4 text-primary" />
+                      )}
+                      <span>Sign in with Passkey / Biometrics</span>
                     </button>
                   </div>
 
@@ -663,10 +726,10 @@ export const Login: React.FC = () => {
                       </div>
 
                       {/* Login Button (Full Width) */}
-                      <div className="pt-1">
+                      <div className="pt-1 space-y-3">
                         <button
                           type="submit"
-                          disabled={isLoading || !captchaToken}
+                          disabled={isLoading || isPasskeyLoading || !captchaToken}
                           className="w-full h-12 px-8 bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white font-bold text-sm tracking-wider uppercase rounded-lg shadow-md hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                           {isLoading ? (
@@ -674,6 +737,30 @@ export const Login: React.FC = () => {
                           ) : (
                             "Login"
                           )}
+                        </button>
+
+                        {/* Passkey Sign In Option (Desktop) */}
+                        <div className="relative my-2">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-300 dark:border-slate-700/80"></div>
+                          </div>
+                          <div className="relative flex justify-center text-[10px] uppercase">
+                            <span className="bg-[#F1F5FB] dark:bg-[#0f172a] px-2 text-slate-400 font-bold tracking-wider">OR</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handlePasskeySignIn}
+                          disabled={isLoading || isPasskeyLoading || !captchaToken}
+                          className="w-full h-11 bg-white hover:bg-slate-50 dark:bg-slate-800/90 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold rounded-lg border border-slate-300 dark:border-slate-700 shadow-xs text-xs tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                          {isPasskeyLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          ) : (
+                            <Fingerprint className="h-4 w-4 text-primary" />
+                          )}
+                          <span>Sign in with Passkey / Biometrics</span>
                         </button>
                       </div>
 

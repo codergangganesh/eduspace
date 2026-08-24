@@ -11,6 +11,7 @@ interface AdminAuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  signInWithPasskey: (factorId?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -262,6 +263,76 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
     }
   };
 
+  const signInWithPasskey = async (captchaToken?: string) => {
+    try {
+      setIsLoading(true);
+
+      const auth = supabase.auth as any;
+      let authenticatedUser: User | null = null;
+      let authenticatedSession: Session | null = null;
+
+      // 1. Invoke native Supabase signInWithPasskey
+      if (typeof auth.signInWithPasskey === "function") {
+        const res = await auth.signInWithPasskey(
+          captchaToken ? { options: { captchaToken } } : undefined
+        );
+
+        if (res?.error) {
+          setIsLoading(false);
+          return { success: false, error: res.error.message || "Passkey verification failed" };
+        }
+
+        if (res?.data?.user) {
+          authenticatedUser = res.data.user;
+          authenticatedSession = res.data.session ?? null;
+        }
+      }
+
+      // 2. Fallback check for session
+      if (!authenticatedUser) {
+        const { data: { session: updatedSession } } = await supabase.auth.getSession();
+        authenticatedUser = updatedSession?.user ?? null;
+        authenticatedSession = updatedSession ?? null;
+      }
+
+      if (!authenticatedUser) {
+        setIsLoading(false);
+        return { success: false, error: "Passkey authentication was not completed." };
+      }
+
+      setUser(authenticatedUser);
+      setSession(authenticatedSession);
+
+      const adminStatus = await withTimeout(
+        checkAdminRole(authenticatedUser.id, authenticatedUser.email, authenticatedUser.user_metadata),
+        3000,
+        isKnownAdminEmail(authenticatedUser.email)
+      );
+      setIsAdmin(adminStatus);
+
+      if (!adminStatus) {
+        setIsLoading(false);
+        return {
+          success: false,
+          error: "Access Denied: You do not have administrator permissions to access the Eduspace Admin Portal.",
+        };
+      }
+
+      const userProfile = await withTimeout(
+        fetchProfile(authenticatedUser.id, authenticatedUser.user_metadata, authenticatedUser.email),
+        3000,
+        makeSyntheticProfile(authenticatedUser.id, authenticatedUser.email, authenticatedUser.user_metadata)
+      );
+      setProfile(userProfile);
+      setIsLoading(false);
+
+      return { success: true, user: authenticatedUser };
+    } catch (err: any) {
+      setIsLoading(false);
+      return { success: false, error: err.message || "Passkey authentication failed." };
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -297,6 +368,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
         isAdmin,
         isLoading,
         signIn,
+        signInWithPasskey,
         signOut,
         refreshProfile,
       }}
