@@ -99,6 +99,8 @@ import {
   isPasskeySupported,
   getSuggestedPasskeyName,
 } from "@/services/passkey.service";
+import { MfaSecurityCard } from "@/components/auth/MfaSecurityCard";
+import { AndroidIcon } from "@/components/auth/MfaEnrollDrawer";
 
 const LeetCodeIcon = ({ className = "size-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -247,12 +249,22 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = false): S
   return [...active, ...defaultsToInclude];
 };
 
-const profileTabs = [
+const studentProfileTabs = [
   { id: "personal", label: "Personal Info", icon: User },
   { id: "academic", label: "Academic Details", icon: GraduationCap },
   { id: "coding", label: "Coding Profiles", icon: Code2 },
   { id: "social", label: "Social Links", icon: Share2 },
   { id: "security", label: "Security", icon: Shield },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "preferences", label: "Settings", icon: Settings },
+];
+
+const lecturerProfileTabs = [
+  { id: "personal", label: "Personal Info", icon: User },
+  { id: "academic", label: "Academic Details", icon: GraduationCap },
+  { id: "2fa", label: "Two-Factor Auth (2FA)", icon: AndroidIcon },
+  { id: "passkeys", label: "Passkeys & Biometrics", icon: Fingerprint },
+  { id: "password", label: "Account Password", icon: Lock },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "preferences", label: "Settings", icon: Settings },
 ];
@@ -275,13 +287,15 @@ export default function Profile() {
 
   const isLecturer = role === "lecturer" || profile?.role === "lecturer";
   const isStudent = !isLecturer;
-  const visibleProfileTabs = profileTabs.filter(
-    (tab) => (tab.id !== "social" && tab.id !== "coding") || isStudent
-  );
+  const visibleProfileTabs = isLecturer ? lecturerProfileTabs : studentProfileTabs;
 
-  const primaryMobileTabs = visibleProfileTabs.filter(
-    (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "coding" || tab.id === "social"
-  );
+  const primaryMobileTabs = isLecturer
+    ? visibleProfileTabs.filter(
+        (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "2fa" || tab.id === "passkeys"
+      )
+    : visibleProfileTabs.filter(
+        (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "coding" || tab.id === "social"
+      );
   const secondaryMobileTabs = visibleProfileTabs.filter(
     (tab) => !primaryMobileTabs.some((p) => p.id === tab.id)
   );
@@ -355,7 +369,7 @@ export default function Profile() {
   const [isDeletingPasskey, setIsDeletingPasskey] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "security" || passkeys.length === 0) {
+    if (activeTab === "security" || activeTab === "passkeys" || passkeys.length === 0) {
       fetchPasskeys();
     }
   }, [activeTab]);
@@ -1668,21 +1682,29 @@ export default function Profile() {
             </>
           )}
 
-          {/* Security Section */}
-          {activeTab === "security" && (
-            <div className="space-y-6">
-              {/* Passkeys & Biometrics Card */}
+          {/* LECTURER TAB: 2FA (Two-Factor Authentication) */}
+          {isLecturer && activeTab === "2fa" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <MfaSecurityCard />
+            </div>
+          )}
+
+          {/* LECTURER TAB: Passkeys & Biometrics */}
+          {isLecturer && activeTab === "passkeys" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div className="bg-surface border border-border rounded-xl p-4 sm:p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
-                  <div>
-                    <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                      <Fingerprint className="size-5 text-blue-600" />
-                      <span>Passkeys & Biometrics</span>
-                      <Badge variant="outline" className="text-[10px] font-bold text-blue-500 border-blue-500/30">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+                        <Fingerprint className="size-5 text-blue-600 shrink-0" />
+                        <span>Passkeys & Biometrics</span>
+                      </h2>
+                      <Badge variant="outline" className="text-[10px] font-bold text-blue-500 border-blue-500/30 py-0.5 px-2 uppercase tracking-wider shrink-0 whitespace-nowrap">
                         FIDO2
                       </Badge>
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
                       Sign in faster and more securely using Windows Hello, Touch ID, Face ID, or Google Password Manager.
                     </p>
                   </div>
@@ -1691,7 +1713,7 @@ export default function Profile() {
                     type="button"
                     size="sm"
                     onClick={handleOpenAddPasskey}
-                    className="text-xs font-semibold gap-1.5 h-9 bg-blue-600 hover:bg-blue-700 text-white shrink-0 shadow-sm"
+                    className="text-xs font-semibold gap-1.5 h-9 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto shrink-0 shadow-sm cursor-pointer"
                   >
                     <Plus className="size-3.5" />
                     Add Passkey
@@ -1739,17 +1761,17 @@ export default function Profile() {
                       return (
                         <div
                           key={factor.id}
-                          className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border/80 hover:border-blue-500/40 transition-all shadow-xs"
+                          className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 hover:border-blue-500/40 transition-all shadow-xs gap-3"
                         >
                           <div className="flex items-center space-x-3 min-w-0">
                             <div className={cn(
-                              "size-10 rounded-xl flex items-center justify-center shrink-0",
+                              "size-9 sm:size-10 rounded-xl flex items-center justify-center shrink-0",
                               isGoogle
                                 ? "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs"
                                 : "bg-blue-500/10 text-blue-600"
                             )}>
                               {isGoogle ? (
-                                <svg className="size-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg className="size-4.5 sm:size-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                                     fill="#4285F4"
@@ -1768,19 +1790,19 @@ export default function Profile() {
                                   />
                                 </svg>
                               ) : (
-                                <DeviceIcon className="size-5" />
+                                <DeviceIcon className="size-4.5 sm:size-5" />
                               )}
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-sm text-foreground truncate">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                <p className="font-bold text-xs sm:text-sm text-foreground truncate">
                                   {factor.friendly_name}
                                 </p>
-                                <Badge variant="outline" className="text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5">
+                                <Badge variant="outline" className="text-[9px] sm:text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5 shrink-0 whitespace-nowrap">
                                   Active
                                 </Badge>
                               </div>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                              <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 truncate">
                                 Added on {new Date(factor.created_at).toLocaleDateString()}
                               </p>
                             </div>
@@ -1791,7 +1813,245 @@ export default function Profile() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setDeletingPasskey(factor)}
-                            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2.5 shrink-0 gap-1"
+                            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2 sm:px-2.5 shrink-0 gap-1"
+                            title="Remove passkey"
+                          >
+                            <Trash2 className="size-3.5" />
+                            <span className="hidden sm:inline">Remove</span>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* LECTURER TAB: Account Password */}
+          {isLecturer && activeTab === "password" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-surface border border-border rounded-xl p-4 sm:p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-6">Change Password</h2>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Current Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+                      <Input
+                        type={showPasswords.current ? "text" : "password"}
+                        value={passwordData.currentPassword}
+                        onChange={(e) =>
+                          setPasswordData((prev) => ({ ...prev, currentPassword: e.target.value }))
+                        }
+                        className="pl-10 pr-10"
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPasswords((prev) => ({ ...prev, current: !prev.current }))
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPasswords.current ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">New Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+                      <Input
+                        type={showPasswords.new ? "text" : "password"}
+                        value={passwordData.newPassword}
+                        onChange={(e) =>
+                          setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))
+                        }
+                        className="pl-10 pr-10"
+                        placeholder="Enter new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPasswords.new ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Confirm New Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+                      <Input
+                        type={showPasswords.confirm ? "text" : "password"}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordData((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                        }
+                        className="pl-10 pr-10"
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPasswords.confirm ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button onClick={handlePasswordChange} disabled={isSaving} className="mt-2">
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STUDENT TAB: Security Section (Combined 2FA + Passkeys + Password) */}
+          {isStudent && activeTab === "security" && (
+            <div className="space-y-6">
+              {/* Card 0: Two-Factor Authentication (TOTP / Google Authenticator) */}
+              <MfaSecurityCard />
+
+              {/* Passkeys & Biometrics Card */}
+              <div className="bg-surface border border-border rounded-xl p-4 sm:p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+                        <Fingerprint className="size-5 text-blue-600 shrink-0" />
+                        <span>Passkeys & Biometrics</span>
+                      </h2>
+                      <Badge variant="outline" className="text-[10px] font-bold text-blue-500 border-blue-500/30 py-0.5 px-2 uppercase tracking-wider shrink-0 whitespace-nowrap">
+                        FIDO2
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Sign in faster and more securely using Windows Hello, Touch ID, Face ID, or Google Password Manager.
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleOpenAddPasskey}
+                    className="text-xs font-semibold gap-1.5 h-9 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto shrink-0 shadow-sm cursor-pointer"
+                  >
+                    <Plus className="size-3.5" />
+                    Add Passkey
+                  </Button>
+                </div>
+
+                {/* Passkeys List */}
+                {isLoadingPasskeys ? (
+                  <div className="space-y-2 py-2">
+                    <div className="h-16 bg-muted/40 animate-pulse rounded-xl" />
+                  </div>
+                ) : passkeys.length === 0 ? (
+                  <div className="text-center py-8 px-4 rounded-xl border-2 border-dashed border-border/70 bg-muted/10 space-y-3">
+                    <div className="mx-auto size-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                      <Key className="size-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm text-foreground">No Passkeys Registered</h4>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                        Add a passkey to sign in instantly with biometrics or Google Password Manager without typing your password.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenAddPasskey}
+                      className="text-xs font-semibold gap-1.5 h-8 mt-1"
+                    >
+                      <Fingerprint className="size-3.5 text-blue-600" />
+                      Register This Device
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {passkeys.map((factor) => {
+                      const nameLower = factor.friendly_name.toLowerCase();
+                      const isGoogle = nameLower.includes("google") || nameLower.includes("password manager") || nameLower.includes("chrome");
+                      const isApple = nameLower.includes("apple") || nameLower.includes("mac") || nameLower.includes("iphone") || nameLower.includes("ipad");
+                      const isWindows = nameLower.includes("windows");
+                      const isMobile = nameLower.includes("phone") || nameLower.includes("android");
+
+                      const DeviceIcon = isWindows ? Laptop : isMobile ? Smartphone : isApple ? Fingerprint : Key;
+
+                      return (
+                        <div
+                          key={factor.id}
+                          className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 hover:border-blue-500/40 transition-all shadow-xs gap-3"
+                        >
+                          <div className="flex items-center space-x-3 min-w-0">
+                            <div className={cn(
+                              "size-9 sm:size-10 rounded-xl flex items-center justify-center shrink-0",
+                              isGoogle
+                                ? "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs"
+                                : "bg-blue-500/10 text-blue-600"
+                            )}>
+                              {isGoogle ? (
+                                <svg className="size-4.5 sm:size-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    fill="#4285F4"
+                                  />
+                                  <path
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    fill="#34A853"
+                                  />
+                                  <path
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                                    fill="#FBBC05"
+                                  />
+                                  <path
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                                    fill="#EA4335"
+                                  />
+                                </svg>
+                              ) : (
+                                <DeviceIcon className="size-4.5 sm:size-5" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                <p className="font-bold text-xs sm:text-sm text-foreground truncate">
+                                  {factor.friendly_name}
+                                </p>
+                                <Badge variant="outline" className="text-[9px] sm:text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5 shrink-0 whitespace-nowrap">
+                                  Active
+                                </Badge>
+                              </div>
+                              <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 truncate">
+                                Added on {new Date(factor.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingPasskey(factor)}
+                            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2 sm:px-2.5 shrink-0 gap-1"
                             title="Remove passkey"
                           >
                             <Trash2 className="size-3.5" />

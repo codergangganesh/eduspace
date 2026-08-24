@@ -284,7 +284,7 @@ export const aiChatService = {
 
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-            
+
             // Clean the URL to avoid double slashes which can cause fetch failures on some mobile browsers
             const baseUrl = supabaseUrl.replace(/\/$/, "");
             const functionUrl = `${baseUrl}/functions/v1/ai-chat`;
@@ -299,7 +299,7 @@ export const aiChatService = {
                 },
                 body: JSON.stringify({ messages, stream: true }),
             });
-            
+
 
             if (!response.ok) {
                 const errorText = await response.text();

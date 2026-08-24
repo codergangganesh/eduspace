@@ -12,6 +12,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
 import { isPasskeySupported } from "@/services/passkey.service";
+import { mfaService } from "@/services/mfa.service";
+import { MfaChallengeView } from "@/components/auth/MfaChallengeView";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LecturerLogin() {
     const navigate = useNavigate();
@@ -22,6 +25,9 @@ export default function LecturerLogin() {
     const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
     const isCaptchaVerified = Boolean(captchaToken);
+
+    // 2FA Challenge State
+    const [mfaChallenge, setMfaChallenge] = useState<{ factorId: string; factorName: string } | null>(null);
 
     const { register, handleSubmit: hookFormSubmit, formState: { errors } } = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -38,10 +44,25 @@ export default function LecturerLogin() {
         }
     }, [location]);
 
-    // Redirect if already authenticated
+    // Redirect if already authenticated, verifying 2FA AAL2 requirement first
     useEffect(() => {
         if (isAuthenticated && role) {
-            navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
+            mfaService.getAssuranceLevel().then(({ currentLevel, nextLevel }) => {
+                if (currentLevel === "aal1" && nextLevel === "aal2") {
+                    mfaService.listFactors().then(({ totpFactors }) => {
+                        const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+                        if (activeFactor) {
+                            setMfaChallenge({
+                                factorId: activeFactor.id,
+                                factorName: activeFactor.friendly_name || "Android Authenticator",
+                            });
+                            return;
+                        }
+                    });
+                } else {
+                    navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
+                }
+            });
         }
     }, [isAuthenticated, role, navigate]);
 
@@ -51,7 +72,23 @@ export default function LecturerLogin() {
         const result = await signIn(data.email, data.password, captchaToken);
 
         if (result.success) {
+            // Check if 2FA (AAL2) challenge is required
+            const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
+            if (currentLevel === "aal1" && nextLevel === "aal2") {
+                const { totpFactors } = await mfaService.listFactors();
+                const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+                if (activeFactor) {
+                    setMfaChallenge({
+                        factorId: activeFactor.id,
+                        factorName: activeFactor.friendly_name || "Android Authenticator",
+                    });
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
             toast.success("Welcome back!");
+            navigate("/lecturer-dashboard", { replace: true });
         } else {
             toast.error(result.error || "Login failed");
             setIsLoading(false);
@@ -71,7 +108,23 @@ export default function LecturerLogin() {
             setIsPasskeyLoading(true);
             const result = await signInWithPasskey(captchaToken);
             if (result.success) {
+                // Check if 2FA (AAL2) challenge is required
+                const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
+                if (currentLevel === "aal1" && nextLevel === "aal2") {
+                    const { totpFactors } = await mfaService.listFactors();
+                    const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+                    if (activeFactor) {
+                        setMfaChallenge({
+                            factorId: activeFactor.id,
+                            factorName: activeFactor.friendly_name || "Android Authenticator",
+                        });
+                        setIsPasskeyLoading(false);
+                        return;
+                    }
+                }
+
                 toast.success("Welcome back!");
+                navigate("/lecturer-dashboard", { replace: true });
             } else {
                 toast.error(result.error || "Passkey sign-in failed");
                 setIsPasskeyLoading(false);
@@ -80,6 +133,25 @@ export default function LecturerLogin() {
             toast.error(err.message || "Passkey sign-in error");
             setIsPasskeyLoading(false);
         }
+    };
+
+    const handleVerifyMfa = async (code: string) => {
+        if (!mfaChallenge) return { success: false, error: "No active 2FA challenge." };
+        const res = await mfaService.challengeAndVerify(mfaChallenge.factorId, code);
+        if (res.success) {
+            toast.success("Two-Factor Authentication verified!");
+            setMfaChallenge(null);
+            navigate("/lecturer-dashboard", { replace: true });
+            return { success: true };
+        }
+        return { success: false, error: res.error || "Invalid 6-digit code. Please try again." };
+    };
+
+    const handleCancelMfa = async () => {
+        setMfaChallenge(null);
+        try {
+            await supabase.auth.signOut();
+        } catch {}
     };
 
     return (
@@ -105,120 +177,131 @@ export default function LecturerLogin() {
                 }}
             />
             <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-6 lg:shadow-sm">
-                {/* Form */}
-                <form className="space-y-4 lg:space-y-5" onSubmit={hookFormSubmit(onValidSubmit)}>
-                    {/* Institutional Email Field */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
-                            Institutional Email
-                        </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <Mail className="size-5" />
+                {mfaChallenge ? (
+                    <MfaChallengeView
+                        factorName={mfaChallenge.factorName}
+                        onVerify={handleVerifyMfa}
+                        onCancel={handleCancelMfa}
+                    />
+                ) : (
+                    <>
+                        {/* Form */}
+                        <form className="space-y-4 lg:space-y-5" onSubmit={hookFormSubmit(onValidSubmit)}>
+                            {/* Institutional Email Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-foreground lg:block hidden">
+                                    Institutional Email
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                        <Mail className="size-5" />
+                                    </div>
+                                    <Input
+                                        type="email"
+                                        placeholder="Institutional Email"
+                                        {...register("email")}
+                                        className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                                {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
                             </div>
-                            <Input
-                                type="email"
-                                placeholder="Institutional Email"
-                                {...register("email")}
-                                className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
-                                disabled={isLoading}
-                            />
-                        </div>
-                        {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
-                    </div>
 
-                    {/* Password Field */}
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground lg:block hidden">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                            {/* Password Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-foreground lg:block hidden">
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                        <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                    </div>
+                                    <Input
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="Password"
+                                        {...register("password")}
+                                        className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                        disabled={isLoading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                    >
+                                        {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                                    </button>
+                                </div>
+                                {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
                             </div>
-                            <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Password"
-                                {...register("password")}
-                                className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
-                                disabled={isLoading}
-                            />
-                            <button
+
+                            {/* Forgot Password Link */}
+                            <div className="flex justify-end pt-1">
+                                <Link
+                                    to="/forgot-password"
+                                    className="text-sm font-medium text-blue-600 hover:underline"
+                                >
+                                    Forgot Password?
+                                </Link>
+                            </div>
+
+                            {/* CAPTCHA Protection */}
+                            <div className="flex justify-center my-1.5">
+                                <Turnstile
+                                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
+                                    onSuccess={(token) => setCaptchaToken(token)}
+                                    onExpire={() => setCaptchaToken(undefined)}
+                                    onError={() => setCaptchaToken(undefined)}
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}>
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="size-5 mr-2 animate-spin" />
+                                        Signing In...
+                                    </>
+                                ) : (
+                                    "Sign In"
+                                )}
+                            </Button>
+
+                            {/* Passkey Sign In Button */}
+                            <Button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                variant="outline"
+                                onClick={handlePasskeySignIn}
+                                disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}
+                                className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-sm font-bold border-border/80 hover:bg-secondary/40 gap-2 mt-2"
                             >
-                                {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                            </button>
+                                {isPasskeyLoading ? (
+                                    <Loader2 className="size-4 animate-spin text-blue-600" />
+                                ) : (
+                                    <Fingerprint className="size-4 text-blue-600" />
+                                )}
+                                <span>Sign in with Passkey / Biometrics</span>
+                            </Button>
+                        </form>
+
+                        {/* Footer - Only on mobile */}
+                        <div className="mt-8 text-center lg:hidden">
+                            <p className="text-muted-foreground text-sm">
+                                Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
+                            </p>
                         </div>
-                        {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
-                    </div>
 
-                    {/* Forgot Password Link */}
-                    <div className="flex justify-end pt-1">
-                        <Link
-                            to="/forgot-password"
-                            className="text-sm font-medium text-blue-600 hover:underline"
-                        >
-                            Forgot Password?
-                        </Link>
-                    </div>
-
-                    {/* CAPTCHA Protection */}
-                    <div className="flex justify-center my-1.5">
-                        <Turnstile
-                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
-                            onSuccess={(token) => setCaptchaToken(token)}
-                            onExpire={() => setCaptchaToken(undefined)}
-                            onError={() => setCaptchaToken(undefined)}
-                        />
-                    </div>
-
-                    {/* Submit Button */}
-                    <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}>
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="size-5 mr-2 animate-spin" />
-                                Signing In...
-                            </>
-                        ) : (
-                            "Sign In"
-                        )}
-                    </Button>
-
-                    {/* Passkey Sign In Button */}
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handlePasskeySignIn}
-                        disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}
-                        className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-sm font-bold border-border/80 hover:bg-secondary/40 gap-2 mt-2"
-                    >
-                        {isPasskeyLoading ? (
-                            <Loader2 className="size-4 animate-spin text-blue-600" />
-                        ) : (
-                            <Fingerprint className="size-4 text-blue-600" />
-                        )}
-                        <span>Sign in with Passkey / Biometrics</span>
-                    </Button>
-                </form>
-
-                {/* Footer - Only on mobile */}
-                <div className="mt-8 text-center lg:hidden">
-                    <p className="text-muted-foreground text-sm">
-                        Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
-                    </p>
-                </div>
-
-                {/* Desktop Switcher */}
-                <div className="hidden lg:block mt-6 pt-2 border-t border-border">
-                    <div className="text-center">
-                        <p className="text-muted-foreground text-[11px]">
-                            Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
-                        </p>
-                    </div>
-                </div>
+                        {/* Desktop Switcher */}
+                        <div className="hidden lg:block mt-6 pt-2 border-t border-border">
+                            <div className="text-center">
+                                <p className="text-muted-foreground text-[11px]">
+                                    Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
+                                </p>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
+
         </AuthLayout>
     );
 }

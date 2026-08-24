@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { AdminAuthProvider, useAdminAuth } from "@/hooks/useAdminAuth";
+import { AdminPinLockProvider } from "@/hooks/useAdminPinLock";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -86,52 +87,54 @@ export function App() {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <QueryClientProvider client={queryClient}>
         <AdminAuthProvider>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <Routes>
-              {/* Public Auth & Legal Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/access-denied" element={<AccessDenied />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/agreement" element={<TermsAgreement />} />
+          <AdminPinLockProvider>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <Routes>
+                {/* Public Auth & Legal Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/access-denied" element={<AccessDenied />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/agreement" element={<TermsAgreement />} />
 
-              {/* Protected Administration Routes */}
-              <Route
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminLayout />
-                  </ProtectedAdminRoute>
-                }
-              >
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/students" element={<Students />} />
-                <Route path="/lecturers" element={<Lecturers />} />
-                <Route path="/courses" element={<Courses />} />
-                <Route path="/classes" element={<Classes />} />
-                <Route path="/assignments" element={<Assignments />} />
-                <Route path="/quizzes" element={<Quizzes />} />
-                <Route path="/activity" element={<ActivityPage />} />
-                <Route path="/messages" element={<MessagesModeration />} />
-                <Route path="/announcements" element={<Announcements />} />
-                <Route path="/audit-logs" element={<AuditLog />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/profile" element={<AdminProfile />} />
-              </Route>
+                {/* Protected Administration Routes */}
+                <Route
+                  element={
+                    <ProtectedAdminRoute>
+                      <AdminLayout />
+                    </ProtectedAdminRoute>
+                  }
+                >
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/students" element={<Students />} />
+                  <Route path="/lecturers" element={<Lecturers />} />
+                  <Route path="/courses" element={<Courses />} />
+                  <Route path="/classes" element={<Classes />} />
+                  <Route path="/assignments" element={<Assignments />} />
+                  <Route path="/quizzes" element={<Quizzes />} />
+                  <Route path="/activity" element={<ActivityPage />} />
+                  <Route path="/messages" element={<MessagesModeration />} />
+                  <Route path="/announcements" element={<Announcements />} />
+                  <Route path="/audit-logs" element={<AuditLog />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<AdminProfile />} />
+                </Route>
 
-              {/* Catch-all fallback */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </BrowserRouter>
-          <Toaster position="top-right" richColors />
+                {/* Catch-all fallback */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </BrowserRouter>
+            <Toaster position="top-right" richColors />
+          </AdminPinLockProvider>
         </AdminAuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

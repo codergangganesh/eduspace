@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabase";
 import { hasAcceptedCurrentAgreements } from "@/services/legal.service";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { isPasskeySupported } from "@/services/passkey.service";
+import { mfaService } from "@/services/mfa.service";
+import { AdminMfaChallengeView } from "@/components/auth/AdminMfaChallengeView";
 
 const ROTATING_MESSAGES = [
   "Manage your institution effortlessly.",
@@ -27,6 +29,9 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>();
+
+  // 2FA Challenge State
+  const [mfaChallenge, setMfaChallenge] = useState<{ factorId: string; factorName: string } | null>(null);
 
   // Inline View Mode: "login" | "forgot-password"
   const [viewMode, setViewMode] = useState<"login" | "forgot-password">("login");
@@ -87,14 +92,29 @@ export const Login: React.FC = () => {
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, textIndex]);
 
-  // If already authenticated as admin, navigate based on agreement acceptance status
+  // If already authenticated as admin, check if 2FA AAL2 challenge is required before redirecting
   useEffect(() => {
     if (!isAuthChecking && user && isAdmin) {
-      if (hasAcceptedCurrentAgreements(user.id)) {
-        navigate("/dashboard", { replace: true });
-      } else {
-        navigate("/agreement", { replace: true });
-      }
+      mfaService.getAssuranceLevel().then(({ currentLevel, nextLevel }) => {
+        if (currentLevel === "aal1" && nextLevel === "aal2") {
+          mfaService.listFactors().then(({ totpFactors }) => {
+            const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+            if (activeFactor) {
+              setMfaChallenge({
+                factorId: activeFactor.id,
+                factorName: activeFactor.friendly_name || "Authenticator App",
+              });
+              return;
+            }
+          });
+        } else {
+          if (hasAcceptedCurrentAgreements(user.id)) {
+            navigate("/dashboard", { replace: true });
+          } else {
+            navigate("/agreement", { replace: true });
+          }
+        }
+      });
     }
   }, [user, isAdmin, isAuthChecking, navigate]);
 
@@ -111,6 +131,21 @@ export const Login: React.FC = () => {
       const res = await signIn(email.trim(), password, captchaToken);
 
       if (res.success) {
+        // Check if account has 2FA enabled (AAL2 challenge required)
+        const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
+        if (currentLevel === "aal1" && nextLevel === "aal2") {
+          const { totpFactors } = await mfaService.listFactors();
+          const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+          if (activeFactor) {
+            setMfaChallenge({
+              factorId: activeFactor.id,
+              factorName: activeFactor.friendly_name || "Authenticator App",
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+
         toast.success("Welcome to the Eduspace Admin Portal!");
         const currentUserId = res.user?.id || user?.id;
         if (hasAcceptedCurrentAgreements(currentUserId)) {
@@ -148,6 +183,21 @@ export const Login: React.FC = () => {
       const res = await signInWithPasskey(captchaToken);
 
       if (res.success) {
+        // Check if account has 2FA enabled (AAL2 challenge required)
+        const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
+        if (currentLevel === "aal1" && nextLevel === "aal2") {
+          const { totpFactors } = await mfaService.listFactors();
+          const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+          if (activeFactor) {
+            setMfaChallenge({
+              factorId: activeFactor.id,
+              factorName: activeFactor.friendly_name || "Authenticator App",
+            });
+            setIsPasskeyLoading(false);
+            return;
+          }
+        }
+
         toast.success("Authenticated with Passkey! Welcome to Eduspace Admin.");
         const currentUserId = res.user?.id || user?.id;
         if (hasAcceptedCurrentAgreements(currentUserId)) {
@@ -163,6 +213,31 @@ export const Login: React.FC = () => {
     } finally {
       setIsPasskeyLoading(false);
     }
+  };
+
+  const handleVerifyMfa = async (code: string) => {
+    if (!mfaChallenge) return { success: false, error: "No active 2FA challenge." };
+    const res = await mfaService.challengeAndVerify(mfaChallenge.factorId, code);
+    if (res.success) {
+      toast.success("Two-Factor Authentication verified!");
+      setMfaChallenge(null);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const currentUserId = currentUser?.id || user?.id;
+      if (hasAcceptedCurrentAgreements(currentUserId)) {
+        navigate("/dashboard", { replace: true });
+      } else {
+        navigate("/agreement", { replace: true });
+      }
+      return { success: true };
+    }
+    return { success: false, error: res.error || "Invalid 6-digit code. Please try again." };
+  };
+
+  const handleCancelMfa = async () => {
+    setMfaChallenge(null);
+    try {
+      await supabase.auth.signOut();
+    } catch {}
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -267,7 +342,13 @@ export const Login: React.FC = () => {
         <div className="flex-1 px-6 sm:px-10 pt-1 sm:pt-4 pb-8 relative z-20 flex flex-col justify-between">
           <div className="w-full max-w-[420px] mx-auto">
             
-            {viewMode === "login" ? (
+            {mfaChallenge ? (
+              <AdminMfaChallengeView
+                factorName={mfaChallenge.factorName}
+                onVerify={handleVerifyMfa}
+                onCancel={handleCancelMfa}
+              />
+            ) : viewMode === "login" ? (
               <>
                 {/* Heading: Sign In */}
                 <div className="mb-6 pt-2 sm:pt-4">
@@ -640,7 +721,13 @@ export const Login: React.FC = () => {
                   </span>
                 </div>
 
-                {viewMode === "login" ? (
+                {mfaChallenge ? (
+                  <AdminMfaChallengeView
+                    factorName={mfaChallenge.factorName}
+                    onVerify={handleVerifyMfa}
+                    onCancel={handleCancelMfa}
+                  />
+                ) : viewMode === "login" ? (
                   <>
                     {/* Header Title */}
                     <div className="text-center mb-6">

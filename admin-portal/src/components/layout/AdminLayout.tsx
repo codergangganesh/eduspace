@@ -5,6 +5,7 @@ import { AdminHeader } from "./AdminHeader";
 import { MobileSidebar } from "./MobileSidebar";
 import { CommandPalette } from "./CommandPalette";
 import { MaintenanceModeBanner } from "./MaintenanceModeBanner";
+import { AdminLockScreen } from "@/components/auth/AdminLockScreen";
 
 export const AdminLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -72,6 +73,9 @@ export const AdminLayout: React.FC = () => {
         open={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
       />
+
+      {/* Global 4-Digit In-App PIN Lock Screen Overlay */}
+      <AdminLockScreen />
     </div>
   );
 };

@@ -23,10 +23,12 @@ import {
   Bell,
   MessageSquare,
   History,
+  Lock,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useAdminPinLock } from "@/hooks/useAdminPinLock";
 
 interface AdminHeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -38,6 +40,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onOpenCommandPalette,
 }) => {
   const { user, profile, signOut } = useAdminAuth();
+  const { lockScreen, isPinLockEnabled } = useAdminPinLock();
   const { theme, setTheme } = useTheme();
   const { badges } = useAdminBadges();
   const navigate = useNavigate();
@@ -236,6 +239,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 System Settings
               </Link>
             </DropdownMenuItem>
+            {isPinLockEnabled && (
+              <DropdownMenuItem
+                onClick={lockScreen}
+                className="text-xs cursor-pointer text-foreground focus:bg-primary/10 focus:text-primary"
+              >
+                <Lock className="mr-2 h-4 w-4 text-primary" />
+                Lock Screen Now
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={handleSignOut}

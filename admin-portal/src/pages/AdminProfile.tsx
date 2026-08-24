@@ -83,13 +83,26 @@ import {
   isPasskeySupported,
   getSuggestedPasskeyName,
 } from "@/services/passkey.service";
+import { AdminPinSecurityCard } from "@/components/auth/AdminPinSecurityCard";
+import { AdminMfaSecurityCard } from "@/components/auth/AdminMfaSecurityCard";
+import { AndroidIcon } from "@/components/auth/AdminMfaEnrollModal";
 
-type ProfileTab = "personal" | "preferences" | "security" | "activity";
+type ProfileTab =
+  | "personal"
+  | "preferences"
+  | "2fa"
+  | "passkeys"
+  | "pin_lock"
+  | "password"
+  | "activity";
 
 const profileTabs = [
   { id: "personal" as ProfileTab, label: "Personal Info", icon: User },
   { id: "preferences" as ProfileTab, label: "Display Theme", icon: Palette },
-  { id: "security" as ProfileTab, label: "Security", icon: Lock },
+  { id: "2fa" as ProfileTab, label: "Two-Factor Auth (2FA)", icon: AndroidIcon },
+  { id: "passkeys" as ProfileTab, label: "Passkeys & Biometrics", icon: Fingerprint },
+  { id: "pin_lock" as ProfileTab, label: "Profile PIN Lock", icon: ShieldCheck },
+  { id: "password" as ProfileTab, label: "Account Password", icon: Lock },
   { id: "activity" as ProfileTab, label: "Activity Log", icon: Activity },
 ];
 
@@ -171,7 +184,7 @@ export const AdminProfile: React.FC = () => {
   useEffect(() => {
     if (activeTab === "activity") {
       fetchAdminLogs();
-    } else if (activeTab === "security") {
+    } else if (activeTab === "passkeys") {
       fetchPasskeys();
     }
   }, [activeTab]);
@@ -785,6 +798,30 @@ export const AdminProfile: React.FC = () => {
             </div>
           </Card>
 
+          {/* Mobile Horizontal Scrollable Tab Navigation (lg:hidden) */}
+          <div className="flex lg:hidden overflow-x-auto no-scrollbar gap-1.5 p-1.5 bg-card border border-border/80 rounded-2xl shadow-xs">
+            {profileTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <Icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* TAB 1: Personal Information with Inline Edit Button */}
           {activeTab === "personal" && (
             <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
@@ -1006,19 +1043,25 @@ export const AdminProfile: React.FC = () => {
             </Card>
           )}
 
-          {/* TAB 3: Security & Password + Passkeys */}
-          {activeTab === "security" && (
+          {/* TAB 3: Two-Factor Authentication (2FA / TOTP) */}
+          {activeTab === "2fa" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Card 1: Passkeys & Biometric Security */}
+              <AdminMfaSecurityCard />
+            </div>
+          )}
+
+          {/* TAB 4: Passkeys & Biometric Security */}
+          {activeTab === "passkeys" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
               <Card className="border-border shadow-sm bg-card overflow-hidden">
                 <CardHeader className="pb-3 sm:pb-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
                         <Fingerprint className="h-4 w-4 text-primary shrink-0" />
                         Passkeys & Biometric Authentication
                       </CardTitle>
-                      <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/30 py-0 px-2 uppercase tracking-wider">
+                      <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/30 py-0.5 px-2 uppercase tracking-wider shrink-0 whitespace-nowrap">
                         FIDO2 / WebAuthn
                       </Badge>
                     </div>
@@ -1031,7 +1074,7 @@ export const AdminProfile: React.FC = () => {
                     type="button"
                     size="sm"
                     onClick={handleOpenAddPasskey}
-                    className="text-xs font-semibold shadow-sm gap-1.5 h-8 sm:h-9 shrink-0"
+                    className="text-xs font-semibold shadow-sm gap-1.5 h-8 sm:h-9 w-full sm:w-auto shrink-0 cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Register New Passkey
@@ -1072,7 +1115,7 @@ export const AdminProfile: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={handleOpenAddPasskey}
-                        className="text-xs font-semibold gap-1.5 h-8"
+                        className="text-xs font-semibold gap-1.5 h-8 cursor-pointer"
                       >
                         <Fingerprint className="h-3.5 w-3.5 text-primary" />
                         Create Your First Passkey
@@ -1092,17 +1135,17 @@ export const AdminProfile: React.FC = () => {
                         return (
                           <div
                             key={factor.id}
-                            className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border/80 hover:border-primary/40 transition-all shadow-xs"
+                            className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 hover:border-primary/40 transition-all shadow-xs gap-3"
                           >
                             <div className="flex items-center space-x-3 min-w-0">
                               <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                                "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0",
                                 isGoogle
                                   ? "bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-xs"
                                   : "bg-primary/10 text-primary"
                               )}>
                                 {isGoogle ? (
-                                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <svg className="h-4.5 w-4.5 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path
                                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                                       fill="#4285F4"
@@ -1121,19 +1164,19 @@ export const AdminProfile: React.FC = () => {
                                     />
                                   </svg>
                                 ) : (
-                                  <DeviceIcon className="h-5 w-5" />
+                                  <DeviceIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-bold text-sm text-foreground truncate">
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                  <p className="font-bold text-xs sm:text-sm text-foreground truncate">
                                     {factor.friendly_name}
                                   </p>
-                                  <Badge variant="outline" className="text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5">
+                                  <Badge variant="outline" className="text-[9px] sm:text-[10px] font-semibold text-emerald-500 border-emerald-500/30 py-0 px-1.5 shrink-0 whitespace-nowrap">
                                     Active
                                   </Badge>
                                 </div>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 truncate">
                                   Added on {formatDate(factor.created_at)}
                                 </p>
                               </div>
@@ -1144,8 +1187,8 @@ export const AdminProfile: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => setDeletingPasskey(factor)}
-                              className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2.5 shrink-0 gap-1"
-                              title="Delete this passkey"
+                              className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-2 sm:px-2.5 shrink-0 gap-1 cursor-pointer"
+                              title="Remove this passkey"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                               <span className="hidden sm:inline">Remove</span>
@@ -1157,8 +1200,19 @@ export const AdminProfile: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
+            </div>
+          )}
 
-              {/* Card 2: Security & Password Management */}
+          {/* TAB 5: 4-Digit In-App Screen Lock (PIN & Biometrics) */}
+          {activeTab === "pin_lock" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <AdminPinSecurityCard />
+            </div>
+          )}
+
+          {/* TAB 6: Account Password Management */}
+          {activeTab === "password" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
               <Card className="border-border shadow-sm bg-card">
                 <CardHeader className="pb-3 sm:pb-4 border-b border-border/40">
                   <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
@@ -1185,7 +1239,7 @@ export const AdminProfile: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -1207,7 +1261,7 @@ export const AdminProfile: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -1242,7 +1296,7 @@ export const AdminProfile: React.FC = () => {
                       type="submit"
                       size="sm"
                       disabled={isUpdatingPassword || !newPassword}
-                      className="text-xs font-semibold shadow-md shadow-primary/20 gap-1.5"
+                      className="text-xs font-semibold shadow-md shadow-primary/20 gap-1.5 cursor-pointer"
                     >
                       {isUpdatingPassword ? (
                         <>
@@ -1259,6 +1313,8 @@ export const AdminProfile: React.FC = () => {
                   </CardFooter>
                 </form>
               </Card>
+            </div>
+          )}
 
               {/* Add Passkey Modal Dialog */}
               <Dialog open={isAddPasskeyOpen} onOpenChange={setIsAddPasskeyOpen}>
@@ -1375,10 +1431,8 @@ export const AdminProfile: React.FC = () => {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </div>
-          )}
 
-          {/* TAB 4: Admin Activity Log */}
+          {/* TAB 7: Admin Activity Log */}
           {activeTab === "activity" && (
             <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-3 sm:pb-4 border-b border-border/40">
