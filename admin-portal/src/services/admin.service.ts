@@ -67,49 +67,91 @@ export const adminService = {
   },
 
   /**
-   * Update user status (active / suspended) purely at the Supabase Database Level
+   * Update user status (active / suspended) via the Edge Function that uses service_role key
    */
   async setUserStatus(userId: string, status: UserStatus, email?: string) {
     try {
       const cleanEmail = email && email !== "No email" ? email.trim() : null;
 
-      // 1. Primary: Execute PostgreSQL SECURITY DEFINER RPC if present
+      // 1. Primary: Call the Edge Function (uses service_role key, bypasses RLS)
+      let edgeFunctionSuccess = false;
       try {
-        await (supabase as any).rpc("admin_set_user_status", {
-          target_user_id: userId,
-          new_status: status,
-          target_email: cleanEmail,
-        });
-      } catch (rpcErr) {
-        console.warn("[AdminService] RPC invocation note:", rpcErr);
+        const session = (await supabase.auth.getSession()).data.session;
+        const token = session?.access_token;
+
+        if (token) {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://trbetpcdiysfirjaxdfi.supabase.co";
+          const res = await fetch(`${supabaseUrl}/functions/v1/admin-delete-user`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              action: "set_status",
+              userId: userId,
+              email: cleanEmail,
+              status: status,
+            }),
+          });
+
+          if (res.ok) {
+            const result = await res.json();
+            if (result.success) {
+              edgeFunctionSuccess = true;
+              console.log(`[AdminService] Edge function: status set to ${status} for ${cleanEmail || userId}`);
+            }
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            console.warn("[AdminService] Edge function returned error:", res.status, errBody);
+          }
+        }
+      } catch (edgeErr) {
+        console.warn("[AdminService] Edge function invocation error:", edgeErr);
       }
 
-      // 2. Direct Supabase Database Updates on profiles & student_profiles
-      await supabase
-        .from("profiles")
-        .update({ status })
-        .or(`user_id.eq.${userId},id.eq.${userId}`);
+      // 2. Fallback: Try RPC if edge function didn't succeed
+      if (!edgeFunctionSuccess) {
+        try {
+          await (supabase as any).rpc("admin_set_user_status", {
+            target_user_id: userId,
+            new_status: status,
+            target_email: cleanEmail,
+          });
+          edgeFunctionSuccess = true;
+        } catch (rpcErr) {
+          console.warn("[AdminService] RPC fallback note:", rpcErr);
+        }
+      }
 
-      if (cleanEmail) {
+      // 3. Last resort: Direct Supabase updates (may be blocked by RLS)
+      if (!edgeFunctionSuccess) {
         await supabase
           .from("profiles")
           .update({ status })
-          .ilike("email", cleanEmail);
+          .or(`user_id.eq.${userId},id.eq.${userId}`);
 
-        await supabase
-          .from("student_profiles")
-          .update({ status })
-          .ilike("email", cleanEmail);
+        if (cleanEmail) {
+          await supabase
+            .from("profiles")
+            .update({ status })
+            .ilike("email", cleanEmail);
+
+          await supabase
+            .from("student_profiles")
+            .update({ status })
+            .ilike("email", cleanEmail);
+        }
+
+        try {
+          await supabase
+            .from("student_profiles")
+            .update({ status })
+            .or(`user_id.eq.${userId},id.eq.${userId}`);
+        } catch (_) {}
       }
 
-      try {
-        await supabase
-          .from("student_profiles")
-          .update({ status })
-          .or(`user_id.eq.${userId},id.eq.${userId}`);
-      } catch (_) {}
-
-      // 3. Supabase Notifications table
+      // 4. Notifications
       if (status === "suspended") {
         try {
           await supabase.from("notifications").insert({
@@ -131,13 +173,15 @@ export const adminService = {
         } catch (_) {}
       }
 
-      // 4. Admin Audit Log Record
-      await auditService.logAction({
-        action: status === "suspended" ? "suspend_user" : "activate_user",
-        targetUserId: userId,
-        targetEmail: cleanEmail,
-        details: { new_status: status },
-      });
+      // 5. Audit log (if edge function didn't already write one)
+      if (!edgeFunctionSuccess) {
+        await auditService.logAction({
+          action: status === "suspended" ? "suspend_user" : "activate_user",
+          targetUserId: userId,
+          targetEmail: cleanEmail,
+          details: { new_status: status },
+        });
+      }
 
       return { success: true };
     } catch (err: any) {
