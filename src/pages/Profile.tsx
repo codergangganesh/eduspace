@@ -647,14 +647,31 @@ export default function Profile() {
       toast.error("New passwords do not match");
       return;
     }
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (passwordData.newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+    if (!/[A-Z]/.test(passwordData.newPassword) || !/[a-z]/.test(passwordData.newPassword) || !/[0-9]/.test(passwordData.newPassword)) {
+      toast.error("Password must contain uppercase letters, lowercase letters, and at least one number");
       return;
     }
 
     setIsSaving(true);
 
     try {
+      // If current password was provided, verify it first
+      if (passwordData.currentPassword && user?.email) {
+        const { error: verifyErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: passwordData.currentPassword,
+        });
+        if (verifyErr) {
+          toast.error("Current password is incorrect");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       // Update password using Supabase auth
       const { error } = await supabase.auth.updateUser({
         password: passwordData.newPassword

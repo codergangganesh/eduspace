@@ -91,9 +91,11 @@ export const AdminProfile: React.FC = () => {
   const [country, setCountry] = useState("India");
 
   // Security fields
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // Activity logs
@@ -370,6 +372,10 @@ export const AdminProfile: React.FC = () => {
       toast.error("Password must be at least 8 characters long.");
       return;
     }
+    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      toast.error("Password must contain uppercase letters, lowercase letters, and at least one number.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match.");
       return;
@@ -377,6 +383,20 @@ export const AdminProfile: React.FC = () => {
 
     try {
       setIsUpdatingPassword(true);
+
+      // Verify current password if provided
+      if (currentPassword && user?.email) {
+        const { error: verifyErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
+        });
+        if (verifyErr) {
+          toast.error("Current password is incorrect.");
+          setIsUpdatingPassword(false);
+          return;
+        }
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -392,6 +412,7 @@ export const AdminProfile: React.FC = () => {
       }
 
       toast.success("Administrator password updated successfully!");
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
@@ -820,66 +841,41 @@ export const AdminProfile: React.FC = () => {
                   Appearance & Display Theme
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Customize the interface lighting and appearance of your Administrator portal.
+                  Choose the color theme and appearance for your Administrator portal.
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-6 pt-4 sm:pt-5">
-                <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                  {/* Light Theme Card */}
-                  <button
-                    type="button"
-                    onClick={() => setTheme("light")}
-                    className={cn(
-                      "p-3.5 sm:p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all text-center cursor-pointer",
-                      theme === "light"
-                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                        : "border-border hover:border-muted-foreground/40 bg-card"
-                    )}
-                  >
-                    <div className="p-2.5 rounded-full bg-amber-500/10 text-amber-500">
-                      <Sun className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-bold text-foreground">Light Mode</span>
-                    <span className="text-[10px] text-muted-foreground">Clean light UI</span>
-                  </button>
-
-                  {/* Dark Theme Card */}
-                  <button
-                    type="button"
-                    onClick={() => setTheme("dark")}
-                    className={cn(
-                      "p-3.5 sm:p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all text-center cursor-pointer",
-                      theme === "dark"
-                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                        : "border-border hover:border-muted-foreground/40 bg-card"
-                    )}
-                  >
-                    <div className="p-2.5 rounded-full bg-blue-500/10 text-blue-500">
-                      <Moon className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-bold text-foreground">Dark Mode</span>
-                    <span className="text-[10px] text-muted-foreground">Sleek dark theme</span>
-                  </button>
-
-                  {/* System Default */}
-                  <button
-                    type="button"
-                    onClick={() => setTheme("system")}
-                    className={cn(
-                      "p-3.5 sm:p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all text-center cursor-pointer",
-                      theme === "system"
-                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                        : "border-border hover:border-muted-foreground/40 bg-card"
-                    )}
-                  >
-                    <div className="p-2.5 rounded-full bg-emerald-500/10 text-emerald-500">
-                      <Laptop className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-bold text-foreground">System Sync</span>
-                    <span className="text-[10px] text-muted-foreground">Auto OS match</span>
-                  </button>
+              <CardContent className="space-y-4 pt-4 sm:pt-5 max-w-md">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-foreground">Select Display Theme</Label>
+                  <Select value={theme || "system"} onValueChange={(val) => setTheme(val)}>
+                    <SelectTrigger className="w-full h-10 text-xs sm:text-sm">
+                      <SelectValue placeholder="Select display theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">
+                        <div className="flex items-center gap-2">
+                          <Sun className="h-4 w-4 text-amber-500" />
+                          <span>Light Mode</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="dark">
+                        <div className="flex items-center gap-2">
+                          <Moon className="h-4 w-4 text-blue-500" />
+                          <span>Dark Mode</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="system">
+                        <div className="flex items-center gap-2">
+                          <Laptop className="h-4 w-4 text-emerald-500" />
+                          <span>System Default (Auto)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+
               </CardContent>
             </Card>
           )}
@@ -899,6 +895,26 @@ export const AdminProfile: React.FC = () => {
 
               <form onSubmit={handlePasswordChange}>
                 <CardContent className="space-y-4 pt-4 sm:pt-5 max-w-lg">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="h-9 sm:h-10 text-sm pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">New Administrator Password</Label>
                     <div className="relative">
@@ -920,7 +936,7 @@ export const AdminProfile: React.FC = () => {
                       </button>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Minimum 8 characters with numbers and symbols.
+                      Minimum 8 characters with uppercase, lowercase, and numbers.
                     </p>
                   </div>
 

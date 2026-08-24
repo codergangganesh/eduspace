@@ -392,14 +392,22 @@ export const Announcements: React.FC = () => {
                 Compose Notice
               </CardTitle>
 
-              {/* Auto-save status badge */}
               <div className="flex items-center gap-2">
+                {/* Estimated Reach */}
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary">
+                  <Users className="h-3.5 w-3.5" />
+                  {recipientCount} Recipients
+                </span>
+
+                {/* Auto-save status */}
                 {lastSavedTime && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
                     <Save className="h-3 w-3 text-emerald-500" />
-                    Auto-saved {lastSavedTime}
+                    Auto-save {lastSavedTime}
                   </span>
                 )}
+
+                {/* Reset */}
                 {(title || message || attachedFiles.length > 0) && (
                   <Button
                     type="button"
@@ -414,8 +422,7 @@ export const Announcements: React.FC = () => {
                   </Button>
                 )}
               </div>
-            </div>
-            <CardDescription className="text-xs">
+            </div>            <CardDescription className="text-xs">
               Broadcast an announcement across user groups with auto-saved drafts.
             </CardDescription>
           </CardHeader>
@@ -630,13 +637,7 @@ export const Announcements: React.FC = () => {
               </div>
 
               {/* Recipient Count Indicator */}
-              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 font-medium text-foreground">
-                  <Users className="h-4 w-4 text-primary" />
-                  Estimated Reach:
-                </span>
-                <span className="font-bold text-primary">{recipientCount} Recipients</span>
-              </div>
+
 
               <Button
                 type="submit"

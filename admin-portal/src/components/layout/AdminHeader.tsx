@@ -67,8 +67,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <Menu className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-sm font-bold text-foreground">Eduspace Administration</h1>
-          <p className="text-[11px] text-muted-foreground hidden sm:block">Platform governance & management</p>
+          <h1 className="text-sm sm:text-base lg:text-lg xl:text-xl font-extrabold tracking-tight text-foreground">
+            Eduspace Administration
+          </h1>
+          <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground hidden sm:block">
+            Platform governance & management
+          </p>
         </div>
       </div>
 

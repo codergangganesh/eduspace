@@ -45,10 +45,19 @@ export default function UpdatePassword() {
             return;
         }
 
-        if (password.length < 6) {
+        if (password.length < 8) {
             toast({
                 title: "Password Too Short",
-                description: "Password must be at least 6 characters long",
+                description: "Password must be at least 8 characters long",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+            toast({
+                title: "Weak Password",
+                description: "Password must contain uppercase letters, lowercase letters, and at least one number",
                 variant: "destructive",
             });
             return;

@@ -29,6 +29,7 @@ export const Login: React.FC = () => {
   // Inline View Mode: "login" | "forgot-password"
   const [viewMode, setViewMode] = useState<"login" | "forgot-password">("login");
   const [resetEmail, setResetEmail] = useState("");
+  const [resetCaptchaToken, setResetCaptchaToken] = useState<string | undefined>();
   const [isResetting, setIsResetting] = useState(false);
   const [resetStatus, setResetStatus] = useState<"idle" | "success" | "error">("idle");
   const [resetErrorMsg, setResetErrorMsg] = useState("");
@@ -137,6 +138,7 @@ export const Login: React.FC = () => {
       setResetErrorMsg("");
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
         redirectTo: `${window.location.origin}/reset-password`,
+        ...(resetCaptchaToken ? { captchaToken: resetCaptchaToken } : {}),
       });
 
       if (error) {
@@ -416,12 +418,26 @@ export const Login: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Cloudflare Turnstile CAPTCHA Protection */}
+                    <div className="flex justify-center my-2 min-h-[65px]">
+                      <Turnstile
+                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                        options={{
+                          theme: currentTheme === "dark" ? "dark" : "light",
+                          size: "normal",
+                        }}
+                        onSuccess={(token) => setResetCaptchaToken(token)}
+                        onExpire={() => setResetCaptchaToken(undefined)}
+                        onError={() => setResetCaptchaToken(undefined)}
+                      />
+                    </div>
+
                     {/* Submit Reset Link */}
-                    <div className="pt-2">
+                    <div className="pt-1">
                       <button
                         type="submit"
-                        disabled={isResetting}
-                        className="w-full h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                        disabled={isResetting || !resetCaptchaToken}
+                        className="w-full h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {isResetting ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
@@ -742,12 +758,26 @@ export const Login: React.FC = () => {
                           />
                         </div>
 
+                        {/* Cloudflare Turnstile CAPTCHA Protection */}
+                        <div className="flex justify-center my-2 min-h-[65px]">
+                          <Turnstile
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                            options={{
+                              theme: currentTheme === "dark" ? "dark" : "light",
+                              size: "normal",
+                            }}
+                            onSuccess={(token) => setResetCaptchaToken(token)}
+                            onExpire={() => setResetCaptchaToken(undefined)}
+                            onError={() => setResetCaptchaToken(undefined)}
+                          />
+                        </div>
+
                         {/* Send Reset Link Button */}
-                        <div className="pt-2">
+                        <div className="pt-1">
                           <button
                             type="submit"
-                            disabled={isResetting}
-                            className="w-full h-12 px-8 bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white font-bold text-sm tracking-wider uppercase rounded-lg shadow-md hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                            disabled={isResetting || !resetCaptchaToken}
+                            className="w-full h-12 px-8 bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white font-bold text-sm tracking-wider uppercase rounded-lg shadow-md hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                           >
                             {isResetting ? (
                               <Loader2 className="h-4 w-4 animate-spin" />

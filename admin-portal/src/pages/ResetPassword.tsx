@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "next-themes";
-import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Sun, Moon } from "lucide-react";
+import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Sun, Moon, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -15,6 +16,7 @@ export const ResetPassword: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | undefined>();
 
   const { theme, setTheme, resolvedTheme } = useTheme();
   const navigate = useNavigate();
@@ -54,8 +56,13 @@ export const ResetPassword: React.FC = () => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (password.length < 6) {
-      setErrorMsg("Password must be at least 6 characters long.");
+    if (password.length < 8) {
+      setErrorMsg("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setErrorMsg("Password must contain uppercase letters, lowercase letters, and at least one number.");
       return;
     }
 
@@ -209,12 +216,26 @@ export const ResetPassword: React.FC = () => {
                 </button>
               </div>
 
+              {/* Cloudflare Turnstile CAPTCHA Protection */}
+              <div className="flex justify-center my-2 min-h-[65px]">
+                <Turnstile
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                  options={{
+                    theme: currentTheme === "dark" ? "dark" : "light",
+                    size: "normal",
+                  }}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(undefined)}
+                  onError={() => setCaptchaToken(undefined)}
+                />
+              </div>
+
               {/* Submit Button */}
-              <div className="pt-2">
+              <div className="pt-1">
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-sm tracking-wider uppercase rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
+                  disabled={isLoading || !captchaToken}
+                  className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-sm tracking-wider uppercase rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
