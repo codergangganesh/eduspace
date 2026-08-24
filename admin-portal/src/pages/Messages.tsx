@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import { useConversations, useConversationMessages } from "@/hooks/useMessages";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Pagination } from "@/components/common/Pagination";
@@ -87,7 +88,7 @@ export const MessagesModeration: React.FC = () => {
           <div className="p-3.5 border-b border-border">
             <SearchBar
               value={search}
-              onChange={(val) => {
+              onChange={(val: string) => {
                 setSearch(val);
                 setPage(1);
               }}
@@ -116,9 +117,8 @@ export const MessagesModeration: React.FC = () => {
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv)}
-                    className={`group p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
-                      isSelected ? "bg-primary/10 border-l-4 border-l-primary" : ""
-                    }`}
+                    className={`group p-4 cursor-pointer transition-colors hover:bg-muted/50 ${isSelected ? "bg-primary/10 border-l-4 border-l-primary" : ""
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center space-x-2.5 min-w-0">
@@ -152,7 +152,7 @@ export const MessagesModeration: React.FC = () => {
                 totalPages={totalPages}
                 totalRecords={total}
                 pageSize={10}
-                onPageChange={(p) => setPage(p)}
+                onPageChange={(p: number) => setPage(p)}
               />
             </div>
           )}

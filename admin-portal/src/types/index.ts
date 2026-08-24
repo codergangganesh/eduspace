@@ -22,6 +22,8 @@ export interface Profile {
   enrollment_date: string | null;
   expected_graduation: string | null;
   avatar_url: string | null;
+  banner_url?: string | null;
+  cover_url?: string | null;
   verified: boolean | null;
   status?: UserStatus | string | null;
   street?: string | null;

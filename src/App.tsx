@@ -8,6 +8,7 @@ import "@/i18n/config"; // Initialize i18n
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
 import { FCMManager } from "@/components/chat/FCMManager";
@@ -260,6 +261,7 @@ const App = () => (
     <Toaster />
     <Sonner />
     <OfflineBanner />
+    <MaintenanceBanner />
     <PWAInstallPrompt />
     <PushNotificationManager />
     <FCMManager />

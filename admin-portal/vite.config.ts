@@ -22,7 +22,6 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    // Pass VITE_ variables loaded from the parent root .env file
     define: {
       "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
         env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || ""
@@ -30,7 +29,9 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(
         env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ""
       ),
-      "import.meta.env.VITE_TURNSTILE_SITE_KEY": JSON.stringify(""),
+      "import.meta.env.VITE_TURNSTILE_SITE_KEY": JSON.stringify(
+        env.VITE_TURNSTILE_SITE_KEY || process.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"
+      ),
     },
   };
 });

@@ -28,103 +28,113 @@ export function useDashboardStats() {
   useEffect(() => {
     if (!isReady) return;
 
-    const channel = supabase
-      .channel("admin-dashboard-realtime-all")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "student_profiles" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "lecturer_profiles" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_roles" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "class_students" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "classes" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "courses" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "assignments" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "quizzes" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "messages" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "admin_audit_logs" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "assignment_submissions" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-        }
-      )
-      .subscribe();
+    let channel: any = null;
+    try {
+      const channelName = `admin_dashboard_realtime_${Math.random().toString(36).substring(2, 9)}`;
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "profiles" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "student_profiles" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "lecturer_profiles" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "user_roles" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "class_students" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "classes" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "courses" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "assignments" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "quizzes" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "messages" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "notifications" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "admin_audit_logs" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "assignment_submissions" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+          }
+        );
+      channel.subscribe();
+    } catch (err) {
+      console.warn("[useDashboardStats] Realtime subscription error:", err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (_) {}
+      }
     };
   }, [queryClient, isReady]);
 

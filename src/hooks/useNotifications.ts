@@ -14,6 +14,9 @@ export interface Notification {
     related_id?: string; // ID of related entity (assignment, message, etc.)
     metadata?: any;
     class_id?: string; // Class association for filtering
+    attachment_url?: string;
+    attachment_type?: string;
+    attachment_name?: string;
 }
 
 /**

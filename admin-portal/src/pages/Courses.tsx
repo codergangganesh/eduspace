@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import { useCourses } from "@/hooks/useCourses";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Pagination } from "@/components/common/Pagination";
@@ -82,7 +83,7 @@ export const Courses: React.FC = () => {
       <div className="bg-card p-3 rounded-xl border border-border">
         <SearchBar
           value={search}
-          onChange={(val) => {
+          onChange={(val: string) => {
             setSearch(val);
             setPage(1);
           }}
@@ -167,7 +168,7 @@ export const Courses: React.FC = () => {
           totalPages={totalPages}
           totalRecords={total}
           pageSize={10}
-          onPageChange={(p) => setPage(p)}
+          onPageChange={(p: number) => setPage(p)}
         />
       )}
     </div>

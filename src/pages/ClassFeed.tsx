@@ -21,6 +21,8 @@ import {
     Paperclip,
     Send,
     Image as ImageIcon,
+    Music,
+    Video,
     FileText,
     X,
     Smile,
@@ -145,7 +147,9 @@ function PostCard({
         return acc;
     }, {} as Record<string, { count: number; users: string[]; hasReacted: boolean }>);
 
-    const isImage = post.attachment_type?.startsWith('image/');
+    const isImage = post.attachment_type?.startsWith('image/') || String(post.attachment_url).match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i);
+    const isAudio = post.attachment_type?.startsWith('audio/') || String(post.attachment_url).match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i);
+    const isVideo = post.attachment_type?.startsWith('video/') || String(post.attachment_url).match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i);
     const isPDF = post.attachment_type === 'application/pdf' || post.attachment_name?.toLowerCase().endsWith('.pdf');
 
     return (
@@ -257,6 +261,18 @@ function PostCard({
                                     loading="lazy"
                                 />
                             </a>
+                        ) : isAudio ? (
+                            <div className="p-3 bg-secondary/40 rounded-xl space-y-1.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                                    <Music className="size-4 text-emerald-500" />
+                                    <span>{post.attachment_name || 'Audio voice message'}</span>
+                                </div>
+                                <audio controls src={post.attachment_url} className="w-full h-8" />
+                            </div>
+                        ) : isVideo ? (
+                            <div className="bg-black rounded-xl overflow-hidden max-h-96 flex items-center justify-center">
+                                <video controls src={post.attachment_url} className="w-full max-h-96 object-contain" />
+                            </div>
                         ) : (
                             <a
                                 href={post.attachment_url}

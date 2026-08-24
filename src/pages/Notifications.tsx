@@ -65,6 +65,9 @@ interface NotificationData {
   created_at: string;
   link?: string;
   metadata?: any;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
 }
 
 const getNotificationIcon = (type: string) => {
@@ -481,10 +484,80 @@ export default function Notifications() {
                 </div>
 
                 {/* Full Message */}
-                <div className="bg-muted/50 rounded-lg p-4">
+                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
                     {selectedNotification.message}
                   </p>
+
+                  {/* Render Attached Media (Single or Multiple) */}
+                  {(() => {
+                    const metaList = selectedNotification.metadata?.attachments;
+                    const mediaList = Array.isArray(metaList) && metaList.length > 0
+                      ? metaList
+                      : (selectedNotification.attachment_url || selectedNotification.metadata?.attachment_url)
+                      ? [{
+                          url: selectedNotification.attachment_url || selectedNotification.metadata?.attachment_url,
+                          type: selectedNotification.attachment_type || selectedNotification.metadata?.attachment_type || 'file',
+                          name: selectedNotification.attachment_name || selectedNotification.metadata?.attachment_name || 'Attachment',
+                        }]
+                      : [];
+
+                    if (mediaList.length === 0) return null;
+
+                    return (
+                      <div className="space-y-3 pt-2">
+                        {mediaList.map((media: any, idx: number) => {
+                          const attUrl = media.url;
+                          const attType = media.type;
+
+                          if (attType === 'image' || String(attUrl).match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
+                            return (
+                              <div key={idx} className="rounded-lg overflow-hidden border border-border max-h-80 bg-black/5 flex items-center justify-center">
+                                <img
+                                  src={attUrl}
+                                  alt={media.name || "Attachment"}
+                                  className="max-h-80 w-full object-contain cursor-pointer hover:opacity-95 transition-opacity"
+                                  onClick={() => window.open(attUrl, '_blank')}
+                                />
+                              </div>
+                            );
+                          }
+
+                          if (attType === 'audio' || String(attUrl).match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i)) {
+                            return (
+                              <div key={idx} className="p-3 rounded-lg bg-card border border-border space-y-1.5">
+                                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                                  🎵 {media.name || "Attached Audio Recording"}
+                                </span>
+                                <audio controls src={attUrl} className="w-full h-10" />
+                              </div>
+                            );
+                          }
+
+                          if (attType === 'video' || String(attUrl).match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i)) {
+                            return (
+                              <div key={idx} className="rounded-lg overflow-hidden border border-border bg-black max-h-80">
+                                <video controls src={attUrl} className="w-full max-h-80 object-contain" />
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={idx} className="pt-1">
+                              <a
+                                href={attUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-xs font-semibold text-primary underline"
+                              >
+                                📎 View Attached: {media.name || "Document"}
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Timestamp */}

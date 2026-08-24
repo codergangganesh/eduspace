@@ -686,3 +686,20 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_stats() TO authenticated, anon;
+
+-- Helper to fetch platform maintenance mode securely across all user roles
+CREATE OR REPLACE FUNCTION public.get_maintenance_status()
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT details
+  FROM public.admin_audit_logs
+  WHERE action = 'SET_MAINTENANCE_MODE'
+  ORDER BY created_at DESC
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_maintenance_status() TO authenticated, anon;

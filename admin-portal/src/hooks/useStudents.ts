@@ -47,47 +47,57 @@ export function useStudentDetails(userId: string | null) {
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`admin-student-details-live-${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "assignment_submissions" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "quiz_submissions" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "class_students" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "course_enrollments" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_coding_profiles" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
-        }
-      )
-      .subscribe();
+    let channel: any = null;
+    try {
+      const channelName = `admin_student_details_${userId}_${Math.random().toString(36).substring(2, 9)}`;
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "assignment_submissions" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "quiz_submissions" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "class_students" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "course_enrollments" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "user_coding_profiles" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+          }
+        );
+      channel.subscribe();
+    } catch (err) {
+      console.warn("[useStudentDetails] Realtime subscription error:", err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (_) {}
+      }
     };
   }, [userId, queryClient]);
 

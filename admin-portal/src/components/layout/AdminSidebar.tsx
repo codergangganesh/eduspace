@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import * as React from "react";
+import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -13,7 +14,6 @@ import {
   History,
   Settings,
   User,
-  Server,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminBadges } from "@/hooks/useAdminBadges";
 import { cn, getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -41,54 +42,14 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
+  badge?: number | string;
+  badgeVariant?: "default" | "destructive" | "outline" | "secondary";
 }
 
 interface NavSection {
   title: string;
   items: NavItem[];
 }
-
-const navSections: NavSection[] = [
-  {
-    title: "Overview",
-    items: [
-      { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-      { label: "System Health", path: "/system-overview", icon: Server },
-    ],
-  },
-  {
-    title: "User Management",
-    items: [
-      { label: "Students", path: "/students", icon: Users },
-      { label: "Lecturers", path: "/lecturers", icon: GraduationCap },
-    ],
-  },
-  {
-    title: "Academic Resources",
-    items: [
-      { label: "Classes", path: "/classes", icon: FolderKanban },
-      { label: "Assignments", path: "/assignments", icon: ClipboardList },
-      { label: "Quizzes", path: "/quizzes", icon: FileCheck },
-    ],
-  },
-  {
-    title: "Platform & Governance",
-    items: [
-      { label: "Live Activity", path: "/activity", icon: Activity },
-      { label: "Messages", path: "/messages", icon: MessageSquare },
-      { label: "Announcements", path: "/announcements", icon: Megaphone },
-      { label: "Audit Logs", path: "/audit-logs", icon: History },
-    ],
-  },
-  {
-    title: "Configuration",
-    items: [
-      { label: "Settings", path: "/settings", icon: Settings },
-      { label: "Admin Profile", path: "/profile", icon: User },
-    ],
-  },
-];
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -102,10 +63,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onToggleCollapse,
   className = "",
   onNavigate,
-}) => {
+}: AdminSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAdminAuth();
+  const { badges } = useAdminBadges();
 
   const displayName = profile?.full_name || "Administrator";
   const displayEmail = user?.email || "";
@@ -117,6 +79,52 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     toast.success("Signed out of Admin Portal.");
     navigate("/login", { replace: true });
   };
+
+  // Dynamic Navigation Sections with Real-time Badges
+  const navSections: NavSection[] = useMemo(() => [
+    {
+      title: "Overview",
+      items: [
+        { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: "User Management",
+      items: [
+        { label: "Students", path: "/students", icon: Users },
+        { label: "Lecturers", path: "/lecturers", icon: GraduationCap },
+      ],
+    },
+    {
+      title: "Academic Resources",
+      items: [
+        { label: "Classes", path: "/classes", icon: FolderKanban },
+        { label: "Assignments", path: "/assignments", icon: ClipboardList },
+        { label: "Quizzes", path: "/quizzes", icon: FileCheck },
+      ],
+    },
+    {
+      title: "Platform & Governance",
+      items: [
+        { label: "Live Activity", path: "/activity", icon: Activity },
+        {
+          label: "Messages",
+          path: "/messages",
+          icon: MessageSquare,
+          badge: badges.unreadMessagesCount > 0 ? badges.unreadMessagesCount : undefined,
+          badgeVariant: "destructive",
+        },
+        { label: "Announcements", path: "/announcements", icon: Megaphone },
+        {
+          label: "Audit Logs",
+          path: "/audit-logs",
+          icon: History,
+          badge: badges.recentAuditLogsCount > 0 ? `${badges.recentAuditLogsCount} new` : undefined,
+          badgeVariant: "outline",
+        },
+      ],
+    },
+  ], [badges]);
 
   return (
     <aside
@@ -183,7 +191,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             )}
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links with Real-Time Badges */}
           <nav className="flex flex-col gap-4">
             <TooltipProvider>
               {navSections.map((section, secIdx) => (
@@ -206,23 +214,43 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                           to={item.path}
                           onClick={onNavigate}
                           className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group active:scale-[0.98]",
+                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group active:scale-[0.98] relative",
                             isActive
                               ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 font-semibold"
                               : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                             isCollapsed && "justify-center px-0"
                           )}
                         >
-                          <Icon
-                            className={cn(
-                              "size-5 shrink-0 transition-transform duration-200",
-                              !isActive && "group-hover:scale-110",
-                              isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                          <div className="relative">
+                            <Icon
+                              className={cn(
+                                "size-5 shrink-0 transition-transform duration-200",
+                                !isActive && "group-hover:scale-110",
+                                isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                              )}
+                            />
+                            {/* Collapsed dot badge */}
+                            {isCollapsed && item.badge && (
+                              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-background" />
                             )}
-                          />
+                          </div>
+
                           {!isCollapsed && <span className="truncate">{item.label}</span>}
+
+                          {/* Expanded count badge */}
                           {!isCollapsed && item.badge && (
-                            <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
+                            <span
+                              className={cn(
+                                "ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors",
+                                item.badgeVariant === "destructive"
+                                  ? isActive
+                                    ? "bg-primary-foreground text-primary font-extrabold"
+                                    : "bg-rose-500/15 text-rose-500 font-bold border border-rose-500/20"
+                                  : isActive
+                                    ? "bg-primary-foreground/20 text-primary-foreground"
+                                    : "bg-primary/10 text-primary border border-primary/20"
+                              )}
+                            >
                               {item.badge}
                             </span>
                           )}
@@ -233,8 +261,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                         return (
                           <Tooltip key={item.path} delayDuration={0}>
                             <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                            <TooltipContent side="right" className="font-medium text-xs">
-                              {item.label}
+                            <TooltipContent side="right" className="font-medium text-xs flex items-center gap-1.5">
+                              <span>{item.label}</span>
+                              {item.badge && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/20 text-primary">
+                                  {item.badge}
+                                </span>
+                              )}
                             </TooltipContent>
                           </Tooltip>
                         );
@@ -260,7 +293,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "flex items-center w-full gap-3 p-2 rounded-xl border border-transparent hover:bg-muted/60 transition-all duration-200 group outline-none text-left",
+                  "flex items-center w-full gap-3 p-2 rounded-xl border border-transparent hover:bg-muted/60 transition-all duration-200 group outline-none text-left cursor-pointer",
                   isCollapsed ? "justify-center px-0" : "px-3"
                 )}
               >
@@ -305,13 +338,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="text-xs cursor-pointer">
                 <Link to="/profile">
-                  <User className="mr-2 h-4 w-4" />
+                  <User className="mr-2 h-4 w-4 text-primary" />
                   Admin Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="text-xs cursor-pointer">
                 <Link to="/settings">
-                  <Settings className="mr-2 h-4 w-4" />
+                  <Settings className="mr-2 h-4 w-4 text-primary" />
                   System Settings
                 </Link>
               </DropdownMenuItem>

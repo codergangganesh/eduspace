@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
+import * as React from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode, ReactElement } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "@/types";
@@ -9,7 +10,7 @@ interface AdminAuthContextType {
   profile: Profile | null;
   isAdmin: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -35,7 +36,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   ]);
 }
 
-export function AdminAuthProvider({ children }: { children: ReactNode }): React.ReactElement {
+export function AdminAuthProvider({ children }: { children: ReactNode }): ReactElement {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -44,12 +45,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
   const mountedRef = useRef(true);
 
   const makeSyntheticProfile = useCallback((userId: string, email?: string, userMeta?: any): Profile => {
+    const cachedAvatar = localStorage.getItem("eduspace_admin_avatar") || localStorage.getItem(`admin_avatar_${userId}`) || null;
+    const cachedBanner = localStorage.getItem("eduspace_admin_banner") || localStorage.getItem(`admin_banner_${userId}`) || null;
     return {
       id: userId,
       user_id: userId,
       email: email || userMeta?.email || "",
       full_name: userMeta?.full_name || userMeta?.name || (email ? email.split("@")[0] : "Administrator"),
-      avatar_url: userMeta?.avatar_url || null,
+      avatar_url: userMeta?.avatar_url || cachedAvatar || null,
+      cover_url: userMeta?.cover_url || cachedBanner || null,
       status: "active",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -135,7 +139,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
           // Enrich profile in background (non-blocking)
           fetchProfile(authUser.id, authUser.user_metadata, authUser.email).then((p) => {
             if (mountedRef.current) setProfile(p);
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
           // Unknown email — need DB check, but with a 3-second timeout
           const adminStatus = await withTimeout(
@@ -251,7 +255,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
         setIsLoading(false);
       }
 
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err: any) {
       setIsLoading(false);
       return { success: false, error: err.message || "Failed to sign in" };

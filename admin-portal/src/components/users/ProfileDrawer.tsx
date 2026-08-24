@@ -1,7 +1,11 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -43,7 +47,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   open,
   onOpenChange,
   onUserUpdated,
-}) => {
+}: ProfileDrawerProps) => {
   const [suspendModalOpen, setSuspendModalOpen] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -88,6 +92,11 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0 flex flex-col bg-card border-border">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{user.full_name} User Profile</SheetTitle>
+            <SheetDescription>Comprehensive user details, academic records, and account permissions.</SheetDescription>
+          </SheetHeader>
+
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 border-b border-border/80">
             <div className="flex items-start justify-between">
@@ -399,9 +408,8 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                 variant={isSuspended ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSuspendModalOpen(true)}
-                className={`text-xs font-medium justify-center ${
-                  !isSuspended ? "text-destructive border-destructive/30 hover:bg-destructive/10" : ""
-                }`}
+                className={`text-xs font-medium justify-center ${!isSuspended ? "text-destructive border-destructive/30 hover:bg-destructive/10" : ""
+                  }`}
               >
                 {isSuspended ? (
                   <>

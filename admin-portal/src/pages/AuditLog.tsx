@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Pagination } from "@/components/common/Pagination";
@@ -7,7 +8,28 @@ import { EmptyState, LoadingState, ErrorState } from "@/components/common/EmptyS
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History, RefreshCw, ShieldCheck, ChevronRight } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
+  History,
+  RefreshCw,
+  ShieldCheck,
+  ChevronRight,
+  Shield,
+  User,
+  Clock,
+  FileCode,
+  Copy,
+  Check,
+  Target,
+  Lock,
+} from "lucide-react";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -15,6 +37,8 @@ export const AuditLog: React.FC = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useAuditLog({
     search,
@@ -33,6 +57,13 @@ export const AuditLog: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast.success(`Copied ${field} to clipboard!`);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const logs = data?.data || [];
@@ -57,22 +88,24 @@ export const AuditLog: React.FC = () => {
 
   const getActionBadgeVariant = (action: string) => {
     if (action.includes("suspend") || action.includes("delete")) return "destructive";
-    if (action.includes("activate") || action.includes("promote")) return "success";
+    if (action.includes("activate") || action.includes("promote") || action.includes("SET_MAINTENANCE")) return "success";
     return "info";
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Administrator Audit Trail</h1>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+            <h1 className="text-base sm:text-2xl font-black tracking-tight text-foreground truncate">
+              Administrator Audit Trail
+            </h1>
+            <span className="text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1 shrink-0 whitespace-nowrap">
               <ShieldCheck className="h-3 w-3" />
-              {total} Logged Events
+              {total} Events
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate sm:whitespace-normal">
             Immutable log of all administrative actions, suspensions, role modifications, and notices.
           </p>
         </div>
@@ -96,7 +129,7 @@ export const AuditLog: React.FC = () => {
       <div className="bg-card p-3 rounded-xl border border-border">
         <SearchBar
           value={search}
-          onChange={(val) => {
+          onChange={(val: string) => {
             setSearch(val);
             setPage(1);
           }}
@@ -130,7 +163,11 @@ export const AuditLog: React.FC = () => {
             </TableHeader>
             <TableBody>
               {logs.map((log) => (
-                <TableRow key={log.id} className="group hover:bg-muted/50 transition-colors">
+                <TableRow
+                  key={log.id}
+                  onClick={() => setSelectedAudit(log)}
+                  className="group hover:bg-muted/50 transition-colors cursor-pointer"
+                >
                   <TableCell>
                     <p className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{log.admin_name}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">{log.admin_email}</p>
@@ -155,8 +192,13 @@ export const AuditLog: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAudit(log);
+                      }}
                       className="h-8 px-2.5 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 gap-1 rounded-lg transition-all"
                     >
+                      <span className="hidden sm:inline">Details</span>
                       <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform" />
                     </Button>
                   </TableCell>
@@ -174,9 +216,135 @@ export const AuditLog: React.FC = () => {
           totalPages={totalPages}
           totalRecords={total}
           pageSize={10}
-          onPageChange={(p) => setPage(p)}
+          onPageChange={(p: number) => setPage(p)}
         />
       )}
+
+      {/* ── Audit Event Details Right-Side Drawer ─────────────────────────── */}
+      <Sheet open={!!selectedAudit} onOpenChange={(open) => !open && setSelectedAudit(null)}>
+        <SheetContent className="sm:max-w-lg w-full overflow-y-auto space-y-6">
+          <SheetHeader className="space-y-1.5 text-left items-start pr-6">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Audit Record
+              </span>
+              <Badge variant={getActionBadgeVariant(selectedAudit?.action || "") as any} className="capitalize text-xs">
+                {(selectedAudit?.action || "").replace("_", " ")}
+              </Badge>
+            </div>
+            <SheetTitle className="text-base sm:text-lg font-bold text-foreground capitalize text-left leading-tight break-words">
+              {(selectedAudit?.action || "Audit Event").replace("_", " ")}
+            </SheetTitle>
+            <SheetDescription className="text-xs text-left flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              Recorded: {selectedAudit?.created_at ? formatDate(selectedAudit.created_at, "PPP p") : ""}
+            </SheetDescription>
+          </SheetHeader>
+
+          {/* Administrator Info Card */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5 text-primary" />
+              Initiating Administrator
+            </h4>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Admin Name:</span>
+                <span className="font-semibold text-foreground">{selectedAudit?.admin_name || "Platform Admin"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Admin Email:</span>
+                <span className="font-mono text-foreground">{selectedAudit?.admin_email || "N/A"}</span>
+              </div>
+              {selectedAudit?.admin_id && (
+                <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                  <span className="text-muted-foreground">Admin ID:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-[11px] text-muted-foreground">{selectedAudit.admin_id.slice(0, 16)}...</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => copyToClipboard(selectedAudit.admin_id, "Admin ID")}
+                    >
+                      {copiedField === "Admin ID" ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Target User / Entity Card */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Target className="h-3.5 w-3.5 text-primary" />
+              Target Entity
+            </h4>
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Target Email:</span>
+                <span className="font-semibold text-foreground">{selectedAudit?.target_email || "System-Wide / No Single User"}</span>
+              </div>
+              {selectedAudit?.target_user_id && (
+                <div className="flex items-center justify-between pt-1 border-t border-border/60">
+                  <span className="text-muted-foreground">Target User ID:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-[11px] text-muted-foreground">{selectedAudit.target_user_id.slice(0, 16)}...</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => copyToClipboard(selectedAudit.target_user_id, "Target User ID")}
+                    >
+                      {copiedField === "Target User ID" ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Details & Telemetry JSON */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <FileCode className="h-3.5 w-3.5 text-primary" />
+              Action Parameters & Details
+            </h4>
+            <div className="p-4 rounded-xl bg-muted/40 border border-border/80 font-mono text-[11px] leading-relaxed overflow-x-auto max-h-56 text-foreground">
+              <pre>{JSON.stringify(selectedAudit?.details || {}, null, 2)}</pre>
+            </div>
+          </div>
+
+          {/* Audit Record ID */}
+          <div className="p-3 rounded-xl bg-muted/20 border border-border/60 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Log Entry ID:</span>
+            <div className="flex items-center gap-1">
+              <span className="font-mono text-[11px] text-muted-foreground">{selectedAudit?.id?.slice(0, 16)}...</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => copyToClipboard(selectedAudit?.id || "", "Log Entry ID")}
+              >
+                {copiedField === "Log Entry ID" ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+              </Button>
+            </div>
+          </div>
+
+          <SheetFooter className="pt-4 border-t flex flex-row items-center justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedAudit(null)}
+              className="text-xs"
+            >
+              Close
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

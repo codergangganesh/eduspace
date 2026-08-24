@@ -1,4 +1,5 @@
-import React from "react";
+import * as React from "react";
+import { ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -20,9 +21,14 @@ import { ActivityPage } from "@/pages/Activity";
 import { MessagesModeration } from "@/pages/Messages";
 import { Announcements } from "@/pages/Announcements";
 import { AuditLog } from "@/pages/AuditLog";
-import { SystemOverview } from "@/pages/SystemOverview";
 import { Settings } from "@/pages/Settings";
 import { AdminProfile } from "@/pages/AdminProfile";
+
+import { TermsOfService } from "@/pages/TermsOfService";
+import { PrivacyPolicy } from "@/pages/PrivacyPolicy";
+import { TermsAgreement } from "@/pages/TermsAgreement";
+import { ResetPassword } from "@/pages/ResetPassword";
+import { hasAcceptedCurrentAgreements } from "@/services/legal.service";
 
 // Wipe legacy localStorage caches on boot
 try {
@@ -33,7 +39,7 @@ try {
     "eduspace_admin_activity_persistent_cache",
     "eduspace_suspended_accounts",
   ].forEach((k) => localStorage.removeItem(k));
-} catch (_) {}
+} catch (_) { }
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,7 +54,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+function ProtectedAdminRoute({ children }: { children: ReactNode }) {
   const { user, isAdmin, isLoading } = useAdminAuth();
 
   if (isLoading) {
@@ -67,6 +73,11 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/access-denied" replace />;
   }
 
+  // Prevent bypassing of legal agreements
+  if (!hasAcceptedCurrentAgreements(user.id)) {
+    return <Navigate to="/agreement" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -82,9 +93,15 @@ export function App() {
             }}
           >
             <Routes>
-              {/* Public Auth Routes */}
+              {/* Public Auth & Legal Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/access-denied" element={<AccessDenied />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/agreement" element={<TermsAgreement />} />
 
               {/* Protected Administration Routes */}
               <Route
@@ -106,7 +123,6 @@ export function App() {
                 <Route path="/messages" element={<MessagesModeration />} />
                 <Route path="/announcements" element={<Announcements />} />
                 <Route path="/audit-logs" element={<AuditLog />} />
-                <Route path="/system-overview" element={<SystemOverview />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<AdminProfile />} />
               </Route>
@@ -123,3 +139,4 @@ export function App() {
 }
 
 export default App;
+

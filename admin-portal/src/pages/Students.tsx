@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import { useStudents } from "@/hooks/useStudents";
 import { SearchBar } from "@/components/common/SearchBar";
 import { FilterDropdown } from "@/components/common/FilterDropdown";
@@ -134,15 +135,17 @@ export const Students: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Students Directory</h1>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+            <h1 className="text-base sm:text-2xl font-black tracking-tight text-foreground truncate">
+              Students Directory
+            </h1>
+            <span className="text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 whitespace-nowrap">
               {total} Enrolled
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate sm:whitespace-normal">
             Monitor, inspect, and manage student enrollments, statuses, and academic records.
           </p>
         </div>
@@ -171,7 +174,7 @@ export const Students: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border">
         <SearchBar
           value={search}
-          onChange={(val) => {
+          onChange={(val: string) => {
             setSearch(val);
             setPage(1);
           }}
@@ -182,7 +185,7 @@ export const Students: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <FilterDropdown
             value={statusFilter}
-            onChange={(val) => {
+            onChange={(val: string) => {
               setStatusFilter(val);
               setPage(1);
             }}
@@ -196,7 +199,7 @@ export const Students: React.FC = () => {
 
           <FilterDropdown
             value={deptFilter}
-            onChange={(val) => {
+            onChange={(val: string) => {
               setDeptFilter(val);
               setPage(1);
             }}
@@ -253,9 +256,8 @@ export const Students: React.FC = () => {
                 return (
                   <TableRow
                     key={student.user_id}
-                    className={`group cursor-pointer hover:bg-muted/50 transition-colors ${
-                      isSelected ? "bg-primary/5" : ""
-                    }`}
+                    className={`group cursor-pointer hover:bg-muted/50 transition-colors ${isSelected ? "bg-primary/5" : ""
+                      }`}
                     onClick={() => handleOpenDrawer(student)}
                   >
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
@@ -377,7 +379,7 @@ export const Students: React.FC = () => {
         <Pagination
           currentPage={page}
           totalPages={totalPages}
-          onPageChange={(p) => setPage(p)}
+          onPageChange={(p: number) => setPage(p)}
           totalRecords={total}
           pageSize={10}
         />
@@ -407,7 +409,7 @@ export const Students: React.FC = () => {
       <ProfileDrawer
         user={activeUser}
         open={drawerOpen}
-        onOpenChange={(isOpen) => {
+        onOpenChange={(isOpen: boolean) => {
           setDrawerOpen(isOpen);
           if (!isOpen) setActiveUser(null);
         }}
@@ -418,7 +420,7 @@ export const Students: React.FC = () => {
         <RoleChangeModal
           user={roleModalUser}
           open={Boolean(roleModalUser)}
-          onOpenChange={(isOpen) => {
+          onOpenChange={(isOpen: boolean) => {
             if (!isOpen) setRoleModalUser(null);
           }}
           onSuccess={() => {
@@ -432,7 +434,7 @@ export const Students: React.FC = () => {
         <DeleteUserModal
           user={deleteModalUser}
           open={Boolean(deleteModalUser)}
-          onOpenChange={(isOpen) => {
+          onOpenChange={(isOpen: boolean) => {
             if (!isOpen) setDeleteModalUser(null);
           }}
           onSuccess={() => {
@@ -444,7 +446,7 @@ export const Students: React.FC = () => {
 
       <ConfirmationModal
         open={bulkSuspendOpen}
-        onOpenChange={(isOpen) => setBulkSuspendOpen(isOpen)}
+        onOpenChange={(isOpen: boolean) => setBulkSuspendOpen(isOpen)}
         onConfirm={() => {
           handleBulkStatus("suspended");
           setBulkSuspendOpen(false);
@@ -457,7 +459,7 @@ export const Students: React.FC = () => {
 
       <ConfirmationModal
         open={bulkActivateOpen}
-        onOpenChange={(isOpen) => setBulkActivateOpen(isOpen)}
+        onOpenChange={(isOpen: boolean) => setBulkActivateOpen(isOpen)}
         onConfirm={() => {
           handleBulkStatus("active");
           setBulkActivateOpen(false);

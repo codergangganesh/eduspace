@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import * as React from "react";
+import { useState, useEffect } from "react";
 import { adminService } from "@/services/admin.service";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,17 @@ import {
   CheckCircle2,
   Server,
   Lock,
+  AlertTriangle,
+  Power,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { Badge } from "@/components/ui/badge";
 
 export const Settings: React.FC = () => {
+  const { isMaintenanceMode, setMaintenanceMode } = useMaintenanceMode();
   const [admins, setAdmins] = useState<any[]>([]);
   const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
   const [promoteEmail, setPromoteEmail] = useState("");
@@ -207,31 +213,86 @@ export const Settings: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3.5 text-xs">
-              <div className="space-y-1">
+              {/* <div className="space-y-1">
                 <span className="text-muted-foreground font-medium">Supabase Project URL</span>
                 <p className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border truncate">
                   {import.meta.env.VITE_SUPABASE_URL || "Configured via .env"}
                 </p>
+              </div> */}
+
+              <div className="space-y-1">
+                <span className="text-muted-foreground font-medium">Admin Portal Endpoint</span>
+                <div className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border flex items-center justify-between gap-2">
+                  <span className="truncate">http://localhost:5174</span>
+                  <a
+                    href="http://localhost:5174"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground px-2.5 py-1 rounded transition-colors shrink-0"
+                  >
+                    Open
+                  </a>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <span className="text-muted-foreground font-medium">Admin Portal Port</span>
-                <p className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border">
-                  http://localhost:5174
-                </p>
+                <span className="text-muted-foreground font-medium">Main Application URL</span>
+                <div className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border flex items-center justify-between gap-2">
+                  <span className="truncate">https://www.eduspaceacademy.online/</span>
+                  <a
+                    href="https://www.eduspaceacademy.online/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground px-2.5 py-1 rounded transition-colors shrink-0"
+                  >
+                    Open
+                  </a>
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-1">
-                <span className="text-muted-foreground font-medium">Main Application Port</span>
-                <p className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border">
-                  http://localhost:8080
-                </p>
+          {/* Maintenance Mode Governance Card */}
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  Platform Maintenance Mode
+                </CardTitle>
+                <Badge
+                  variant={isMaintenanceMode ? "destructive" : "outline"}
+                  className="text-[10px] font-bold uppercase tracking-wider"
+                >
+                  {isMaintenanceMode ? "Active" : "Normal Mode"}
+                </Badge>
               </div>
-
-              <div className="pt-2 border-t border-border/60 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                Shared single-database backend active
-              </div>
+              <CardDescription className="text-xs">
+                Restricts platform access for scheduled maintenance and security upgrades.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-1">
+              <p className="text-xs text-muted-foreground">
+                When enabled, a warning banner will appear across the portal and student access will be restricted.
+              </p>
+              <Button
+                type="button"
+                variant={isMaintenanceMode ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const next = !isMaintenanceMode;
+                  setMaintenanceMode(next);
+                  if (next) {
+                    toast.warning("Platform Maintenance Mode enabled! Warning banner is now active.");
+                  } else {
+                    toast.success("Platform Maintenance Mode disabled. Normal operations resumed.");
+                  }
+                }}
+                className="w-full text-xs font-semibold h-9 gap-1.5"
+              >
+                <Power className="h-3.5 w-3.5" />
+                {isMaintenanceMode ? "Deactivate Maintenance Mode" : "Enable Maintenance Mode"}
+              </Button>
             </CardContent>
           </Card>
         </div>

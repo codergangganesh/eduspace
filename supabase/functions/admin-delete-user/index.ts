@@ -76,6 +76,174 @@ serve(async (req: Request) => {
 
     const body = await req.json();
     const action = body?.action || "delete_user";
+
+    // -------------------------------------------------------------
+    // ACTION: Send Platform Broadcast Announcement (Bulk Insert)
+    // -------------------------------------------------------------
+    if (action === "send_announcement") {
+      const title = body?.title;
+      const message = body?.message;
+      const recipientUserIds = body?.recipientUserIds || [];
+
+      if (!title || !message || !Array.isArray(recipientUserIds) || recipientUserIds.length === 0) {
+        return new Response(JSON.stringify({ error: "Invalid announcement parameters or empty recipients" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const attachmentUrl = body?.attachmentUrl;
+      const attachmentType = body?.attachmentType;
+      const attachmentName = body?.attachmentName;
+
+      const notifications = recipientUserIds.map((recipientId: string) => ({
+        recipient_id: recipientId,
+        user_id: recipientId,
+        sender_id: callerUser.id,
+        title,
+        message,
+        type: "announcement",
+        action_type: "announcement",
+        attachment_url: attachmentUrl || null,
+        attachment_type: attachmentType || null,
+        attachment_name: attachmentName || null,
+        metadata: attachmentUrl
+          ? {
+              attachment_url: attachmentUrl,
+              attachment_type: attachmentType || "file",
+              attachment_name: attachmentName || "Attachment",
+            }
+          : {},
+        is_read: false,
+      }));
+
+      const chunkSize = 100;
+      for (let i = 0; i < notifications.length; i += chunkSize) {
+        const chunk = notifications.slice(i, i + chunkSize);
+        const { error } = await adminClient.from("notifications").insert(chunk);
+        if (error) {
+          console.error("Bulk insert notifications error:", error);
+        }
+      }
+
+      // Also post official announcement to Class Feed
+      try {
+        const audience = body?.audience;
+        const targetId = body?.targetId;
+
+        let targetClassIds: string[] = [];
+
+        if (audience === "class" && targetId) {
+          targetClassIds = [targetId];
+        } else {
+          const { data: activeClasses } = await adminClient
+            .from("classes")
+            .select("id")
+            .eq("is_active", true)
+            .limit(100);
+
+          targetClassIds = (activeClasses || []).map((c: any) => c.id).filter(Boolean);
+        }
+
+        if (targetClassIds.length > 0) {
+          const feedPosts = targetClassIds.map((classId: string) => ({
+            class_id: classId,
+            author_id: callerUser.id,
+            content: `📢 **${title}**\n\n${message}`,
+            attachment_url: attachmentUrl || null,
+            attachment_type: attachmentType || null,
+            attachment_name: attachmentName || null,
+            is_pinned: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
+
+          await adminClient.from("class_feed_posts").insert(feedPosts);
+        }
+      } catch (feedErr) {
+        console.warn("Class feed post insert error (safe fallback):", feedErr);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          count: recipientUserIds.length,
+          message: "Announcement broadcasted successfully to notifications and class feed",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // -------------------------------------------------------------
+    // ACTION: Delete Broadcast Announcement Platform-Wide
+    // -------------------------------------------------------------
+    if (action === "delete_announcement") {
+      const title = body?.title;
+      const auditLogId = body?.auditLogId;
+
+      if (!title && !auditLogId) {
+        return new Response(JSON.stringify({ error: "Missing announcement title or ID" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 1. Delete notifications matching this title
+      if (title) {
+        try {
+          await adminClient
+            .from("notifications")
+            .delete()
+            .eq("title", title);
+        } catch (_) {}
+
+        // 2. Delete from class_feed_posts
+        try {
+          await adminClient
+            .from("class_feed_posts")
+            .delete()
+            .ilike("content", `%${title}%`);
+        } catch (_) {}
+      }
+
+      // 3. Delete from admin_audit_logs
+      try {
+        if (auditLogId) {
+          await adminClient
+            .from("admin_audit_logs")
+            .delete()
+            .eq("id", auditLogId);
+        } else if (title) {
+          const { data: logs } = await adminClient
+            .from("admin_audit_logs")
+            .select("id, details")
+            .eq("action", "send_announcement");
+
+          const matchingIds = (logs || [])
+            .filter((l: any) => l.details?.title === title)
+            .map((l: any) => l.id);
+
+          if (matchingIds.length > 0) {
+            await adminClient.from("admin_audit_logs").delete().in("id", matchingIds);
+          }
+        }
+      } catch (_) {}
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Announcement permanently deleted across all user notifications and class feeds",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const targetUserId = body?.userId || body?.targetUserId;
     const targetEmail = body?.email;
 

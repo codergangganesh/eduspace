@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import * as React from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { auditService } from "@/services/audit.service";
 import { supabase } from "@/lib/supabase";
+import { uploadToCloudinary } from "@/lib/cloudinary";
+import { useTheme } from "next-themes";
 import {
   User,
-  Shield,
-  ShieldCheck,
   Lock,
   Mail,
   Phone,
-  Calendar,
   Save,
   CheckCircle,
   Camera,
@@ -17,41 +17,71 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-  Building,
-  MapPin,
   Clock,
-  Sparkles,
   RefreshCw,
-  Award,
+  Sun,
+  Moon,
+  Laptop,
+  Trash2,
+  Check,
+  Palette,
+  Edit3,
+  X,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn, getInitials, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { AdminAuditLog } from "@/types";
 
-type ProfileTab = "personal" | "admin_scope" | "security" | "activity";
+type ProfileTab = "personal" | "preferences" | "security" | "activity";
 
 const profileTabs = [
   { id: "personal" as ProfileTab, label: "Personal Info", icon: User },
-  { id: "admin_scope" as ProfileTab, label: "Admin Privileges", icon: Shield },
-  { id: "security" as ProfileTab, label: "Security & Password", icon: Lock },
-  { id: "activity" as ProfileTab, label: "Admin Activity Log", icon: Activity },
+  { id: "preferences" as ProfileTab, label: "Display Theme", icon: Palette },
+  { id: "security" as ProfileTab, label: "Security", icon: Lock },
+  { id: "activity" as ProfileTab, label: "Activity Log", icon: Activity },
 ];
 
 export const AdminProfile: React.FC = () => {
   const { user, profile, refreshProfile } = useAdminAuth();
+  const { theme, setTheme } = useTheme();
+
   const [activeTab, setActiveTab] = useState<ProfileTab>("personal");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form fields matching EduSpace profile fields
+  // Persistent Avatar & Banner image states
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [bannerUrl, setBannerUrl] = useState<string>("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Form fields
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
@@ -59,9 +89,8 @@ export const AdminProfile: React.FC = () => {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [country, setCountry] = useState("India");
-  const [emailNotifications, setEmailNotifications] = useState(true);
 
-  // Security tab fields
+  // Security fields
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -80,33 +109,214 @@ export const AdminProfile: React.FC = () => {
       setCity(profile.city || "");
       setState(profile.state || "");
       setCountry(profile.country || "India");
-      setEmailNotifications(profile.email_notifications ?? true);
+
+      const savedAvatar =
+        profile.avatar_url ||
+        localStorage.getItem("eduspace_admin_avatar") ||
+        (profile.user_id ? localStorage.getItem(`admin_avatar_${profile.user_id}`) : "") ||
+        "";
+
+      const savedBanner =
+        (profile as any).cover_url ||
+        (profile as any).banner_url ||
+        localStorage.getItem("eduspace_admin_banner") ||
+        (profile.user_id ? localStorage.getItem(`admin_banner_${profile.user_id}`) : "") ||
+        "";
+
+      if (savedAvatar) setAvatarUrl(savedAvatar);
+      if (savedBanner) setBannerUrl(savedBanner);
     }
   }, [profile]);
 
   useEffect(() => {
-    if (activeTab === "activity" && user?.id) {
-      fetchAdminLogs(user.id);
+    if (activeTab === "activity") {
+      fetchAdminLogs();
     }
-  }, [activeTab, user?.id]);
+  }, [activeTab]);
 
-  const fetchAdminLogs = async (adminId: string) => {
+  const fetchAdminLogs = async () => {
     try {
       setIsLoadingLogs(true);
-      const { data, error } = await supabase
-        .from("admin_audit_logs")
-        .select("*")
-        .eq("admin_id", adminId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (!error && data) {
-        setRecentLogs(data as AdminAuditLog[]);
-      }
+      const res = await auditService.getAuditLogs({ pageSize: 15 });
+      setRecentLogs(res.data || []);
     } catch (err) {
-      console.error("Failed to load admin logs:", err);
+      console.error("Error fetching audit logs for profile:", err);
     } finally {
       setIsLoadingLogs(false);
+    }
+  };
+
+  // Direct Avatar Upload
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile photo file size must be less than 5MB.");
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      const res = await uploadToCloudinary(file);
+
+      if (res?.url) {
+        setAvatarUrl(res.url);
+        localStorage.setItem("eduspace_admin_avatar", res.url);
+        localStorage.setItem(`admin_avatar_${user.id}`, res.url);
+
+        await supabase
+          .from("profiles")
+          .update({
+            avatar_url: res.url,
+            updated_at: new Date().toISOString(),
+          })
+          .or(`user_id.eq.${user.id},id.eq.${user.id}`);
+
+        if (user.email) {
+          await supabase
+            .from("profiles")
+            .update({ avatar_url: res.url, updated_at: new Date().toISOString() })
+            .ilike("email", user.email);
+        }
+
+        try {
+          await supabase.auth.updateUser({ data: { avatar_url: res.url } });
+        } catch (_) { }
+
+        await auditService.logAction({
+          action: "UPDATE_AVATAR",
+          targetUserId: user.id,
+          targetEmail: user.email,
+          details: { avatar_url: res.url },
+        });
+
+        await refreshProfile();
+        toast.success("Profile photo updated successfully!");
+      }
+    } catch (err: any) {
+      console.error("Avatar upload failed:", err);
+      toast.error(err.message || "Failed to upload profile photo.");
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user) return;
+    try {
+      setAvatarUrl("");
+      localStorage.removeItem("eduspace_admin_avatar");
+      localStorage.removeItem(`admin_avatar_${user.id}`);
+
+      await supabase
+        .from("profiles")
+        .update({ avatar_url: null, updated_at: new Date().toISOString() })
+        .or(`user_id.eq.${user.id},id.eq.${user.id}`);
+
+      if (user.email) {
+        await supabase
+          .from("profiles")
+          .update({ avatar_url: null, updated_at: new Date().toISOString() })
+          .ilike("email", user.email);
+      }
+
+      try {
+        await supabase.auth.updateUser({ data: { avatar_url: null } });
+      } catch (_) { }
+
+      await refreshProfile();
+      toast.success("Profile photo removed.");
+    } catch (err: any) {
+      toast.error("Failed to remove avatar.");
+    }
+  };
+
+  // Direct Banner Upload
+  const handleBannerFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Banner image file size must be less than 8MB.");
+      return;
+    }
+
+    try {
+      setIsUploadingBanner(true);
+      const res = await uploadToCloudinary(file);
+
+      if (res?.url) {
+        setBannerUrl(res.url);
+        localStorage.setItem("eduspace_admin_banner", res.url);
+        localStorage.setItem(`admin_banner_${user.id}`, res.url);
+
+        await supabase
+          .from("profiles")
+          .update({
+            cover_url: res.url,
+            updated_at: new Date().toISOString(),
+          })
+          .or(`user_id.eq.${user.id},id.eq.${user.id}`);
+
+        if (user.email) {
+          await supabase
+            .from("profiles")
+            .update({ cover_url: res.url, updated_at: new Date().toISOString() })
+            .ilike("email", user.email);
+        }
+
+        try {
+          await supabase.auth.updateUser({ data: { cover_url: res.url } });
+        } catch (_) { }
+
+        await auditService.logAction({
+          action: "UPDATE_BANNER",
+          targetUserId: user.id,
+          targetEmail: user.email,
+          details: { cover_url: res.url },
+        });
+
+        await refreshProfile();
+        toast.success("Profile banner updated successfully!");
+      }
+    } catch (err: any) {
+      console.error("Banner upload failed:", err);
+      toast.error(err.message || "Failed to upload banner image.");
+    } finally {
+      setIsUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveBanner = async () => {
+    if (!user) return;
+    try {
+      setBannerUrl("");
+      localStorage.removeItem("eduspace_admin_banner");
+      localStorage.removeItem(`admin_banner_${user.id}`);
+
+      await supabase
+        .from("profiles")
+        .update({ cover_url: null, updated_at: new Date().toISOString() })
+        .or(`user_id.eq.${user.id},id.eq.${user.id}`);
+
+      if (user.email) {
+        await supabase
+          .from("profiles")
+          .update({ cover_url: null, updated_at: new Date().toISOString() })
+          .ilike("email", user.email);
+      }
+
+      try {
+        await supabase.auth.updateUser({ data: { cover_url: null } });
+      } catch (_) { }
+
+      await refreshProfile();
+      toast.success("Custom banner removed.");
+    } catch (err: any) {
+      toast.error("Failed to remove banner.");
     }
   };
 
@@ -126,10 +336,9 @@ export const AdminProfile: React.FC = () => {
           city: city.trim(),
           state: state.trim(),
           country: country.trim(),
-          email_notifications: emailNotifications,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", user.id);
+        .or(`user_id.eq.${user.id},id.eq.${user.id}`);
 
       if (error) throw error;
 
@@ -144,6 +353,7 @@ export const AdminProfile: React.FC = () => {
       toast.success("Admin profile updated successfully!");
       setIsEditing(false);
     } catch (err: any) {
+      console.error("Save profile error:", err);
       toast.error(err.message || "Failed to update profile.");
     } finally {
       setIsSaving(false);
@@ -191,49 +401,74 @@ export const AdminProfile: React.FC = () => {
     }
   };
 
-  const displayName = profile?.full_name || "Administrator";
+  const displayName = profile?.full_name || fullName || "Administrator";
   const displayEmail = user?.email || "";
-  const displayAvatar = profile?.avatar_url || "";
+  const displayAvatar = avatarUrl || profile?.avatar_url || "";
   const displayInitials = getInitials(displayName);
   const bioMaxLength = 300;
   const bioRemaining = bioMaxLength - bio.length;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Top Breadcrumb & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
-            <User className="h-6 w-6 text-primary" />
-            Admin Profile & Account Settings
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Manage your administrative identity, credentials, role parameters, and system audit trail.
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-24 lg:pb-8">
+      {/* Hidden File Inputs for Direct Avatar & Banner Upload */}
+      <input
+        type="file"
+        ref={avatarInputRef}
+        onChange={handleAvatarFileChange}
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={bannerInputRef}
+        onChange={handleBannerFileChange}
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        className="hidden"
+      />
+
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+            <h1 className="text-base sm:text-2xl font-black tracking-tight text-foreground truncate flex items-center gap-2">
+              <User className="h-4 w-4 sm:h-6 sm:w-6 text-primary shrink-0" />
+              Admin Profile & Settings
+            </h1>
+            <Badge variant="default" className="text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-primary shrink-0 whitespace-nowrap">
+              Super Admin
+            </Badge>
+          </div>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate sm:whitespace-normal">
+            Manage your personal profile, uploaded photos, display theme, and security.
           </p>
         </div>
-
-        <Button
-          variant={isEditing ? "outline" : "default"}
-          onClick={() => setIsEditing(!isEditing)}
-          className="text-xs font-semibold self-start sm:self-auto"
-        >
-          {isEditing ? "Cancel Editing" : "Edit Profile Details"}
-        </Button>
       </div>
 
-      {/* Two-Column Responsive Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Column: Quick Profile Card & Navigation Tabs */}
-        <div className="w-full lg:w-72 shrink-0 space-y-4 sticky top-6">
+      {/* Main Container Layout */}
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start">
+        {/* Left Column (Desktop Only): Profile Card & Vertical Tab Navigation */}
+        <div className="hidden lg:block w-72 shrink-0 space-y-4">
           <Card className="border-border shadow-sm overflow-hidden bg-card">
             <div className="p-5 flex flex-col items-center text-center border-b border-border/60 bg-muted/20">
-              <div className="relative group/avatar mb-3">
+              {/* Avatar with Click to Change */}
+              <div className="relative group/avatar mb-2.5">
                 <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-md">
                   <AvatarImage src={displayAvatar} alt={displayName} />
                   <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
                     {displayInitials}
                   </AvatarFallback>
                 </Avatar>
+
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className="absolute inset-0 rounded-full bg-black/65 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold cursor-pointer gap-1"
+                  title="Click to upload profile photo"
+                >
+                  <Camera className={cn("h-4 w-4", isUploadingAvatar && "animate-spin")} />
+                  <span>{isUploadingAvatar ? "..." : "Upload"}</span>
+                </button>
               </div>
 
               <h3 className="font-bold text-base text-foreground leading-tight">{displayName}</h3>
@@ -241,7 +476,7 @@ export const AdminProfile: React.FC = () => {
                 {displayEmail}
               </p>
 
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
                 <Badge variant="default" className="text-[10px] font-bold uppercase tracking-wider bg-primary">
                   Super Admin
                 </Badge>
@@ -250,10 +485,35 @@ export const AdminProfile: React.FC = () => {
                   Verified
                 </Badge>
               </div>
+
+              {/* Quick Image Action Buttons */}
+              <div className="mt-2.5 flex items-center justify-center gap-2 pt-2 border-t border-border/50 w-full">
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  Upload Photo
+                </button>
+                {displayAvatar && (
+                  <>
+                    <span className="text-muted-foreground/50">•</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="text-xs font-semibold text-destructive hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Vertical Tab Navigation */}
-            <div className="p-2 space-y-1">
+            {/* Desktop Vertical Tab Navigation */}
+            <div className="p-2 flex flex-col gap-1.5">
               {profileTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -262,61 +522,114 @@ export const AdminProfile: React.FC = () => {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all text-left",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer",
                       isActive
                         ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20 font-bold"
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}
                   >
-                    <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                    <Icon
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        isActive ? "text-primary-foreground" : "text-muted-foreground"
+                      )}
+                    />
                     <span>{tab.label}</span>
                   </button>
                 );
               })}
             </div>
           </Card>
-
-          {/* Quick System Summary */}
-          <Card className="border-border shadow-sm p-4 text-xs space-y-2 bg-card">
-            <div className="font-semibold text-foreground flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              Security Governance
-            </div>
-            <p className="text-muted-foreground leading-relaxed text-[11px]">
-              Full database write authorization and cryptographic session tokens active.
-            </p>
-            <div className="pt-2 text-[10px] text-muted-foreground border-t border-border/50">
-              Joined: <span className="font-mono text-foreground font-medium">{formatDate(user?.created_at || "")}</span>
-            </div>
-          </Card>
         </div>
 
-        {/* Right Column: Main Content Panels */}
-        <div className="flex-1 min-w-0 w-full space-y-6">
-          {/* Header Banner Card (matching student profile hero banner) */}
-          <Card className="border-border shadow-sm overflow-hidden bg-card">
-            <div className="h-28 sm:h-36 bg-gradient-to-r from-primary/30 via-primary/10 to-blue-600/20 relative">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]" />
+        {/* Right Column: Hero Banner + Active Content Panel */}
+        <div className="flex-1 min-w-0 w-full space-y-4 sm:space-y-6">
+          {/* Responsive Hero Banner & Profile Header Card */}
+          <Card className="border-border shadow-sm overflow-hidden bg-card relative">
+            {/* Banner Image Container with Correct Mobile Fit */}
+            <div
+              className={cn(
+                "h-32 sm:h-44 md:h-48 w-full relative transition-all duration-300 group/banner",
+                !bannerUrl && "bg-gradient-to-r from-primary/35 via-primary/20 to-sky-600/30"
+              )}
+              style={
+                bannerUrl
+                  ? {
+                    backgroundImage: `url(${bannerUrl})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                  : undefined
+              }
+            >
+              <div className="absolute inset-0 bg-black/20 group-hover/banner:bg-black/35 transition-colors" />
+
+              {/* Banner Action Buttons */}
+              <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 flex items-center gap-1.5 sm:gap-2 z-10">
+                {bannerUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveBanner}
+                    title="Remove custom banner image"
+                    className="size-7 sm:size-8 rounded-full bg-black/75 hover:bg-destructive text-white border border-white/20 shadow-md flex items-center justify-center backdrop-blur-md transition-all cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={isUploadingBanner}
+                  title="Upload banner image"
+                  className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white border border-white/20 shadow-md flex items-center gap-1.5 backdrop-blur-md text-[11px] font-semibold cursor-pointer transition-all"
+                >
+                  <Camera className={cn("h-3.5 w-3.5", isUploadingBanner && "animate-spin")} />
+                  <span>{isUploadingBanner ? "Uploading..." : "Change Banner"}</span>
+                </button>
+              </div>
             </div>
 
-            <div className="px-6 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12">
-              <div className="flex items-end gap-4">
-                <Avatar className="h-24 w-24 border-4 border-background shadow-xl rounded-2xl">
-                  <AvatarImage src={displayAvatar} alt={displayName} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-extrabold rounded-2xl">
-                    {displayInitials}
-                  </AvatarFallback>
-                </Avatar>
+            {/* Profile Avatar & Info Row (Correct Mobile Alignment) */}
+            <div className="px-3 sm:px-6 pb-4 sm:pb-6 pt-0 relative flex items-end justify-between gap-3 -mt-9 sm:-mt-12">
+              <div className="flex items-end gap-3 sm:gap-4 min-w-0 flex-1">
+                {/* Hero Avatar with Quick Upload Click */}
+                <div className="relative group/heroAvatar shrink-0 w-20 h-20 sm:w-24 sm:h-24">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-3 sm:border-4 border-card shadow-xl rounded-2xl overflow-hidden cursor-pointer">
+                    <AvatarImage src={displayAvatar} alt={displayName} className="w-full h-full object-cover" />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-lg sm:text-2xl font-extrabold rounded-2xl w-full h-full flex items-center justify-center">
+                      {displayInitials}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="mb-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-extrabold text-foreground">{displayName}</h2>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute inset-0 rounded-2xl bg-black/65 opacity-0 group-hover/heroAvatar:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold cursor-pointer gap-1 z-10"
+                    title="Click to upload profile photo"
+                  >
+                    <Camera className={cn("h-4 w-4", isUploadingAvatar && "animate-spin")} />
+                    <span>{isUploadingAvatar ? "..." : "Photo"}</span>
+                  </button>
+                </div>
+
+                <div className="mb-0.5 sm:mb-1 min-w-0 flex-1">
+                  <h2 className="text-base sm:text-xl font-extrabold text-foreground truncate leading-tight">
+                    {displayName}
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate mt-0.5">
+                    {department}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1 sm:hidden">
+                    <Badge variant="default" className="text-[9px] font-bold py-0 px-1.5 bg-primary">
+                      Super Admin
+                    </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground font-medium">{department}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 shrink-0">
                 <Badge variant="secondary" className="text-xs font-semibold gap-1.5 py-1 px-3">
                   <Clock className="h-3.5 w-3.5 text-primary" />
                   Active Session
@@ -325,22 +638,43 @@ export const AdminProfile: React.FC = () => {
             </div>
           </Card>
 
-          {/* TAB 1: Personal Information */}
+          {/* TAB 1: Personal Information with Inline Edit Button */}
           {activeTab === "personal" && (
-            <Card className="border-border shadow-sm bg-card">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  Personal & Institutional Details
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Public and institutional identity parameters for your administrator profile.
-                </CardDescription>
+            <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-border/40">
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                    <User className="h-4 w-4 text-primary shrink-0" />
+                    Personal & Institutional Details
+                  </CardTitle>
+                  <CardDescription className="text-xs truncate sm:whitespace-normal">
+                    Public and institutional identity parameters for your administrator profile.
+                  </CardDescription>
+                </div>
+
+                <Button
+                  variant={isEditing ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="text-xs font-semibold h-8 shrink-0 gap-1"
+                >
+                  {isEditing ? (
+                    <>
+
+                      Cancel
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="h-3.5 w-3.5" />
+                      Edit
+                    </>
+                  )}
+                </Button>
               </CardHeader>
 
               <form onSubmit={handleSaveProfile}>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <CardContent className="space-y-4 pt-4 sm:pt-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">Full Name</Label>
                       <Input
@@ -348,7 +682,7 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => setFullName(e.target.value)}
                         disabled={!isEditing}
                         placeholder="Admin Full Name"
-                        className="h-10 text-sm"
+                        className="h-9 sm:h-10 text-sm"
                         required
                       />
                     </div>
@@ -358,12 +692,12 @@ export const AdminProfile: React.FC = () => {
                       <Input
                         value={displayEmail}
                         disabled
-                        className="h-10 text-sm bg-muted/50 cursor-not-allowed font-mono"
+                        className="h-9 sm:h-10 text-sm bg-muted/50 cursor-not-allowed font-mono"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">Contact Phone</Label>
                       <Input
@@ -371,7 +705,7 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => setPhone(e.target.value)}
                         disabled={!isEditing}
                         placeholder="+91 98765 43210"
-                        className="h-10 text-sm"
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
 
@@ -382,12 +716,12 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => setDepartment(e.target.value)}
                         disabled={!isEditing}
                         placeholder="e.g. Central IT / Academic Administration"
-                        className="h-10 text-sm"
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">City</Label>
                       <Input
@@ -395,7 +729,7 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => setCity(e.target.value)}
                         disabled={!isEditing}
                         placeholder="City"
-                        className="h-10 text-sm"
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -405,7 +739,7 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => setState(e.target.value)}
                         disabled={!isEditing}
                         placeholder="State"
-                        className="h-10 text-sm"
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -415,47 +749,61 @@ export const AdminProfile: React.FC = () => {
                         onChange={(e) => setCountry(e.target.value)}
                         disabled={!isEditing}
                         placeholder="Country"
-                        className="h-10 text-sm"
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold">Bio / Administrative Scope</Label>
-                      {isEditing && (
-                        <span className="text-[10px] text-muted-foreground font-mono">
-                          {bioRemaining} characters left
-                        </span>
-                      )}
+                      <Label className="text-xs font-semibold">Administrator Bio</Label>
+                      <span className="text-[11px] text-muted-foreground">
+                        {bioRemaining} characters left
+                      </span>
                     </div>
                     <Textarea
                       value={bio}
-                      onChange={(e) => setBio(e.target.value.slice(0, bioMaxLength))}
+                      onChange={(e) => {
+                        if (e.target.value.length <= bioMaxLength) {
+                          setBio(e.target.value);
+                        }
+                      }}
                       disabled={!isEditing}
-                      placeholder="Write a brief description of your administrative responsibilities..."
-                      className="min-h-[90px] text-sm resize-y"
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-border/60 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">Email Notifications</p>
-                      <p className="text-[11px] text-muted-foreground">Receive critical platform security digests via email</p>
-                    </div>
-                    <Switch
-                      checked={emailNotifications}
-                      onCheckedChange={setEmailNotifications}
-                      disabled={!isEditing}
+                      placeholder="Write a brief professional summary about your role and responsibilities..."
+                      className="min-h-[90px] text-sm resize-none"
                     />
                   </div>
                 </CardContent>
 
                 {isEditing && (
-                  <CardFooter className="pt-2">
-                    <Button type="submit" disabled={isSaving} className="text-xs font-semibold">
-                      <Save className="mr-1.5 h-3.5 w-3.5" />
-                      {isSaving ? "Saving changes..." : "Save Profile Details"}
+                  <CardFooter className="pt-2 pb-4 border-t border-border/40 flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(false)}
+                      disabled={isSaving}
+                      className="text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={isSaving}
+                      className="text-xs font-semibold shadow-md shadow-primary/20 gap-1.5"
+                    >
+                      {isSaving ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          Saving Changes...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-3.5 w-3.5" />
+                          Save Profile Changes
+                        </>
+                      )}
                     </Button>
                   </CardFooter>
                 )}
@@ -463,59 +811,74 @@ export const AdminProfile: React.FC = () => {
             </Card>
           )}
 
-          {/* TAB 2: Administrative Scope & Privileges */}
-          {activeTab === "admin_scope" && (
-            <Card className="border-border shadow-sm bg-card">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  Administrator Scope & Access Privileges
+          {/* TAB 2: Display Theme & Visual Preferences */}
+          {activeTab === "preferences" && (
+            <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
+              <CardHeader className="pb-3 sm:pb-4 border-b border-border/40">
+                <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                  <Palette className="h-4 w-4 text-primary shrink-0" />
+                  Appearance & Display Theme
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Active policy permissions granted to your administrative account.
+                  Customize the interface lighting and appearance of your Administrator portal.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 text-xs">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  <div className="p-3.5 rounded-xl border border-border/70 bg-muted/20 space-y-1.5">
-                    <div className="flex items-center gap-2 font-bold text-foreground">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      User Governance
-                    </div>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      Capability to suspend, activate, promote to admin, or permanently delete student and faculty profiles.
-                    </p>
-                  </div>
 
-                  <div className="p-3.5 rounded-xl border border-border/70 bg-muted/20 space-y-1.5">
-                    <div className="flex items-center gap-2 font-bold text-foreground">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      Academic Oversight
+              <CardContent className="space-y-6 pt-4 sm:pt-5">
+                <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                  {/* Light Theme Card */}
+                  <button
+                    type="button"
+                    onClick={() => setTheme("light")}
+                    className={cn(
+                      "p-3.5 sm:p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all text-center cursor-pointer",
+                      theme === "light"
+                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                        : "border-border hover:border-muted-foreground/40 bg-card"
+                    )}
+                  >
+                    <div className="p-2.5 rounded-full bg-amber-500/10 text-amber-500">
+                      <Sun className="h-5 w-5" />
                     </div>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      Cross-departmental visibility over all enrolled courses, classes, assignments, and submitted quizzes.
-                    </p>
-                  </div>
+                    <span className="text-xs font-bold text-foreground">Light Mode</span>
+                    <span className="text-[10px] text-muted-foreground">Clean light UI</span>
+                  </button>
 
-                  <div className="p-3.5 rounded-xl border border-border/70 bg-muted/20 space-y-1.5">
-                    <div className="flex items-center gap-2 font-bold text-foreground">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      Communication Moderation
+                  {/* Dark Theme Card */}
+                  <button
+                    type="button"
+                    onClick={() => setTheme("dark")}
+                    className={cn(
+                      "p-3.5 sm:p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all text-center cursor-pointer",
+                      theme === "dark"
+                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                        : "border-border hover:border-muted-foreground/40 bg-card"
+                    )}
+                  >
+                    <div className="p-2.5 rounded-full bg-blue-500/10 text-blue-500">
+                      <Moon className="h-5 w-5" />
                     </div>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      Oversight of user messaging threads and dispatch authority for institution-wide targeted broadcast announcements.
-                    </p>
-                  </div>
+                    <span className="text-xs font-bold text-foreground">Dark Mode</span>
+                    <span className="text-[10px] text-muted-foreground">Sleek dark theme</span>
+                  </button>
 
-                  <div className="p-3.5 rounded-xl border border-border/70 bg-muted/20 space-y-1.5">
-                    <div className="flex items-center gap-2 font-bold text-foreground">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      Audit & Compliance Trail
+                  {/* System Default */}
+                  <button
+                    type="button"
+                    onClick={() => setTheme("system")}
+                    className={cn(
+                      "p-3.5 sm:p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all text-center cursor-pointer",
+                      theme === "system"
+                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                        : "border-border hover:border-muted-foreground/40 bg-card"
+                    )}
+                  >
+                    <div className="p-2.5 rounded-full bg-emerald-500/10 text-emerald-500">
+                      <Laptop className="h-5 w-5" />
                     </div>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      Immutable logging of all administrative operations stored directly in the <code className="font-mono text-primary">admin_audit_logs</code> table.
-                    </p>
-                  </div>
+                    <span className="text-xs font-bold text-foreground">System Sync</span>
+                    <span className="text-[10px] text-muted-foreground">Auto OS match</span>
+                  </button>
                 </div>
               </CardContent>
             </Card>
@@ -523,19 +886,19 @@ export const AdminProfile: React.FC = () => {
 
           {/* TAB 3: Security & Password */}
           {activeTab === "security" && (
-            <Card className="border-border shadow-sm bg-card">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-primary" />
-                  Security & Authentication
+            <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
+              <CardHeader className="pb-3 sm:pb-4 border-b border-border/40">
+                <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                  <Lock className="h-4 w-4 text-primary shrink-0" />
+                  Security & Password Management
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Update your administrator account password and review security protocols.
+                  Update your administrator account password and review active security policies.
                 </CardDescription>
               </CardHeader>
 
               <form onSubmit={handlePasswordChange}>
-                <CardContent className="space-y-4 max-w-md">
+                <CardContent className="space-y-4 pt-4 sm:pt-5 max-w-lg">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">New Administrator Password</Label>
                     <div className="relative">
@@ -544,17 +907,21 @@ export const AdminProfile: React.FC = () => {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="••••••••••••"
-                        className="h-10 text-sm pr-10"
+                        className="h-9 sm:h-10 text-sm pr-10"
                         required
+                        minLength={8}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Minimum 8 characters with numbers and symbols.
+                    </p>
                   </div>
 
                   <div className="space-y-1.5">
@@ -564,74 +931,99 @@ export const AdminProfile: React.FC = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="h-10 text-sm"
+                      className="h-9 sm:h-10 text-sm"
                       required
                     />
                   </div>
+
+                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/80 flex items-start gap-2.5 text-xs text-muted-foreground">
+                    <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span>
+                      Administrative credentials provide privileged access to institutional data. Use a strong, unique password.
+                    </span>
+                  </div>
                 </CardContent>
 
-                <CardFooter className="pt-2">
-                  <Button type="submit" disabled={isUpdatingPassword} className="text-xs font-semibold">
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
-                    {isUpdatingPassword ? "Updating Password..." : "Update Admin Password"}
+                <CardFooter className="pt-2 pb-4 border-t border-border/40 flex items-center justify-end">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isUpdatingPassword || !newPassword}
+                    className="text-xs font-semibold shadow-md shadow-primary/20 gap-1.5"
+                  >
+                    {isUpdatingPassword ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        Updating Password...
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="h-3.5 w-3.5" />
+                        Update Password
+                      </>
+                    )}
                   </Button>
                 </CardFooter>
               </form>
             </Card>
           )}
 
-          {/* TAB 4: Admin Audit Activity */}
+          {/* TAB 4: Admin Activity Log */}
           {activeTab === "activity" && (
-            <Card className="border-border shadow-sm bg-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
+              <CardHeader className="flex flex-row items-center justify-between pb-3 sm:pb-4 border-b border-border/40">
                 <div>
-                  <CardTitle className="text-base font-bold flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
-                    Recent Administrative Actions
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                    <Activity className="h-4 w-4 text-primary shrink-0" />
+                    Administrative Actions & Telemetry
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Audit log history of actions performed by your administrator account.
+                    Your recent administrative events recorded on this portal.
                   </CardDescription>
                 </div>
-                {user && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchAdminLogs(user.id)}
-                    disabled={isLoadingLogs}
-                    className="text-xs h-8"
-                  >
-                    <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isLoadingLogs && "animate-spin")} />
-                    Refresh
-                  </Button>
-                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchAdminLogs}
+                  disabled={isLoadingLogs}
+                  className="h-8 text-xs font-medium gap-1"
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", isLoadingLogs && "animate-spin")} />
+                  Refresh
+                </Button>
               </CardHeader>
-              <CardContent>
+
+              <CardContent className="pt-4 space-y-3">
                 {isLoadingLogs ? (
-                  <div className="py-8 text-center text-xs text-muted-foreground">Loading recent actions...</div>
+                  <div className="space-y-2 py-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="h-12 bg-muted/60 animate-pulse rounded-lg" />
+                    ))}
+                  </div>
                 ) : recentLogs.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-                    No recent administrative actions recorded for this account.
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    No recent administrative activity recorded for this session.
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {recentLogs.map((log) => (
+                  <div className="space-y-2">
+                    {recentLogs.map((log, idx) => (
                       <div
-                        key={log.id}
-                        className="p-3 rounded-lg border border-border bg-muted/20 text-xs flex items-start justify-between gap-3"
+                        key={idx}
+                        className="p-3 rounded-xl bg-muted/30 border border-border/80 flex items-center justify-between gap-3 text-xs"
                       >
-                        <div className="space-y-0.5 min-w-0">
-                          <p className="font-semibold text-foreground">
-                            {log.action}
-                            {log.target_email && (
-                              <span className="text-muted-foreground font-normal"> on {log.target_email}</span>
-                            )}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground font-mono truncate">
-                            {JSON.stringify(log.details)}
-                          </p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] font-mono capitalize py-0 px-1.5">
+                              {log.action.replace("_", " ")}
+                            </Badge>
+                            <span className="font-semibold text-foreground truncate">
+                              {log.target_email || "System-wide"}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+
+                        <span className="text-[11px] text-muted-foreground shrink-0">
                           {formatDate(log.created_at)}
                         </span>
                       </div>
@@ -642,6 +1034,39 @@ export const AdminProfile: React.FC = () => {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* ── Sticky Mobile Bottom Navigation Bar ──────────────────────────────── */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2 py-1.5 flex items-center justify-around lg:hidden shadow-2xl safe-area-inset-bottom">
+        {profileTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative cursor-pointer",
+                isActive
+                  ? "text-primary font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <div
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  isActive ? "bg-primary/15 text-primary scale-110" : ""
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <span className="text-[10px] tracking-tight mt-0.5">{tab.label}</span>
+              {isActive && (
+                <span className="absolute bottom-0 h-0.5 w-5 bg-primary rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { StatCard } from "@/components/dashboard/StatCard";
