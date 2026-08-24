@@ -135,17 +135,108 @@ export const passkeyService = {
     const auth = supabase.auth as any;
 
     try {
+      // 1. Try SDK native Passkey registration API
       if (typeof auth.registerPasskey === "function") {
         const res = await auth.registerPasskey();
         if (res?.error) {
-          return { data: null, error: res.error.message || "Passkey registration failed." };
+          const msg = res.error.message || "";
+          if (msg.toLowerCase().includes("domain") || msg.toLowerCase().includes("origin") || msg.toLowerCase().includes("relying party")) {
+            return {
+              data: null,
+              error: `Domain mismatch: Supabase Relying Party ID is set for a different domain than '${window.location.hostname}'. If testing locally, set RP ID to 'localhost' in Supabase Dashboard.`,
+            };
+          }
+          return { data: null, error: msg || "Passkey registration failed." };
         }
         if (res?.data) {
           return { data: res.data, error: null };
         }
       }
 
-      return { data: null, error: "Native Passkey registration is not supported on this client." };
+      // 2. Direct WebAuthn Ceremony Fallback
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (accessToken) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apikey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        // Step A: Request challenge options from Supabase
+        const optionsRes = await fetch(`${supabaseUrl}/auth/v1/passkeys/registration/options`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            apikey,
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (!optionsRes.ok) {
+          const errBody = await optionsRes.json().catch(() => ({}));
+          const errMsg = errBody?.msg || errBody?.message || errBody?.error_description || "";
+          if (errMsg.toLowerCase().includes("domain") || errMsg.toLowerCase().includes("origin") || errMsg.toLowerCase().includes("relying party") || optionsRes.status === 400) {
+            return {
+              data: null,
+              error: `Domain mismatch: Supabase Relying Party is configured for a different domain than '${window.location.hostname}'. If testing on localhost, set Relying Party ID to 'localhost' in Supabase Dashboard.`,
+            };
+          }
+          return { data: null, error: errMsg || "Failed to start passkey registration." };
+        }
+
+        const optionsData = await optionsRes.json();
+        const serverOptions = optionsData.options || optionsData;
+        const challengeId = optionsData.challenge_id;
+
+        // Step B: Prompt user via browser WebAuthn API
+        let publicKey: any;
+        if (typeof (PublicKeyCredential as any)?.parseCreationOptionsFromJSON === "function") {
+          publicKey = (PublicKeyCredential as any).parseCreationOptionsFromJSON(serverOptions);
+        } else {
+          publicKey = serverOptions;
+        }
+
+        const credential = (await navigator.credentials.create({ publicKey })) as any;
+        if (!credential) {
+          return { data: null, error: "WebAuthn ceremony failed to generate credential." };
+        }
+
+        const serializedCredential = typeof credential.toJSON === "function"
+          ? credential.toJSON()
+          : {
+              id: credential.id,
+              rawId: credential.id,
+              type: credential.type,
+              response: {
+                clientDataJSON: credential.response.clientDataJSON,
+                attestationObject: credential.response.attestationObject,
+              },
+            };
+
+        // Step C: Verify registration with Supabase
+        const verifyRes = await fetch(`${supabaseUrl}/auth/v1/passkeys/registration/verify`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            apikey,
+          },
+          body: JSON.stringify({
+            challenge_id: challengeId,
+            credential: serializedCredential,
+            friendly_name: friendlyName?.trim() || getSuggestedPasskeyName(),
+          }),
+        });
+
+        if (!verifyRes.ok) {
+          const errBody = await verifyRes.json().catch(() => ({}));
+          return { data: null, error: errBody?.msg || errBody?.message || "Failed to verify passkey." };
+        }
+
+        const verifyData = await verifyRes.json();
+        return { data: verifyData, error: null };
+      }
+
+      return { data: null, error: "Active session required to register a passkey." };
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
         return { data: null, error: "Passkey registration was cancelled or timed out." };
