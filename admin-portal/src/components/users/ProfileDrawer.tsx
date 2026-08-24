@@ -2,9 +2,6 @@ import React, { useState } from "react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -27,7 +24,6 @@ import {
   RotateCcw,
   Trash2,
   Mail,
-  Phone,
   Calendar,
   Building,
   GraduationCap,
@@ -54,10 +50,10 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isStudent = user?.role === "student";
-  const { data: studentDetails, isLoading: loadingStudent } = useStudentDetails(
+  const { data: studentDetails } = useStudentDetails(
     isStudent && user ? user.user_id : null
   );
-  const { data: lecturerDetails, isLoading: loadingLecturer } = useLecturerDetails(
+  const { data: lecturerDetails } = useLecturerDetails(
     !isStudent && user ? user.user_id : null
   );
 
@@ -67,20 +63,24 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
 
   const handleToggleStatus = async () => {
     const newStatus = isSuspended ? "active" : "suspended";
-    setSuspendModalOpen(false);
-    user.status = newStatus;
-    toast.success(
-      `Account for ${user.full_name} is now ${newStatus === "active" ? "activated" : "suspended"}.`
-    );
-    onUserUpdated();
-
     try {
+      setIsProcessing(true);
       const res = await adminService.setUserStatus(user.user_id, newStatus, user.email);
-      if (!res.success) {
-        console.warn("Status update fallback note:", res.error);
+      if (res.success) {
+        user.status = newStatus;
+        toast.success(
+          `Account for ${user.full_name} is now ${newStatus === "active" ? "activated" : "suspended"}.`
+        );
+        onUserUpdated();
+        setSuspendModalOpen(false);
+      } else {
+        toast.error(res.error || "Failed to update status in database.");
       }
     } catch (err: any) {
-      console.warn("Status update exception:", err);
+      console.error("[ProfileDrawer] Status update exception:", err);
+      toast.error(err.message || "Failed to update status in database.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -135,14 +135,14 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <Building className="h-3.5 w-3.5" /> Department
                     </span>
-                    <p className="text-sm font-medium text-foreground">{user.department || "Not specified"}</p>
+                    <p className="text-sm font-medium text-foreground">{user.department || "General"}</p>
                   </div>
 
                   <div className="p-3.5 rounded-lg bg-muted/30 border border-border/60 space-y-1">
                     <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <GraduationCap className="h-3.5 w-3.5" /> Program / Degree
                     </span>
-                    <p className="text-sm font-medium text-foreground">{user.program || "General Degree"}</p>
+                    <p className="text-sm font-medium text-foreground">{user.program || "Student Account"}</p>
                   </div>
 
                   {user.student_id && (
@@ -185,44 +185,122 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
               <TabsContent value="academic" className="space-y-4">
                 {isStudent ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-center">
-                        <span className="text-xl font-bold text-primary">
-                          {studentDetails?.classes?.length || 0}
+                    {/* Live Real-time Status Badge */}
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-semibold text-foreground">Live Academic Metrics</span>
+                      <div className="flex items-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        <span className="relative flex h-1.5 w-1.5 mr-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                         </span>
-                        <p className="text-[11px] font-medium text-muted-foreground mt-0.5">Classes Enrolled</p>
-                      </div>
-
-                      <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-center">
-                        <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                          {studentDetails?.assignmentSubmissions?.length || 0}
-                        </span>
-                        <p className="text-[11px] font-medium text-muted-foreground mt-0.5">Submissions</p>
-                      </div>
-
-                      <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20 text-center">
-                        <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                          {studentDetails?.quizSubmissions?.length || 0}
-                        </span>
-                        <p className="text-[11px] font-medium text-muted-foreground mt-0.5">Quizzes Taken</p>
+                        Supabase Live
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    {/* 3 Core Academic Metric Tiles */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-center shadow-sm">
+                        <span className="text-2xl font-black text-primary">
+                          {studentDetails?.classes?.length || 0}
+                        </span>
+                        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">Classes Enrolled</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-center shadow-sm">
+                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                          {studentDetails?.assignmentSubmissions?.length || 0}
+                        </span>
+                        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">Submissions</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-center shadow-sm">
+                        <span className="text-2xl font-black text-purple-600 dark:text-purple-400">
+                          {studentDetails?.quizSubmissions?.length || 0}
+                        </span>
+                        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">Quizzes Taken</p>
+                      </div>
+                    </div>
+
+                    {/* Coding Profile Stats (if available in Supabase) */}
+                    {(studentDetails as any)?.codingProfile && (
+                      <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                            LeetCode & Competitive Coding
+                          </span>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                            {(studentDetails as any).codingProfile.leetcode_username || "Active"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-foreground/90">
+                          Total Problems Solved: <span className="font-bold">{(studentDetails as any).codingProfile.overall_data?.totalSolved || (studentDetails as any).codingProfile.leetcode_data?.totalSolved || 0}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Enrolled Classes List */}
+                    <div className="space-y-2 pt-1">
                       <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                        Enrolled Classes ({studentDetails?.classes?.length || 0})
+                        Enrolled Classes & Coursework ({studentDetails?.classes?.length || 0})
                       </h4>
                       {studentDetails?.classes && studentDetails.classes.length > 0 ? (
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {studentDetails.classes.map((cls, i) => (
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {studentDetails.classes.map((cls: any, i: number) => (
                             <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border text-xs">
-                              <span className="font-medium text-foreground">Class ID: {cls.class_id}</span>
-                              <span className="font-mono text-muted-foreground">{cls.register_number || "Enrolled"}</span>
+                              <div>
+                                <span className="font-medium text-foreground block">{cls.register_number || cls.class_name || `Class ${i + 1}`}</span>
+                                {cls.lecturer && <span className="text-[10px] text-muted-foreground">Instructor: {cls.lecturer}</span>}
+                              </div>
+                              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">Enrolled</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground italic">No classes enrolled currently.</p>
+                        <p className="text-xs text-muted-foreground italic">No enrolled classes recorded.</p>
+                      )}
+                    </div>
+
+                    {/* Recent Submissions List */}
+                    <div className="space-y-2 pt-1">
+                      <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Assignment Submissions ({studentDetails?.assignmentSubmissions?.length || 0})
+                      </h4>
+                      {studentDetails?.assignmentSubmissions && studentDetails.assignmentSubmissions.length > 0 ? (
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {studentDetails.assignmentSubmissions.map((sub: any, i: number) => (
+                            <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border text-xs">
+                              <div>
+                                <span className="font-medium text-foreground block">{sub.title || `Assignment ${i + 1}`}</span>
+                                <span className="text-[10px] text-muted-foreground">{formatDate(sub.submitted_at)}</span>
+                              </div>
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-xs">{sub.grade || "Submitted"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No assignment submissions recorded.</p>
+                      )}
+                    </div>
+
+                    {/* Quizzes Taken List */}
+                    <div className="space-y-2 pt-1">
+                      <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Quizzes & Evaluations ({studentDetails?.quizSubmissions?.length || 0})
+                      </h4>
+                      {studentDetails?.quizSubmissions && studentDetails.quizSubmissions.length > 0 ? (
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {studentDetails.quizSubmissions.map((q: any, i: number) => (
+                            <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border text-xs">
+                              <div>
+                                <span className="font-medium text-foreground block">{q.title || `Quiz Evaluation ${i + 1}`}</span>
+                                <span className="text-[10px] text-muted-foreground">{formatDate(q.submitted_at)}</span>
+                              </div>
+                              <span className="font-semibold text-purple-600 dark:text-purple-400 text-xs">{q.total_obtained ? `${q.total_obtained} pts` : "Completed"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No quiz attempts recorded.</p>
                       )}
                     </div>
                   </div>
@@ -250,6 +328,27 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                         <p className="text-[11px] font-medium text-muted-foreground mt-0.5">Quizzes Published</p>
                       </div>
                     </div>
+
+                    <div className="space-y-2 pt-1">
+                      <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Assigned Courses ({lecturerDetails?.courses?.length || 0})
+                      </h4>
+                      {lecturerDetails?.courses && lecturerDetails.courses.length > 0 ? (
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {lecturerDetails.courses.map((crs: any, i: number) => (
+                            <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border text-xs">
+                              <div>
+                                <span className="font-medium text-foreground block">{crs.title || crs.course_name || `Course ${i + 1}`}</span>
+                                <span className="text-[10px] text-muted-foreground">{crs.course_code || `Credits: ${crs.credits || 3}`}</span>
+                              </div>
+                              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-semibold">Active</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No courses assigned.</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </TabsContent>
@@ -261,7 +360,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     <span className="text-xs font-semibold text-foreground">Last Recorded Activity</span>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {studentDetails?.activityLog && studentDetails.activityLog.length > 0
-                        ? formatRelativeTime(studentDetails.activityLog[0].action_date)
+                        ? formatRelativeTime(studentDetails.activityLog[0].action_date || studentDetails.activityLog[0].created_at)
                         : "No recent activity"}
                     </p>
                   </div>
@@ -277,7 +376,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                       {studentDetails.activityLog.map((log, i) => (
                         <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border text-xs">
                           <span className="font-medium text-foreground">Platform Access</span>
-                          <span className="font-mono text-muted-foreground">{formatDate(log.action_date)}</span>
+                          <span className="font-mono text-muted-foreground">{formatDate(log.action_date || log.created_at)}</span>
                         </div>
                       ))}
                     </div>

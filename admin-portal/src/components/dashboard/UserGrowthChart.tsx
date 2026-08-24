@@ -26,42 +26,6 @@ type TimeframeKey = "7d" | "30d" | "6m" | "12m";
 type ViewMode = "cumulative" | "new";
 type RoleFilter = "all" | "students" | "lecturers";
 
-const DEFAULT_DATASETS: UserGrowthDatasets = {
-  "7d": [
-    { date: "5d ago", students: 11, lecturers: 1, total: 12, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "4d ago", students: 12, lecturers: 1, total: 13, newStudents: 1, newLecturers: 0, newTotal: 1 },
-    { date: "3d ago", students: 13, lecturers: 2, total: 15, newStudents: 1, newLecturers: 1, newTotal: 2 },
-    { date: "2d ago", students: 14, lecturers: 2, total: 16, newStudents: 1, newLecturers: 0, newTotal: 1 },
-    { date: "Yesterday", students: 15, lecturers: 2, total: 17, newStudents: 1, newLecturers: 0, newTotal: 1 },
-    { date: "Today", students: 16, lecturers: 2, total: 18, newStudents: 1, newLecturers: 0, newTotal: 1 },
-  ],
-  "30d": [
-    { date: "25d ago", students: 7, lecturers: 1, total: 8, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "20d ago", students: 9, lecturers: 1, total: 10, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "15d ago", students: 11, lecturers: 1, total: 12, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "10d ago", students: 13, lecturers: 2, total: 15, newStudents: 2, newLecturers: 1, newTotal: 3 },
-    { date: "5d ago", students: 15, lecturers: 2, total: 17, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "Today", students: 16, lecturers: 2, total: 18, newStudents: 1, newLecturers: 0, newTotal: 1 },
-  ],
-  "6m": [
-    { date: "Mar", students: 4, lecturers: 1, total: 5, newStudents: 4, newLecturers: 1, newTotal: 5 },
-    { date: "Apr", students: 7, lecturers: 1, total: 8, newStudents: 3, newLecturers: 0, newTotal: 3 },
-    { date: "May", students: 10, lecturers: 1, total: 11, newStudents: 3, newLecturers: 0, newTotal: 3 },
-    { date: "Jun", students: 12, lecturers: 2, total: 14, newStudents: 2, newLecturers: 1, newTotal: 3 },
-    { date: "Jul", students: 15, lecturers: 2, total: 17, newStudents: 3, newLecturers: 0, newTotal: 3 },
-    { date: "Aug", students: 16, lecturers: 2, total: 18, newStudents: 1, newLecturers: 0, newTotal: 1 },
-  ],
-  "12m": [
-    { date: "Sep", students: 2, lecturers: 1, total: 3, newStudents: 2, newLecturers: 1, newTotal: 3 },
-    { date: "Nov", students: 4, lecturers: 1, total: 5, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "Jan", students: 6, lecturers: 1, total: 7, newStudents: 2, newLecturers: 0, newTotal: 2 },
-    { date: "Mar", students: 9, lecturers: 1, total: 10, newStudents: 3, newLecturers: 0, newTotal: 3 },
-    { date: "May", students: 12, lecturers: 2, total: 14, newStudents: 3, newLecturers: 1, newTotal: 4 },
-    { date: "Jul", students: 15, lecturers: 2, total: 17, newStudents: 3, newLecturers: 0, newTotal: 3 },
-    { date: "Aug", students: 16, lecturers: 2, total: 18, newStudents: 1, newLecturers: 0, newTotal: 1 },
-  ],
-};
-
 export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
   data = [],
   datasets,
@@ -71,7 +35,7 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>("cumulative");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
 
-  // Select the appropriate dataset based on chosen timeframe, with guaranteed fallback
+  // Select the appropriate dataset based on chosen timeframe
   const activeDataset: UserGrowthPoint[] = useMemo(() => {
     if (datasets && datasets[timeframe] && datasets[timeframe].length > 0) {
       return datasets[timeframe];
@@ -79,7 +43,7 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
     if (data && data.length > 0) {
       return data;
     }
-    return DEFAULT_DATASETS[timeframe] || DEFAULT_DATASETS["6m"];
+    return [];
   }, [datasets, timeframe, data]);
 
   // Compute summary stats for the current view
@@ -96,204 +60,212 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
     const currentLecturers = latest?.lecturers || 0;
 
     const totalNew = activeDataset.reduce((acc, curr) => acc + (curr.newTotal ?? 0), 0);
-    const startVal = earliest?.total || 1;
+    const startVal = earliest?.total || 0;
     const growthRate = startVal > 0 ? Math.round(((currentTotal - startVal) / startVal) * 100) : 0;
 
     return {
       total: currentTotal,
       students: currentStudents,
       lecturers: currentLecturers,
-      newInPeriod: totalNew > 0 ? totalNew : currentTotal,
-      growthRate: Math.max(0, growthRate),
+      newInPeriod: totalNew,
+      growthRate,
     };
   }, [activeDataset]);
 
-  // Custom Chart Tooltip
+  const timeframeLabels: Record<TimeframeKey, string> = {
+    "7d": "Last 7 Days (Daily)",
+    "30d": "Last 30 Days (5-Day Intervals)",
+    "6m": "Last 6 Months (Monthly)",
+    "12m": "Past Year (12 Months)",
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
 
-    const pointData: UserGrowthPoint = payload[0]?.payload;
-    if (!pointData) return null;
-
-    const isCum = viewMode === "cumulative";
-    const studentsVal = isCum ? pointData.students : (pointData.newStudents ?? 0);
-    const lecturersVal = isCum ? pointData.lecturers : (pointData.newLecturers ?? 0);
-    const totalVal = isCum ? pointData.total : (pointData.newTotal ?? (studentsVal + lecturersVal));
+    const p = payload[0]?.payload as UserGrowthPoint;
+    if (!p) return null;
 
     return (
-      <div className="bg-popover/95 backdrop-blur-md border border-border/80 rounded-xl p-3.5 shadow-xl min-w-[200px] text-xs">
-        <div className="flex items-center justify-between pb-2 border-b border-border/60 mb-2.5">
-          <div className="flex items-center gap-1.5 font-semibold text-foreground">
-            <Calendar className="h-3.5 w-3.5 text-primary" />
-            <span>{pointData.date}</span>
-          </div>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium">
-            {isCum ? "Total Base" : "New Signups"}
+      <div className="bg-popover/95 backdrop-blur-md border border-border/80 rounded-xl p-3 shadow-xl text-xs space-y-2 min-w-[190px]">
+        <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
+          <span className="font-bold text-foreground">{p.date}</span>
+          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono">
+            {timeframe.toUpperCase()}
           </Badge>
         </div>
 
-        <div className="space-y-1.5">
-          {(roleFilter === "all" || roleFilter === "students") && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
-                <span className="text-muted-foreground">Students:</span>
-              </div>
-              <span className="font-bold text-foreground">{studentsVal.toLocaleString()}</span>
+        {viewMode === "cumulative" ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
+                Total Students:
+              </span>
+              <strong className="text-foreground font-mono">{p.students}</strong>
             </div>
-          )}
-
-          {(roleFilter === "all" || roleFilter === "lecturers") && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-                <span className="text-muted-foreground">Lecturers:</span>
-              </div>
-              <span className="font-bold text-foreground">{lecturersVal.toLocaleString()}</span>
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Total Lecturers:
+              </span>
+              <strong className="text-foreground font-mono">{p.lecturers}</strong>
             </div>
-          )}
-
-          <div className="pt-2 mt-1 border-t border-border/40 flex items-center justify-between font-semibold">
-            <span className="text-foreground">Total:</span>
-            <span className="text-primary font-bold">{totalVal.toLocaleString()}</span>
+            <div className="pt-1 border-t border-border/50 flex items-center justify-between font-semibold">
+              <span className="text-foreground">Cumulative Total:</span>
+              <span className="text-primary font-bold font-mono">{p.total}</span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
+                New Students:
+              </span>
+              <strong className="text-foreground font-mono">+{p.newStudents ?? 0}</strong>
+            </div>
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                New Lecturers:
+              </span>
+              <strong className="text-foreground font-mono">+{p.newLecturers ?? 0}</strong>
+            </div>
+            <div className="pt-1 border-t border-border/50 flex items-center justify-between font-semibold">
+              <span className="text-foreground">New Registrations:</span>
+              <span className="text-emerald-500 font-bold font-mono">+{p.newTotal ?? 0}</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <Card className="col-span-full lg:col-span-2 shadow-sm border-border/80 bg-card overflow-hidden">
-      <CardHeader className="pb-4">
-        {/* Top Header Row */}
+    <Card className="lg:col-span-2 border-border bg-card flex flex-col justify-between overflow-hidden shadow-sm">
+      <CardHeader className="pb-3 border-b border-border/60">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <CardTitle className="text-base font-bold tracking-tight text-foreground">
-                User Growth Trends
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                User Enrollment & Growth Trends
               </CardTitle>
-              <div className="flex items-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                <span className="relative flex h-1.5 w-1.5 mr-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                </span>
-                Real-Time
-              </div>
+              <Badge variant="outline" className="text-[10px] font-semibold text-primary border-primary/30">
+                Live Data
+              </Badge>
             </div>
-            <CardDescription className="text-xs text-muted-foreground mt-0.5">
-              Live registration velocity and total active user expansion
+            <CardDescription className="text-xs mt-0.5">
+              {timeframeLabels[timeframe]} • Historical student and faculty expansion
             </CardDescription>
           </div>
 
-          {/* Timeframe & View Mode Controls */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex items-center bg-muted/70 p-0.5 rounded-lg border border-border/50">
-              <Button
-                variant={viewMode === "cumulative" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("cumulative")}
-                className="h-7 text-[11px] px-2.5 font-medium rounded-md shadow-none"
+          {/* Timeframe Controls (7d, 30d, 6m, 12m) */}
+          <div className="flex items-center gap-1 bg-muted/70 p-1 rounded-lg border border-border/60 self-start sm:self-auto">
+            {(["7d", "30d", "6m", "12m"] as TimeframeKey[]).map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => setTimeframe(tf)}
+                className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-all ${
+                  timeframe === tf
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <LineChart className="h-3 w-3 mr-1" />
-                Cumulative
-              </Button>
-              <Button
-                variant={viewMode === "new" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("new")}
-                className="h-7 text-[11px] px-2.5 font-medium rounded-md shadow-none"
-              >
-                <BarChart3 className="h-3 w-3 mr-1" />
-                New Signups
-              </Button>
-            </div>
-
-            {/* Timeframe Selector */}
-            <div className="flex items-center bg-muted/70 p-0.5 rounded-lg border border-border/50">
-              {(["7d", "30d", "6m", "12m"] as TimeframeKey[]).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`h-7 px-2.5 text-[11px] font-semibold rounded-md transition-all ${
-                    timeframe === tf
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {tf.toUpperCase()}
-                </button>
-              ))}
-            </div>
+                {tf.toUpperCase()}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Metrics Sub-banner & Role Filter Buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/60 mt-1">
-          {/* Quick Metrics Pills */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs">
-              <div className="p-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                <Users className="h-3.5 w-3.5" />
-              </div>
-              <span className="text-muted-foreground">Students:</span>
-              <span className="font-bold text-foreground">{summary.students.toLocaleString()}</span>
+        {/* Sub-toolbar: Cumulative vs New Bar + Role Filter + KPI Indicators */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-1">
+          {/* View Mode Toggle: Cumulative Area vs New Volume Bars */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center bg-muted/50 p-0.5 rounded-lg border border-border/50 text-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode("cumulative")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium text-xs transition-colors ${
+                  viewMode === "cumulative"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <LineChart className="h-3 w-3" />
+                Cumulative
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("new")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium text-xs transition-colors ${
+                  viewMode === "new"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BarChart3 className="h-3 w-3" />
+                New Users
+              </button>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs">
-              <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <GraduationCap className="h-3.5 w-3.5" />
-              </div>
-              <span className="text-muted-foreground">Lecturers:</span>
-              <span className="font-bold text-foreground">{summary.lecturers.toLocaleString()}</span>
+            {/* Role Filter Pills */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setRoleFilter("all")}
+                className={`text-[11px] px-2 py-0.5 rounded-md font-medium transition-colors ${
+                  roleFilter === "all"
+                    ? "bg-secondary text-secondary-foreground font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("students")}
+                className={`text-[11px] px-2 py-0.5 rounded-md font-medium transition-colors ${
+                  roleFilter === "students"
+                    ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Students
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("lecturers")}
+                className={`text-[11px] px-2 py-0.5 rounded-md font-medium transition-colors ${
+                  roleFilter === "lecturers"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Lecturers
+              </button>
             </div>
-
-            {summary.growthRate > 0 && (
-              <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                <TrendingUp className="h-3 w-3" />
-                <span>+{summary.growthRate}% overall</span>
-              </div>
-            )}
           </div>
 
-          {/* Role Filter Buttons */}
-          <div className="flex items-center gap-1 text-xs">
-            <button
-              onClick={() => setRoleFilter("all")}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                roleFilter === "all"
-                  ? "bg-primary/15 text-primary font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              All Roles
-            </button>
-            <button
-              onClick={() => setRoleFilter("students")}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                roleFilter === "students"
-                  ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Students Only
-            </button>
-            <button
-              onClick={() => setRoleFilter("lecturers")}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                roleFilter === "lecturers"
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Lecturers Only
-            </button>
+          {/* Mini KPI Indicators */}
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-muted-foreground">Students:</span>
+              <span className="font-bold text-foreground">{summary.students}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="text-muted-foreground">Faculty:</span>
+              <span className="font-bold text-foreground">{summary.lecturers}</span>
+            </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent>
-        <div className="h-[290px] w-full">
+      <CardContent className="pt-4 pb-2">
+        <div className="h-[270px] w-full">
           {viewMode === "cumulative" ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -301,25 +273,23 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                 margin={{ top: 15, right: 15, left: -20, bottom: 5 }}
               >
                 <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45} />
+                  <linearGradient id="growthStudents" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="colorLecturers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.45} />
+                  <linearGradient id="growthLecturers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
+
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
                   stroke="hsl(var(--border))"
                   opacity={0.6}
                 />
+
                 <XAxis
                   dataKey="date"
                   stroke="hsl(var(--muted-foreground))"
@@ -337,20 +307,6 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                 />
                 <Tooltip content={<CustomTooltip />} />
 
-                {roleFilter === "all" && (
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    name="Total Users"
-                    stroke="#8b5cf6"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    fillOpacity={1}
-                    fill="url(#colorTotal)"
-                    activeDot={{ r: 5, fill: "#8b5cf6", stroke: "#ffffff", strokeWidth: 2 }}
-                  />
-                )}
-
                 {(roleFilter === "all" || roleFilter === "students") && (
                   <Area
                     type="monotone"
@@ -359,8 +315,8 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                     stroke="#3b82f6"
                     strokeWidth={2.5}
                     fillOpacity={1}
-                    fill="url(#colorStudents)"
-                    activeDot={{ r: 5, fill: "#3b82f6", stroke: "#ffffff", strokeWidth: 2 }}
+                    fill="url(#growthStudents)"
+                    activeDot={{ r: 5, strokeWidth: 2 }}
                   />
                 )}
 
@@ -372,8 +328,8 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                     stroke="#10b981"
                     strokeWidth={2.5}
                     fillOpacity={1}
-                    fill="url(#colorLecturers)"
-                    activeDot={{ r: 5, fill: "#10b981", stroke: "#ffffff", strokeWidth: 2 }}
+                    fill="url(#growthLecturers)"
+                    activeDot={{ r: 5, strokeWidth: 2 }}
                   />
                 )}
               </AreaChart>
@@ -434,4 +390,3 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
     </Card>
   );
 };
-

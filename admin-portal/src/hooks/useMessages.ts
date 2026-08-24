@@ -5,7 +5,8 @@ export function useConversations(options: { search?: string; page?: number; page
   return useQuery({
     queryKey: ["admin", "conversations", options.search, options.page, options.pageSize],
     queryFn: () => messagesService.getConversations(options),
-    staleTime: 1000 * 30,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 
@@ -14,6 +15,7 @@ export function useConversationMessages(conversationId: string | null) {
     queryKey: ["admin", "conversation-messages", conversationId],
     queryFn: () => (conversationId ? messagesService.getConversationMessages(conversationId) : []),
     enabled: !!conversationId,
-    staleTime: 1000 * 15,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }

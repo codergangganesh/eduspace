@@ -1,31 +1,18 @@
 import { supabase } from "../lib/supabase";
 import { DashboardStats, UserGrowthPoint, UserGrowthDatasets } from "../types";
 
-async function ensureAuthenticatedSession(): Promise<boolean> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) {
-      return true;
-    }
-  } catch (err) {
-    console.warn("[DashboardService] Session wait warning:", err);
-  }
-  return true;
-}
-
 interface UnifiedUser {
   id: string;
   role: "student" | "lecturer" | "admin";
   status: "active" | "suspended";
   created_at: Date;
   email?: string;
+  full_name?: string;
 }
 
 export const dashboardService = {
   async getStats(): Promise<DashboardStats> {
     try {
-      await ensureAuthenticatedSession();
-
       // Query all core tables concurrently
       const [
         profilesRes,
@@ -39,7 +26,7 @@ export const dashboardService = {
         messagesRes,
         classStudentsRes,
       ] = await Promise.all([
-        supabase.from("profiles").select("id, user_id, status, created_at, email, full_name"),
+        supabase.from("profiles").select("id, user_id, status, created_at, email, full_name, role"),
         supabase.from("user_roles").select("user_id, role"),
         supabase.from("lecturer_profiles").select("id, user_id, created_at, full_name, email"),
         supabase.from("student_profiles").select("id, user_id, created_at, full_name, email"),
@@ -87,14 +74,14 @@ export const dashboardService = {
       courses.forEach((co) => co.lecturer_id && explicitLecturerIds.add(co.lecturer_id));
       classStudents.forEach((cs) => cs.student_id && explicitStudentIds.add(cs.student_id));
 
-      // Build deduplicated Unified Users list
-      const userMap = new Map<string, UnifiedUser>();
-
       const parseDate = (dateStr?: string | null): Date => {
         if (!dateStr) return new Date();
         const d = new Date(dateStr);
         return isNaN(d.getTime()) ? new Date() : d;
       };
+
+      // Build deduplicated Unified Users list
+      const userMap = new Map<string, UnifiedUser>();
 
       // 1. Process student_profiles
       studentProfiles.forEach((sp) => {
@@ -106,6 +93,7 @@ export const dashboardService = {
           status: "active",
           created_at: parseDate(sp.created_at),
           email: sp.email,
+          full_name: sp.full_name,
         });
       });
 
@@ -119,6 +107,7 @@ export const dashboardService = {
           status: "active",
           created_at: parseDate(lp.created_at),
           email: lp.email,
+          full_name: lp.full_name,
         });
       });
 
@@ -132,12 +121,13 @@ export const dashboardService = {
         const isAdmin =
           adminIds.has(uid) ||
           adminIds.has(p.user_id) ||
+          p.role === "admin" ||
           email.toLowerCase().includes("admin") ||
           email.toLowerCase() === "mannamganeshbabu8@gmail.com";
 
         const isLecturer =
           !isAdmin &&
-          (explicitLecturerIds.has(uid) || explicitLecturerIds.has(p.user_id));
+          (p.role === "lecturer" || explicitLecturerIds.has(uid) || explicitLecturerIds.has(p.user_id));
 
         const role: "student" | "lecturer" | "admin" = isAdmin
           ? "admin"
@@ -154,6 +144,7 @@ export const dashboardService = {
           if (role === "admin" || (role === "lecturer" && existing.role === "student")) {
             existing.role = role;
           }
+          if (p.full_name) existing.full_name = p.full_name;
         } else {
           userMap.set(uid, {
             id: uid,
@@ -161,6 +152,7 @@ export const dashboardService = {
             status: isSuspended ? "suspended" : "active",
             created_at: createdAt,
             email: p.email,
+            full_name: p.full_name,
           });
         }
       });
@@ -181,47 +173,35 @@ export const dashboardService = {
           else activeStudents++;
         } else if (u.role === "lecturer") {
           totalLecturers++;
-          if (u.status === "active") activeLecturers++;
+          if (u.status === "suspended") {
+            // Suspended lecturer
+          } else {
+            activeLecturers++;
+          }
         } else if (u.role === "admin") {
           totalAdmins++;
         }
       });
 
-      if (totalStudents === 0) {
-        totalStudents = 16;
-        activeStudents = 16;
-      }
-      if (totalLecturers === 0) {
-        totalLecturers = 2;
-        activeLecturers = 2;
-      }
       if (totalAdmins === 0) {
-        totalAdmins = 1;
-      }
-
-      if (activeStudents === 0 && suspendedStudents === 0 && totalStudents > 0) {
-        activeStudents = totalStudents;
-      }
-      if (activeLecturers === 0 && totalLecturers > 0) {
-        activeLecturers = totalLecturers;
+        totalAdmins = adminIds.size || 1;
       }
 
       // New users in last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      let newUsersLast30Days = allUsers.filter(
+      const newUsersLast30Days = allUsers.filter(
         (u) => u.created_at >= thirtyDaysAgo
       ).length;
-      if (newUsersLast30Days === 0) newUsersLast30Days = 11;
 
-      const totalCourses = (coursesRes.count ?? courses.length) || 6;
-      const totalClasses = (classesRes.count ?? classes.length) || 8;
-      const totalAssignments = (assignmentsRes.count ?? assignments.length) || 5;
-      const totalQuizzes = (quizzesRes.count ?? quizzes.length) || 4;
-      const totalMessages = (messagesRes.count ?? messages.length) || 98;
+      const totalCourses = coursesRes.count ?? courses.length ?? 0;
+      const totalClasses = classesRes.count ?? classes.length ?? 0;
+      const totalAssignments = assignmentsRes.count ?? assignments.length ?? 0;
+      const totalQuizzes = quizzesRes.count ?? quizzes.length ?? 0;
+      const totalMessages = messagesRes.count ?? messages.length ?? 0;
 
-      // Compute multi-timeframe user growth datasets
-      const userGrowthDatasets = computeGrowthDatasets(allUsers, totalStudents, totalLecturers);
+      // Compute multi-timeframe user growth datasets from real user created_at dates
+      const userGrowthDatasets = computeGrowthDatasets(allUsers);
       const userGrowth = userGrowthDatasets["6m"];
 
       const userDistribution = [
@@ -264,7 +244,6 @@ export const dashboardService = {
 
   async getRecentActivity() {
     try {
-      await ensureAuthenticatedSession();
       const [
         submissionsRes,
         quizzesRes,
@@ -274,7 +253,6 @@ export const dashboardService = {
         classesRes,
         coursesRes,
         assignmentsRes,
-        announcementsRes,
         auditLogsRes,
       ] = await Promise.all([
         supabase
@@ -291,43 +269,37 @@ export const dashboardService = {
           .then((r) => r, () => ({ data: [] })),
         supabase
           .from("profiles")
-          .select("id, user_id, full_name, email, created_at")
+          .select("id, user_id, full_name, email, created_at, role, department")
           .order("created_at", { ascending: false })
           .limit(10)
           .then((r) => r, () => ({ data: [] })),
         supabase
           .from("student_profiles")
-          .select("id, user_id, full_name, student_name, email, department, created_at, enrollment_date")
+          .select("id, user_id, full_name, email, department, created_at")
           .order("created_at", { ascending: false })
           .limit(10)
           .then((r) => r, () => ({ data: [] })),
         supabase
           .from("lecturer_profiles")
-          .select("id, user_id, full_name, email, department, specialization, created_at")
+          .select("id, user_id, full_name, email, department, created_at")
           .order("created_at", { ascending: false })
           .limit(8)
           .then((r) => r, () => ({ data: [] })),
         supabase
           .from("classes")
-          .select("id, class_name, class_code, created_at")
+          .select("id, class_name, course_code, created_at")
           .order("created_at", { ascending: false })
           .limit(8)
           .then((r) => r, () => ({ data: [] })),
         supabase
           .from("courses")
-          .select("id, title, code, course_name, created_at")
+          .select("id, title, course_code, created_at")
           .order("created_at", { ascending: false })
           .limit(8)
           .then((r) => r, () => ({ data: [] })),
         supabase
           .from("assignments")
           .select("id, title, created_at, max_points, due_date")
-          .order("created_at", { ascending: false })
-          .limit(8)
-          .then((r) => r, () => ({ data: [] })),
-        supabase
-          .from("announcements")
-          .select("id, title, content, created_at")
           .order("created_at", { ascending: false })
           .limit(8)
           .then((r) => r, () => ({ data: [] })),
@@ -342,7 +314,7 @@ export const dashboardService = {
       const mergedUsers: any[] = [
         ...(studentProfilesRes.data || []).map((s: any) => ({ ...s, userType: "student" })),
         ...(lecturerProfilesRes.data || []).map((l: any) => ({ ...l, userType: "lecturer" })),
-        ...(newUsersRes.data || []).map((p: any) => ({ ...p, userType: "user" })),
+        ...(newUsersRes.data || []).map((p: any) => ({ ...p, userType: p.role || "user" })),
       ];
 
       // Deduplicate recent users by email or ID
@@ -363,7 +335,7 @@ export const dashboardService = {
         classes: classesRes.data || [],
         courses: coursesRes.data || [],
         assignments: assignmentsRes.data || [],
-        announcements: announcementsRes.data || [],
+        announcements: [],
         auditLogs: auditLogsRes.data || [],
       };
     } catch (err) {
@@ -375,16 +347,10 @@ export const dashboardService = {
 
 /**
  * Computes real-time multi-timeframe growth datasets (7d, 30d, 6m, 12m)
- * with cumulative base metrics and discrete new registration volume.
+ * directly from database users' actual created_at timestamps.
  */
-function computeGrowthDatasets(
-  allUsers: UnifiedUser[],
-  currentTotalStudents: number,
-  currentTotalLecturers: number
-): UserGrowthDatasets {
+function computeGrowthDatasets(allUsers: UnifiedUser[]): UserGrowthDatasets {
   const now = new Date();
-  const totalStudents = Math.max(currentTotalStudents, 16);
-  const totalLecturers = Math.max(currentTotalLecturers, 2);
 
   const formatShortDate = (d: Date) => {
     return d.toLocaleDateString("default", { month: "short", day: "numeric" });
@@ -396,59 +362,24 @@ function computeGrowthDatasets(
 
   // 1. 7 Days Dataset (Daily)
   const d7Points: UserGrowthPoint[] = [];
-  const s7Progression = [
-    Math.max(1, Math.round(totalStudents * 0.68)),
-    Math.max(1, Math.round(totalStudents * 0.75)),
-    Math.max(1, Math.round(totalStudents * 0.81)),
-    Math.max(1, Math.round(totalStudents * 0.88)),
-    Math.max(1, Math.round(totalStudents * 0.94)),
-    Math.max(1, Math.round(totalStudents * 0.97)),
-    totalStudents,
-  ];
-  const l7Progression = [
-    Math.max(1, Math.round(totalLecturers * 0.5)),
-    Math.max(1, Math.round(totalLecturers * 0.5)),
-    Math.max(1, Math.round(totalLecturers * 0.75)),
-    Math.max(1, Math.round(totalLecturers * 0.75)),
-    Math.max(1, Math.round(totalLecturers * 0.85)),
-    totalLecturers,
-    totalLecturers,
-  ];
-
   for (let i = 6; i >= 0; i--) {
-    const idx = 6 - i;
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0);
     const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 23, 59, 59, 999);
     const label = i === 0 ? "Today" : i === 1 ? "Yesterday" : dayStart.toLocaleDateString("default", { weekday: "short" });
 
-    // Actual user matching from database
-    const actualNewStudents = allUsers.filter(
+    const newStudents = allUsers.filter(
       (u) => u.role === "student" && u.created_at >= dayStart && u.created_at <= dayEnd
     ).length;
-    const actualNewLecturers = allUsers.filter(
+    const newLecturers = allUsers.filter(
       (u) => u.role === "lecturer" && u.created_at >= dayStart && u.created_at <= dayEnd
     ).length;
 
-    const actualCumStudents = allUsers.filter(
+    const students = allUsers.filter(
       (u) => u.role === "student" && u.created_at <= dayEnd
     ).length;
-    const actualCumLecturers = allUsers.filter(
+    const lecturers = allUsers.filter(
       (u) => u.role === "lecturer" && u.created_at <= dayEnd
     ).length;
-
-    // Use actual if distributed, else use progression
-    const students = actualCumStudents > 0 && actualCumStudents !== totalStudents
-      ? actualCumStudents
-      : s7Progression[idx];
-    const lecturers = actualCumLecturers > 0 && actualCumLecturers !== totalLecturers
-      ? actualCumLecturers
-      : l7Progression[idx];
-
-    const prevStudents = idx > 0 ? (s7Progression[idx - 1] || students) : Math.max(1, students - 1);
-    const prevLecturers = idx > 0 ? (l7Progression[idx - 1] || lecturers) : lecturers;
-
-    const newStudents = actualNewStudents > 0 ? actualNewStudents : Math.max(0, students - prevStudents);
-    const newLecturers = actualNewLecturers > 0 ? actualNewLecturers : Math.max(0, lecturers - prevLecturers);
 
     d7Points.push({
       date: label,
@@ -464,49 +395,26 @@ function computeGrowthDatasets(
 
   // 2. 30 Days Dataset (6 intervals of 5 days)
   const d30Points: UserGrowthPoint[] = [];
-  const s30Progression = [
-    Math.max(1, Math.round(totalStudents * 0.45)),
-    Math.max(1, Math.round(totalStudents * 0.58)),
-    Math.max(1, Math.round(totalStudents * 0.70)),
-    Math.max(1, Math.round(totalStudents * 0.82)),
-    Math.max(1, Math.round(totalStudents * 0.92)),
-    totalStudents,
-  ];
-  const l30Progression = [
-    Math.max(1, Math.round(totalLecturers * 0.4)),
-    Math.max(1, Math.round(totalLecturers * 0.5)),
-    Math.max(1, Math.round(totalLecturers * 0.65)),
-    Math.max(1, Math.round(totalLecturers * 0.8)),
-    totalLecturers,
-    totalLecturers,
-  ];
-
   for (let i = 5; i >= 0; i--) {
-    const idx = 5 - i;
-    const daysAgo = i * 5;
-    const intervalDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-    const intervalEnd = new Date(intervalDate.getFullYear(), intervalDate.getMonth(), intervalDate.getDate(), 23, 59, 59);
+    const daysAgoStart = (i + 1) * 5;
+    const daysAgoEnd = i * 5;
+    const intervalStart = new Date(now.getTime() - daysAgoStart * 24 * 60 * 60 * 1000);
+    const intervalEnd = new Date(now.getTime() - daysAgoEnd * 24 * 60 * 60 * 1000);
     const label = i === 0 ? "Today" : formatShortDate(intervalEnd);
 
-    const actualCumStudents = allUsers.filter(
+    const newStudents = allUsers.filter(
+      (u) => u.role === "student" && u.created_at > intervalStart && u.created_at <= intervalEnd
+    ).length;
+    const newLecturers = allUsers.filter(
+      (u) => u.role === "lecturer" && u.created_at > intervalStart && u.created_at <= intervalEnd
+    ).length;
+
+    const students = allUsers.filter(
       (u) => u.role === "student" && u.created_at <= intervalEnd
     ).length;
-    const actualCumLecturers = allUsers.filter(
+    const lecturers = allUsers.filter(
       (u) => u.role === "lecturer" && u.created_at <= intervalEnd
     ).length;
-
-    const students = actualCumStudents > 0 && actualCumStudents !== totalStudents
-      ? actualCumStudents
-      : s30Progression[idx];
-    const lecturers = actualCumLecturers > 0 && actualCumLecturers !== totalLecturers
-      ? actualCumLecturers
-      : l30Progression[idx];
-
-    const prevStudents = idx > 0 ? (s30Progression[idx - 1] || students) : Math.max(1, students - 2);
-    const prevLecturers = idx > 0 ? (l30Progression[idx - 1] || lecturers) : lecturers;
-
-    const newStudents = Math.max(0, students - prevStudents);
-    const newLecturers = Math.max(0, lecturers - prevLecturers);
 
     d30Points.push({
       date: label,
@@ -522,48 +430,24 @@ function computeGrowthDatasets(
 
   // 3. 6 Months Dataset (Monthly)
   const m6Points: UserGrowthPoint[] = [];
-  const s6Progression = [
-    Math.max(1, Math.round(totalStudents * 0.25)),
-    Math.max(1, Math.round(totalStudents * 0.40)),
-    Math.max(1, Math.round(totalStudents * 0.60)),
-    Math.max(1, Math.round(totalStudents * 0.75)),
-    Math.max(1, Math.round(totalStudents * 0.90)),
-    totalStudents,
-  ];
-  const l6Progression = [
-    1,
-    1,
-    Math.max(1, Math.round(totalLecturers * 0.6)),
-    Math.max(1, Math.round(totalLecturers * 0.8)),
-    totalLecturers,
-    totalLecturers,
-  ];
-
   for (let i = 5; i >= 0; i--) {
-    const idx = 5 - i;
     const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
     const label = formatMonth(monthStart);
 
-    const actualCumStudents = allUsers.filter(
+    const newStudents = allUsers.filter(
+      (u) => u.role === "student" && u.created_at >= monthStart && u.created_at <= monthEnd
+    ).length;
+    const newLecturers = allUsers.filter(
+      (u) => u.role === "lecturer" && u.created_at >= monthStart && u.created_at <= monthEnd
+    ).length;
+
+    const students = allUsers.filter(
       (u) => u.role === "student" && u.created_at <= monthEnd
     ).length;
-    const actualCumLecturers = allUsers.filter(
+    const lecturers = allUsers.filter(
       (u) => u.role === "lecturer" && u.created_at <= monthEnd
     ).length;
-
-    const students = actualCumStudents > 0 && actualCumStudents !== totalStudents
-      ? actualCumStudents
-      : s6Progression[idx];
-    const lecturers = actualCumLecturers > 0 && actualCumLecturers !== totalLecturers
-      ? actualCumLecturers
-      : l6Progression[idx];
-
-    const prevStudents = idx > 0 ? (s6Progression[idx - 1] || students) : Math.max(1, students - 3);
-    const prevLecturers = idx > 0 ? (l6Progression[idx - 1] || lecturers) : lecturers;
-
-    const newStudents = Math.max(0, students - prevStudents);
-    const newLecturers = Math.max(0, lecturers - prevLecturers);
 
     m6Points.push({
       date: label,
@@ -579,31 +463,24 @@ function computeGrowthDatasets(
 
   // 4. 12 Months Dataset (Monthly)
   const m12Points: UserGrowthPoint[] = [];
-  const s12Progression = [
-    Math.max(1, Math.round(totalStudents * 0.10)),
-    Math.max(1, Math.round(totalStudents * 0.18)),
-    Math.max(1, Math.round(totalStudents * 0.25)),
-    Math.max(1, Math.round(totalStudents * 0.35)),
-    Math.max(1, Math.round(totalStudents * 0.45)),
-    Math.max(1, Math.round(totalStudents * 0.55)),
-    Math.max(1, Math.round(totalStudents * 0.65)),
-    Math.max(1, Math.round(totalStudents * 0.75)),
-    Math.max(1, Math.round(totalStudents * 0.82)),
-    Math.max(1, Math.round(totalStudents * 0.90)),
-    Math.max(1, Math.round(totalStudents * 0.95)),
-    totalStudents,
-  ];
-
   for (let i = 11; i >= 0; i--) {
-    const idx = 11 - i;
     const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
     const label = formatMonth(monthStart);
 
-    const students = s12Progression[idx];
-    const lecturers = idx >= 6 ? totalLecturers : 1;
-    const prevStudents = idx > 0 ? s12Progression[idx - 1] : 1;
-    const prevLecturers = idx >= 6 ? (idx === 6 ? 1 : totalLecturers) : 1;
+    const newStudents = allUsers.filter(
+      (u) => u.role === "student" && u.created_at >= monthStart && u.created_at <= monthEnd
+    ).length;
+    const newLecturers = allUsers.filter(
+      (u) => u.role === "lecturer" && u.created_at >= monthStart && u.created_at <= monthEnd
+    ).length;
+
+    const students = allUsers.filter(
+      (u) => u.role === "student" && u.created_at <= monthEnd
+    ).length;
+    const lecturers = allUsers.filter(
+      (u) => u.role === "lecturer" && u.created_at <= monthEnd
+    ).length;
 
     m12Points.push({
       date: label,
@@ -611,9 +488,9 @@ function computeGrowthDatasets(
       students,
       lecturers,
       total: students + lecturers,
-      newStudents: Math.max(0, students - prevStudents),
-      newLecturers: Math.max(0, lecturers - prevLecturers),
-      newTotal: Math.max(0, (students + lecturers) - (prevStudents + prevLecturers)),
+      newStudents,
+      newLecturers,
+      newTotal: newStudents + newLecturers,
     });
   }
 
@@ -624,4 +501,3 @@ function computeGrowthDatasets(
     "12m": m12Points,
   };
 }
-

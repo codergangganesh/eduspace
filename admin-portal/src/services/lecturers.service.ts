@@ -1,67 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { EnrichedUser } from "../types";
 
-const LECTURERS_CACHE_KEY = "eduspace_admin_real_lecturers_v3";
-
-export const DEFAULT_LECTURERS: EnrichedUser[] = [
-  {
-    user_id: "d9c969f2-97c3-493b-a07e-bc5db5d09f02",
-    full_name: "Blessan Corley",
-    email: "ganeshbabumannam8@gmail.com",
-    role: "lecturer",
-    status: "active",
-    department: "Computer Science",
-    created_at: "2025-12-30T09:46:26.268911+00:00",
-    updated_at: new Date().toISOString(),
-    verified: true,
-  },
-  {
-    user_id: "9a1021d9-f0cb-4319-b25b-952901262f5e",
-    full_name: "Aisha shakel",
-    email: "aishakel@gmail.com",
-    role: "lecturer",
-    status: "active",
-    department: "Information Technology",
-    created_at: "2026-07-23T10:02:35.673078+00:00",
-    updated_at: new Date().toISOString(),
-    verified: true,
-  },
-];
-
-export const getCachedLecturersData = () => {
-  try {
-    const raw = localStorage.getItem(LECTURERS_CACHE_KEY);
-    if (!raw) return { data: DEFAULT_LECTURERS, total: DEFAULT_LECTURERS.length, page: 1, pageSize: 10, totalPages: 1 };
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
-      return parsed;
-    }
-  } catch (err) {
-    console.warn("[LecturersService] Cache read error:", err);
-  }
-  return { data: DEFAULT_LECTURERS, total: DEFAULT_LECTURERS.length, page: 1, pageSize: 10, totalPages: 1 };
-};
-
-export const setCachedLecturersData = (data: any) => {
-  try {
-    if (data && Array.isArray(data.data) && data.data.length > 0) {
-      localStorage.setItem(LECTURERS_CACHE_KEY, JSON.stringify(data));
-    }
-  } catch (err) {
-    console.warn("[LecturersService] Cache write error:", err);
-  }
-};
-
-async function ensureAuthenticatedSession(): Promise<boolean> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) return true;
-  } catch (err) {
-    console.warn("[LecturersService] Session wait warning:", err);
-  }
-  return true;
-}
-
 export interface LecturerFilterOptions {
   search?: string;
   status?: string;
@@ -85,9 +24,7 @@ export const lecturersService = {
     } = options;
 
     try {
-      await ensureAuthenticatedSession();
-
-      // Fetch all sources concurrently with resilient fallback
+      // Fetch all sources concurrently from Supabase
       const [
         rolesRes,
         lecturerProfilesRes,
@@ -111,6 +48,7 @@ export const lecturersService = {
       // Collect all verified lecturer IDs
       const lecturerIds = new Set<string>();
       roles.filter((r: any) => r.role === "lecturer").forEach((r: any) => lecturerIds.add(r.user_id));
+      profiles.filter((p: any) => p.role === "lecturer").forEach((p: any) => lecturerIds.add(p.user_id || p.id));
       lecturerProfiles.forEach((lp: any) => lp.user_id && lecturerIds.add(lp.user_id));
       classes.forEach((c: any) => c.lecturer_id && lecturerIds.add(c.lecturer_id));
       courses.forEach((co: any) => co.lecturer_id && lecturerIds.add(co.lecturer_id));
@@ -118,39 +56,44 @@ export const lecturersService = {
       const lecturerProfileMap = new Map<string, any>();
       lecturerProfiles.forEach((lp: any) => {
         if (lp.user_id) lecturerProfileMap.set(lp.user_id, lp);
+        if (lp.id) lecturerProfileMap.set(lp.id, lp);
+        if (lp.email) lecturerProfileMap.set(lp.email.toLowerCase().trim(), lp);
       });
 
       // Filter main profiles for lecturers
-      let lecturerProfileList = profiles.filter((p: any) => lecturerIds.has(p.user_id));
+      let lecturerProfileList = profiles.filter((p: any) => lecturerIds.has(p.user_id) || lecturerIds.has(p.id));
 
       // Map to EnrichedUser
       let enrichedLecturers: EnrichedUser[] = lecturerProfileList.map((p: any) => {
-        const lp = lecturerProfileMap.get(p.user_id) || {};
+        const emailKey = p.email ? p.email.toLowerCase().trim() : "";
+        const lp = lecturerProfileMap.get(p.user_id) || lecturerProfileMap.get(p.id) || (emailKey ? lecturerProfileMap.get(emailKey) : null) || {} as any;
         return {
-          user_id: p.user_id,
-          full_name: p.full_name || lp.full_name || "Faculty Member",
+          user_id: p.user_id || p.id,
+          full_name: p.full_name || lp.full_name || (p.email ? p.email.split("@")[0] : "Faculty Member"),
           email: p.email || lp.email || "No email",
           role: "lecturer",
-          status: (p.status as any) || "active",
-          department: p.department || lp.department || "Computer Science",
+          status: (p.status as any) || (lp.status as any) || "active",
+          department: p.department || lp.department || "General",
           avatar_url: p.avatar_url || lp.profile_image || null,
-          verified: !!p.verified,
-          created_at: p.created_at,
-          updated_at: p.updated_at,
+          verified: Boolean(p.verified ?? lp.verified ?? true),
+          created_at: p.created_at || lp.created_at || new Date().toISOString(),
+          updated_at: p.updated_at || lp.updated_at || new Date().toISOString(),
         };
       });
 
       // Include any lecturers in lecturer_profiles not in profiles
-      const foundUserIds = new Set(lecturerProfileList.map((p: any) => p.user_id));
+      const foundUserIds = new Set(lecturerProfileList.map((p: any) => p.user_id || p.id));
       lecturerProfiles.forEach((lp: any) => {
-        if (lp.user_id && !foundUserIds.has(lp.user_id)) {
+        const uid = lp.user_id || lp.id;
+        if (uid && !foundUserIds.has(uid) && !foundUserIds.has(lp.user_id)) {
+          foundUserIds.add(uid);
           enrichedLecturers.push({
-            user_id: lp.user_id,
-            full_name: lp.full_name || "Faculty Member",
+            user_id: uid,
+            full_name: lp.full_name || (lp.email ? lp.email.split("@")[0] : "Faculty Member"),
             email: lp.email || "No email",
             role: "lecturer",
-            status: "active",
-            department: lp.department || "Computer Science",
+            status: (lp.status as any) || "active",
+            department: lp.department || "General",
             avatar_url: lp.profile_image || null,
             verified: true,
             created_at: lp.created_at || new Date().toISOString(),
@@ -158,10 +101,6 @@ export const lecturersService = {
           });
         }
       });
-
-      if (enrichedLecturers.length === 0) {
-        enrichedLecturers.push(...DEFAULT_LECTURERS);
-      }
 
       // Apply Search Filter
       if (search.trim()) {
@@ -197,28 +136,27 @@ export const lecturersService = {
       const from = (page - 1) * pageSize;
       const paginatedData = enrichedLecturers.slice(from, from + pageSize);
 
-      const result = {
+      return {
         data: paginatedData,
         total,
         page,
         pageSize,
         totalPages,
       };
-
-      if (!search && status === "all" && department === "all" && page === 1) {
-        setCachedLecturersData(result);
-      }
-
-      return result;
     } catch (err) {
       console.error("[LecturersService] Error getting lecturers:", err);
-      return getCachedLecturersData();
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      };
     }
   },
 
   async getLecturerDetails(userId: string) {
     try {
-      await ensureAuthenticatedSession();
       const [
         profileRes,
         lecturerProfileRes,
@@ -227,12 +165,12 @@ export const lecturersService = {
         quizzesRes,
         roleRes,
       ] = await Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-        supabase.from("lecturer_profiles").select("*").eq("user_id", userId).maybeSingle(),
-        supabase.from("classes").select("*").eq("lecturer_id", userId),
-        supabase.from("courses").select("*").eq("lecturer_id", userId),
-        supabase.from("quizzes").select("id, title, status, created_at").eq("class_id", userId),
-        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+        supabase.from("profiles").select("*").or(`user_id.eq.${userId},id.eq.${userId}`).maybeSingle().then((r) => r, () => ({ data: null })),
+        supabase.from("lecturer_profiles").select("*").or(`user_id.eq.${userId},id.eq.${userId}`).maybeSingle().then((r) => r, () => ({ data: null })),
+        supabase.from("classes").select("*").eq("lecturer_id", userId).then((r) => r, () => ({ data: [] })),
+        supabase.from("courses").select("*").eq("lecturer_id", userId).then((r) => r, () => ({ data: [] })),
+        supabase.from("quizzes").select("id, title, status, created_at").eq("class_id", userId).then((r) => r, () => ({ data: [] })),
+        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle().then((r) => r, () => ({ data: null })),
       ]);
 
       return {
@@ -245,7 +183,14 @@ export const lecturersService = {
       };
     } catch (err) {
       console.error("[LecturersService] Error getting lecturer details:", err);
-      throw err;
+      return {
+        profile: null,
+        lecturerProfile: null,
+        role: "lecturer",
+        classes: [],
+        courses: [],
+        quizzes: [],
+      };
     }
   },
 };

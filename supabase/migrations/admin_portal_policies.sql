@@ -3,8 +3,9 @@
 -- Run this script in the Supabase Dashboard -> SQL Editor
 -- ==============================================================================
 
--- 1. Ensure status column on profiles
+-- 1. Ensure status and role columns on profiles
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'student';
 
 -- 2. Auto-assign admin role in user_roles for admin accounts
 INSERT INTO public.user_roles (user_id, role)
@@ -16,6 +17,8 @@ WHERE email = 'mannamganeshbabu8@gmail.com'
 ON CONFLICT (user_id, role) DO NOTHING;
 
 -- 3. Robust is_admin() Security Definer Function
+DROP FUNCTION IF EXISTS public.is_admin() CASCADE;
+
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -30,6 +33,12 @@ AS $$
       WHERE user_id = auth.uid() AND role::text = 'admin'
     )
     OR
+    -- Direct role check in profiles table
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE (user_id = auth.uid() OR id = auth.uid()) AND role = 'admin'
+    )
+    OR
     -- Email / metadata match
     (auth.jwt()->>'email' = 'mannamganeshbabu8@gmail.com')
     OR
@@ -42,6 +51,36 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+
+-- 3b. Helper function to pre-provision Dean / Admin accounts directly
+DROP FUNCTION IF EXISTS public.provision_admin(TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.provision_admin CASCADE;
+
+CREATE OR REPLACE FUNCTION public.provision_admin(
+  admin_email TEXT,
+  admin_full_name TEXT DEFAULT 'Administrator',
+  admin_department TEXT DEFAULT 'Administration'
+) RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  SELECT id INTO v_user_id FROM auth.users WHERE email = admin_email;
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'User % does not exist in Auth. Create user in Supabase Auth first.', admin_email;
+  END IF;
+
+  INSERT INTO public.profiles (user_id, id, email, full_name, role, department, status, verified)
+  VALUES (v_user_id, v_user_id, admin_email, admin_full_name, 'admin', admin_department, 'active', true)
+  ON CONFLICT (user_id) DO UPDATE 
+  SET role = 'admin', verified = true, status = 'active';
+
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (v_user_id, 'admin'::app_role)
+  ON CONFLICT (user_id, role) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.provision_admin(TEXT, TEXT, TEXT) TO authenticated, service_role;
 
 -- 4. Create admin_audit_logs table
 CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
@@ -103,6 +142,12 @@ USING (public.is_admin());
 DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 CREATE POLICY "Admins can update any profile"
 ON public.profiles FOR UPDATE TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete any profile" ON public.profiles;
+CREATE POLICY "Admins can delete any profile"
+ON public.profiles FOR DELETE TO authenticated
 USING (public.is_admin());
 
 -- lecturer_profiles
@@ -111,10 +156,49 @@ CREATE POLICY "Admins can view all lecturer profiles"
 ON public.lecturer_profiles FOR SELECT TO authenticated
 USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins can update any lecturer profile" ON public.lecturer_profiles;
+CREATE POLICY "Admins can update any lecturer profile"
+ON public.lecturer_profiles FOR UPDATE TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete any lecturer profile" ON public.lecturer_profiles;
+CREATE POLICY "Admins can delete any lecturer profile"
+ON public.lecturer_profiles FOR DELETE TO authenticated
+USING (public.is_admin());
+
 -- student_profiles
 DROP POLICY IF EXISTS "Admins can view all student profiles" ON public.student_profiles;
 CREATE POLICY "Admins can view all student profiles"
 ON public.student_profiles FOR SELECT TO authenticated
+USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can update any student profile" ON public.student_profiles;
+CREATE POLICY "Admins can update any student profile"
+ON public.student_profiles FOR UPDATE TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete any student profile" ON public.student_profiles;
+CREATE POLICY "Admins can delete any student profile"
+ON public.student_profiles FOR DELETE TO authenticated
+USING (public.is_admin());
+
+-- class_students
+DROP POLICY IF EXISTS "Admins can view all class students" ON public.class_students;
+CREATE POLICY "Admins can view all class students"
+ON public.class_students FOR SELECT TO authenticated
+USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can update all class students" ON public.class_students;
+CREATE POLICY "Admins can update all class students"
+ON public.class_students FOR UPDATE TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete all class students" ON public.class_students;
+CREATE POLICY "Admins can delete all class students"
+ON public.class_students FOR DELETE TO authenticated
 USING (public.is_admin());
 
 -- classes
@@ -123,10 +207,30 @@ CREATE POLICY "Admins can view all classes"
 ON public.classes FOR SELECT TO authenticated
 USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins can update all classes" ON public.classes;
+CREATE POLICY "Admins can update all classes"
+ON public.classes FOR UPDATE TO authenticated
+USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete all classes" ON public.classes;
+CREATE POLICY "Admins can delete all classes"
+ON public.classes FOR DELETE TO authenticated
+USING (public.is_admin());
+
 -- courses
 DROP POLICY IF EXISTS "Admins can view all courses" ON public.courses;
 CREATE POLICY "Admins can view all courses"
 ON public.courses FOR SELECT TO authenticated
+USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can update all courses" ON public.courses;
+CREATE POLICY "Admins can update all courses"
+ON public.courses FOR UPDATE TO authenticated
+USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete all courses" ON public.courses;
+CREATE POLICY "Admins can delete all courses"
+ON public.courses FOR DELETE TO authenticated
 USING (public.is_admin());
 
 -- assignments
@@ -153,12 +257,6 @@ CREATE POLICY "Admins can view all quiz submissions"
 ON public.quiz_submissions FOR SELECT TO authenticated
 USING (public.is_admin());
 
--- class_students
-DROP POLICY IF EXISTS "Admins can view all class students" ON public.class_students;
-CREATE POLICY "Admins can view all class students"
-ON public.class_students FOR SELECT TO authenticated
-USING (public.is_admin());
-
 -- conversations
 DROP POLICY IF EXISTS "Admins can view all conversations" ON public.conversations;
 CREATE POLICY "Admins can view all conversations"
@@ -170,6 +268,227 @@ DROP POLICY IF EXISTS "Admins can view all messages" ON public.messages;
 CREATE POLICY "Admins can view all messages"
 ON public.messages FOR SELECT TO authenticated
 USING (public.is_admin());
+
+-- ==============================================================================
+-- 5b. SECURITY DEFINER RPC Functions for Guaranteed Status & Role Mutations
+-- ==============================================================================
+
+DROP FUNCTION IF EXISTS public.admin_set_user_status(TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_set_user_status(TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_set_user_status(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_set_user_status() CASCADE;
+
+CREATE OR REPLACE FUNCTION public.admin_set_user_status(
+  target_user_id TEXT,
+  new_status TEXT,
+  target_email TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_caller UUID := auth.uid();
+  v_is_admin BOOLEAN;
+  v_uuid UUID;
+BEGIN
+  -- Verify caller is admin
+  v_is_admin := public.is_admin();
+  IF NOT v_is_admin THEN
+    RAISE EXCEPTION 'Access Denied: Only administrators can update user status.';
+  END IF;
+
+  -- 1. Update profiles by user_id or id
+  BEGIN
+    v_uuid := target_user_id::UUID;
+    UPDATE public.profiles
+    SET status = new_status, updated_at = now()
+    WHERE user_id = v_uuid OR id = v_uuid;
+
+    UPDATE public.student_profiles
+    SET status = new_status
+    WHERE user_id = v_uuid OR id = v_uuid;
+
+    UPDATE public.lecturer_profiles
+    SET status = new_status
+    WHERE user_id = v_uuid OR id = v_uuid;
+  EXCEPTION WHEN OTHERS THEN
+    -- In case target_user_id is not a valid UUID string
+    NULL;
+  END;
+
+  -- 2. Update by email if provided
+  IF target_email IS NOT NULL AND target_email <> '' AND target_email <> 'No email' THEN
+    UPDATE public.profiles
+    SET status = new_status, updated_at = now()
+    WHERE email ILIKE target_email;
+
+    UPDATE public.student_profiles
+    SET status = new_status
+    WHERE email ILIKE target_email;
+
+    UPDATE public.lecturer_profiles
+    SET status = new_status
+    WHERE email ILIKE target_email;
+
+    UPDATE public.class_students
+    SET status = new_status
+    WHERE email ILIKE target_email;
+  END IF;
+
+  -- 3. Notifications handling
+  IF new_status = 'suspended' AND v_uuid IS NOT NULL THEN
+    INSERT INTO public.notifications (recipient_id, sender_id, title, message, type, action_type, created_at)
+    VALUES (
+      v_uuid,
+      v_caller,
+      'ACCOUNT_SUSPENDED',
+      'Your account has been suspended by an administrator. Please contact your institution.',
+      'general',
+      'suspended',
+      now()
+    );
+  ELSIF new_status = 'active' AND v_uuid IS NOT NULL THEN
+    DELETE FROM public.notifications
+    WHERE recipient_id = v_uuid AND title = 'ACCOUNT_SUSPENDED';
+  END IF;
+
+  -- 4. Audit Log
+  INSERT INTO public.admin_audit_logs (admin_id, action, target_user_id, target_email, details)
+  VALUES (
+    COALESCE(v_caller, '00000000-0000-0000-0000-000000000000'::UUID),
+    CASE WHEN new_status = 'suspended' THEN 'suspend_user' ELSE 'activate_user' END,
+    v_uuid,
+    target_email,
+    jsonb_build_object('new_status', new_status, 'updated_at', now())
+  );
+
+  RETURN jsonb_build_object('success', true, 'status', new_status, 'user_id', target_user_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_set_user_status(TEXT, TEXT, TEXT) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.admin_set_user_role(TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_set_user_role(TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_set_user_role(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_set_user_role() CASCADE;
+
+CREATE OR REPLACE FUNCTION public.admin_set_user_role(
+  target_user_id TEXT,
+  new_role TEXT,
+  target_email TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_caller UUID := auth.uid();
+  v_is_admin BOOLEAN;
+  v_uuid UUID;
+  v_app_role app_role;
+BEGIN
+  v_is_admin := public.is_admin();
+  IF NOT v_is_admin THEN
+    RAISE EXCEPTION 'Access Denied: Only administrators can modify user roles.';
+  END IF;
+
+  v_app_role := new_role::app_role;
+  v_uuid := target_user_id::UUID;
+
+  -- Upsert user_roles
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (v_uuid, v_app_role)
+  ON CONFLICT (user_id) DO UPDATE SET role = v_app_role;
+
+  -- Update profiles role column
+  UPDATE public.profiles
+  SET role = new_role, updated_at = now()
+  WHERE user_id = v_uuid OR id = v_uuid;
+
+  IF target_email IS NOT NULL AND target_email <> '' THEN
+    UPDATE public.profiles
+    SET role = new_role, updated_at = now()
+    WHERE email ILIKE target_email;
+  END IF;
+
+  -- Audit log
+  INSERT INTO public.admin_audit_logs (admin_id, action, target_user_id, target_email, details)
+  VALUES (
+    COALESCE(v_caller, '00000000-0000-0000-0000-000000000000'::UUID),
+    'change_role',
+    v_uuid,
+    target_email,
+    jsonb_build_object('new_role', new_role, 'updated_at', now())
+  );
+
+  RETURN jsonb_build_object('success', true, 'role', new_role, 'user_id', target_user_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_set_user_role(TEXT, TEXT, TEXT) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.admin_delete_user_records(TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_delete_user_records(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_delete_user_records() CASCADE;
+
+CREATE OR REPLACE FUNCTION public.admin_delete_user_records(
+  target_user_id TEXT,
+  target_email TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_caller UUID := auth.uid();
+  v_is_admin BOOLEAN;
+  v_uuid UUID;
+BEGIN
+  v_is_admin := public.is_admin();
+  IF NOT v_is_admin THEN
+    RAISE EXCEPTION 'Access Denied: Only administrators can delete users.';
+  END IF;
+
+  BEGIN
+    v_uuid := target_user_id::UUID;
+  EXCEPTION WHEN OTHERS THEN
+    v_uuid := NULL;
+  END;
+
+  IF v_uuid IS NOT NULL THEN
+    DELETE FROM public.class_students WHERE student_id = v_uuid OR id = v_uuid;
+    DELETE FROM public.student_profiles WHERE user_id = v_uuid OR id = v_uuid;
+    DELETE FROM public.lecturer_profiles WHERE user_id = v_uuid OR id = v_uuid;
+    DELETE FROM public.user_roles WHERE user_id = v_uuid;
+    DELETE FROM public.profiles WHERE user_id = v_uuid OR id = v_uuid;
+  END IF;
+
+  IF target_email IS NOT NULL AND target_email <> '' AND target_email <> 'No email' THEN
+    DELETE FROM public.class_students WHERE email ILIKE target_email;
+    DELETE FROM public.student_profiles WHERE email ILIKE target_email;
+    DELETE FROM public.lecturer_profiles WHERE email ILIKE target_email;
+    DELETE FROM public.profiles WHERE email ILIKE target_email;
+  END IF;
+
+  INSERT INTO public.admin_audit_logs (admin_id, action, target_user_id, target_email, details)
+  VALUES (
+    COALESCE(v_caller, '00000000-0000-0000-0000-000000000000'::UUID),
+    'delete_user',
+    v_uuid,
+    target_email,
+    jsonb_build_object('deleted_at', now())
+  );
+
+  RETURN jsonb_build_object('success', true, 'deleted_user_id', target_user_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_delete_user_records(TEXT, TEXT) TO authenticated;
 
 -- notifications
 DROP POLICY IF EXISTS "Admins can view all notifications" ON public.notifications;
@@ -191,6 +510,9 @@ USING (public.is_admin());
 -- ==============================================================================
 -- 6. RPC FUNCTION: Instant Live Dashboard Statistics (Security Definer)
 -- ==============================================================================
+
+DROP FUNCTION IF EXISTS public.get_admin_dashboard_stats() CASCADE;
+DROP FUNCTION IF EXISTS public.get_admin_dashboard_stats CASCADE;
 
 CREATE OR REPLACE FUNCTION public.get_admin_dashboard_stats()
 RETURNS JSONB

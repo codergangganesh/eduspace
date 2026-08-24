@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Shield, Clock, Paperclip, RefreshCw, ChevronRight } from "lucide-react";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { ConversationItem } from "@/types";
+import { toast } from "sonner";
 
 export const MessagesModeration: React.FC = () => {
   const [search, setSearch] = useState("");

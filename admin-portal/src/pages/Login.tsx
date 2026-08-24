@@ -9,8 +9,8 @@ import { Lock, Mail, ArrowRight, AlertCircle, Loader2, KeyRound, Sparkles } from
 import { toast } from "sonner";
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState("mannamganeshbabu8@gmail.com");
-  const [password, setPassword] = useState("Ganeshbabu@123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const { signIn, user, isAdmin, isLoading: isAuthChecking } = useAdminAuth();

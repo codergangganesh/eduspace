@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { EnrichedUser } from "@/types";
 import { adminService } from "@/services/admin.service";
 import { toast } from "sonner";
@@ -29,26 +29,32 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
   onSuccess,
 }) => {
   const [typedEmail, setTypedEmail] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!user) return null;
 
   const isConfirmed = typedEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!isConfirmed) return;
 
-    // 1. Immediately close the modal and reset input
-    onOpenChange(false);
-    setTypedEmail("");
-    
-    // 2. Instant optimistic feedback & table refresh
-    toast.success(`User ${user.full_name} was permanently deleted.`);
-    onSuccess();
-
-    // 3. Execute permanent deletion across all database tables & auth in background
-    adminService.deleteUser(user.user_id, user.email).catch((err) => {
-      console.warn("[DeleteUserModal] Background deletion note:", err);
-    });
+    try {
+      setIsDeleting(true);
+      const res = await adminService.deleteUser(user.user_id, user.email);
+      if (res.success) {
+        toast.success(`User ${user.full_name} was permanently deleted.`);
+        onSuccess();
+        onOpenChange(false);
+        setTypedEmail("");
+      } else {
+        toast.error(res.error || "Failed to delete user from database.");
+      }
+    } catch (err: any) {
+      console.error("[DeleteUserModal] Deletion exception:", err);
+      toast.error(err.message || "Failed to delete user from database.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -77,16 +83,17 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setTypedEmail("")}>
+          <AlertDialogCancel onClick={() => setTypedEmail("")} disabled={isDeleting}>
             Cancel
           </AlertDialogCancel>
-          <AlertDialogAction
+          <Button
+            type="button"
             onClick={handleDelete}
-            disabled={!isConfirmed}
+            disabled={!isConfirmed || isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-semibold"
           >
-            Permanently Delete
-          </AlertDialogAction>
+            {isDeleting ? "Deleting..." : "Permanently Delete"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

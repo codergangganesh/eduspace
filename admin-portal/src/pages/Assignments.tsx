@@ -42,6 +42,7 @@ export const Assignments: React.FC = () => {
   const exportCols = [
     { header: "Assignment Title", key: "title", width: 30 },
     { header: "Course / Topic", key: "course_name", width: 25 },
+    { header: "Submissions", key: "submissions_count", width: 15 },
     { header: "Max Points", key: "max_points", width: 12 },
     { header: "Due Date", key: "due_date", width: 20 },
     { header: "Status", key: "status", width: 15 },
@@ -110,6 +111,7 @@ export const Assignments: React.FC = () => {
               <TableRow>
                 <TableHead>Assignment Title</TableHead>
                 <TableHead>Course / Subject</TableHead>
+                <TableHead>Submissions</TableHead>
                 <TableHead>Max Points</TableHead>
                 <TableHead>Due Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -126,6 +128,11 @@ export const Assignments: React.FC = () => {
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {asg.course_name || "General Coursework"}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      {asg.submissions_count ?? 0} Submissions
+                    </span>
                   </TableCell>
                   <TableCell className="text-xs font-bold text-primary">
                     {asg.max_points ? `${asg.max_points} pts` : "100 pts"}

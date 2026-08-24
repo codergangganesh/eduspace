@@ -5,6 +5,7 @@ export function useAuditLog(options: { page?: number; pageSize?: number; search?
   return useQuery({
     queryKey: ["admin", "audit-logs", options.page, options.pageSize, options.search],
     queryFn: () => auditService.getAuditLogs(options),
-    staleTime: 1000 * 30,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }

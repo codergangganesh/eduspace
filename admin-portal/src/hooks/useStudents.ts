@@ -1,14 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { studentsService, StudentFilterOptions, getCachedStudentsData, setCachedStudentsData } from "@/services/students.service";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
-
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { studentsService, StudentFilterOptions } from "@/services/students.service";
+import { supabase } from "@/lib/supabase";
 import { EnrichedUser } from "@/types";
 
 export function useStudents(options: StudentFilterOptions = {}) {
-  const auth = useAdminAuth();
-
-  const isReady = Boolean(auth.user && auth.isAdmin && !auth.isLoading);
-
   const query = useQuery({
     queryKey: [
       "admin",
@@ -21,47 +17,84 @@ export function useStudents(options: StudentFilterOptions = {}) {
       options.sortBy,
       options.sortOrder,
     ],
-    queryFn: async () => {
-      const res = await studentsService.getStudents(options);
-      if (res && res.data?.length > 0 && !options.search && options.status === "all" && options.page === 1) {
-        setCachedStudentsData(res);
-      }
-      return res;
-    },
-    initialData: !options.search && options.status === "all"
-      ? () => getCachedStudentsData(options.page || 1, options.pageSize || 10)
-      : undefined,
-    staleTime: 1000 * 20,
+    queryFn: () => studentsService.getStudents(options),
+    staleTime: 1000 * 30,
+    refetchOnMount: true,
   });
 
   const departmentsQuery = useQuery({
     queryKey: ["admin", "departments"],
     queryFn: () => studentsService.getAllDepartments(),
-    initialData: () => ["Computer Science", "Information Technology", "Electronics & Communication"],
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 5,
   });
-
-  const hasData = Boolean(query.data && Array.isArray(query.data.data) && query.data.data.length > 0);
 
   return {
     students: (query.data?.data as EnrichedUser[]) || [],
     total: query.data?.total || 0,
     totalPages: query.data?.totalPages || 0,
     page: query.data?.page || 1,
-    isLoading: !hasData && query.isLoading,
-    isError: !hasData && query.isError,
+    isLoading: query.isPending && !query.data,
+    isError: query.isError,
     error: query.error,
     refetch: query.refetch,
-    departments: departmentsQuery.data || ["Computer Science", "Information Technology"],
+    departments: departmentsQuery.data || [],
   };
 }
 
 export function useStudentDetails(userId: string | null) {
-  const auth = useAdminAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`admin-student-details-live-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "assignment_submissions" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quiz_submissions" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "class_students" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "course_enrollments" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_coding_profiles" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin", "student-details", userId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
+
   return useQuery({
     queryKey: ["admin", "student-details", userId],
     queryFn: () => (userId ? studentsService.getStudentDetails(userId) : null),
     enabled: Boolean(userId),
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 30,
   });
 }

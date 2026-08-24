@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "@/types";
@@ -16,48 +16,9 @@ interface AdminAuthContextType {
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-const getCachedAdminStatus = (userId?: string): boolean => {
-  if (!userId) return false;
-  try {
-    return localStorage.getItem(`eduspace_admin_auth_${userId}`) === "true";
-  } catch {
-    return false;
-  }
-};
-
-const setCachedAdminStatus = (userId: string, status: boolean) => {
-  try {
-    if (status) {
-      localStorage.setItem(`eduspace_admin_auth_${userId}`, "true");
-    } else {
-      localStorage.removeItem(`eduspace_admin_auth_${userId}`);
-    }
-  } catch {}
-};
-
-const getCachedProfile = (userId?: string): Profile | null => {
-  if (!userId) return null;
-  try {
-    const raw = localStorage.getItem(`eduspace_admin_profile_${userId}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const setCachedProfile = (userId: string, prof: Profile | null) => {
-  try {
-    if (prof) {
-      localStorage.setItem(`eduspace_admin_profile_${userId}`, JSON.stringify(prof));
-    } else {
-      localStorage.removeItem(`eduspace_admin_profile_${userId}`);
-    }
-  } catch {}
-};
-
 const isKnownAdminEmail = (email?: string): boolean => {
   if (!email) return false;
-  const e = email.toLowerCase();
+  const e = email.toLowerCase().trim();
   return (
     e === "mannamganeshbabu8@gmail.com" ||
     e.startsWith("admin.") ||
@@ -66,134 +27,87 @@ const isKnownAdminEmail = (email?: string): boolean => {
   );
 };
 
-// Synchronous Fast-Hydration from localStorage on render 0
-const getInitialAuthState = () => {
-  try {
-    const keys = Object.keys(localStorage);
-    const authKey =
-      keys.find((k) => k.startsWith("sb-") && k.endsWith("-auth-token")) ||
-      keys.find((k) => k.includes("auth-token") || k.includes("supabase.auth"));
-
-    if (authKey) {
-      const raw = localStorage.getItem(authKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const user = parsed?.user || parsed?.currentSession?.user || null;
-        const session = parsed?.access_token ? parsed : parsed?.currentSession || null;
-
-        if (user) {
-          const isCached =
-            localStorage.getItem(`eduspace_admin_auth_${user.id}`) === "true" ||
-            isKnownAdminEmail(user.email) ||
-            user.user_metadata?.role === "admin" ||
-            user.app_metadata?.role === "admin";
-
-          const cachedProfile = getCachedProfile(user.id) || {
-            id: user.id,
-            user_id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || "Mannam Ganeshbabu",
-            avatar_url: user.user_metadata?.avatar_url || null,
-            status: "active",
-            created_at: user.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as Profile;
-
-          return {
-            user,
-            session,
-            profile: cachedProfile,
-            isAdmin: isCached,
-            isLoading: false,
-          };
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("[AdminAuth] Sync parse:", e);
-  }
-  return { user: null, session: null, profile: null, isAdmin: false, isLoading: false };
-};
+/** Wrap a promise with a timeout — resolves to fallback if the promise doesn't settle in time */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 export function AdminAuthProvider({ children }: { children: ReactNode }): React.ReactElement {
-  const initial = getInitialAuthState();
-  const [user, setUser] = useState<User | null>(initial.user);
-  const [session, setSession] = useState<Session | null>(initial.session);
-  const [profile, setProfile] = useState<Profile | null>(initial.profile);
-  const [isAdmin, setIsAdmin] = useState<boolean>(initial.isAdmin);
-  const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const mountedRef = useRef(true);
 
-  const checkAdminRole = async (userId: string, email?: string, userMeta?: any): Promise<boolean> => {
+  const makeSyntheticProfile = useCallback((userId: string, email?: string, userMeta?: any): Profile => {
+    return {
+      id: userId,
+      user_id: userId,
+      email: email || userMeta?.email || "",
+      full_name: userMeta?.full_name || userMeta?.name || (email ? email.split("@")[0] : "Administrator"),
+      avatar_url: userMeta?.avatar_url || null,
+      status: "active",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as Profile;
+  }, []);
+
+  const checkAdminRole = useCallback(async (userId: string, email?: string, userMeta?: any): Promise<boolean> => {
+    // Fast-path: known admin email or metadata — no DB query needed
+    if (userMeta?.role === "admin" || userMeta?.app_role === "admin" || isKnownAdminEmail(email)) {
+      return true;
+    }
+
     try {
-      if (isKnownAdminEmail(email) || userMeta?.role === "admin" || userMeta?.app_role === "admin") {
-        setCachedAdminStatus(userId, true);
-        return true;
-      }
+      const [rolesRes, profileRes] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("profiles").select("role").or(`user_id.eq.${userId},id.eq.${userId}`).maybeSingle(),
+      ]);
 
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
+      const hasAdminRole =
+        (rolesRes.data && rolesRes.data.some((r: any) => r.role === "admin")) ||
+        profileRes.data?.role === "admin";
 
-      if (!error && data && data.length > 0) {
-        const hasAdmin = data.some((r: any) => r.role === "admin");
-        setCachedAdminStatus(userId, hasAdmin);
-        return hasAdmin;
-      }
-
-      return getCachedAdminStatus(userId);
+      return Boolean(hasAdminRole || isKnownAdminEmail(email));
     } catch (err) {
       console.warn("[AdminAuth] Role check error:", err);
-      return getCachedAdminStatus(userId) || isKnownAdminEmail(email);
+      return isKnownAdminEmail(email);
     }
-  };
+  }, []);
 
-  const fetchProfile = async (userId: string, userMeta?: any, email?: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (userId: string, userMeta?: any, email?: string): Promise<Profile> => {
     try {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userId},id.eq.${userId}`)
         .maybeSingle();
 
       if (!error && data) {
-        setCachedProfile(userId, data as Profile);
         return data as Profile;
       }
-
-      // Fallback from metadata
-      const syntheticProfile: Profile = {
-        id: userId,
-        user_id: userId,
-        email: email || "mannamganeshbabu8@gmail.com",
-        full_name: userMeta?.full_name || userMeta?.name || "Mannam Ganeshbabu",
-        avatar_url: userMeta?.avatar_url || null,
-        status: "active",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Profile;
-
-      setCachedProfile(userId, syntheticProfile);
-      return syntheticProfile;
     } catch {
-      return getCachedProfile(userId);
+      // fall through
     }
-  };
+    return makeSyntheticProfile(userId, email, userMeta);
+  }, [makeSyntheticProfile]);
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
 
-    const initializeAuth = async () => {
+    const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Step 1: Get current session — this is fast and reliable
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
-        if (!session?.user) {
-          // If we already have a valid synchronously parsed local session, don't clear it immediately
-          if (initial.user) {
-            return;
-          }
+        // Step 2: If no session, immediately show login — no DB queries needed
+        if (!currentSession?.user) {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
@@ -202,78 +116,102 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
           return;
         }
 
-        setSession(session);
-        setUser(session.user);
+        // Step 3: Session exists — set user immediately so we're not stuck
+        const authUser = currentSession.user;
+        setSession(currentSession);
+        setUser(authUser);
 
-        const isKnown = isKnownAdminEmail(session.user.email);
-        if (isKnown) {
+        // Step 4: Determine admin status — use fast path first, DB query with timeout
+        const fastAdmin = isKnownAdminEmail(authUser.email) ||
+          authUser.user_metadata?.role === "admin" ||
+          authUser.user_metadata?.app_role === "admin";
+
+        if (fastAdmin) {
+          // Known admin — show dashboard immediately, fetch profile in background
           setIsAdmin(true);
-          setCachedAdminStatus(session.user.id, true);
-        }
-
-        const [adminStatus, userProfile] = await Promise.all([
-          checkAdminRole(session.user.id, session.user.email, session.user.user_metadata),
-          fetchProfile(session.user.id, session.user.user_metadata, session.user.email),
-        ]);
-
-        if (mounted) {
-          setIsAdmin(adminStatus);
-          setProfile(userProfile);
+          setProfile(makeSyntheticProfile(authUser.id, authUser.email, authUser.user_metadata));
           setIsLoading(false);
+
+          // Enrich profile in background (non-blocking)
+          fetchProfile(authUser.id, authUser.user_metadata, authUser.email).then((p) => {
+            if (mountedRef.current) setProfile(p);
+          }).catch(() => {});
+        } else {
+          // Unknown email — need DB check, but with a 3-second timeout
+          const adminStatus = await withTimeout(
+            checkAdminRole(authUser.id, authUser.email, authUser.user_metadata),
+            3000,
+            false
+          );
+          const userProfile = await withTimeout(
+            fetchProfile(authUser.id, authUser.user_metadata, authUser.email),
+            3000,
+            makeSyntheticProfile(authUser.id, authUser.email, authUser.user_metadata)
+          );
+
+          if (mountedRef.current) {
+            setIsAdmin(adminStatus);
+            setProfile(userProfile);
+            setIsLoading(false);
+          }
         }
       } catch (err) {
         console.error("[AdminAuth] Init error:", err);
-        if (mounted) setIsLoading(false);
+        if (mountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
-    initializeAuth();
+    initAuth();
 
+    // Listen for future auth changes (sign-in, sign-out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         if (event === "SIGNED_OUT" || !newSession?.user) {
-          if (event === "SIGNED_OUT") {
-            setSession(null);
-            setUser(null);
-            setIsAdmin(false);
-            setProfile(null);
-            setIsLoading(false);
-          }
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
+          setProfile(null);
+          setIsLoading(false);
           return;
         }
 
-        setSession(newSession);
-        setUser(newSession.user);
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          setSession(newSession);
+          setUser(newSession.user);
 
-        const isKnown = isKnownAdminEmail(newSession.user.email);
-        if (isKnown) {
-          setIsAdmin(true);
-          setCachedAdminStatus(newSession.user.id, true);
-        }
+          const adminStatus = await withTimeout(
+            checkAdminRole(newSession.user.id, newSession.user.email, newSession.user.user_metadata),
+            3000,
+            isKnownAdminEmail(newSession.user.email)
+          );
+          const userProfile = await withTimeout(
+            fetchProfile(newSession.user.id, newSession.user.user_metadata, newSession.user.email),
+            3000,
+            makeSyntheticProfile(newSession.user.id, newSession.user.email, newSession.user.user_metadata)
+          );
 
-        const [adminStatus, userProfile] = await Promise.all([
-          checkAdminRole(newSession.user.id, newSession.user.email, newSession.user.user_metadata),
-          fetchProfile(newSession.user.id, newSession.user.user_metadata, newSession.user.email),
-        ]);
-
-        if (mounted) {
-          setIsAdmin(adminStatus);
-          setProfile(userProfile);
-          setIsLoading(false);
+          if (mountedRef.current) {
+            setIsAdmin(adminStatus);
+            setProfile(userProfile);
+            setIsLoading(false);
+          }
         }
       }
     );
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [checkAdminRole, fetchProfile, makeSyntheticProfile]);
 
   const signIn = async (email: string, password: string, captchaToken?: string) => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -281,6 +219,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
       });
 
       if (error) {
+        setIsLoading(false);
         return { success: false, error: error.message };
       }
 
@@ -288,47 +227,39 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
         setUser(data.user);
         setSession(data.session ?? null);
 
-        const adminStatus = await checkAdminRole(data.user.id, data.user.email, data.user.user_metadata);
+        const adminStatus = await withTimeout(
+          checkAdminRole(data.user.id, data.user.email, data.user.user_metadata),
+          3000,
+          isKnownAdminEmail(data.user.email)
+        );
         setIsAdmin(adminStatus);
-        setCachedAdminStatus(data.user.id, adminStatus);
 
         if (!adminStatus) {
+          setIsLoading(false);
           return {
             success: false,
             error: "Access Denied: You do not have administrator permissions to access the Eduspace Admin Portal.",
           };
         }
 
-        fetchProfile(data.user.id, data.user.user_metadata, data.user.email).then((p) => {
-          setProfile(p);
-        });
-
+        const userProfile = await withTimeout(
+          fetchProfile(data.user.id, data.user.user_metadata, data.user.email),
+          3000,
+          makeSyntheticProfile(data.user.id, data.user.email, data.user.user_metadata)
+        );
+        setProfile(userProfile);
         setIsLoading(false);
       }
 
       return { success: true };
     } catch (err: any) {
+      setIsLoading(false);
       return { success: false, error: err.message || "Failed to sign in" };
     }
   };
 
   const signOut = async () => {
     try {
-      if (user) {
-        setCachedAdminStatus(user.id, false);
-        setCachedProfile(user.id, null);
-      }
-      const keys = Object.keys(localStorage);
-      keys.forEach((k) => {
-        if (
-          k.startsWith("eduspace_admin_auth_") ||
-          k.startsWith("eduspace_admin_profile_") ||
-          k.includes("auth-token") ||
-          k.includes("supabase.auth")
-        ) {
-          localStorage.removeItem(k);
-        }
-      });
       await supabase.auth.signOut();
     } catch (err) {
       console.warn("[AdminAuth] Sign out error:", err);
@@ -345,8 +276,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): React.
   const refreshProfile = async () => {
     if (user) {
       const [adminStatus, userProfile] = await Promise.all([
-        checkAdminRole(user.id, user.email, user.user_metadata),
-        fetchProfile(user.id, user.user_metadata, user.email),
+        withTimeout(checkAdminRole(user.id, user.email, user.user_metadata), 3000, isAdmin),
+        withTimeout(fetchProfile(user.id, user.user_metadata, user.email), 3000, profile!),
       ]);
       setIsAdmin(adminStatus);
       setProfile(userProfile);

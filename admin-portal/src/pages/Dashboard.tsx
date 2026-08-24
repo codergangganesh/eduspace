@@ -99,23 +99,23 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
         <StatCard
           title="Total Students"
-          value={stats?.totalStudents ?? 16}
-          subtitle={`${stats?.activeStudents ?? stats?.totalStudents ?? 16} active enrolled`}
+          value={stats?.totalStudents ?? 0}
+          subtitle={`${stats?.activeStudents ?? stats?.totalStudents ?? 0} active enrolled`}
           icon={Users}
           color="blue"
         />
 
         <StatCard
           title="Total Lecturers"
-          value={stats?.totalLecturers ?? 2}
-          subtitle={`${stats?.activeLecturers ?? stats?.totalLecturers ?? 2} active faculty`}
+          value={stats?.totalLecturers ?? 0}
+          subtitle={`${stats?.activeLecturers ?? stats?.totalLecturers ?? 0} active faculty`}
           icon={GraduationCap}
           color="emerald"
         />
 
         <StatCard
           title="Total Classes"
-          value={stats?.totalClasses ?? 8}
+          value={stats?.totalClasses ?? 0}
           subtitle="Active lecture rooms"
           icon={FolderKanban}
           color="amber"
@@ -123,7 +123,7 @@ export const Dashboard: React.FC = () => {
 
         <StatCard
           title="New Users (30d)"
-          value={stats?.newUsersLast30Days ?? 11}
+          value={stats?.newUsersLast30Days ?? 0}
           subtitle="Recent registrations"
           icon={UserPlus}
           color="rose"
@@ -134,7 +134,7 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
         <StatCard
           title="Assignments"
-          value={stats?.totalAssignments ?? 5}
+          value={stats?.totalAssignments ?? 0}
           subtitle="Course coursework tasks"
           icon={ClipboardList}
           color="blue"
@@ -142,7 +142,7 @@ export const Dashboard: React.FC = () => {
 
         <StatCard
           title="Quizzes"
-          value={stats?.totalQuizzes ?? 4}
+          value={stats?.totalQuizzes ?? 0}
           subtitle="Published evaluations"
           icon={FileCheck}
           color="emerald"
@@ -150,7 +150,7 @@ export const Dashboard: React.FC = () => {
 
         <StatCard
           title="Messages Sent"
-          value={stats?.totalMessages ?? 98}
+          value={stats?.totalMessages ?? 0}
           subtitle="Chat communications"
           icon={MessageSquare}
           color="purple"

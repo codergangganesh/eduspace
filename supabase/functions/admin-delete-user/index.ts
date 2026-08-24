@@ -43,18 +43,28 @@ serve(async (req: Request) => {
       });
     }
 
-    // 2. Verify caller has admin role
+    // 2. Verify caller has admin role dynamically
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: roleData, error: roleError } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", callerUser.id)
-      .eq("role", "admin")
-      .maybeSingle();
+    const [roleRes, profileRes] = await Promise.all([
+      adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", callerUser.id)
+        .eq("role", "admin")
+        .maybeSingle(),
+      adminClient
+        .from("profiles")
+        .select("role")
+        .eq("user_id", callerUser.id)
+        .maybeSingle(),
+    ]);
 
     const isAuthorizedAdmin =
-      (!roleError && roleData?.role === "admin") ||
-      callerUser.email?.includes("admin") ||
+      roleRes.data?.role === "admin" ||
+      profileRes.data?.role === "admin" ||
+      callerUser.app_metadata?.role === "admin" ||
+      callerUser.user_metadata?.role === "admin" ||
+      callerUser.email?.toLowerCase().includes("admin") ||
       callerUser.email === "mannamganeshbabu8@gmail.com";
 
     if (!isAuthorizedAdmin) {

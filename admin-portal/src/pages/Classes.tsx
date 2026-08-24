@@ -44,6 +44,7 @@ export const Classes: React.FC = () => {
     { header: "Course Code", key: "course_code", width: 15 },
     { header: "Instructor", key: "lecturer_name", width: 20 },
     { header: "Department", key: "lecturer_department", width: 20 },
+    { header: "Enrolled", key: "student_count", width: 15 },
     { header: "Academic Year", key: "academic_year", width: 15 },
     { header: "Semester", key: "semester", width: 15 },
   ];
@@ -59,7 +60,7 @@ export const Classes: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Monitor lecture sections, course codes, and assigned faculty instructors.
+            Monitor lecture sections, course codes, enrolled students, and assigned faculty instructors.
           </p>
         </div>
 
@@ -112,6 +113,7 @@ export const Classes: React.FC = () => {
                 <TableHead>Course Code</TableHead>
                 <TableHead>Instructor</TableHead>
                 <TableHead>Department</TableHead>
+                <TableHead>Enrolled</TableHead>
                 <TableHead>Academic Year</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
@@ -132,6 +134,11 @@ export const Classes: React.FC = () => {
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {cls.lecturer_department || "Department"}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      {cls.student_count ?? 0} Students
+                    </span>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {cls.academic_year || "2026"} (Sem {cls.semester || "1"})

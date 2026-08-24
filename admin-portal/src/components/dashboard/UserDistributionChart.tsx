@@ -8,23 +8,13 @@ interface UserDistributionChartProps {
   isLoading?: boolean;
 }
 
-const DEFAULT_DISTRIBUTION = [
-  { name: "Students", value: 16, color: "#3b82f6" },
-  { name: "Lecturers", value: 2, color: "#10b981" },
-  { name: "Administrators", value: 1, color: "#8b5cf6" },
-];
-
 export const UserDistributionChart: React.FC<UserDistributionChartProps> = ({
   data = [],
 }) => {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
   const activeData = useMemo(() => {
-    if (data && data.length > 0) {
-      const sum = data.reduce((acc, curr) => acc + (curr.value || 0), 0);
-      if (sum > 0) return data;
-    }
-    return DEFAULT_DISTRIBUTION;
+    return data || [];
   }, [data]);
 
   const totalUsers = useMemo(() => {
@@ -58,131 +48,133 @@ export const UserDistributionChart: React.FC<UserDistributionChartProps> = ({
     );
   };
 
-  // Custom Tooltip
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload || !payload.length) return null;
     const item = payload[0];
-    const val = item.value || 0;
-    const pct = totalUsers > 0 ? ((val / totalUsers) * 100).toFixed(1) : "0";
+    const percentage = totalUsers > 0 ? ((item.value / totalUsers) * 100).toFixed(1) : "0";
 
     return (
-      <div className="bg-popover/95 backdrop-blur-md border border-border/80 rounded-xl p-2.5 shadow-xl text-xs min-w-[150px]">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className="h-2.5 w-2.5 rounded-full shadow-sm"
-            style={{ backgroundColor: item.payload.color }}
-          />
+      <div className="bg-popover/95 backdrop-blur-md border border-border/80 rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[150px]">
+        <div className="flex items-center gap-2 pb-1 border-b border-border/50">
+          {getRoleIcon(item.name)}
           <span className="font-semibold text-foreground">{item.name}</span>
         </div>
-        <div className="flex items-center justify-between text-muted-foreground pt-1 border-t border-border/50">
-          <span>Count:</span>
-          <span className="font-bold text-foreground">{val.toLocaleString()} ({pct}%)</span>
+        <div className="flex items-center justify-between text-muted-foreground pt-0.5">
+          <span>Accounts:</span>
+          <span className="font-mono font-bold text-foreground">{item.value}</span>
+        </div>
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>Proportion:</span>
+          <span className="font-mono font-semibold text-primary">{percentage}%</span>
         </div>
       </div>
     );
   };
 
   return (
-    <Card className="col-span-full lg:col-span-1 shadow-sm border-border/80 bg-card overflow-hidden flex flex-col justify-between">
-      <CardHeader className="pb-2">
+    <Card className="border-border bg-card flex flex-col justify-between overflow-hidden shadow-sm">
+      <CardHeader className="pb-2 border-b border-border/60">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-base font-bold tracking-tight text-foreground">
-              User Distribution
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground mt-0.5">
-              Active breakdown across user roles
-            </CardDescription>
-          </div>
-          <div className="flex items-center bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-            {totalUsers} Total
-          </div>
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            User Distribution
+          </CardTitle>
+          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+            {totalUsers} Registered
+          </span>
         </div>
+        <CardDescription className="text-xs">
+          Role distribution across the platform
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="pb-4">
-        {/* Donut Chart with Center Total */}
-        <div className="h-[175px] w-full relative flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={activeData}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={72}
-                paddingAngle={4}
-                dataKey="value"
-                activeIndex={activeIndex}
-                activeShape={renderActiveShape}
-                onMouseEnter={(_, index) => setActiveIndex(index)}
-                onMouseLeave={() => setActiveIndex(undefined)}
-              >
-                {activeData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.color}
-                    className="transition-all duration-200 cursor-pointer"
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+      <CardContent className="pt-4 flex flex-col items-center justify-between flex-1 gap-3">
+        {/* Donut Chart with Centered KPI */}
+        <div className="h-[200px] w-full relative flex items-center justify-center">
+          {totalUsers > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Pie
+                    data={activeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                    activeIndex={activeIndex}
+                    activeShape={renderActiveShape}
+                    onMouseEnter={(_, index) => setActiveIndex(index)}
+                    onMouseLeave={() => setActiveIndex(undefined)}
+                  >
+                    {activeData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        className="transition-all duration-300 cursor-pointer stroke-background stroke-2"
+                      />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
 
-          {/* Donut Center Counter */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-xl font-extrabold text-foreground tracking-tight">
-              {totalUsers}
-            </span>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
-              Users
-            </span>
-          </div>
-        </div>
-
-        {/* Detailed Breakdown Rows with Mini Progress Bars */}
-        <div className="space-y-2 mt-2 pt-3 border-t border-border/60">
-          {activeData.map((item, idx) => {
-            const pct = totalUsers > 0 ? Math.round((item.value / totalUsers) * 100) : 0;
-            const isHovered = activeIndex === idx;
-
-            return (
-              <div
-                key={item.name}
-                onMouseEnter={() => setActiveIndex(idx)}
-                onMouseLeave={() => setActiveIndex(undefined)}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  isHovered ? "bg-muted/70" : "hover:bg-muted/40"
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <div className="flex items-center gap-1.5 font-medium text-foreground">
-                    {getRoleIcon(item.name)}
-                    <span>{item.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-bold text-foreground text-xs">
-                    <span>{item.value}</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">({pct}%)</span>
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: item.color,
-                    }}
-                  />
-                </div>
+              {/* Center Stat */}
+              <div className="absolute flex flex-col items-center justify-center pointer-events-none text-center">
+                <span className="text-xl font-black tracking-tight text-foreground">
+                  {activeIndex !== undefined && activeData[activeIndex]
+                    ? activeData[activeIndex].value
+                    : totalUsers}
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                  {activeIndex !== undefined && activeData[activeIndex]
+                    ? activeData[activeIndex].name
+                    : "Total"}
+                </span>
               </div>
-            );
-          })}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground text-xs italic">
+              No user records found
+            </div>
+          )}
         </div>
+
+        {/* Legend Pills Grid */}
+        {totalUsers > 0 && (
+          <div className="grid grid-cols-2 gap-2 w-full pt-2 border-t border-border/50">
+            {activeData.map((item, idx) => {
+              const pct = totalUsers > 0 ? ((item.value / totalUsers) * 100).toFixed(0) : "0";
+              const isHovered = activeIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  onMouseLeave={() => setActiveIndex(undefined)}
+                  className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
+                    isHovered
+                      ? "bg-accent border-primary/40 shadow-xs"
+                      : "bg-muted/30 border-border/60 hover:bg-muted/60"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-xs font-medium text-foreground truncate">{item.name}</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 shrink-0 font-mono">
+                    <span className="text-xs font-bold text-foreground">{item.value}</span>
+                    <span className="text-[10px] text-muted-foreground">({pct}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 };
-
