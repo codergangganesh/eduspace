@@ -31,7 +31,7 @@ export default function StudentLogin() {
 
     const { register, handleSubmit: hookFormSubmit, formState: { errors } } = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
-        mode: "onChange",
+        mode: "onTouched",
         defaultValues: { email: "", password: "" }
     });
 
@@ -273,7 +273,7 @@ export default function StudentLogin() {
                                         {...register("email")}
                                         className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
                                         disabled={isLoading}
-                                        required
+                                        autoComplete="email"
                                     />
                                 </div>
                                 {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
@@ -293,7 +293,7 @@ export default function StudentLogin() {
                                         {...register("password")}
                                         className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium pr-8"
                                         disabled={isLoading}
-                                        required
+                                        autoComplete="current-password"
                                     />
                                     <button
                                         type="button"

@@ -159,8 +159,8 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                 </div>
 
                 {/* Bottom Form Sheet - Centered in the available middle space */}
-                <div className="flex-1 px-6 sm:px-8 py-4 relative z-20 flex flex-col justify-center overflow-y-auto">
-                    <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col justify-center">
+                <div className="flex-1 px-6 sm:px-8 py-4 pb-6 relative z-20 flex flex-col overflow-y-auto">
+                    <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col">
                         {/* Heading with Signature Accent Pill */}
                         <div className="mb-2.5 sm:mb-3">
                             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight relative inline-block">

@@ -29,7 +29,7 @@ export default function LecturerRegister() {
 
     const { register, handleSubmit: hookFormSubmit, formState: { errors }, watch } = useForm<RegisterFormValues>({
         resolver: zodResolver(registerSchema),
-        mode: "onChange",
+        mode: "onTouched",
         defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" }
     });
 
