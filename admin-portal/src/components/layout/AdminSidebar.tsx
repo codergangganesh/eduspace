@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
+  BrainCircuit,
   Users,
   GraduationCap,
   FolderKanban,
@@ -87,6 +88,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       title: "Overview",
       items: [
         { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+        { label: "Early Warning", path: "/early-warning", icon: BrainCircuit },
       ],
     },
     {

@@ -24,6 +24,7 @@ import { Announcements } from "@/pages/Announcements";
 import { AuditLog } from "@/pages/AuditLog";
 import { Settings } from "@/pages/Settings";
 import { AdminProfile } from "@/pages/AdminProfile";
+import { EarlyWarning } from "@/pages/EarlyWarning";
 
 import { TermsOfService } from "@/pages/TermsOfService";
 import { PrivacyPolicy } from "@/pages/PrivacyPolicy";
@@ -115,6 +116,7 @@ export function App() {
                 >
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/early-warning" element={<EarlyWarning />} />
                   <Route path="/students" element={<Students />} />
                   <Route path="/lecturers" element={<Lecturers />} />
                   <Route path="/courses" element={<Courses />} />

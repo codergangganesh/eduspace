@@ -239,3 +239,110 @@ export interface AnnouncementItem {
   recipient_count: number;
   read_count: number;
 }
+
+export type RiskLevel = "safe" | "low" | "moderate" | "high" | "critical";
+
+export interface RiskFactor {
+  type: "missed_assignments" | "quiz_decline" | "inactivity" | "failed_quizzes" | string;
+  label: string;
+  score: number; // 0 to 100
+  weight: number; // e.g. 0.35, 0.25, etc.
+  detail: string;
+  status: "safe" | "warning" | "critical";
+  metricValue?: string | number;
+}
+
+export interface StudentEnrolledClass {
+  id: string;
+  name: string;
+  courseCode?: string;
+  lecturerId?: string;
+  lecturerName?: string;
+  lecturerEmail?: string;
+}
+
+export interface AtRiskStudent {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  department: string;
+  studentId: string;
+  avatarUrl?: string | null;
+  status: UserStatus;
+  riskScore: number; // 0 to 100
+  riskLevel: RiskLevel;
+  factors: RiskFactor[];
+  missedAssignmentsCount: number;
+  totalAssignmentsCount: number;
+  failedQuizzesCount: number;
+  totalQuizzesCount: number;
+  lastActivityDate: string | null;
+  daysSinceLastActivity: number;
+  enrolledClasses: StudentEnrolledClass[];
+  recentQuizAverage?: number;
+  overallQuizAverage?: number;
+  assignmentCompletionRate?: number;
+}
+
+export interface SubjectPerformance {
+  classId: string;
+  className: string;
+  courseCode: string;
+  lecturerId?: string;
+  lecturerName?: string;
+  avgScore: number;
+  passRate: number;
+  totalStudents: number;
+  submissionRate: number;
+  totalAssignments: number;
+  totalQuizzes: number;
+  isAtRisk: boolean; // true if passRate < 50% or avgScore < 50%
+}
+
+export interface EarlyWarningStats {
+  totalStudents: number;
+  totalAtRisk: number;
+  criticalRisk: number;
+  highRisk: number;
+  moderateRisk: number;
+  lowRisk: number;
+  safeCount: number;
+  averageRiskScore: number;
+}
+
+export interface InterventionPayload {
+  studentUserId: string;
+  studentName: string;
+  studentEmail: string;
+  title: string;
+  message: string;
+  type: "gentle_reminder" | "academic_warning" | "schedule_meeting" | "study_support" | "custom";
+  sendEmail?: boolean;
+}
+
+export interface BulkInterventionPayload {
+  students: {
+    userId: string;
+    studentName: string;
+    studentEmail: string;
+  }[];
+  title: string;
+  message: string;
+  type: "gentle_reminder" | "academic_warning" | "schedule_meeting" | "study_support" | "custom";
+  sendEmail?: boolean;
+}
+
+export interface EarlyWarningSettings {
+  missedAssignmentsWeight: number; // e.g. 35 (%)
+  quizDeclineWeight: number;       // e.g. 25 (%)
+  inactivityWeight: number;        // e.g. 25 (%)
+  failedQuizzesWeight: number;     // e.g. 15 (%)
+  criticalThreshold: number;       // e.g. 75
+  highThreshold: number;           // e.g. 60
+  moderateThreshold: number;       // e.g. 40
+  lowThreshold: number;            // e.g. 20
+  inactivityDaysThreshold: number; // e.g. 14
+}
+
+
