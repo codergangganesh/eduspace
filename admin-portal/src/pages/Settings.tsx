@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { UserAvatar } from "@/components/users/UserAvatar";
+import { Link } from "react-router-dom";
 import {
   ShieldCheck,
   UserPlus,
@@ -16,12 +17,16 @@ import {
   Lock,
   AlertTriangle,
   Power,
+  Scale,
+  FlaskConical,
+  ExternalLink,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { Badge } from "@/components/ui/badge";
+import { LEGAL_VERSIONS } from "@/services/legal.service";
 
 export const Settings: React.FC = () => {
   const { isMaintenanceMode, setMaintenanceMode } = useMaintenanceMode();
@@ -295,6 +300,8 @@ export const Settings: React.FC = () => {
               </Button>
             </CardContent>
           </Card>
+
+
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Scale,
 } from "lucide-react";
 import {
   Tooltip,

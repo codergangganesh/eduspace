@@ -60,7 +60,7 @@ export const TermsOfService: React.FC = () => {
         </div>
 
         <div className="space-y-10 text-sm sm:text-base text-muted-foreground leading-relaxed">
-          
+
           {/* Section 1 */}
           <section className="space-y-3">
             <h2 className="text-lg sm:text-xl font-semibold text-foreground">
@@ -174,11 +174,13 @@ export const TermsOfService: React.FC = () => {
               <br />
               <strong>Eduspace Inc. — Legal Affairs</strong>
               <br />
-              Email: legal@eduspaceacademy.online
+              <strong>Email:</strong> <a href="mailto:eduspacelearning8@gmail.com" className="text-primary hover:underline">eduspacelearning8@gmail.com</a>
               <br />
-              Phone: +91-7670895485
+              <strong>Phone:</strong> +91-7670895485
               <br />
-              Website: https://www.eduspaceacademy.online
+              <strong>Address:</strong> 1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District, Andhra Pradesh - 523225, India
+              <br />
+              <strong>Website:</strong> <a href="https://www.eduspaceacademy.online" target="_blank" rel="noreferrer" className="text-primary hover:underline">https://www.eduspaceacademy.online</a>
             </p>
           </section>
 

@@ -166,11 +166,13 @@ export const PrivacyPolicy: React.FC = () => {
               <br />
               <strong>Eduspace Inc. — Data Protection Office</strong>
               <br />
-              Email: privacy@eduspaceacademy.online
+              <strong>Email:</strong> <a href="mailto:eduspacelearning8@gmail.com" className="text-primary hover:underline">eduspacelearning8@gmail.com</a>
               <br />
-              Phone: +91-7670895485
+              <strong>Phone:</strong> +91-7670895485
               <br />
-              Website: https://www.eduspaceacademy.online
+              <strong>Address:</strong> 1-194, Mannam Bazar, SN Padu Mandal, Endluru, Prakasam District, Andhra Pradesh - 523225, India
+              <br />
+              <strong>Website:</strong> <a href="https://www.eduspaceacademy.online" target="_blank" rel="noreferrer" className="text-primary hover:underline">https://www.eduspaceacademy.online</a>
             </p>
           </section>
 

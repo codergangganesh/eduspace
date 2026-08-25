@@ -81,3 +81,23 @@ export function revokeAgreementConsent(userId: string): void {
     window.dispatchEvent(new CustomEvent("eduspace:consent-updated", { detail: null }));
   } catch (_) {}
 }
+
+/**
+ * Returns formatted acceptance date string or null if not accepted.
+ */
+export function getFormattedConsentDate(userId?: string | null): string | null {
+  const record = getConsentRecord(userId);
+  if (!record || !record.acceptedAt) return null;
+  try {
+    const d = new Date(record.acceptedAt);
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (_) {
+    return record.acceptedAt;
+  }
+}
