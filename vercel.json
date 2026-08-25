@@ -26,6 +26,18 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/admin",
+      "destination": "https://admin.eduspaceacademy.online",
+      "permanent": false
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://admin.eduspaceacademy.online/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
