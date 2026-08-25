@@ -32,6 +32,8 @@ export const EarlyWarning: React.FC = () => {
     bulkAlertLecturers,
     updateSettings,
     resetSettings,
+    isRunningAutomation,
+    runAutomationCycle,
   } = useEarlyWarning();
 
   const [refreshState, setRefreshState] = useState(false);
@@ -80,6 +82,8 @@ export const EarlyWarning: React.FC = () => {
     { header: "Primary Risk Drivers", key: "Primary Risk Drivers", width: 35 },
   ];
 
+  const activeAutomationRulesCount = (settings.automationRules || []).filter((r) => r.enabled).length;
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8">
       {/* Page Header */}
@@ -99,23 +103,23 @@ export const EarlyWarning: React.FC = () => {
               </div>
             </div>
             <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 hidden sm:block">
-              Configurable risk scoring, bottleneck detection, multi-select cohort broadcasts, and 1-click interventions.
+              Configurable risk scoring, bottleneck detection, multi-select cohort broadcasts, and hands-free trigger automation.
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Configure Weights / Settings Button */}
+          {/* Configure Weights / Automation Settings Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsSettingsOpen(true)}
             className="h-7 w-7 p-0 sm:h-9 sm:w-auto sm:px-3 text-xs font-medium bg-card/60 border-border/80 hover:bg-accent shrink-0 rounded-lg"
-            title="Configure Algorithm Weights & Cutoffs"
+            title="Configure Algorithm Weights & Automation Rules"
           >
             <Sliders className="h-3.5 w-3.5 text-primary" />
-            <span className="hidden sm:inline ml-1.5">Weights & Cutoffs</span>
+            <span className="hidden sm:inline ml-1.5">Rules & Weights</span>
           </Button>
 
           {/* Refresh Button */}
@@ -175,14 +179,16 @@ export const EarlyWarning: React.FC = () => {
         />
       </div>
 
-      {/* 4. Algorithm Factor Weights & Cutoffs Settings Drawer */}
+      {/* 4. Algorithm Factor Weights, Automation Rules & Cutoffs Settings Drawer */}
       <EarlyWarningSettingsDialog
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         currentSettings={settings}
         onSave={updateSettings}
         onReset={resetSettings}
+        onRunAutomation={runAutomationCycle}
         isSaving={isUpdatingSettings}
+        isRunningAutomation={isRunningAutomation}
       />
     </div>
   );

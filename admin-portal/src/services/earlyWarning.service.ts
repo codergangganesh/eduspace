@@ -2,6 +2,8 @@ import { supabase } from "@/lib/supabase";
 import {
   AtRiskStudent,
   BulkInterventionPayload,
+  EarlyWarningAutomationExecutionLog,
+  EarlyWarningAutomationRule,
   EarlyWarningSettings,
   EarlyWarningStats,
   InterventionPayload,
@@ -11,6 +13,61 @@ import {
   SubjectPerformance,
 } from "@/types";
 import { auditService } from "./audit.service";
+
+export const DEFAULT_AUTOMATION_RULES: EarlyWarningAutomationRule[] = [
+  {
+    id: "rule-inactivity-14d",
+    name: "Prolonged Inactivity Re-engagement",
+    description: "Automatically dispatches a supportive retention notice when a student is inactive for 14+ consecutive days.",
+    enabled: true,
+    triggerType: "inactivity",
+    thresholdValue: 14,
+    actionType: "student_nudge",
+    cooldownDays: 7,
+    channels: { inApp: true, email: true },
+    customMessageTemplate:
+      "Hi {{student_name}}, our academic records indicate you haven't accessed Eduspace for over 14 days. Your courses, assignments, and learning resources are available on your student dashboard. Please log in today to stay on track with your cohort.",
+  },
+  {
+    id: "rule-critical-tier-escalation",
+    name: "Critical Tier Faculty Escalation",
+    description: "Automatically alerts all assigned course professors when a student's risk score enters the Critical Tier (75+).",
+    enabled: true,
+    triggerType: "critical_risk",
+    thresholdValue: 75,
+    actionType: "faculty_alert",
+    cooldownDays: 7,
+    channels: { inApp: true, email: true },
+    customMessageTemplate:
+      "Automated Early Warning Advisory: Student {{student_name}} ({{student_email}}) has crossed into the Critical Retention Risk Tier (Score: {{risk_score}}/100). Please review recent milestone submissions and schedule an academic consultation.",
+  },
+  {
+    id: "rule-quiz-failure-intervention",
+    name: "Repeated Quiz Failure Support",
+    description: "Triggers academic support notice when a student fails 3 or more quizzes across their enrolled subjects.",
+    enabled: false,
+    triggerType: "quiz_failure",
+    thresholdValue: 3,
+    actionType: "both",
+    cooldownDays: 7,
+    channels: { inApp: true, email: true },
+    customMessageTemplate:
+      "Academic Support Notice: Multiple recent quiz scores have been flagged. Department tutoring hours and lecturer consultation slots are available to help you master core concepts.",
+  },
+  {
+    id: "rule-missed-assignments-alert",
+    name: "Multiple Missed Deadlines Warning",
+    description: "Alerts student and course lecturers when 3 or more assignment deadlines are overdue without submission.",
+    enabled: false,
+    triggerType: "missed_assignments",
+    thresholdValue: 3,
+    actionType: "both",
+    cooldownDays: 7,
+    channels: { inApp: true, email: true },
+    customMessageTemplate:
+      "Milestone Reminder: You have 3 or more pending assignment submissions. Please review your task deadlines on the student portal and consult your instructor if you need assistance.",
+  },
+];
 
 export const DEFAULT_EARLY_WARNING_SETTINGS: EarlyWarningSettings = {
   missedAssignmentsWeight: 35,
@@ -22,6 +79,10 @@ export const DEFAULT_EARLY_WARNING_SETTINGS: EarlyWarningSettings = {
   moderateThreshold: 40,
   lowThreshold: 20,
   inactivityDaysThreshold: 14,
+  automationEnabled: true,
+  automationCooldownDays: 7,
+  automationRules: DEFAULT_AUTOMATION_RULES,
+  lastAutomationRunAt: null,
 };
 
 const SETTINGS_STORAGE_KEY = "eduspace_early_warning_settings";
@@ -1431,5 +1492,178 @@ export const earlyWarningService = {
         error: err.message || "Failed to alert faculty",
       };
     }
+  },
+
+  /**
+   * Executes an automated retention evaluation cycle against active rules.
+   */
+  async runAutomationCycle(providedStudents?: AtRiskStudent[]): Promise<{
+    success: boolean;
+    log: EarlyWarningAutomationExecutionLog;
+    error?: string;
+  }> {
+    try {
+      const settings = this.getSettings();
+      const rules = (settings.automationRules || DEFAULT_AUTOMATION_RULES).filter((r) => r.enabled);
+
+      let students = providedStudents;
+      if (!students || students.length === 0) {
+        const computed = await this.getAtRiskStudents();
+        students = computed.students;
+      }
+
+      const executionTime = new Date().toISOString();
+      const logDetails: EarlyWarningAutomationExecutionLog["details"] = [];
+      let emailsDispatched = 0;
+      let facultyAlerted = 0;
+      const affectedStudentUserIds = new Set<string>();
+      let rulesTriggered = 0;
+
+      for (const rule of rules) {
+        let matchingStudents: AtRiskStudent[] = [];
+
+        switch (rule.triggerType) {
+          case "inactivity":
+            matchingStudents = students.filter(
+              (s) => s.daysSinceLastActivity >= rule.thresholdValue && s.riskLevel !== "safe"
+            );
+            break;
+          case "critical_risk":
+            matchingStudents = students.filter((s) => s.riskScore >= rule.thresholdValue);
+            break;
+          case "quiz_failure":
+            matchingStudents = students.filter((s) => s.failedQuizzesCount >= rule.thresholdValue);
+            break;
+          case "missed_assignments":
+            matchingStudents = students.filter((s) => s.missedAssignmentsCount >= rule.thresholdValue);
+            break;
+        }
+
+        if (matchingStudents.length === 0) continue;
+        rulesTriggered++;
+
+        for (const student of matchingStudents) {
+          affectedStudentUserIds.add(student.userId);
+          const studentName = student.fullName;
+
+          // Parse dynamic template variables
+          let message = rule.customMessageTemplate || "Early Warning Automated Notice.";
+          message = message
+            .replace(/\{\{student_name\}\}/g, studentName)
+            .replace(/\{\{student_id\}\}/g, student.studentId)
+            .replace(/\{\{department\}\}/g, student.department)
+            .replace(/\{\{risk_score\}\}/g, String(student.riskScore))
+            .replace(/\{\{risk_level\}\}/g, student.riskLevel.toUpperCase());
+
+          // Perform actions based on rule.actionType
+          if (rule.actionType === "student_nudge" || rule.actionType === "both") {
+            await this.sendNudgeNotification({
+              studentUserId: student.userId,
+              studentName: student.fullName,
+              studentEmail: student.email,
+              title: `[AUTOMATED NOTICE] ${rule.name}`,
+              message: message,
+              type: rule.triggerType === "inactivity" ? "gentle_reminder" : "academic_warning",
+              sendEmail: rule.channels.email,
+            });
+            if (rule.channels.email) emailsDispatched++;
+          }
+
+          if (rule.actionType === "faculty_alert" || rule.actionType === "both") {
+            const alertRes = await this.alertLecturer({
+              student,
+              customNote: `Automated Trigger: ${rule.name}. ${message}`,
+              sendEmail: rule.channels.email,
+            });
+            if (alertRes.success) {
+              facultyAlerted += alertRes.alertedLecturersCount;
+              if (rule.channels.email) emailsDispatched += alertRes.alertedLecturersCount;
+            }
+          }
+
+          logDetails.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            studentName: student.fullName,
+            studentEmail: student.email,
+            actionTaken:
+              rule.actionType === "both"
+                ? "Dispatched Student Nudge & Faculty Alert"
+                : rule.actionType === "faculty_alert"
+                ? "Dispatched Faculty Alert"
+                : "Dispatched Student Nudge",
+          });
+        }
+      }
+
+      const executionLog: EarlyWarningAutomationExecutionLog = {
+        id: `auto-run-${Date.now()}`,
+        executedAt: executionTime,
+        rulesTriggeredCount: rulesTriggered,
+        studentsAffectedCount: affectedStudentUserIds.size,
+        emailsDispatchedCount: emailsDispatched,
+        facultyAlertedCount: facultyAlerted,
+        details: logDetails,
+      };
+
+      // Update last run time in settings
+      const updatedSettings = {
+        ...settings,
+        lastAutomationRunAt: executionTime,
+      };
+      await this.saveSettings(updatedSettings);
+
+      // Save execution log in localStorage history
+      try {
+        const historyRaw = localStorage.getItem("eduspace_early_warning_automation_logs");
+        const history: EarlyWarningAutomationExecutionLog[] = historyRaw ? JSON.parse(historyRaw) : [];
+        history.unshift(executionLog);
+        localStorage.setItem("eduspace_early_warning_automation_logs", JSON.stringify(history.slice(0, 20)));
+      } catch (e) {
+        console.warn("[EarlyWarningService] Could not persist automation log:", e);
+      }
+
+      // Log consolidated audit trail
+      await auditService.logAction({
+        action: "EARLY_WARNING_AUTOMATION_CYCLE",
+        details: {
+          rules_evaluated: rules.length,
+          rules_triggered: rulesTriggered,
+          students_affected: affectedStudentUserIds.size,
+          emails_dispatched: emailsDispatched,
+          faculty_alerted: facultyAlerted,
+        },
+      });
+
+      return { success: true, log: executionLog };
+    } catch (err: any) {
+      console.error("[EarlyWarningService] Error running automation cycle:", err);
+      return {
+        success: false,
+        log: {
+          id: `auto-run-failed-${Date.now()}`,
+          executedAt: new Date().toISOString(),
+          rulesTriggeredCount: 0,
+          studentsAffectedCount: 0,
+          emailsDispatchedCount: 0,
+          facultyAlertedCount: 0,
+          details: [],
+        },
+        error: err.message || "Failed to execute automation cycle",
+      };
+    }
+  },
+
+  /**
+   * Retrieves automation execution history logs.
+   */
+  getAutomationHistory(): EarlyWarningAutomationExecutionLog[] {
+    try {
+      const historyRaw = localStorage.getItem("eduspace_early_warning_automation_logs");
+      if (historyRaw) return JSON.parse(historyRaw);
+    } catch (e) {
+      console.warn("[EarlyWarningService] Error loading automation history:", e);
+    }
+    return [];
   },
 };

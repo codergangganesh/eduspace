@@ -303,6 +303,35 @@ export function useEarlyWarning() {
     }
   };
 
+  const [isRunningAutomation, setIsRunningAutomation] = useState(false);
+
+  // Execute Automation Evaluation Cycle
+  const runAutomationCycle = async () => {
+    setIsRunningAutomation(true);
+    try {
+      const res = await earlyWarningService.runAutomationCycle(studentsQuery.data?.students);
+      if (res.success) {
+        if (res.log.rulesTriggeredCount > 0) {
+          toast.success(
+            `Automation complete: ${res.log.rulesTriggeredCount} rule(s) triggered across ${res.log.studentsAffectedCount} student(s) (${res.log.emailsDispatchedCount} email(s) sent)!`
+          );
+        } else {
+          toast.info("Automation cycle complete: No students currently breach active trigger rules.");
+        }
+        await queryClient.invalidateQueries({ queryKey: ["admin", "early-warning"] });
+        return { success: true, log: res.log };
+      } else {
+        toast.error(res.error || "Failed to execute automation cycle.");
+        return { success: false, log: res.log, error: res.error };
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Automation execution failed.");
+      return { success: false, error: err.message };
+    } finally {
+      setIsRunningAutomation(false);
+    }
+  };
+
   return {
     atRiskStudents: studentsQuery.data?.students || [],
     stats: studentsQuery.data?.stats || {
@@ -321,6 +350,7 @@ export function useEarlyWarning() {
     isRefreshing: studentsQuery.isFetching || subjectQuery.isFetching,
     isIntervening,
     isUpdatingSettings,
+    isRunningAutomation,
     refetch,
     sendNudge,
     sendBulkNudge,
@@ -328,5 +358,6 @@ export function useEarlyWarning() {
     bulkAlertLecturers,
     updateSettings,
     resetSettings,
+    runAutomationCycle,
   };
 }

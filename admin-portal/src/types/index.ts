@@ -333,6 +333,38 @@ export interface BulkInterventionPayload {
   sendEmail?: boolean;
 }
 
+export interface EarlyWarningAutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  triggerType: "inactivity" | "critical_risk" | "quiz_failure" | "missed_assignments";
+  thresholdValue: number; // e.g. 14 days, 75 score, 3 quizzes, etc.
+  actionType: "student_nudge" | "faculty_alert" | "both";
+  cooldownDays: number; // e.g. 7 days minimum between automated dispatches
+  channels: {
+    inApp: boolean;
+    email: boolean;
+  };
+  customMessageTemplate?: string;
+}
+
+export interface EarlyWarningAutomationExecutionLog {
+  id: string;
+  executedAt: string;
+  rulesTriggeredCount: number;
+  studentsAffectedCount: number;
+  emailsDispatchedCount: number;
+  facultyAlertedCount: number;
+  details: {
+    ruleId: string;
+    ruleName: string;
+    studentName: string;
+    studentEmail: string;
+    actionTaken: string;
+  }[];
+}
+
 export interface EarlyWarningSettings {
   missedAssignmentsWeight: number; // e.g. 35 (%)
   quizDeclineWeight: number;       // e.g. 25 (%)
@@ -343,6 +375,12 @@ export interface EarlyWarningSettings {
   moderateThreshold: number;       // e.g. 40
   lowThreshold: number;            // e.g. 20
   inactivityDaysThreshold: number; // e.g. 14
+
+  // Automation Settings
+  automationEnabled?: boolean;
+  automationCooldownDays?: number;
+  automationRules?: EarlyWarningAutomationRule[];
+  lastAutomationRunAt?: string | null;
 }
 
 
