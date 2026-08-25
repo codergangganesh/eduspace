@@ -54,6 +54,7 @@ import { InterventionDialog } from "./InterventionDialog";
 import { BulkInterventionDialog } from "./BulkInterventionDialog";
 import { AlertLecturerDialog } from "./AlertLecturerDialog";
 import { BulkAlertLecturersDialog } from "./BulkAlertLecturersDialog";
+import { Pagination } from "@/components/common/Pagination";
 import { cn, getInitials } from "@/lib/utils";
 
 interface AtRiskStudentTableProps {
@@ -834,33 +835,16 @@ export const AtRiskStudentTable: React.FC<AtRiskStudentTableProps> = ({
         )}
       </div>
 
-      {/* Pagination Bar */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between p-2.5 sm:p-3.5 rounded-xl border border-border/60 bg-card/60 text-[11px] sm:text-xs">
-          <span className="text-muted-foreground">
-            Page <strong className="text-foreground">{page}</strong> of <strong className="text-foreground">{totalPages}</strong>
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="h-7 text-xs px-2"
-            >
-              Prev
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="h-7 text-xs px-2"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+      {/* Standard Application Pagination */}
+      {filteredStudents.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRecords={filteredStudents.length}
+          pageSize={pageSize}
+          onPageChange={(p: number) => setPage(p)}
+          className="px-1"
+        />
       )}
 
       {/* 3. RESPONSIVE STUDENT DETAILS DRAWER */}
