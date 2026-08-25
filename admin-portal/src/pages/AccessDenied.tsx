@@ -72,7 +72,7 @@ export const AccessDenied: React.FC = () => {
 
             {/* Return to Main Student App */}
             <Button asChild variant="outline" size="sm" className="w-full h-9 text-xs">
-              <a href="http://localhost:8080" target="_blank" rel="noreferrer">
+              <a href="https://eduspaceacademy.online" target="_blank" rel="noreferrer">
                 <ExternalLink className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                 Return to Student & Lecturer Portal
               </a>

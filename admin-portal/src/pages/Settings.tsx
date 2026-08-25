@@ -223,9 +223,9 @@ export const Settings: React.FC = () => {
               <div className="space-y-1">
                 <span className="text-muted-foreground font-medium">Admin Portal Endpoint</span>
                 <div className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border flex items-center justify-between gap-2">
-                  <span className="truncate">http://localhost:5174</span>
+                  <span className="truncate">https://admin.eduspaceacademy.online</span>
                   <a
-                    href="http://localhost:5174"
+                    href="https://admin.eduspaceacademy.online"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground px-2.5 py-1 rounded transition-colors shrink-0"
@@ -238,9 +238,9 @@ export const Settings: React.FC = () => {
               <div className="space-y-1">
                 <span className="text-muted-foreground font-medium">Main Application URL</span>
                 <div className="font-mono text-foreground font-semibold p-2 rounded bg-muted/40 border border-border flex items-center justify-between gap-2">
-                  <span className="truncate">https://www.eduspaceacademy.online/</span>
+                  <span className="truncate">https://eduspaceacademy.online</span>
                   <a
-                    href="https://www.eduspaceacademy.online/"
+                    href="https://eduspaceacademy.online"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground px-2.5 py-1 rounded transition-colors shrink-0"

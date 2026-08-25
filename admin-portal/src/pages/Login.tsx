@@ -488,7 +488,7 @@ export const Login: React.FC = () => {
                   <div className="text-center text-xs text-slate-500 dark:text-slate-400 pt-1">
                     <span>Don't have an Account ? </span>
                     <a
-                      href="http://localhost:8080/"
+                      href="https://eduspaceacademy.online/"
                       target="_blank"
                       rel="noreferrer"
                       className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline"
@@ -855,7 +855,7 @@ export const Login: React.FC = () => {
                       <div className="flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 pt-1">
                         <span>If you want to visit, </span>
                         <a
-                          href="http://localhost:8080/"
+                          href="https://eduspaceacademy.online/"
                           target="_blank"
                           rel="noreferrer"
                           className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline ml-1"
@@ -980,7 +980,7 @@ export const Login: React.FC = () => {
                         <div className="flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 pt-1">
                           <span>If you want to visit, </span>
                           <a
-                            href="http://localhost:8080/"
+                            href="https://eduspaceacademy.online/"
                             target="_blank"
                             rel="noreferrer"
                             className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline ml-1"
