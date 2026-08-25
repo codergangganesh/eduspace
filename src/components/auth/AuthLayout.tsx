@@ -93,7 +93,7 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
             {/* ========================================================================= */}
             {/* 1. MOBILE VIEW (< lg screens - Pronounced Deep Organic Wave Shell)        */}
             {/* ========================================================================= */}
-            <div className="flex lg:hidden flex-col h-[100dvh] max-h-[100dvh] w-full bg-white dark:bg-[#0B0F1A] text-slate-900 dark:text-white font-sans relative overflow-hidden selection:bg-blue-500/30">
+            <div className="flex lg:hidden flex-col min-h-[100dvh] w-full bg-white dark:bg-[#0B0F1A] text-slate-900 dark:text-white font-sans relative overflow-y-auto selection:bg-blue-500/30">
 
                 {/* Top Organic Curved Wave Banner */}
                 <div className="relative w-full h-44 sm:h-52 bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#1d4ed8] overflow-hidden flex flex-col justify-between shrink-0">
@@ -159,7 +159,7 @@ export function AuthLayout({ children, title, subtitle, contentMaxWidth = "max-w
                 </div>
 
                 {/* Bottom Form Sheet - Centered in the available middle space */}
-                <div className="flex-1 px-6 sm:px-8 py-1 relative z-20 flex flex-col justify-center min-h-0 overflow-y-auto sm:overflow-hidden">
+                <div className="flex-1 px-6 sm:px-8 py-4 relative z-20 flex flex-col justify-center overflow-y-auto">
                     <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col justify-center">
                         {/* Heading with Signature Accent Pill */}
                         <div className="mb-2.5 sm:mb-3">

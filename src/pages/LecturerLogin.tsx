@@ -267,7 +267,7 @@ export default function LecturerLogin() {
                                     <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
                                 </div>
                                 <div className="relative flex justify-center text-[10px] uppercase">
-                                    <span className="bg-[#F1F5FB] dark:bg-[#0f172a] px-2 text-slate-400 dark:text-slate-500 font-bold tracking-wider">OR</span>
+                                    <span className="bg-white dark:bg-[#0B0F1A] lg:bg-[#F1F5FB] lg:dark:bg-[#0f172a] px-2 text-slate-400 dark:text-slate-500 font-bold tracking-wider">OR</span>
                                 </div>
                             </div>
 
