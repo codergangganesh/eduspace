@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Mail, Eye, EyeOff, Loader2, Fingerprint } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Mail, Lock, Eye, EyeOff, Loader2, Fingerprint } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { toast } from "sonner";
@@ -39,7 +37,6 @@ export default function LecturerLogin() {
     useEffect(() => {
         if (location.state?.registered) {
             toast.success("Your account has been successfully created. Please log in to continue.");
-            // Clear location state to prevent toast on refresh
             window.history.replaceState({}, document.title);
         }
     }, [location]);
@@ -72,7 +69,6 @@ export default function LecturerLogin() {
         const result = await signIn(data.email, data.password, captchaToken);
 
         if (result.success) {
-            // Check if 2FA (AAL2) challenge is required
             const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
             if (currentLevel === "aal1" && nextLevel === "aal2") {
                 const { totpFactors } = await mfaService.listFactors();
@@ -108,7 +104,6 @@ export default function LecturerLogin() {
             setIsPasskeyLoading(true);
             const result = await signInWithPasskey(captchaToken);
             if (result.success) {
-                // Check if 2FA (AAL2) challenge is required
                 const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
                 if (currentLevel === "aal1" && nextLevel === "aal2") {
                     const { totpFactors } = await mfaService.listFactors();
@@ -141,7 +136,7 @@ export default function LecturerLogin() {
         if (res.success) {
             toast.success("Two-Factor Authentication verified!");
             setMfaChallenge(null);
-            navigate("/lecturer-dashboard", { replace: true });
+            navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
             return { success: true };
         }
         return { success: false, error: res.error || "Invalid 6-digit code. Please try again." };
@@ -176,7 +171,7 @@ export default function LecturerLogin() {
                     }]
                 }}
             />
-            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-6 lg:shadow-sm">
+            <div>
                 {mfaChallenge ? (
                     <MfaChallengeView
                         factorName={mfaChallenge.factorName}
@@ -184,124 +179,131 @@ export default function LecturerLogin() {
                         onCancel={handleCancelMfa}
                     />
                 ) : (
-                    <>
-                        {/* Form */}
-                        <form className="space-y-4 lg:space-y-5" onSubmit={hookFormSubmit(onValidSubmit)}>
-                            {/* Institutional Email Field */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground lg:block hidden">
-                                    Institutional Email
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                        <Mail className="size-5" />
-                                    </div>
-                                    <Input
-                                        type="email"
-                                        placeholder="Institutional Email"
-                                        {...register("email")}
-                                        className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                                {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
-                            </div>
-
-                            {/* Password Field */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground lg:block hidden">
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                        <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                                    </div>
-                                    <Input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Password"
-                                        {...register("password")}
-                                        className="pl-12 pr-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
-                                        disabled={isLoading}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
-                                    >
-                                        {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                                    </button>
-                                </div>
-                                {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
-                            </div>
-
-                            {/* Forgot Password Link */}
-                            <div className="flex justify-end pt-1">
-                                <Link
-                                    to="/forgot-password"
-                                    className="text-sm font-medium text-blue-600 hover:underline"
-                                >
-                                    Forgot Password?
-                                </Link>
-                            </div>
-
-                            {/* CAPTCHA Protection */}
-                            <div className="flex justify-center my-1.5">
-                                <Turnstile
-                                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
-                                    onSuccess={(token) => setCaptchaToken(token)}
-                                    onExpire={() => setCaptchaToken(undefined)}
-                                    onError={() => setCaptchaToken(undefined)}
+                    <form className="space-y-4" onSubmit={hookFormSubmit(onValidSubmit)}>
+                        {/* Email Field */}
+                        <div className="space-y-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                                Institutional Email
+                            </label>
+                            <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors">
+                                <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                                <input
+                                    type="email"
+                                    placeholder="lecturer@institution.edu"
+                                    {...register("email")}
+                                    className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
+                                    disabled={isLoading}
+                                    required
                                 />
                             </div>
+                            {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
+                        </div>
 
-                            {/* Submit Button */}
-                            <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2" disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}>
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="size-5 mr-2 animate-spin" />
-                                        Signing In...
-                                    </>
-                                ) : (
-                                    "Sign In"
-                                )}
-                            </Button>
+                        {/* Password Field */}
+                        <div className="space-y-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                                Password
+                            </label>
+                            <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors relative">
+                                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••••••"
+                                    {...register("password")}
+                                    className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium pr-8"
+                                    disabled={isLoading}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 cursor-pointer"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                            {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
+                        </div>
 
-                            {/* Passkey Sign In Button */}
-                            <Button
+                        {/* Forgot Password Link */}
+                        <div className="flex items-center justify-end text-xs font-semibold pt-0.5">
+                            <Link
+                                to="/forgot-password"
+                                className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                            >
+                                Forgot Password?
+                            </Link>
+                        </div>
+
+                        {/* Turnstile CAPTCHA */}
+                        <div className="flex justify-center my-1.5 min-h-[65px]">
+                            <Turnstile
+                                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                                options={{
+                                    theme: "auto",
+                                    size: "normal",
+                                }}
+                                onSuccess={(token) => setCaptchaToken(token)}
+                                onExpire={() => setCaptchaToken(undefined)}
+                                onError={() => setCaptchaToken(undefined)}
+                            />
+                        </div>
+
+                        {/* Submit Button & Passkey */}
+                        <div className="pt-1 space-y-2.5">
+                            <button
+                                type="submit"
+                                disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}
+                                className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
+                            </button>
+
+                            <div className="relative my-2">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+                                </div>
+                                <div className="relative flex justify-center text-[10px] uppercase">
+                                    <span className="bg-[#F1F5FB] dark:bg-[#0f172a] px-2 text-slate-400 dark:text-slate-500 font-bold tracking-wider">OR</span>
+                                </div>
+                            </div>
+
+                            <button
                                 type="button"
-                                variant="outline"
                                 onClick={handlePasskeySignIn}
                                 disabled={!isCaptchaVerified || isLoading || isPasskeyLoading}
-                                className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-sm font-bold border-border/80 hover:bg-secondary/40 gap-2 mt-2"
+                                className="w-full h-11 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold rounded-2xl border border-slate-300 dark:border-slate-700 shadow-xs text-xs tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                             >
                                 {isPasskeyLoading ? (
-                                    <Loader2 className="size-4 animate-spin text-blue-600" />
+                                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                                 ) : (
-                                    <Fingerprint className="size-4 text-blue-600" />
+                                    <Fingerprint className="h-4 w-4 text-blue-600" />
                                 )}
                                 <span>Sign in with Passkey / Biometrics</span>
-                            </Button>
-                        </form>
-
-                        {/* Footer - Only on mobile */}
-                        <div className="mt-8 text-center lg:hidden">
-                            <p className="text-muted-foreground text-sm">
-                                Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
-                            </p>
+                            </button>
                         </div>
 
-                        {/* Desktop Switcher */}
-                        <div className="hidden lg:block mt-6 pt-2 border-t border-border">
-                            <div className="text-center">
-                                <p className="text-muted-foreground text-[11px]">
-                                    Don't have an account? <Link to="/lecturer/register" className="text-blue-600 font-bold hover:underline">Create Account</Link>
-                                </p>
+                        {/* Switch Links */}
+                        <div className="space-y-1.5 text-center text-xs text-slate-500 dark:text-slate-400 pt-2">
+                            <div>
+                                <span>Don't have an account? </span>
+                                <Link to="/lecturer/register" className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline">
+                                    Create Account
+                                </Link>
+                            </div>
+                            <div>
+                                <span>Looking for Student Portal? </span>
+                                <Link to="/student/login" className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline">
+                                    Sign In as Student
+                                </Link>
                             </div>
                         </div>
-                    </>
+                    </form>
                 )}
             </div>
-
         </AuthLayout>
     );
 }

@@ -1,19 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Mail, Eye, EyeOff, User, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Mail, Lock, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
-import { PasswordStrength, getPasswordRules } from "@/components/auth/PasswordStrength";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
 import DOMPurify from "dompurify";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, RegisterFormValues } from "@/lib/validations/auth";
-
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 
@@ -29,8 +26,9 @@ export default function StudentRegister() {
     const [isGitHubLoading, setIsGitHubLoading] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
-    const [hasNavigated, setHasNavigated] = useState(false); // Prevent multiple navigations
+    const [hasNavigated, setHasNavigated] = useState(false);
     const isCaptchaVerified = Boolean(captchaToken);
+
     const { register, handleSubmit: hookFormSubmit, formState: { errors }, watch } = useForm<RegisterFormValues>({
         resolver: zodResolver(registerSchema),
         mode: "onChange",
@@ -41,8 +39,6 @@ export default function StudentRegister() {
 
     // Redirect if already authenticated (only after component has mounted)
     useEffect(() => {
-        // Only redirect if we haven't just submitted the form
-        // This prevents flickering after account creation
         if (!hasNavigated && isAuthenticated && role) {
             navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
         }
@@ -68,7 +64,7 @@ export default function StudentRegister() {
         const result = await signUp(sanitizedEmail, data.password, sanitizedFullName, "student", captchaToken);
 
         if (result.success) {
-            setHasNavigated(true); // Mark that we're about to navigate
+            setHasNavigated(true);
             toast.success("Account created successfully! Please sign in to continue.");
             navigate("/student/login", { state: { registered: true } });
         } else {
@@ -100,7 +96,6 @@ export default function StudentRegister() {
         }
     };
 
-
     return (
         <AuthLayout title="Student Registration" subtitle="Join Eduspace and start your learning journey" noScroll={true}>
             <SEO
@@ -123,84 +118,91 @@ export default function StudentRegister() {
                     }]
                 }}
             />
-            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-4 lg:shadow-sm overflow-hidden animate-in fade-in zoom-in duration-300">
-                {/* OAuth Buttons - Top on mobile, Bottom on desktop */}
-                <div className="flex flex-col lg:hidden mb-4">
-                    <div className="flex justify-center gap-4 lg:grid lg:grid-cols-2 lg:gap-3">
+            <div>
+                {/* Modals */}
+                <TermsDialog
+                    open={showTerms}
+                    onOpenChange={setShowTerms}
+                    showAgreeButton={true}
+                    onAgree={() => setAgreedToTerms(true)}
+                />
+                <PrivacyPolicyDialog
+                    open={showPrivacy}
+                    onOpenChange={setShowPrivacy}
+                    showAgreeButton={false}
+                />
+
+                {/* OAuth Buttons */}
+                <div className="flex flex-col mb-3">
+                    <div className="flex justify-center gap-3 sm:gap-4">
                         <button
+                            type="button"
                             onClick={handleGoogleSignIn}
                             disabled={!isCaptchaVerified || isGoogleLoading || isLoading || isGitHubLoading}
-                            className="size-[72px] flex items-center justify-center bg-background rounded-2xl border border-border shadow-sm hover:bg-accent transition-all active:scale-95 disabled:opacity-50"
+                            className="size-12 sm:size-14 flex items-center justify-center bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                            title="Sign up with Google"
                         >
                             {isGoogleLoading ? (
-                                <Loader2 className="size-6 animate-spin" />
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                             ) : (
-                                <div className="p-3 border border-border/50 rounded-lg">
-                                    <svg className="size-6" viewBox="0 0 24 24">
-                                        <path
-                                            fill="#4285F4"
-                                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                        />
-                                        <path
-                                            fill="#34A853"
-                                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                        />
-                                        <path
-                                            fill="#FBBC05"
-                                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                                        />
-                                        <path
-                                            fill="#EA4335"
-                                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                        />
+                                <div className="p-1.5 border border-slate-200 dark:border-slate-700/50 rounded-xl bg-white dark:bg-slate-900">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24">
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                     </svg>
                                 </div>
                             )}
                         </button>
 
                         <button
+                            type="button"
                             onClick={handleGitHubSignIn}
                             disabled={!isCaptchaVerified || isGitHubLoading || isLoading || isGoogleLoading}
-                            className="size-[72px] flex items-center justify-center bg-[#181717] rounded-2xl border border-transparent shadow-sm hover:opacity-90 transition-all active:scale-95 disabled:opacity-50"
+                            className="size-12 sm:size-14 flex items-center justify-center bg-[#181717] rounded-2xl border border-transparent shadow-xs hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                            title="Sign up with GitHub"
                         >
                             {isGitHubLoading ? (
-                                <Loader2 className="size-6 animate-spin text-white" />
+                                <Loader2 className="w-5 h-5 animate-spin text-white" />
                             ) : (
-                                <svg className="size-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                                 </svg>
                             )}
                         </button>
                     </div>
 
-                    <div className="relative mt-4 mb-3">
+                    <div className="relative mt-3 mb-2">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border/50"></div>
+                            <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
                         </div>
-                        <div className="relative flex justify-center text-[13px]">
-                            <span className="bg-background px-4 text-muted-foreground/70 font-medium">or continue with email</span>
+                        <div className="relative flex justify-center text-[10px] uppercase">
+                            <span className="bg-[#F1F5FB] dark:bg-[#0f172a] px-3 text-slate-400 dark:text-slate-500 font-semibold tracking-wider">
+                                or register with email
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Form */}
-                <form className="space-y-2 lg:space-y-3" onSubmit={hookFormSubmit(onValidSubmit)}>
+                <form className="space-y-3 sm:space-y-3.5" onSubmit={hookFormSubmit(onValidSubmit)}>
                     {/* Full Name Field */}
                     <div className="space-y-1">
-                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
+                        <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
                             Full Name
                         </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <User className="size-5" />
-                            </div>
-                            <Input
+                        <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors">
+                            <User className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                            <input
                                 type="text"
-                                placeholder="Full Name"
+                                placeholder="Jane Doe"
                                 {...register("fullName")}
                                 maxLength={100}
-                                className="pl-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
                                 disabled={isLoading}
+                                required
                             />
                         </div>
                         {errors.fullName && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.fullName.message}</p>}
@@ -208,76 +210,78 @@ export default function StudentRegister() {
 
                     {/* Email Field */}
                     <div className="space-y-1">
-                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
-                            Email Address
+                        <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                            Institutional Email Address
                         </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <Mail className="size-5" />
-                            </div>
-                            <Input
+                        <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors">
+                            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                            <input
                                 type="email"
-                                placeholder="Email Address"
+                                placeholder="demo@email.com"
                                 {...register("email")}
                                 maxLength={255}
-                                className="pl-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
                                 disabled={isLoading}
+                                required
                             />
                         </div>
                         {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
                     </div>
 
-                    {/* Password Fields in a row on desktop, stacked on mobile */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4">
+                    {/* Password & Confirm Password */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div className="space-y-1">
-                            <label className="text-[12px] font-bold text-foreground lg:block hidden">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
                                 Password
                             </label>
-                            <div className="relative">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                                </div>
-                                <Input
+                            <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors relative">
+                                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                                <input
                                     type={showPassword ? "text" : "password"}
-                                    placeholder="Password"
+                                    placeholder="••••••••••••"
                                     {...register("password")}
                                     maxLength={128}
-                                    className="pl-12 pr-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                    className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium pr-8"
                                     disabled={isLoading}
+                                    required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                    className="absolute right-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 cursor-pointer"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                             {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[12px] font-bold text-foreground lg:block hidden">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
                                 Confirm Password
                             </label>
-                            <div className="relative">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                                </div>
-                                <Input
+                            <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors relative">
+                                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                                <input
                                     type={showConfirmPassword ? "text" : "password"}
-                                    placeholder="Confirm Password"
+                                    placeholder="••••••••••••"
                                     {...register("confirmPassword")}
                                     maxLength={128}
-                                    className="pl-12 pr-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                    className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium pr-8"
                                     disabled={isLoading}
+                                    required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                    className="absolute right-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 cursor-pointer"
+                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                             {errors.confirmPassword && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.confirmPassword.message}</p>}
@@ -287,44 +291,49 @@ export default function StudentRegister() {
                     {passwordWatch && <PasswordStrength password={passwordWatch} />}
 
                     {/* Terms Agreement */}
-                    <div className="flex items-start gap-3 mt-2">
-                        <TermsDialog
-                            open={showTerms}
-                            onOpenChange={setShowTerms}
-                            showAgreeButton={true}
-                            onAgree={() => setAgreedToTerms(true)}
+                    <div className="flex items-center gap-2.5 pt-0.5">
+                        <input
+                            type="checkbox"
+                            id="terms-check"
+                            checked={agreedToTerms}
+                            onChange={() => {
+                                if (!agreedToTerms) {
+                                    setShowTerms(true);
+                                } else {
+                                    setAgreedToTerms(false);
+                                }
+                            }}
+                            className="size-4.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                            disabled={isLoading}
                         />
-                        <PrivacyPolicyDialog
-                            open={showPrivacy}
-                            onOpenChange={setShowPrivacy}
-                            showAgreeButton={false}
-                        />
-
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                id="terms"
-                                checked={agreedToTerms}
-                                onChange={() => {
-                                    if (!agreedToTerms) {
-                                        setShowTerms(true);
-                                    } else {
-                                        setAgreedToTerms(false);
-                                    }
-                                }}
-                                className="size-5 rounded-lg border-border/50 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
-                                disabled={isLoading}
-                            />
-                            <label htmlFor="terms" className="text-[13px] text-muted-foreground/80 select-none">
-                                I agree to the <Link to="/terms-of-service" target="_blank" className="text-blue-600 font-semibold hover:underline">Terms</Link> & <Link to="/privacy-policy" target="_blank" className="text-blue-600 font-semibold hover:underline">Privacy Policy</Link>
-                            </label>
-                        </div>
+                        <label htmlFor="terms-check" className="text-xs text-slate-600 dark:text-slate-400 select-none">
+                            I agree to the{" "}
+                            <button
+                                type="button"
+                                onClick={() => setShowTerms(true)}
+                                className="text-[#2563eb] dark:text-blue-400 font-semibold hover:underline"
+                            >
+                                Terms
+                            </button>{" "}
+                            &{" "}
+                            <button
+                                type="button"
+                                onClick={() => setShowPrivacy(true)}
+                                className="text-[#2563eb] dark:text-blue-400 font-semibold hover:underline"
+                            >
+                                Privacy Policy
+                            </button>
+                        </label>
                     </div>
 
                     {/* CAPTCHA Protection */}
-                    <div className="flex justify-center my-1.5">
+                    <div className="flex justify-center my-1.5 min-h-[65px]">
                         <Turnstile
-                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                            options={{
+                                theme: "auto",
+                                size: "normal",
+                            }}
                             onSuccess={(token) => setCaptchaToken(token)}
                             onExpire={() => setCaptchaToken(undefined)}
                             onError={() => setCaptchaToken(undefined)}
@@ -332,60 +341,39 @@ export default function StudentRegister() {
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-12 lg:h-10 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1 lg:mt-0" disabled={!isCaptchaVerified || isLoading}>
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="size-5 mr-2 animate-spin" />
-                                Creating Account...
-                            </>
-                        ) : (
-                            "Create Account"
-                        )}
-                    </Button>
+                    <div className="pt-1">
+                        <button
+                            type="submit"
+                            disabled={!isCaptchaVerified || isLoading}
+                            className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>Creating Account...</span>
+                                </>
+                            ) : (
+                                "Create Account"
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Footer Switch Links */}
+                    <div className="space-y-1.5 text-center text-xs text-slate-500 dark:text-slate-400 pt-2">
+                        <div>
+                            <span>Already have an account? </span>
+                            <Link to="/student/login" className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline">
+                                Sign In
+                            </Link>
+                        </div>
+                        <div>
+                            <span>Looking for Lecturer Portal? </span>
+                            <Link to="/lecturer/register" className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline">
+                                Register as Lecturer
+                            </Link>
+                        </div>
+                    </div>
                 </form>
-
-                {/* Footer - Only on mobile */}
-                <div className="mt-4 text-center lg:hidden">
-                    <p className="text-muted-foreground text-sm">
-                        Already have an account? <Link to="/student/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
-                    </p>
-                </div>
-
-                {/* Desktop Divider & OAuth */}
-                <div className="hidden lg:block mt-2 pt-1">
-                    <div className="relative my-2">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-[10px] uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">OR</span>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                        <Button variant="outline" className="gap-2 h-10 text-xs" onClick={handleGoogleSignIn} disabled={!isCaptchaVerified || isGoogleLoading || isLoading}>
-                            <svg className="size-4" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                            </svg>
-                            Google
-                        </Button>
-                        <Button variant="outline" className="gap-2 h-10 text-xs" onClick={handleGitHubSignIn} disabled={!isCaptchaVerified || isGitHubLoading || isLoading}>
-                            <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                            </svg>
-                            GitHub
-                        </Button>
-                    </div>
-
-                    <div className="mt-2 text-center">
-                        <p className="text-muted-foreground text-[11px]">
-                            Already have an account? <Link to="/student/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
-                        </p>
-                    </div>
-                </div>
             </div>
         </AuthLayout>
     );

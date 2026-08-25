@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -20,14 +18,14 @@ export default function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email) {
+    if (!email.trim()) {
       toast.error("Please enter your email address");
       return;
     }
 
     setIsLoading(true);
 
-    const result = await resetPassword(email, captchaToken);
+    const result = await resetPassword(email.trim(), captchaToken);
 
     if (result.success) {
       setIsSubmitted(true);
@@ -42,7 +40,7 @@ export default function ForgotPassword() {
   return (
     <AuthLayout
       title="Reset Password"
-      subtitle="Enter your email to receive a password reset link"
+      subtitle="Enter your email to receive recovery instructions"
     >
       <SEO
         title="Forgot Password"
@@ -64,94 +62,92 @@ export default function ForgotPassword() {
           }]
         }}
       />
-      <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-8 lg:shadow-sm">
+      <div>
         {!isSubmitted ? (
-          <>
-            <div className="mb-8 lg:hidden">
-              <h2 className="text-3xl font-black text-foreground tracking-tight">Reset</h2>
-              <p className="text-blue-600 font-bold text-lg -mt-1">Password</p>
-            </div>
-
-            <form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground lg:block hidden">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                    <Mail className="size-5" />
-                  </div>
-                  <Input
-                    type="email"
-                    placeholder="Email Address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-14 lg:h-11 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
-                    disabled={isLoading}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* CAPTCHA Protection */}
-              <div className="flex justify-center my-1.5">
-                <Turnstile
-                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
-                  onSuccess={(token) => setCaptchaToken(token)}
-                  onExpire={() => setCaptchaToken(undefined)}
-                  onError={() => setCaptchaToken(undefined)}
+          <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
+            {/* Email Field */}
+            <div className="space-y-1">
+              <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                Email Address
+              </label>
+              <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors">
+                <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                <input
+                  type="email"
+                  placeholder="Registered Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
+                  disabled={isLoading}
+                  required
                 />
               </div>
+            </div>
 
-              <Button type="submit" className="w-full h-14 lg:h-11 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1" disabled={!isCaptchaVerified || isLoading}>
+            {/* CAPTCHA Protection */}
+            <div className="flex justify-center my-1.5 min-h-[65px]">
+              <Turnstile
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                options={{
+                  theme: "auto",
+                  size: "normal",
+                }}
+                onSuccess={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(undefined)}
+                onError={() => setCaptchaToken(undefined)}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={!isCaptchaVerified || isLoading}
+                className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
                 {isLoading ? (
                   <>
-                    <Loader2 className="size-5 mr-2 animate-spin" />
-                    Sending Link...
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Sending Link...</span>
                   </>
                 ) : (
                   "Send Reset Link"
                 )}
-              </Button>
-
-              <div className="flex justify-center pt-2">
-                <Link
-                  to="/"
-                  className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="size-4 mr-2" />
-                  Back to Sign In
-                </Link>
-              </div>
-            </form>
-          </>
-        ) : (
-          <div className="text-center py-4">
-            <div className="flex justify-center mb-6">
-              <div className="size-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600 dark:text-green-400">
-                <CheckCircle2 className="size-10" />
-              </div>
+              </button>
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Check your email</h3>
-            <p className="text-muted-foreground mb-8">
-              We've sent a password reset link to <span className="font-semibold text-foreground">{email}</span>.
-            </p>
-            <Button asChild variant="outline" className="w-full h-11">
-              <Link to="/">Back to Sign In</Link>
-            </Button>
+
+            {/* Back to Sign In Link */}
+            <div className="text-center pt-2">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563eb] dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Sign In</span>
+              </Link>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
+              <h3 className="font-bold text-sm text-emerald-800 dark:text-emerald-300">Recovery Link Sent</h3>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed font-medium">
+                Instructions have been sent to <strong>{email}</strong>. Please check your inbox.
+              </p>
+            </div>
+
+            <Link
+              to="/"
+              className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-sm uppercase rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Sign In</span>
+            </Link>
           </div>
         )}
       </div>
-      {/* Desktop Divider - Optional for forgot password but consistent with other pages */}
-      {!isSubmitted && (
-        <div className="hidden lg:block mt-6 px-8">
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
-            </div>
-          </div>
-        </div>
-      )}
     </AuthLayout>
   );
 }

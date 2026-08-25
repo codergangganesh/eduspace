@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Mail, Eye, EyeOff, User, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Mail, Lock, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
@@ -13,7 +11,6 @@ import DOMPurify from "dompurify";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, RegisterFormValues } from "@/lib/validations/auth";
-
 import { TermsDialog } from "@/components/legal/TermsDialog";
 import { PrivacyPolicyDialog } from "@/components/legal/PrivacyPolicyDialog";
 
@@ -27,8 +24,9 @@ export default function LecturerRegister() {
     const [isLoading, setIsLoading] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string>();
-    const [hasNavigated, setHasNavigated] = useState(false); // Prevent multiple navigations
+    const [hasNavigated, setHasNavigated] = useState(false);
     const isCaptchaVerified = Boolean(captchaToken);
+
     const { register, handleSubmit: hookFormSubmit, formState: { errors }, watch } = useForm<RegisterFormValues>({
         resolver: zodResolver(registerSchema),
         mode: "onChange",
@@ -39,8 +37,6 @@ export default function LecturerRegister() {
 
     // Redirect if already authenticated (only after component has mounted)
     useEffect(() => {
-        // Only redirect if we haven't just submitted the form
-        // This prevents flickering after account creation
         if (!hasNavigated && isAuthenticated && role) {
             navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
         }
@@ -66,7 +62,7 @@ export default function LecturerRegister() {
         const result = await signUp(sanitizedEmail, data.password, sanitizedFullName, "lecturer", captchaToken);
 
         if (result.success) {
-            setHasNavigated(true); // Mark that we're about to navigate
+            setHasNavigated(true);
             toast.success("Account created successfully! Please sign in to continue.");
             navigate("/lecturer/login", { state: { registered: true } });
         } else {
@@ -75,7 +71,6 @@ export default function LecturerRegister() {
 
         setIsLoading(false);
     };
-
 
     return (
         <AuthLayout title="Lecturer Registration" subtitle="Join Eduspace and start teaching" noScroll={true}>
@@ -99,25 +94,37 @@ export default function LecturerRegister() {
                     }]
                 }}
             />
-            <div className="bg-background lg:rounded-xl lg:border lg:border-border p-0 lg:p-4 lg:shadow-sm">
-                {/* Form */}
-                <form className="space-y-2 lg:space-y-2.5" onSubmit={hookFormSubmit(onValidSubmit)}>
+            <div>
+                {/* Modals */}
+                <TermsDialog
+                    open={showTerms}
+                    onOpenChange={setShowTerms}
+                    showAgreeButton={true}
+                    onAgree={() => setAgreedToTerms(true)}
+                />
+                <PrivacyPolicyDialog
+                    open={showPrivacy}
+                    onOpenChange={setShowPrivacy}
+                    showAgreeButton={false}
+                />
+
+                <form className="space-y-3 sm:space-y-3.5" onSubmit={hookFormSubmit(onValidSubmit)}>
                     {/* Full Name Field */}
                     <div className="space-y-1">
-                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
+                        <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
                             Full Name
                         </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <User className="size-5" />
-                            </div>
-                            <Input
+                        <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors">
+                            <User className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                            <input
                                 type="text"
-                                placeholder="Full Name"
+                                placeholder="Professor Jane Doe"
                                 {...register("fullName")}
                                 maxLength={100}
-                                className="pl-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
                                 disabled={isLoading}
+                                required
                             />
                         </div>
                         {errors.fullName && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.fullName.message}</p>}
@@ -125,77 +132,78 @@ export default function LecturerRegister() {
 
                     {/* Email Field */}
                     <div className="space-y-1">
-                        <label className="text-[12px] font-bold text-foreground lg:block hidden">
-                            Email Address
+                        <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                            Institutional Email Address
                         </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <Mail className="size-5" />
-                            </div>
-                            <Input
+                        <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors">
+                            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                            <input
                                 type="email"
-                                placeholder="Email Address"
+                                placeholder="lecturer@institution.edu"
                                 {...register("email")}
                                 maxLength={255}
-                                className="pl-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium"
                                 disabled={isLoading}
+                                required
                             />
                         </div>
                         {errors.email && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.email.message}</p>}
                     </div>
 
-                    <div className="flex flex-col lg:grid lg:grid-cols-2 gap-2 lg:gap-3">
-                        {/* Password Field */}
+                    {/* Password & Confirm Password */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div className="space-y-1">
-                            <label className="text-[12px] font-bold text-foreground lg:block hidden">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
                                 Password
                             </label>
-                            <div className="relative">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                                </div>
-                                <Input
+                            <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors relative">
+                                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                                <input
                                     type={showPassword ? "text" : "password"}
-                                    placeholder="Password"
+                                    placeholder="••••••••••••"
                                     {...register("password")}
                                     maxLength={128}
-                                    className="pl-12 pr-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                    className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium pr-8"
                                     disabled={isLoading}
+                                    required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                    className="absolute right-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 cursor-pointer"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                             {errors.password && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.password.message}</p>}
                         </div>
 
-                        {/* Confirm Password Field */}
                         <div className="space-y-1">
-                            <label className="text-[12px] font-bold text-foreground lg:block hidden">
-                                Confirm Pwd
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                                Confirm Password
                             </label>
-                            <div className="relative">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                                </div>
-                                <Input
+                            <div className="flex items-center gap-2.5 pb-2 border-b-2 border-slate-200 dark:border-slate-800 focus-within:border-[#2563eb] transition-colors relative">
+                                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="text-slate-300 dark:text-slate-700 font-light select-none">|</span>
+                                <input
                                     type={showConfirmPassword ? "text" : "password"}
-                                    placeholder="Confirm Password"
+                                    placeholder="••••••••••••"
                                     {...register("confirmPassword")}
                                     maxLength={128}
-                                    className="pl-12 pr-12 h-12 lg:h-10 lg:pl-10 lg:pr-10 rounded-2xl lg:rounded-xl border-border/50 bg-secondary/30 lg:bg-background"
+                                    className="w-full bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none font-medium pr-8"
                                     disabled={isLoading}
+                                    required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-0 top-0 h-full px-4 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                    className="absolute right-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 cursor-pointer"
+                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                             {errors.confirmPassword && <p className="text-red-500 text-[11px] font-medium pl-1">{errors.confirmPassword.message}</p>}
@@ -205,44 +213,49 @@ export default function LecturerRegister() {
                     {passwordWatch && <PasswordStrength password={passwordWatch} />}
 
                     {/* Terms Agreement */}
-                    <div className="flex items-start gap-3 mt-2">
-                        <TermsDialog
-                            open={showTerms}
-                            onOpenChange={setShowTerms}
-                            showAgreeButton={true}
-                            onAgree={() => setAgreedToTerms(true)}
+                    <div className="flex items-center gap-2.5 pt-0.5">
+                        <input
+                            type="checkbox"
+                            id="terms-lecturer"
+                            checked={agreedToTerms}
+                            onChange={() => {
+                                if (!agreedToTerms) {
+                                    setShowTerms(true);
+                                } else {
+                                    setAgreedToTerms(false);
+                                }
+                            }}
+                            className="size-4.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                            disabled={isLoading}
                         />
-                        <PrivacyPolicyDialog
-                            open={showPrivacy}
-                            onOpenChange={setShowPrivacy}
-                            showAgreeButton={false}
-                        />
-
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                id="terms"
-                                checked={agreedToTerms}
-                                onChange={(e) => {
-                                    if (!agreedToTerms) {
-                                        setShowTerms(true);
-                                    } else {
-                                        setAgreedToTerms(false);
-                                    }
-                                }}
-                                className="size-5 rounded-lg border-border/50 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
-                                disabled={isLoading}
-                            />
-                            <label htmlFor="terms" className="text-[13px] text-muted-foreground/80 select-none">
-                                I agree to the <Link to="/terms-of-service" target="_blank" className="text-blue-600 font-semibold hover:underline">Terms</Link> & <Link to="/privacy-policy" target="_blank" className="text-blue-600 font-semibold hover:underline">Privacy Policy</Link>
-                            </label>
-                        </div>
+                        <label htmlFor="terms-lecturer" className="text-xs text-slate-600 dark:text-slate-400 select-none">
+                            I agree to the{" "}
+                            <button
+                                type="button"
+                                onClick={() => setShowTerms(true)}
+                                className="text-[#2563eb] dark:text-blue-400 font-semibold hover:underline"
+                            >
+                                Terms
+                            </button>{" "}
+                            &{" "}
+                            <button
+                                type="button"
+                                onClick={() => setShowPrivacy(true)}
+                                className="text-[#2563eb] dark:text-blue-400 font-semibold hover:underline"
+                            >
+                                Privacy Policy
+                            </button>
+                        </label>
                     </div>
 
                     {/* CAPTCHA Protection */}
-                    <div className="flex justify-center my-1.5">
+                    <div className="flex justify-center my-1.5 min-h-[65px]">
                         <Turnstile
-                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ""}
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                            options={{
+                                theme: "auto",
+                                size: "normal",
+                            }}
                             onSuccess={(token) => setCaptchaToken(token)}
                             onExpire={() => setCaptchaToken(undefined)}
                             onError={() => setCaptchaToken(undefined)}
@@ -250,33 +263,39 @@ export default function LecturerRegister() {
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-12 lg:h-10 rounded-2xl lg:rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-1 lg:mt-0" disabled={!isCaptchaVerified || isLoading}>
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="size-5 mr-2 animate-spin" />
-                                Creating Account...
-                            </>
-                        ) : (
-                            "Create Account"
-                        )}
-                    </Button>
-                </form>
-
-                {/* Footer */}
-                <div className="mt-3 lg:mt-2 text-center lg:hidden">
-                    <p className="text-muted-foreground text-sm lg:text-xs">
-                        Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
-                    </p>
-                </div>
-
-                {/* Desktop Switcher */}
-                <div className="hidden lg:block mt-4 pt-2 border-t border-border">
-                    <div className="text-center">
-                        <p className="text-muted-foreground text-[11px]">
-                            Already have an account? <Link to="/lecturer/login" className="text-blue-600 font-bold hover:underline">Sign In</Link>
-                        </p>
+                    <div className="pt-1">
+                        <button
+                            type="submit"
+                            disabled={!isCaptchaVerified || isLoading}
+                            className="w-full h-11 sm:h-12 bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-blue-600/25 text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>Creating Account...</span>
+                                </>
+                            ) : (
+                                "Create Account"
+                            )}
+                        </button>
                     </div>
-                </div>
+
+                    {/* Footer Switch Links */}
+                    <div className="space-y-1.5 text-center text-xs text-slate-500 dark:text-slate-400 pt-2">
+                        <div>
+                            <span>Already have an account? </span>
+                            <Link to="/lecturer/login" className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline">
+                                Sign In
+                            </Link>
+                        </div>
+                        <div>
+                            <span>Looking for Student Portal? </span>
+                            <Link to="/student/register" className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline">
+                                Register as Student
+                            </Link>
+                        </div>
+                    </div>
+                </form>
             </div>
         </AuthLayout>
     );
