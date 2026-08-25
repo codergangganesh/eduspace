@@ -29,7 +29,7 @@ export default function LecturerLogin() {
 
     const { register, handleSubmit: hookFormSubmit, formState: { errors } } = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
-        mode: "onTouched",
+        mode: "onSubmit",
         defaultValues: { email: "", password: "" }
     });
 
