@@ -219,7 +219,7 @@ export const ResetPassword: React.FC = () => {
               {/* Cloudflare Turnstile CAPTCHA Protection */}
               <div className="flex justify-center my-2 min-h-[65px]">
                 <Turnstile
-                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                   options={{
                     theme: currentTheme === "dark" ? "dark" : "light",
                     size: "normal",

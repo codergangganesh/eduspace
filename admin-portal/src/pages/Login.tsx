@@ -434,7 +434,7 @@ export const Login: React.FC = () => {
                   {/* Cloudflare Turnstile CAPTCHA Protection */}
                   <div className="flex justify-center my-2 min-h-[65px]">
                     <Turnstile
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                       options={{
                         theme: currentTheme === "dark" ? "dark" : "light",
                         size: "normal",
@@ -565,7 +565,7 @@ export const Login: React.FC = () => {
                     {/* Cloudflare Turnstile CAPTCHA Protection */}
                     <div className="flex justify-center my-2 min-h-[65px]">
                       <Turnstile
-                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                         options={{
                           theme: currentTheme === "dark" ? "dark" : "light",
                           size: "normal",
@@ -635,10 +635,10 @@ export const Login: React.FC = () => {
       {/* ========================================================================= */}
       {/* 2. DESKTOP VIEW (Visible on lg: and wider screens, preserved 100%)       */}
       {/* ========================================================================= */}
-      <div className="hidden lg:flex min-h-screen w-full bg-gradient-to-b from-[#e0f2fe] via-[#93c5fd]/50 to-[#1e3a8a]/90 dark:from-[#0B0F1A] dark:via-[#0F172A] dark:to-[#020617] flex-col justify-between items-center p-4 sm:p-6 lg:p-10 font-sans selection:bg-blue-500/30 transition-colors duration-300 relative">
+      <div className="hidden lg:flex h-screen overflow-hidden w-full bg-gradient-to-b from-[#e0f2fe] via-[#93c5fd]/50 to-[#1e3a8a]/90 dark:from-[#0B0F1A] dark:via-[#0F172A] dark:to-[#020617] flex-col justify-between items-center p-4 lg:p-6 font-sans selection:bg-blue-500/30 transition-colors duration-300 relative">
 
         {/* Central Two-Panel Elevated Card */}
-        <div className="w-full max-w-[1140px] my-auto relative z-10">
+        <div className="w-full max-w-[1140px] flex-1 flex flex-col justify-center relative z-10 min-h-0">
 
           <div className="w-full grid grid-cols-12 rounded-[36px] overflow-hidden shadow-[0_25px_70px_-15px_rgba(30,58,138,0.45)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] border border-white/50 dark:border-slate-800/80 transition-colors duration-300">
 
@@ -706,12 +706,12 @@ export const Login: React.FC = () => {
             </div>
 
             {/* RIGHT SIDE: Welcome Back & Sign-In Form / Forgot Password Form */}
-            <div className="col-span-6 bg-[#F1F5FB] dark:bg-[#0f172a] p-10 lg:p-12 flex flex-col justify-between relative transition-colors duration-300">
+            <div className="col-span-6 bg-[#F1F5FB] dark:bg-[#0f172a] p-6 lg:p-8 flex flex-col justify-center overflow-y-auto relative transition-colors duration-300">
 
-              <div className="w-full max-w-[420px] mx-auto my-auto py-4">
+              <div className="w-full max-w-[420px] mx-auto">
 
                 {/* Top Logo */}
-                <div className="flex flex-col items-center justify-center text-center mb-6">
+                <div className="flex flex-col items-center justify-center text-center mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <img src="/favicon.png" alt="Eduspace" className="h-9 w-9 rounded-lg shadow-sm object-cover" />
                     <span className="text-2xl font-black text-[#1e40af] dark:text-blue-400 tracking-tight">Eduspace</span>
@@ -730,8 +730,8 @@ export const Login: React.FC = () => {
                 ) : viewMode === "login" ? (
                   <>
                     {/* Header Title */}
-                    <div className="text-center mb-6">
-                      <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight uppercase">
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight uppercase">
                         Welcome Back!
                       </h2>
                       <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
@@ -748,7 +748,7 @@ export const Login: React.FC = () => {
                     )}
 
                     {/* Form Inputs */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-3">
 
                       {/* User Name / Email Input */}
                       <div>
@@ -799,9 +799,9 @@ export const Login: React.FC = () => {
                       </div>
 
                       {/* Cloudflare Turnstile CAPTCHA Protection */}
-                      <div className="flex justify-center my-2 min-h-[65px]">
+                      <div className="flex justify-center my-1 min-h-[65px]">
                         <Turnstile
-                          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                           options={{
                             theme: currentTheme === "dark" ? "dark" : "light",
                             size: "normal",
@@ -935,7 +935,7 @@ export const Login: React.FC = () => {
                         {/* Cloudflare Turnstile CAPTCHA Protection */}
                         <div className="flex justify-center my-2 min-h-[65px]">
                           <Turnstile
-                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAACoSjniwSUdeJX0r"}
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                             options={{
                               theme: currentTheme === "dark" ? "dark" : "light",
                               size: "normal",
@@ -994,7 +994,7 @@ export const Login: React.FC = () => {
                 )}
 
                 {/* Disclaimer / Terms & Conditions */}
-                <div className="mt-6 text-center text-[9.5px] text-slate-400 dark:text-slate-500 leading-normal max-w-[350px] mx-auto font-normal">
+                <div className="mt-4 text-center text-[9.5px] text-slate-400 dark:text-slate-500 leading-normal max-w-[350px] mx-auto font-normal">
                   By signing in you accept all our{" "}
                   <Link
                     to="/terms"
@@ -1020,7 +1020,7 @@ export const Login: React.FC = () => {
         </div>
 
         {/* Page Bottom Footer */}
-        <footer className="w-full max-w-[1140px] text-center pt-4 pb-2 z-10">
+        <footer className="w-full max-w-[1140px] text-center pt-2 pb-1 z-10">
           <div className="inline-flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-bold text-white/95 dark:text-slate-400 drop-shadow-sm">
             <a href="https://www.eduspaceacademy.online" target="_blank" rel="noreferrer" className="hover:underline">
               www.eduspaceacademy.online
