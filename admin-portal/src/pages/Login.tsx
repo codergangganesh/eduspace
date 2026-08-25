@@ -237,7 +237,7 @@ export const Login: React.FC = () => {
     setMfaChallenge(null);
     try {
       await supabase.auth.signOut();
-    } catch {}
+    } catch { }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -293,10 +293,10 @@ export const Login: React.FC = () => {
       {/* 1. MOBILE VIEW (Visible on mobile/tablet screens < lg, matching reference) */}
       {/* ========================================================================= */}
       <div className="flex lg:hidden flex-col min-h-screen w-full bg-white dark:bg-[#0B0F1A] text-slate-900 dark:text-white font-sans relative overflow-x-hidden selection:bg-blue-500/30">
-        
+
         {/* Top Organic Curved Wave Banner (~36% height) */}
         <div className="relative w-full h-72 sm:h-80 bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#3b82f6] overflow-hidden flex flex-col justify-between">
-          
+
           {/* Topographical / Contour Organic Wave SVG Background Patterns */}
           <svg className="absolute inset-0 w-full h-full opacity-25 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" preserveAspectRatio="none">
             <path d="M-50,60 C80,20 180,140 450,40" fill="none" stroke="white" strokeWidth="2" opacity="0.6" />
@@ -341,7 +341,7 @@ export const Login: React.FC = () => {
         {/* Bottom Form Sheet */}
         <div className="flex-1 px-6 sm:px-10 pt-1 sm:pt-4 pb-8 relative z-20 flex flex-col justify-between">
           <div className="w-full max-w-[420px] mx-auto">
-            
+
             {mfaChallenge ? (
               <AdminMfaChallengeView
                 factorName={mfaChallenge.factorName}
@@ -368,7 +368,7 @@ export const Login: React.FC = () => {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  
+
                   {/* Email Field */}
                   <div className="space-y-1.5">
                     <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
@@ -484,16 +484,16 @@ export const Login: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Open Main App Link */}
+                  {/* Open Student App Link */}
                   <div className="text-center text-xs text-slate-500 dark:text-slate-400 pt-1">
-                    <span>Don't have an Account ? </span>
+                    <span>Looking for Student Portal? </span>
                     <a
                       href="https://eduspaceacademy.online/"
                       target="_blank"
                       rel="noreferrer"
                       className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline"
                     >
-                      Sign up / Open App
+                      Open Student App
                     </a>
                   </div>
                 </form>
@@ -851,16 +851,16 @@ export const Login: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Open Main App Link */}
+                      {/* Open Student App Link */}
                       <div className="flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 pt-1">
-                        <span>If you want to visit, </span>
+                        <span>Looking for Student & Lecturer Portal? </span>
                         <a
                           href="https://eduspaceacademy.online/"
                           target="_blank"
                           rel="noreferrer"
                           className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline ml-1"
                         >
-                          Open Main App
+                          Open Student App
                         </a>
                       </div>
                     </form>
@@ -976,16 +976,16 @@ export const Login: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* Open Main App Link */}
+                        {/* Open Student App Link */}
                         <div className="flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 pt-1">
-                          <span>If you want to visit, </span>
+                          <span>Looking for Student & Lecturer Portal? </span>
                           <a
                             href="https://eduspaceacademy.online/"
                             target="_blank"
                             rel="noreferrer"
                             className="text-[#2563eb] dark:text-blue-400 font-bold hover:underline ml-1"
                           >
-                            Open Main App
+                            Open Student App
                           </a>
                         </div>
                       </form>
