@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface Assignment {
     id: string;
@@ -77,6 +78,7 @@ export function AssignmentCard({
     className,
     viewMode = 'grid'
 }: AssignmentCardProps) {
+    const { t } = useTranslation();
 
     // Determine status logic (similar to QuizCard)
     const status = assignment.studentStatus || assignment.status || 'pending';
@@ -87,10 +89,10 @@ export function AssignmentCard({
 
     // Helper to get status color/icon
     const getStatusDetails = () => {
-        if (isGraded) return { label: 'GRADED', color: 'bg-emerald-400 text-emerald-950', icon: CheckCircle2 };
-        if (isSubmitted) return { label: 'SUBMITTED', color: 'bg-blue-400 text-blue-950', icon: CheckCircle2 };
-        if (isOverdue || isLate) return { label: 'OVERDUE', color: 'bg-red-400 text-red-950', icon: AlertCircle };
-        return { label: 'PENDING', color: 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white', icon: Clock };
+        if (isGraded) return { label: t("assignments.status.graded", "GRADED").toUpperCase(), color: 'bg-emerald-400 text-emerald-950', icon: CheckCircle2 };
+        if (isSubmitted) return { label: t("assignments.status.submitted", "SUBMITTED").toUpperCase(), color: 'bg-blue-400 text-blue-950', icon: CheckCircle2 };
+        if (isOverdue || isLate) return { label: t("dashboard.overdue", "OVERDUE").toUpperCase(), color: 'bg-red-400 text-red-950', icon: AlertCircle };
+        return { label: t("assignments.status.pending", "PENDING").toUpperCase(), color: 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white', icon: Clock };
     };
 
     const statusInfo = getStatusDetails();
@@ -139,7 +141,7 @@ export function AssignmentCard({
                             )}
                             <span className="flex items-center gap-1">
                                 <Calendar className="size-3" />
-                                {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : "No Due Date"}
+                                {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : t("assignments.noDueDate", "No Due Date")}
                             </span>
                         </div>
                     </div>
@@ -167,7 +169,7 @@ export function AssignmentCard({
                                         className="w-full md:w-auto font-semibold"
                                     >
                                         <Eye className="size-4 mr-2" />
-                                        Details
+                                        {t("common.viewDetails", "Details")}
                                     </Button>
                                 )}
                                 {onHelp && (
@@ -181,7 +183,7 @@ export function AssignmentCard({
                                         className="w-full md:w-auto font-semibold"
                                     >
                                         <LifeBuoy className="size-4 mr-2" />
-                                        Help
+                                        {t("common.help", "Help")}
                                     </Button>
                                 )}
                                 <Button
@@ -200,7 +202,7 @@ export function AssignmentCard({
                                     )}
                                 >
                                     {isSubmitted ? <Eye className="size-4 mr-2" /> : <UploadCloud className="size-4 mr-2" />}
-                                    {isSubmitted ? 'View Assignment' : (isOverdue ? 'Late Submit' : 'Submit')}
+                                    {isSubmitted ? t("assignments.viewAssignment", "View Assignment") : (isOverdue ? t("assignments.lateSubmit", "Late Submit") : t("common.submit", "Submit"))}
                                 </Button>
                             </>
                         ) : (
@@ -214,7 +216,7 @@ export function AssignmentCard({
                                 className="w-full md:w-auto font-semibold"
                             >
                                 <Eye className="size-4 mr-2" />
-                                Details
+                                {t("common.viewDetails", "Details")}
                             </Button>
                         )}
 
@@ -228,12 +230,12 @@ export function AssignmentCard({
                                 <DropdownMenuContent align="end">
                                     {onEdit && (
                                         <DropdownMenuItem onClick={() => onEdit(assignment)}>
-                                            <Edit className="size-4 mr-2" /> Edit
+                                            <Edit className="size-4 mr-2" /> {t("common.edit", "Edit")}
                                         </DropdownMenuItem>
                                     )}
                                     {onDelete && (
                                         <DropdownMenuItem onClick={() => onDelete(assignment.id)} className="text-destructive">
-                                            <Trash2 className="size-4 mr-2" /> Delete
+                                            <Trash2 className="size-4 mr-2" /> {t("common.delete", "Delete")}
                                         </DropdownMenuItem>
                                     )}
                                 </DropdownMenuContent>
@@ -286,7 +288,7 @@ export function AssignmentCard({
                                             onEdit(assignment);
                                         }} className="rounded-xl h-10 px-3 cursor-pointer">
                                             <Edit className="size-4 mr-2" />
-                                            Edit
+                                            {t("common.edit", "Edit")}
                                         </DropdownMenuItem>
                                     )}
                                     {onDelete && (
@@ -295,7 +297,7 @@ export function AssignmentCard({
                                             onDelete(assignment.id);
                                         }} className="rounded-xl h-10 px-3 cursor-pointer text-red-600 focus:text-red-600">
                                             <Trash2 className="size-4 mr-2" />
-                                            Delete
+                                            {t("common.delete", "Delete")}
                                         </DropdownMenuItem>
                                     )}
                                 </DropdownMenuContent>
@@ -312,21 +314,6 @@ export function AssignmentCard({
                     <h3 className="font-black text-sm leading-snug line-clamp-2 mb-2 text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors" title={assignment.title}>
                         {assignment.title}
                     </h3>
-
-                    {/* Instructor / Subject Info */}
-                    {(assignment.lecturer_name || assignment.subject_name) && (
-                        <div className="flex items-center gap-1.5">
-                            <Avatar className="h-5 w-5 border border-background shadow-sm shrink-0">
-                                <AvatarImage src={assignment.instructor_avatar || ''} />
-                                <AvatarFallback className="bg-primary/10 text-primary font-bold text-[8px]">
-                                    {assignment.lecturer_name?.charAt(0) || 'L'}
-                                </AvatarFallback>
-                            </Avatar>
-                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 line-clamp-1">
-                                {assignment.lecturer_name || assignment.subject_name}
-                            </span>
-                        </div>
-                    )}
                 </div>
 
                 {/* Metrics - Compact stacked */}
@@ -337,7 +324,7 @@ export function AssignmentCard({
                             <Calendar className="size-3" />
                         </div>
                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate">
-                            {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : "No Due Date"}
+                            {assignment.due_date ? format(new Date(assignment.due_date), "MMM d") : t("assignments.noDueDate", "No Due Date")}
                         </span>
                     </div>
 
@@ -380,7 +367,7 @@ export function AssignmentCard({
                                 )}
                             >
                                 {isSubmitted ? <Eye className="size-3 mr-1" /> : <UploadCloud className="size-3 mr-1" />}
-                                {isSubmitted ? 'View' : (isOverdue ? 'Late Submit' : 'Submit')}
+                                {isSubmitted ? t("common.view", "View") : (isOverdue ? t("assignments.lateSubmit", "Late Submit") : t("common.submit", "Submit"))}
                             </Button>
 
                             {(onView || onHelp) && (
@@ -396,7 +383,7 @@ export function AssignmentCard({
                                             className="h-8 rounded-xl font-bold text-[11px]"
                                         >
                                             <Eye className="size-3 mr-1" />
-                                            Details
+                                            {t("common.viewDetails", "Details")}
                                         </Button>
                                     )}
                                     {onHelp && (
@@ -410,7 +397,7 @@ export function AssignmentCard({
                                             className="h-8 rounded-xl font-bold text-[11px]"
                                         >
                                             <LifeBuoy className="size-3 mr-1" />
-                                            Help
+                                            {t("common.help", "Help")}
                                         </Button>
                                     )}
                                 </div>
@@ -426,7 +413,7 @@ export function AssignmentCard({
                             className="w-full rounded-xl font-bold text-xs h-8 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 shadow transition-all flex items-center justify-center gap-1"
                         >
                             <Eye className="size-3" />
-                            Review
+                            {t("assignments.review", "Review")}
                         </Button>
                     )}
                 </div>

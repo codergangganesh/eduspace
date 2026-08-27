@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { useSchedule, Schedule as ScheduleType } from "@/hooks/useSchedule";
 import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
@@ -78,13 +79,13 @@ const convertToClassEvent = (schedule: ScheduleType): ClassEvent => ({
   endTime: schedule.end_time?.slice(0, 5) || "09:00",
   location: schedule.location || undefined,
   instructor: schedule.course_code || undefined,
-  color: schedule.color || "bg-blue-500",
+  color: schedule.color || "#3b82f6",
   dayOfWeek: schedule.day_of_week,
-  lecturerName: schedule.lecturer_name || "Unknown Lecturer",
-  subjectName: schedule.subject_name || schedule.title || "Unknown Subject",
+  lecturerName: schedule.lecturer_name || "",
+  subjectName: schedule.subject_name || "",
   notes: schedule.notes || undefined,
   specificDate: schedule.specific_date || undefined,
-  classId: schedule.class_id || undefined
+  classId: schedule.class_id || undefined,
 });
 
 const timeSlots = [
@@ -98,6 +99,7 @@ const SCHEDULE_HOUR_HEIGHT = 80;
 const SCHEDULE_GRID_TEMPLATE = `${SCHEDULE_TIME_COLUMN_WIDTH}px repeat(7, minmax(120px, 1fr))`;
 
 export default function Schedule() {
+  const { t } = useTranslation();
   const { role, profile, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -470,7 +472,7 @@ export default function Schedule() {
                 onClick={() => setViewMode("week")}
               >
                 <Grid3X3 className="size-4 mr-1" />
-                Week
+                {t("common.week", "Week")}
               </Button>
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
@@ -478,7 +480,7 @@ export default function Schedule() {
                 onClick={() => setViewMode("list")}
               >
                 <List className="size-4 mr-1" />
-                List
+                {t("common.list", "List")}
               </Button>
             </div>
 
@@ -487,12 +489,12 @@ export default function Schedule() {
                 <DialogTrigger asChild>
                   <Button onClick={resetForm} className="hidden sm:flex">
                     <Plus className="size-4 mr-2" />
-                    Add Event
+                    {t("common.addEvent", "Add Event")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add New Event</DialogTitle>
+                    <DialogTitle>{t("common.addEvent", "Add New Event")}</DialogTitle>
                     <DialogDescription className="sr-only">
                       Create a new event in your schedule by filling out the details below.
                     </DialogDescription>
@@ -500,7 +502,7 @@ export default function Schedule() {
                   <div className="space-y-4 py-4">
                     {/* Add Form */}
                     <div className="space-y-2">
-                      <Label htmlFor="title">Event Title *</Label>
+                      <Label htmlFor="title">{t("common.eventTitle", "Event Title")} *</Label>
                       <Input
                         id="title"
                         placeholder="e.g. Lecture 1"
@@ -511,18 +513,18 @@ export default function Schedule() {
                     {/* Pre-filled Read-only fields for context */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="subjectName">Subject</Label>
+                        <Label htmlFor="subjectName">{t("common.subject", "Subject")}</Label>
                         <Input id="subjectName" value={formData.subjectName} disabled className="bg-muted" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lecturerName">Lecturer</Label>
+                        <Label htmlFor="lecturerName">{t("common.lecturer", "Lecturer")}</Label>
                         <Input id="lecturerName" value={formData.lecturerName} disabled className="bg-muted" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="date">Date *</Label>
+                        <Label htmlFor="date">{t("common.date", "Date")} *</Label>
                         <Input
                           id="date"
                           type="date"
@@ -531,7 +533,7 @@ export default function Schedule() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="type">Type</Label>
+                        <Label htmlFor="type">{t("common.type", "Type")}</Label>
                         <Select
                           value={formData.type}
                           onValueChange={(val) => setFormData({ ...formData, type: val as any })}
@@ -540,12 +542,12 @@ export default function Schedule() {
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="lecture">Lecture</SelectItem>
-                            <SelectItem value="lab">Lab</SelectItem>
-                            <SelectItem value="tutorial">Tutorial</SelectItem>
-                            <SelectItem value="exam">Exam</SelectItem>
-                            <SelectItem value="event">Event</SelectItem>
-                            <SelectItem value="office_hours">Office Hours</SelectItem>
+                            <SelectItem value="lecture">{t("common.lecture", "Lecture")}</SelectItem>
+                            <SelectItem value="lab">{t("common.lab", "Lab")}</SelectItem>
+                            <SelectItem value="tutorial">{t("common.tutorial", "Tutorial")}</SelectItem>
+                            <SelectItem value="exam">{t("common.exam", "Exam")}</SelectItem>
+                            <SelectItem value="event">{t("common.event", "Event")}</SelectItem>
+                            <SelectItem value="office_hours">{t("common.officeHours", "Office Hours")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

@@ -19,8 +19,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumCardSkeleton } from "@/components/skeletons/PremiumCardSkeleton";
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function StudentQuizzes() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -63,6 +65,15 @@ export default function StudentQuizzes() {
         navigate(`/student/quizzes/${quizId}`);
     };
 
+    const getFilterLabel = (f: string) => {
+        switch (f) {
+            case "all": return t("common.all", "All");
+            case "pending": return t("assignments.status.pending", "Pending");
+            case "submitted": return t("assignments.status.submitted", "Submitted");
+            default: return f;
+        }
+    };
+
     return (
         <DashboardLayout>
             <div className="w-full h-full flex flex-col gap-6 animate-in fade-in duration-500 overflow-y-auto">
@@ -72,8 +83,8 @@ export default function StudentQuizzes() {
                             <FileText className="size-6 text-white" />
                         </div>
                         <div>
-                            <span className="text-[10px] font-black tracking-[0.2em] text-indigo-500 uppercase">Assessment</span>
-                            <h1 className="text-2xl font-black text-slate-800 dark:text-white">Active Quizzes</h1>
+                            <span className="text-[10px] font-black tracking-[0.2em] text-indigo-500 uppercase">{t("quizzes.assessment", "Assessment")}</span>
+                            <h1 className="text-2xl font-black text-slate-800 dark:text-white">{t("quizzes.myQuizzes", "Active Quizzes")}</h1>
                         </div>
                     </div>
                 </div>
@@ -137,11 +148,11 @@ export default function StudentQuizzes() {
                                                 className="h-9 shrink-0 gap-2 border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 rounded-xl font-bold text-slate-600 dark:text-slate-300"
                                             >
                                                 <Filter className="size-4" />
-                                                <span className="hidden lg:inline capitalize">{filter}</span>
+                                                <span className="hidden lg:inline capitalize">{getFilterLabel(filter)}</span>
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start" className="w-48 rounded-xl p-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
-                                            <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">Filter Status</div>
+                                            <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">{t("common.filter", "Filter Status")}</div>
                                             <DropdownMenuRadioGroup value={filter} onValueChange={(val) => setFilter(val as any)}>
                                                 {['all', 'pending', 'submitted'].map((f) => (
                                                     <DropdownMenuRadioItem
@@ -149,7 +160,7 @@ export default function StudentQuizzes() {
                                                         value={f}
                                                         className="capitalize rounded-lg focus:bg-indigo-500/10 focus:text-indigo-500 cursor-pointer font-bold"
                                                     >
-                                                        {f}
+                                                        {getFilterLabel(f)}
                                                     </DropdownMenuRadioItem>
                                                 ))}
                                             </DropdownMenuRadioGroup>
@@ -160,7 +171,7 @@ export default function StudentQuizzes() {
                                 <div className="relative flex-1">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Search quizzes..."
+                                        placeholder={t("common.search", "Search quizzes...")}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 h-10 bg-white/50 dark:bg-slate-800/50 border-none shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500/20 text-sm rounded-xl"
@@ -188,7 +199,7 @@ export default function StudentQuizzes() {
                             </div>
                         </div>
 
-                        {/* Content Area - Rendered directly based on selection, not inside TabsContent to ensure updates */}
+                        {/* Content Area */}
                         <div className="mt-4">
                             {loading ? (
                                 <div className={cn(
@@ -206,9 +217,9 @@ export default function StudentQuizzes() {
                                         <div className="p-6 rounded-full bg-primary/10 mb-6">
                                             <FileText className="size-16 text-primary" />
                                         </div>
-                                        <h3 className="text-2xl font-bold mb-3">No Quizzes Available</h3>
+                                        <h3 className="text-2xl font-bold mb-3">{t("quizzes.noQuizzes", "No Quizzes Available")}</h3>
                                         <p className="text-muted-foreground text-lg max-w-md mx-auto">
-                                            There are no published quizzes for this class yet. Check back later!
+                                            {t("quizzes.noQuizzesSubtitle", "There are no published quizzes for this class yet. Check back later!")}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -238,9 +249,9 @@ export default function StudentQuizzes() {
                             <div className="p-6 rounded-full bg-primary/10 mb-6">
                                 <FileText className="size-16 text-primary" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-3">No Classes Enrolled!</h3>
+                            <h3 className="text-2xl font-bold mb-3">{t("dashboard.noClasses", "No Classes Enrolled!")}</h3>
                             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-                                You need to join a class before you can see any quizzes.
+                                {t("dashboard.joinClassToSeeQuizzes", "You need to join a class before you can see any quizzes.")}
                             </p>
                         </CardContent>
                     </Card>

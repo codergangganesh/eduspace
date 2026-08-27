@@ -1,0 +1,25 @@
+{
+    "title": "असाइनमेंट",
+    "description": "अपने पाठ्यक्रम, परियोजनाओं और असाइनमेंट सबमिशन प्रबंधित करें",
+    "pendingAssignments": "लंबित असाइनमेंट",
+    "submittedAssignments": "जमा किए गए असाइनमेंट",
+    "gradedAssignments": "मूल्यांकित असाइनमेंट",
+    "dueDate": "नियत तारीख",
+    "noDueDate": "कोई नियत तिथि नहीं",
+    "lateSubmit": "विलंब से जमा करें",
+    "submittedOn": "जमा करने की तारीख",
+    "grade": "ग्रेड / अंक",
+    "feedback": "शिक्षक प्रतिक्रिया",
+    "submitAssignment": "असाइनमेंट जमा करें",
+    "uploadFiles": "फ़ाइलें अपलोड करें",
+    "submissionText": "सबमिशन नोट्स / विवरण",
+    "fileDropzone": "अपनी असाइनमेंट फ़ाइलें यहाँ खींचें या ब्राउज़ करें",
+    "noAssignments": "वर्तमान में कोई असाइनमेंट नहीं है।",
+    "status": {
+        "pending": "लंबित",
+        "submitted": "जमा किया गया",
+        "graded": "मूल्यांकित",
+        "overdue": "अतिदेय",
+        "late": "देर से"
+    }
+}

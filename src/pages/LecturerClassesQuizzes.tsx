@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useClasses } from '@/hooks/useClasses';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 export default function LecturerClassesQuizzes() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { classes, loading } = useClasses();
@@ -87,16 +89,16 @@ export default function LecturerClassesQuizzes() {
                             {isAICreateMode ? (
                                 <>
                                     <Bot className="size-8 text-blue-600 dark:text-blue-400 fill-blue-500/10" />
-                                    Generate AI Quiz
+                                    {t("lecturer.createAIQuiz", "Generate AI Quiz")}
                                 </>
                             ) : (
-                                "Quiz Management"
+                                t("lecturer.quizzes", "Quiz Management")
                             )}
                         </h1>
                         <p className="text-muted-foreground mt-2 text-lg">
                             {isAICreateMode
-                                ? "Select a class to generate a new quiz using AI."
-                                : "Select a class below to create, manage, and analyze student assessments."}
+                                ? t("quizzes.selectClassAI", "Select a class to generate a new quiz using AI.")
+                                : t("quizzes.selectClassManage", "Select a class below to create, manage, and analyze student assessments.")}
                         </p>
                     </div>
 
@@ -104,7 +106,7 @@ export default function LecturerClassesQuizzes() {
                     <div className="relative w-full lg:w-96 group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input
-                            placeholder="Search class or course code..."
+                            placeholder={t("common.search", "Search class or course code...")}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-11 h-12 bg-white dark:bg-slate-900 border-none shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20 text-lg rounded-xl"
@@ -124,7 +126,7 @@ export default function LecturerClassesQuizzes() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-blue-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Total Classes
+                                    {t("lecturer.classes", "Total Classes")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black text-white">{classes.length}</p>
                             </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
@@ -26,6 +27,7 @@ import { PremiumCardSkeleton } from "@/components/skeletons/PremiumCardSkeleton"
 type FilterType = "all" | "pending" | "submitted" | "overdue" | "graded";
 
 export default function StudentAssignments() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { role, profile, updateProfile: syncProfile } = useAuth();
     const [selectedClassId, setSelectedClassId] = useState<string>("");
@@ -80,16 +82,14 @@ export default function StudentAssignments() {
         setIsSubmitOpen(true);
     };
 
-    const getStatusVariant = (status: string) => {
-        switch (status) {
-            case 'graded':
-                return 'success';
-            case 'submitted':
-                return 'default';
-            case 'overdue':
-                return 'destructive';
-            default:
-                return 'secondary';
+    const getFilterLabel = (f: FilterType) => {
+        switch (f) {
+            case "all": return t("common.all", "All");
+            case "pending": return t("assignments.status.pending", "Pending");
+            case "submitted": return t("assignments.status.submitted", "Submitted");
+            case "graded": return t("assignments.status.graded", "Graded");
+            case "overdue": return t("dashboard.overdue", "Overdue");
+            default: return f;
         }
     };
 
@@ -102,37 +102,36 @@ export default function StudentAssignments() {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div>
                         <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300">
-                            Assignments
+                            {t("assignments.title", "Assignments")}
                         </h1>
                         <p className="text-muted-foreground text-lg mt-2">
-                            Stay on top of your coursework and deadlines
+                            {t("assignments.description", "Stay on top of your coursework and deadlines")}
                         </p>
                     </div>
-
                 </div>
 
                 {/* Premium Stats Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
                     <PremiumStatsCard
-                        title="TOTAL"
+                        title={t("common.all", "TOTAL").toUpperCase()}
                         value={stats.total}
-                        subtitle="Active assignments"
+                        subtitle={t("assignments.title", "Active assignments")}
                         icon={BookOpen}
                         backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
                         iconBackgroundColor="bg-white/10"
                     />
                     <PremiumStatsCard
-                        title="COMPLETED"
+                        title={t("assignments.status.graded", "COMPLETED").toUpperCase()}
                         value={stats.completed}
-                        subtitle="Tasks finished"
+                        subtitle={t("dashboard.stats.completedAssignments", "Tasks finished")}
                         icon={CheckCircle2}
                         backgroundColor="bg-gradient-to-br from-green-600 to-emerald-700"
                         iconBackgroundColor="bg-white/10"
                     />
                     <PremiumStatsCard
-                        title="PENDING"
+                        title={t("assignments.status.pending", "PENDING").toUpperCase()}
                         value={stats.pending}
-                        subtitle="Require attention"
+                        subtitle={t("dashboard.stats.requireAttention", "Require attention")}
                         icon={Clock}
                         backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
                         iconBackgroundColor="bg-white/10"
@@ -206,7 +205,7 @@ export default function StudentAssignments() {
                                                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                                                 )}
                                             >
-                                                {f}
+                                                {getFilterLabel(f)}
                                             </Button>
                                         ))}
                                     </div>
@@ -221,11 +220,11 @@ export default function StudentAssignments() {
                                                         className="h-9 shrink-0 gap-2 border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 rounded-xl font-bold text-slate-600 dark:text-slate-300"
                                                     >
                                                         <Filter className="size-4" />
-                                                        <span className="hidden lg:inline capitalize">{filter}</span>
+                                                        <span className="hidden lg:inline capitalize">{getFilterLabel(filter)}</span>
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="start" className="w-48 rounded-xl p-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
-                                                    <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">Filter Status</div>
+                                                    <div className="px-2 py-1.5 text-xs font-black text-slate-400 uppercase tracking-widest">{t("common.filter", "Filter Status")}</div>
                                                     <DropdownMenuRadioGroup value={filter} onValueChange={(val) => setFilter(val as FilterType)}>
                                                         {(['all', 'pending', 'submitted', 'graded', 'overdue'] as FilterType[]).map((f) => (
                                                             <DropdownMenuRadioItem
@@ -233,7 +232,7 @@ export default function StudentAssignments() {
                                                                 value={f}
                                                                 className="capitalize rounded-lg focus:bg-blue-500/10 focus:text-blue-500 cursor-pointer font-bold"
                                                             >
-                                                                {f}
+                                                                {getFilterLabel(f)}
                                                             </DropdownMenuRadioItem>
                                                         ))}
                                                     </DropdownMenuRadioGroup>
@@ -244,7 +243,7 @@ export default function StudentAssignments() {
                                         <div className="relative flex-1">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                             <Input
-                                                placeholder="Search assignments..."
+                                                placeholder={t("common.search", "Search assignments...")}
                                                 className="pl-9 h-9 bg-background border-border/60 focus-visible:ring-1"
                                                 value={searchQuery}
                                                 onChange={(e: any) => setSearchQuery(e.target.value)}
@@ -289,15 +288,15 @@ export default function StudentAssignments() {
                                         <div className="p-4 rounded-full bg-muted mb-4">
                                             <BookOpen className="w-8 h-8 text-muted-foreground" />
                                         </div>
-                                        <h3 className="text-xl font-semibold mb-2">No assignments found</h3>
+                                        <h3 className="text-xl font-semibold mb-2">{t("assignments.noAssignments", "No assignments found")}</h3>
                                         <p className="text-muted-foreground max-w-sm mb-6">
                                             {filter === 'all' && !searchQuery
-                                                ? "You don't have any assignments for this class yet."
-                                                : "Try adjusting your filters or search query."}
+                                                ? t("assignments.noAssignmentsClass", "You don't have any assignments for this class yet.")
+                                                : t("assignments.adjustFilters", "Try adjusting your filters or search query.")}
                                         </p>
                                         {(filter !== 'all' || searchQuery) && (
                                             <Button variant="outline" onClick={() => { setFilter('all'); setSearchQuery(''); }}>
-                                                Clear Filters
+                                                {t("common.clearAll", "Clear Filters")}
                                             </Button>
                                         )}
                                     </CardContent>
@@ -327,7 +326,6 @@ export default function StudentAssignments() {
                                                     const result = await deleteSubmission(submission.id);
                                                     if (result.success) {
                                                         toast.success("Submission deleted successfully");
-                                                        // Manually refresh to ensure UI updates
                                                         await refreshAssignments(true);
                                                     } else {
                                                         toast.error(result.error || "Failed to delete submission");
@@ -347,9 +345,9 @@ export default function StudentAssignments() {
                             <div className="p-6 rounded-full bg-primary/10 mb-6">
                                 <BookOpen className="size-16 text-primary" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-3">No Classes Enrolled!</h3>
+                            <h3 className="text-2xl font-bold mb-3">{t("dashboard.noClasses", "No Classes Enrolled!")}</h3>
                             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-                                You need to join a class before you can see any assignments.
+                                {t("dashboard.joinClassToSeeAssignments", "You need to join a class before you can see any assignments.")}
                             </p>
                         </CardContent>
                     </Card>
@@ -368,7 +366,6 @@ export default function StudentAssignments() {
                         if (result.success) {
                             toast.success("Submission deleted successfully");
                             setIsSubmitOpen(false);
-                            // Manually refresh to ensure UI updates
                             await refreshAssignments(true);
                         } else {
                             toast.error(result.error || "Failed to delete submission");

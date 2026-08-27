@@ -1,0 +1,15 @@
+{
+    "portalTitle": "प्रशासक पोर्टल (Admin Portal)",
+    "systemOverview": "सिस्टम अवलोकन",
+    "earlyWarning": "प्रारंभिक चेतावनी और प्रतिधारण (Early Warning)",
+    "departments": "विभाग एवं संकाय",
+    "auditLogs": "सुरक्षा और ऑडिट लॉग",
+    "systemAnnouncements": "सिस्टम घोषणाएं",
+    "totalUsers": "कुल पंजीकृत उपयोगकर्ता",
+    "activeLecturers": "सक्रिय संकाय सदस्य",
+    "activeStudents": "नामांकित छात्र",
+    "atRiskStudents": "जोखिम वाले छात्र (At-Risk)",
+    "riskLevel": "जोखिम स्तर",
+    "sendBulkAlert": "बल्क प्रारंभिक चेतावनी अलर्ट भेजें",
+    "reports": "अनुपालन एवं प्रत्यायन रिपोर्ट"
+}

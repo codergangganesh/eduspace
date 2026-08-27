@@ -61,8 +61,10 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
+import { useTranslation } from "react-i18next";
 
 export default function AllStudents() {
+    const { t } = useTranslation();
     const { classId } = useParams<{ classId: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -393,14 +395,14 @@ export default function AllStudents() {
                             className="hidden sm:flex rounded-xl h-10 px-4 md:h-12 border-slate-200 dark:border-slate-800 font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm gap-2"
                         >
                             <UserPlus className="size-4" />
-                            Add Student
+                            {t("lecturer.addStudent", "Add Student")}
                         </Button>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button className="hidden sm:flex rounded-xl h-10 px-4 md:h-12 border-none font-bold transition-all shadow-lg hover:shadow-primary/20 bg-primary text-white gap-2">
                                     <Plus className="size-5" />
-                                    <span>Manage Students</span>
+                                    <span>{t("lecturer.manageStudents", "Manage Students")}</span>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl border-none backdrop-blur-xl bg-white/95 dark:bg-slate-900/95">
@@ -409,8 +411,8 @@ export default function AllStudents() {
                                         <FileSpreadsheet className="size-4 text-emerald-600" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="font-bold text-sm">Import Excel</span>
-                                        <span className="text-[10px] text-muted-foreground">Bulk upload data</span>
+                                        <span className="font-bold text-sm">{t("lecturer.importExcel", "Import Excel")}</span>
+                                        <span className="text-[10px] text-muted-foreground">{t("lecturer.bulkUpload", "Bulk upload data")}</span>
                                     </div>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
@@ -419,8 +421,8 @@ export default function AllStudents() {
                                         <Send className="size-4 text-blue-600" />
                                     </div>
                                     <div className="flex flex-col text-left">
-                                        <span className="font-bold text-sm">Send Requests</span>
-                                        <span className="text-[10px] text-muted-foreground">Invite all students</span>
+                                        <span className="font-bold text-sm">{t("lecturer.sendRequests", "Send Requests")}</span>
+                                        <span className="text-[10px] text-muted-foreground">{t("lecturer.inviteAllStudents", "Invite all students")}</span>
                                     </div>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={handleResendAllRequests} disabled={students.length === 0 || sendingRequests} className="h-12 rounded-xl cursor-pointer gap-3">
@@ -428,8 +430,8 @@ export default function AllStudents() {
                                         <Users className="size-4 text-amber-600" />
                                     </div>
                                     <div className="flex flex-col text-left">
-                                        <span className="font-bold text-sm">Resend Requests</span>
-                                        <span className="text-[10px] text-muted-foreground">Remind pending students</span>
+                                        <span className="font-bold text-sm">{t("lecturer.resendRequests", "Resend Requests")}</span>
+                                        <span className="text-[10px] text-muted-foreground">{t("lecturer.remindPending", "Remind pending students")}</span>
                                     </div>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -451,7 +453,7 @@ export default function AllStudents() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-blue-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Total Students
+                                    {t("lecturer.totalStudents", "Total Students")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black">{totalStudents}</p>
                             </div>
@@ -468,7 +470,7 @@ export default function AllStudents() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Accepted
+                                    {t("assignments.status.accepted", "Accepted")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black">{acceptedStudents}</p>
                             </div>
@@ -485,7 +487,7 @@ export default function AllStudents() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-amber-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Pending Requests
+                                    {t("lecturer.pendingRequests", "Pending Requests")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black">{pendingRequests}</p>
                             </div>
@@ -501,7 +503,7 @@ export default function AllStudents() {
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Search by name, email, or register number..."
+                                        placeholder={t("lecturer.searchStudents", "Search by name, email, or register number...")}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10"
@@ -509,14 +511,14 @@ export default function AllStudents() {
                                 </div>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger className="w-full sm:w-[200px]">
-                                        <SelectValue placeholder="Filter by status" />
+                                        <SelectValue placeholder={t("common.filter", "Filter by status")} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="accepted">Accepted</SelectItem>
-                                        <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="rejected">Rejected</SelectItem>
-                                        <SelectItem value="not_sent">Not Sent</SelectItem>
+                                        <SelectItem value="all">{t("common.all", "All")}</SelectItem>
+                                        <SelectItem value="accepted">{t("assignments.status.accepted", "Accepted")}</SelectItem>
+                                        <SelectItem value="pending">{t("assignments.status.pending", "Pending")}</SelectItem>
+                                        <SelectItem value="rejected">{t("assignments.status.rejected", "Rejected")}</SelectItem>
+                                        <SelectItem value="not_sent">{t("lecturer.notSent", "Not Sent")}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -533,27 +535,27 @@ export default function AllStudents() {
                             <div className="flex flex-col items-center justify-center h-96 gap-4">
                                 <FileSpreadsheet className="size-12 text-muted-foreground" />
                                 <div className="text-center">
-                                    <p className="text-lg font-semibold text-foreground">No Students Yet</p>
+                                    <p className="text-lg font-semibold text-foreground">{t("lecturer.noStudentsYet", "No Students Yet")}</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Import students using Excel or add them manually
+                                        {t("lecturer.importStudentsHelper", "Import students using Excel or add them manually")}
                                     </p>
                                 </div>
                                 <Button onClick={() => setShowImportModal(true)} className="gap-2">
                                     <Upload className="size-4" />
-                                    Import Students
+                                    {t("lecturer.importStudents", "Import Students")}
                                 </Button>
                             </div>
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Student</TableHead>
-                                        <TableHead className="hidden sm:table-cell">Register #</TableHead>
-                                        <TableHead className="hidden md:table-cell">Email</TableHead>
-                                        <TableHead className="hidden lg:table-cell">Department</TableHead>
-                                        <TableHead className="hidden lg:table-cell">Year</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead>{t("common.student", "Student")}</TableHead>
+                                        <TableHead className="hidden sm:table-cell">{t("profile.registerNumber", "Register #")}</TableHead>
+                                        <TableHead className="hidden md:table-cell">{t("profile.email", "Email")}</TableHead>
+                                        <TableHead className="hidden lg:table-cell">{t("profile.department", "Department")}</TableHead>
+                                        <TableHead className="hidden lg:table-cell">{t("profile.year", "Year")}</TableHead>
+                                        <TableHead>{t("common.status", "Status")}</TableHead>
+                                        <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>

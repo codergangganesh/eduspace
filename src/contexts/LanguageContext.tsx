@@ -1,45 +1,70 @@
-import { createContext, useContext, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 
 interface LanguageContextType {
     language: string;
-    changeLanguage: (lang: string) => void;
+    changeLanguage: (lang: string) => Promise<void>;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const { user, profile } = useAuth();
+    const { user, profile, updateProfile } = useAuth();
     const { i18n } = useTranslation();
+    const [language, setLanguageState] = useState<string>(() => {
+        const stored = localStorage.getItem("i18nextLng");
+        if (stored) return stored.split("-")[0];
+        return (i18n.language ? i18n.language.split("-")[0] : "en");
+    });
 
-    // Load language from profile on mount
+    // Listen to i18n language changes to keep state, DOM, and localStorage in sync
     useEffect(() => {
-        if (profile?.language) {
-            i18n.changeLanguage(profile.language);
+        const handleLanguageChanged = (lng: string) => {
+            const normalized = lng ? lng.split("-")[0] : "en";
+            setLanguageState(normalized);
+            document.documentElement.lang = normalized;
+            localStorage.setItem("i18nextLng", normalized);
+        };
+
+        i18n.on("languageChanged", handleLanguageChanged);
+        return () => {
+            i18n.off("languageChanged", handleLanguageChanged);
+        };
+    }, [i18n]);
+
+    // Initial sync with profile language if user has a preference in DB and no local override
+    useEffect(() => {
+        const stored = localStorage.getItem("i18nextLng");
+        if (profile?.language && !stored) {
+            const normalizedProfileLang = profile.language.split("-")[0];
+            i18n.changeLanguage(normalizedProfileLang);
+            setLanguageState(normalizedProfileLang);
+            localStorage.setItem("i18nextLng", normalizedProfileLang);
         }
-    }, [profile?.language, i18n]);
+    }, [profile?.language]);
 
-    // Change language and save to database
+    // Change language, update React state, i18next, localStorage, DOM, and user profile
     const changeLanguage = async (lang: string) => {
-        await i18n.changeLanguage(lang);
+        const normalized = lang.split("-")[0];
+        setLanguageState(normalized);
+        localStorage.setItem("i18nextLng", normalized);
+        document.documentElement.lang = normalized;
 
-        // Save to database if user is logged in
-        if (user) {
+        await i18n.changeLanguage(normalized);
+
+        // Update in AuthContext profile state and database
+        if (user && updateProfile) {
             try {
-                await supabase
-                    .from("profiles")
-                    .update({ language: lang })
-                    .eq("user_id", user.id);
+                await updateProfile({ language: normalized });
             } catch (error) {
-                console.error("Error saving language:", error);
+                console.error("Error saving language to profile:", error);
             }
         }
     };
 
     return (
-        <LanguageContext.Provider value={{ language: i18n.language, changeLanguage }}>
+        <LanguageContext.Provider value={{ language, changeLanguage }}>
             {children}
         </LanguageContext.Provider>
     );

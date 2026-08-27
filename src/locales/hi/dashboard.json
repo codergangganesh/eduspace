@@ -1,0 +1,31 @@
+{
+    "welcomeBack": "स्वागत है",
+    "overview": "अवलोकन",
+    "upcomingAssignments": "आगामी असाइनमेंट",
+    "upcomingClasses": "आगामी कक्षाएं",
+    "recentActivity": "हाल की गतिविधि",
+    "quickActions": "त्वरित क्रियाएं",
+    "upcomingContests": "आगामी कोडिंग प्रतियोगिताएं",
+    "competitiveSchedules": "लाइव प्रतियोगिता कार्यक्रम",
+    "live": "लाइव",
+    "soon": "जल्द",
+    "addedToCalendar": "कैलेंडर में जोड़ा गया",
+    "addToCalendar": "गूगल कैलेंडर में जोड़ें",
+    "noContests": "वर्तमान में कोई आगामी प्रतियोगिता नहीं है।",
+    "momentumTracker": "लगातार प्रगति ट्रैकर",
+    "stats": {
+        "totalCourses": "कुल पाठ्यक्रम",
+        "activeAssignments": "सक्रिय कार्य",
+        "completedAssignments": "पूर्ण किए गए कार्य",
+        "requireAttention": "ध्यान देने योग्य",
+        "upcomingClasses": "आगामी कक्षाएं",
+        "dayBlaze": "लगातार अध्ययन दिवस"
+    },
+    "viewAllAssignments": "सभी असाइनमेंट देखें",
+    "viewSchedule": "शेड्यूल देखें",
+    "noAssignments": "कोई आगामी असाइनमेंट नहीं है",
+    "noClasses": "कोई आगामी कक्षा नहीं है",
+    "dueToday": "आज नियत",
+    "dueTomorrow": "कल नियत",
+    "overdue": "अतिदेय"
+}

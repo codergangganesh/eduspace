@@ -10,11 +10,13 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 export function NotificationsPopover() {
+    const { t } = useTranslation();
     const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
     const { role } = useAuth();
     const navigate = useNavigate();
@@ -138,10 +140,10 @@ export function NotificationsPopover() {
                     {/* Header */}
                     <div className="p-4 flex items-center justify-between border-b">
                         <div>
-                            <h3 className="font-semibold">Notifications</h3>
+                            <h3 className="font-semibold">{t("common.notifications", "Notifications")}</h3>
                             {unreadCount > 0 && (
                                 <p className="text-xs text-muted-foreground">
-                                    {unreadCount} unread
+                                    {unreadCount} {t("common.unread", "unread")}
                                 </p>
                             )}
                         </div>
@@ -153,7 +155,7 @@ export function NotificationsPopover() {
                                 className="text-xs"
                             >
                                 <CheckCheck className="h-3 w-3 mr-1" />
-                                Mark all read
+                                {t("common.markAllAsRead", "Mark all read")}
                             </Button>
                         )}
                     </div>
@@ -162,14 +164,14 @@ export function NotificationsPopover() {
                     {loading ? (
                         <div className="p-8 text-center">
                             <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground animate-pulse" />
-                            <p className="text-sm text-muted-foreground">Loading notifications...</p>
+                            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading notifications...")}</p>
                         </div>
                     ) : notifications.length === 0 ? (
                         <div className="p-8 text-center">
                             <Bell className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                            <p className="text-sm font-medium mb-1">No notifications</p>
+                            <p className="text-sm font-medium mb-1">{t("notifications.noNotifications", "No notifications")}</p>
                             <p className="text-xs text-muted-foreground">
-                                You're all caught up!
+                                {t("notifications.noNotificationsDescription", "You're all caught up!")}
                             </p>
                         </div>
                     ) : (
@@ -179,7 +181,7 @@ export function NotificationsPopover() {
                                 {groupedNotifications.today.length > 0 && (
                                     <div className="mb-4">
                                         <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                            Today
+                                            {t("common.today", "Today")}
                                         </p>
                                         {groupedNotifications.today.map((notification) => (
                                             <NotificationItem
@@ -196,7 +198,7 @@ export function NotificationsPopover() {
                                 {groupedNotifications.yesterday.length > 0 && (
                                     <div className="mb-4">
                                         <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                            Yesterday
+                                            {t("common.yesterday", "Yesterday")}
                                         </p>
                                         {groupedNotifications.yesterday.map((notification) => (
                                             <NotificationItem
@@ -213,7 +215,7 @@ export function NotificationsPopover() {
                                 {groupedNotifications.earlier.length > 0 && (
                                     <div className="mb-4">
                                         <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                            Earlier
+                                            {t("common.earlier", "Earlier")}
                                         </p>
                                         {groupedNotifications.earlier.map((notification) => (
                                             <NotificationItem

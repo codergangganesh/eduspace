@@ -1,0 +1,15 @@
+{
+    "portalTitle": "Administrator Portal",
+    "systemOverview": "System Overview",
+    "earlyWarning": "Early Warning & Retention",
+    "departments": "Departments & Faculties",
+    "auditLogs": "Security & Audit Logs",
+    "systemAnnouncements": "System Announcements",
+    "totalUsers": "Total Registered Users",
+    "activeLecturers": "Active Faculty Members",
+    "activeStudents": "Enrolled Students",
+    "atRiskStudents": "At-Risk Students Detected",
+    "riskLevel": "Risk Level",
+    "sendBulkAlert": "Send Bulk Early Warning Alert",
+    "reports": "Compliance & Accreditation Reports"
+}

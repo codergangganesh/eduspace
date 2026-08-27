@@ -1,0 +1,15 @@
+{
+    "portalTitle": "అడ్మినిస్ట్రేటర్ పోర్టల్ (Admin Portal)",
+    "systemOverview": "సిస్టమ్ సమీక్ష",
+    "earlyWarning": "ముందస్తు హెచ్చరిక & రిటెన్షన్ (Early Warning)",
+    "departments": "విభాగాలు & ఫ్యాకల్టీలు",
+    "auditLogs": "సెక్యూరిటీ & ఆడిట్ లాగ్‌లు",
+    "systemAnnouncements": "సిస్టమ్ ప్రకటనలు",
+    "totalUsers": "మొత్తం నమోదైన వినియోగదారులు",
+    "activeLecturers": "యాక్టివ్ ఫ్యాకల్టీ సభ్యులు",
+    "activeStudents": "నమోదైన విద్యార్థులు",
+    "atRiskStudents": "రిస్క్‌లో ఉన్న విద్యార్థులు (At-Risk)",
+    "riskLevel": "రిస్క్ స్థాయి",
+    "sendBulkAlert": "బల్క్ ముందస్తు హెచ్చరికను పంపండి",
+    "reports": "కంప్లైయన్స్ & అక్రిడిటేషన్ నివేదికలు"
+}

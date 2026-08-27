@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useClasses } from '@/hooks/useClasses';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,6 +15,7 @@ import { SectionClassCard } from '@/components/common/SectionClassCard';
 import { GridSkeleton } from '@/components/skeletons/GridSkeleton';
 
 export default function LecturerClassesAssignments() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { classes, loading } = useClasses();
     const [searchQuery, setSearchQuery] = useState('');
@@ -36,10 +38,10 @@ export default function LecturerClassesAssignments() {
                 <div className="flex flex-col gap-4">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                            Academic Courses
+                            {t("lecturer.classes", "Academic Courses")}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Manage your active classroom sessions
+                            {t("lecturer.manageClasses", "Manage your active classroom sessions")}
                         </p>
                     </div>
 
@@ -47,7 +49,7 @@ export default function LecturerClassesAssignments() {
                     <div className="relative max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search classes..."
+                            placeholder={t("common.search", "Search classes...")}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10"
@@ -55,7 +57,6 @@ export default function LecturerClassesAssignments() {
                     </div>
                 </div>
 
-                {/* Stats Overview - Dark Glass Design */}
                 {/* Stats Overview - Premium Design */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <Card className="border-none bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl rounded-2xl overflow-hidden group">
@@ -68,7 +69,7 @@ export default function LecturerClassesAssignments() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-blue-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Total Classes
+                                    {t("lecturer.classes", "Total Classes")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black text-white">{classes.length}</p>
                             </div>
@@ -85,7 +86,7 @@ export default function LecturerClassesAssignments() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-violet-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Total Students
+                                    {t("lecturer.totalStudents", "Total Students")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black text-white">
                                     {classes.reduce((sum, c) => sum + (c.student_count || 0), 0)}
@@ -104,7 +105,7 @@ export default function LecturerClassesAssignments() {
                             </div>
                             <div className="relative z-10 min-w-0">
                                 <p className="text-[10px] sm:text-sm text-emerald-100/80 font-semibold uppercase tracking-wider truncate">
-                                    Active Status
+                                    {t("common.status", "Active Status")}
                                 </p>
                                 <p className="text-xl sm:text-3xl font-black text-white">
                                     {classes.length > 0 ? Math.round((classes.filter((c) => c.is_active).length / classes.length) * 100) : 0}%
@@ -124,12 +125,12 @@ export default function LecturerClassesAssignments() {
                                 <BookOpen className="size-8 text-muted-foreground" />
                             </div>
                             <h3 className="text-lg font-semibold mb-2 text-foreground">
-                                {searchQuery ? 'No classes found' : 'No classes yet'}
+                                {searchQuery ? t("dashboard.noClasses", "No classes found") : t("dashboard.noClasses", "No classes yet")}
                             </h3>
                             <p className="text-muted-foreground">
                                 {searchQuery
-                                    ? 'Try adjusting your search query'
-                                    : 'Create a class to start managing assignments'}
+                                    ? t("dashboard.adjustFilter", "Try adjusting your search query")
+                                    : t("dashboard.createClassFirst", "Create a class to start managing assignments")}
                             </p>
                         </CardContent>
                     </Card>

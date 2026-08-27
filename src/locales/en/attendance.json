@@ -1,0 +1,17 @@
+{
+    "title": "Attendance",
+    "description": "Track your overall and course-wise attendance percentages",
+    "overallAttendance": "Overall Attendance",
+    "present": "Present",
+    "absent": "Absent",
+    "late": "Late",
+    "excused": "Excused",
+    "totalClasses": "Total Classes",
+    "attendedClasses": "Attended Classes",
+    "attendanceRequirement": "Minimum 75% attendance required for exam eligibility.",
+    "statusGood": "Good Attendance Standing",
+    "statusWarning": "Attendance Warning: Below 75%",
+    "markAttendance": "Mark Attendance",
+    "date": "Date",
+    "subject": "Subject"
+}

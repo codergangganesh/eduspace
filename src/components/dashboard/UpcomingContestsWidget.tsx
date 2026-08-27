@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Trophy, Calendar, Clock, RefreshCw, Zap, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { Contest, PlatformName } from '@/types/contest';
 import { fetchUpcomingContests, formatDuration, generateGoogleCalendarUrl } from '@/services/contestService';
@@ -41,6 +42,7 @@ function formatContestStartLabel(startTimeIso: string) {
 }
 
 export function UpcomingContestsWidget() {
+  const { t } = useTranslation();
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,10 +89,10 @@ export function UpcomingContestsWidget() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none">
-              Upcoming Contests
+              {t("dashboard.upcomingContests", "Upcoming Contests")}
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-              Live competitive schedules
+              {t("dashboard.competitiveSchedules", "Live competitive schedules")}
             </p>
           </div>
         </div>
@@ -99,7 +101,7 @@ export function UpcomingContestsWidget() {
           <button
             onClick={() => loadData(true)}
             disabled={loading || refreshing}
-            title="Refresh"
+            title={t("common.refresh", "Refresh")}
             className="size-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors disabled:opacity-40 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -109,7 +111,7 @@ export function UpcomingContestsWidget() {
             to="/contests"
             className="flex items-center gap-0.5 h-8 px-3 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
           >
-            View All <ChevronRight className="size-3 ml-0.5" />
+            {t("common.viewAll", "View All")} <ChevronRight className="size-3 ml-0.5" />
           </Link>
         </div>
       </div>
@@ -130,10 +132,10 @@ export function UpcomingContestsWidget() {
         ) : contests.length === 0 ? (
           <div className="text-center py-8 space-y-2">
             <p className="text-sm text-muted-foreground font-medium">
-              No upcoming contests right now.
+              {t("dashboard.noContests", "No upcoming contests right now.")}
             </p>
             <Button variant="link" size="sm" onClick={() => loadData(true)} className="text-primary">
-              Check again
+              {t("common.checkAgain", "Check again")}
             </Button>
           </div>
         ) : (
@@ -159,12 +161,12 @@ export function UpcomingContestsWidget() {
                       </span>
                       {contest.status === 'CODING' && (
                         <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-900/70 flex items-center gap-0.5">
-                          <Zap className="size-2.5 fill-current" /> Live
+                          <Zap className="size-2.5 fill-current" /> {t("dashboard.live", "Live")}
                         </span>
                       )}
                       {contest.in24Hours && contest.status !== 'CODING' && (
                         <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-900/70">
-                          Soon
+                          {t("dashboard.soon", "Soon")}
                         </span>
                       )}
                     </div>
@@ -183,7 +185,7 @@ export function UpcomingContestsWidget() {
                       href={generateGoogleCalendarUrl(contest)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title={isCalendarAdded ? 'Added to calendar' : 'Add to Google Calendar'}
+                      title={isCalendarAdded ? t("dashboard.addedToCalendar", "Added to calendar") : t("dashboard.addToCalendar", "Add to Google Calendar")}
                       onClick={() => markCalendarAdded(contest.id)}
                       className={`size-7 rounded-lg flex items-center justify-center transition-colors border ${isCalendarAdded
                         ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-900/70 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
@@ -199,7 +201,7 @@ export function UpcomingContestsWidget() {
                       rel="noopener noreferrer"
                       className="h-7 px-3 rounded-lg text-xs font-semibold text-white flex items-center bg-primary hover:bg-primary-hover transition-colors"
                     >
-                      Join
+                      {t("common.join", "Join")}
                     </a>
                   </div>
                 </div>

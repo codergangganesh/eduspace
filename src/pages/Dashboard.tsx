@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { PendingInvitationsPanel } from "@/components/student/PendingInvitationsPanel";
 import { JoinRequestModal } from "@/components/student/JoinRequestModal";
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentOnboarding } from "@/hooks/useStudentOnboarding";
 import { useRealtimeInvitations } from "@/hooks/useRealtimeInvitations";
@@ -29,6 +30,7 @@ import { UpcomingContestsWidget } from "@/components/dashboard/UpcomingContestsW
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { assignments, stats, loading: assignmentsLoading } = useAssignments();
   const { schedules, loading: scheduleLoading } = useSchedule();
   const { streak, loading: streakLoading } = useStreak();
@@ -222,18 +224,18 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
           <PremiumStatsCard
-            title="ASSIGNED"
+            title={t("assignments.status.pending", "ASSIGNED").toUpperCase()}
             value={displayStats.total}
-            subtitle="Total active tasks"
+            subtitle={t("dashboard.stats.activeAssignments", "Total active tasks")}
             icon={FileText}
             backgroundColor="bg-gradient-to-br from-blue-600 to-indigo-700"
             iconBackgroundColor="bg-white/10"
             onClick={() => navigate("/student/assignments")}
           />
           <PremiumStatsCard
-            title="STREAK"
+            title={t("common.streak", "STREAK").toUpperCase()}
             value={displayStreak?.current_streak || 0}
-            subtitle="Day blaze"
+            subtitle={t("dashboard.stats.dayBlaze", "Day blaze")}
             icon={Flame}
             backgroundColor="bg-gradient-to-br from-orange-500 to-red-600"
             iconBackgroundColor="bg-white/10"
@@ -241,34 +243,34 @@ export default function Dashboard() {
             className="hidden md:flex"
           />
           <PremiumStatsCard
-            title="COMPLETED"
+            title={t("assignments.status.graded", "COMPLETED").toUpperCase()}
             value={displayStats.completed}
-            subtitle="Tasks finished"
+            subtitle={t("dashboard.stats.completedAssignments", "Tasks finished")}
             icon={CheckCircle}
             backgroundColor="bg-gradient-to-br from-green-600 to-emerald-700"
             iconBackgroundColor="bg-white/10"
           />
           <PremiumStatsCard
-            title="PENDING"
+            title={t("assignments.pendingAssignments", "PENDING").toUpperCase()}
             value={displayStats.pending}
-            subtitle="Require attention"
+            subtitle={t("dashboard.stats.requireAttention", "Require attention")}
             icon={AlertCircle}
             backgroundColor="bg-gradient-to-br from-amber-500 to-orange-600"
             iconBackgroundColor="bg-white/10"
           />
           <PremiumStatsCard
-            title="ATTENDANCE"
+            title={t("common.attendance", "ATTENDANCE").toUpperCase()}
             value={attendanceLoading ? <div className="animate-spin"><Clock className="size-4" /></div> : attendanceStats ? `${attendanceStats.percentage}%` : "0%"}
-            subtitle="Overall presence"
+            subtitle={t("attendance.overallAttendance", "Overall presence")}
             icon={PieChart}
             backgroundColor="bg-gradient-to-br from-indigo-600 to-primary"
             iconBackgroundColor="bg-white/10"
             onClick={() => navigate("/student/attendance")}
           />
           <PremiumStatsCard
-            title="SCHEDULE"
+            title={t("common.schedule", "SCHEDULE").toUpperCase()}
             value="View"
-            subtitle="Weekly plan"
+            subtitle={t("dashboard.viewSchedule", "Weekly plan")}
             icon={Calendar}
             backgroundColor="bg-gradient-to-br from-purple-600 to-violet-700"
             iconBackgroundColor="bg-white/10"
@@ -287,17 +289,15 @@ export default function Dashboard() {
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-black text-[10px] text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Flame className="size-3.5 text-orange-500" />
-                  Momentum Tracker
+                  {t("dashboard.momentumTracker", "Momentum Tracker")}
                 </h3>
               </div>
               <DashboardStreakCard streak={displayStreak} className="mt-3" />
             </div>
 
-
-
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-foreground">Current Assignments</h2>
+                <h2 className="text-xl font-bold text-foreground">{t("dashboard.upcomingAssignments", "Current Assignments")}</h2>
               </div>
               <DashboardAssignmentList assignments={assignments.filter(a => a.studentStatus === 'pending' || a.studentStatus === 'overdue')} />
             </div>
@@ -310,7 +310,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between px-1">
                 <h3 className="font-black text-[10px] text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Flame className="size-3.5 text-orange-500" />
-                  Momentum Tracker
+                  {t("dashboard.momentumTracker", "Momentum Tracker")}
                 </h3>
               </div>
               <DashboardStreakCard streak={displayStreak} className="mt-3" />
@@ -323,7 +323,7 @@ export default function Dashboard() {
             <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/50 p-5 shadow-[6px_6px_12px_rgba(0,0,0,0.08),-6px_-6px_12px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[6px_6px_12px_rgba(0,0,0,0.3),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.15)] transition-all duration-300">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Clock className="size-4 text-purple-500" />
-                Upcoming Classes
+                {t("dashboard.upcomingClasses", "Upcoming Classes")}
               </h3>
               <div className="space-y-3">
                 {displayUpcomingClasses.length > 0 ? (
@@ -335,7 +335,7 @@ export default function Dashboard() {
                     />
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">No upcoming classes</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">{t("dashboard.noClasses", "No upcoming classes")}</p>
                 )}
               </div>
               <Button
@@ -343,7 +343,7 @@ export default function Dashboard() {
                 onClick={() => navigate("/schedule")}
                 className="w-full mt-2 text-xs"
               >
-                View Full Schedule
+                {t("dashboard.viewSchedule", "View Full Schedule")}
               </Button>
             </div>
 
@@ -351,7 +351,7 @@ export default function Dashboard() {
             <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-[1.5rem] border border-slate-200/50 dark:border-slate-700/50 p-5 shadow-[6px_6px_12px_rgba(0,0,0,0.08),-6px_-6px_12px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)] dark:shadow-[6px_6px_12px_rgba(0,0,0,0.3),-6px_-6px_12px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.15)] transition-all duration-300">
               <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Calendar className="size-4 text-primary" />
-                Assignments Due
+                {t("dashboard.upcomingAssignments", "Assignments Due")}
               </h3>
               <div className="space-y-3">
                 {displayUpcomingTasks.length > 0 ? (
@@ -363,14 +363,11 @@ export default function Dashboard() {
                     />
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">No pending deadlines</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">{t("dashboard.noAssignments", "No pending deadlines")}</p>
                 )}
               </div>
             </div>
-
-
           </div>
-
         </div>
       </div>
 

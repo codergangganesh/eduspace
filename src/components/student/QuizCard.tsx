@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Clock, FileText, Trophy, PlayCircle, CheckCircle, XCircle, Eye, ArrowRight } from 'lucide-react';
 import { Quiz } from '@/types/quiz';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface QuizCardProps {
     quiz: Quiz & {
@@ -29,6 +30,8 @@ interface QuizCardProps {
 }
 
 export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, viewMode = 'grid', className }: QuizCardProps) {
+    const { t } = useTranslation();
+
     // Determine state
     const hasActiveSubmission = !!quiz.my_submission && !quiz.my_submission.is_archived;
     const isCompleted = hasActiveSubmission && quiz.my_submission.status !== 'pending';
@@ -66,7 +69,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                 {quiz.classes?.course_code || 'COURSE'}
                             </Badge>
                             <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground">
-                                {showAttemptedState ? quiz.my_submission?.status?.toUpperCase() : 'NOT STARTED'}
+                                {showAttemptedState ? quiz.my_submission?.status?.toUpperCase() : t("quizzes.status.pending", "NOT STARTED").toUpperCase()}
                             </span>
                         </div>
                     </div>
@@ -89,7 +92,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                     <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-300 shrink-0 border-r border-slate-200 dark:border-white/10 pr-4 mr-2 hidden md:flex">
                         <div className="flex items-center gap-1.5" title="Questions">
                             <FileText className="size-4" />
-                            <span className="font-medium text-slate-900 dark:text-white">{quiz._count?.questions || 0}</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{quiz._count?.questions || 0} {t("quizzes.questions", "Questions")}</span>
                         </div>
                         <div className="flex items-center gap-1.5" title="Total Points">
                             <Trophy className="size-4" />
@@ -97,7 +100,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                         </div>
                         <div className="flex items-center gap-1.5" title="Pass Score">
                             <CheckCircle className="size-4" />
-                            <span className="font-medium text-slate-900 dark:text-white">{quiz.pass_percentage}% Pass</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{quiz.pass_percentage}% {t("quizzes.passScore", "Pass")}</span>
                         </div>
                     </div>
 
@@ -111,13 +114,14 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                     className="flex-1 md:flex-none font-semibold"
                                     variant="outline"
                                 >
-                                    Details
+                                    {t("common.viewDetails", "Details")}
                                 </Button>
                                 <Button
                                     onClick={() => onViewLeaderboard(quiz.id, quiz.class_id)}
                                     size="icon"
                                     className="shrink-0"
                                     variant="ghost"
+                                    title={t("quizzes.leaderboard", "Leaderboard")}
                                 >
                                     <Trophy className="size-4 text-amber-500" />
                                 </Button>
@@ -128,7 +132,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                 size="sm"
                                 className="w-full md:w-auto font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                             >
-                                Start Quiz
+                                {t("quizzes.startQuiz", "Start Quiz")}
                             </Button>
                         )}
                     </div>
@@ -158,7 +162,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                         </Badge>
                     ) : (
                         <Badge className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md font-bold shadow-sm px-2 py-0.5 rounded-md text-[8px]">
-                            NOT STARTED
+                            {t("quizzes.status.pending", "NOT STARTED").toUpperCase()}
                         </Badge>
                     )}
                 </div>
@@ -193,7 +197,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                     <div className="flex gap-1.5">
                         <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5">
                             <FileText className="size-3 text-blue-500 shrink-0" />
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{quiz._count?.questions || 0} Questions</span>
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{quiz._count?.questions || 0} {t("quizzes.questions", "Questions")}</span>
                         </div>
                         <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5">
                             <Trophy className="size-3 text-amber-500 shrink-0" />
@@ -204,7 +208,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                     <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/10">
                         <Clock className="size-3 text-indigo-500 shrink-0" />
                         <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
-                            {quiz.pass_percentage}% Required to Pass
+                            {quiz.pass_percentage}% {t("quizzes.requiredToPass", "Required to Pass")}
                         </span>
                     </div>
                 </div>
@@ -218,13 +222,13 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                                 className="flex-1 rounded-xl font-bold text-xs h-8 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 shadow transition-all flex items-center justify-center gap-1"
                             >
                                 <Eye className="size-3" />
-                                Details
+                                {t("common.viewDetails", "Details")}
                             </Button>
                             <Button
                                 onClick={() => onViewLeaderboard(quiz.id, quiz.class_id)}
                                 variant="outline"
                                 className="rounded-xl h-8 w-8 p-0 border-slate-200 dark:border-white/10"
-                                title="Leaderboard"
+                                title={t("quizzes.leaderboard", "Leaderboard")}
                             >
                                 <Trophy className="size-3.5 text-amber-500" />
                             </Button>
@@ -234,7 +238,7 @@ export function QuizCard({ quiz, onAttempt, onViewDetails, onViewLeaderboard, vi
                             onClick={() => onAttempt(quiz.id)}
                             className="w-full rounded-xl font-bold text-xs h-8 bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow transition-all hover:scale-[1.02] active:scale-95 border-none"
                         >
-                            {canReattempt ? 'Retake Quiz' : 'Start Quiz'}
+                            {canReattempt ? t("quizzes.retakeQuiz", "Retake Quiz") : t("quizzes.startQuiz", "Start Quiz")}
                         </Button>
                     )}
                 </div>

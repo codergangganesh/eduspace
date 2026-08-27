@@ -12,6 +12,7 @@ import { CommandPalette } from "./CommandPalette";
 import { AICoachWidget } from "@/components/dashboard/AICoachWidget";
 import { SuspensionBanner } from "@/components/common/SuspensionBanner";
 import { SuspensionModal } from "@/components/common/SuspensionModal";
+import { LanguageDialog } from "@/components/language/LanguageDialog";
 
 
 export function RootLayout() {
@@ -105,6 +106,7 @@ export function RootLayout() {
         <div className="h-[100dvh] w-full overflow-hidden bg-background flex flex-col relative">
             <CommandPalette />
             <SuspensionModal />
+            <LanguageDialog />
             {!options.hideSidebar && (
                 <>
                     <Sidebar

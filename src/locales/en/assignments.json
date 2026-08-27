@@ -1,0 +1,25 @@
+{
+    "title": "Assignments",
+    "description": "Manage your coursework, projects, and assignment submissions",
+    "pendingAssignments": "Pending Assignments",
+    "submittedAssignments": "Submitted Assignments",
+    "gradedAssignments": "Graded Assignments",
+    "dueDate": "Due Date",
+    "noDueDate": "No Due Date",
+    "lateSubmit": "Late Submit",
+    "submittedOn": "Submitted On",
+    "grade": "Grade",
+    "feedback": "Lecturer Feedback",
+    "submitAssignment": "Submit Assignment",
+    "uploadFiles": "Upload Files",
+    "submissionText": "Submission Notes / Text",
+    "fileDropzone": "Drag and drop your assignment files here, or browse",
+    "noAssignments": "No assignments assigned currently.",
+    "status": {
+        "pending": "Pending",
+        "submitted": "Submitted",
+        "graded": "Graded",
+        "overdue": "Overdue",
+        "late": "Late"
+    }
+}

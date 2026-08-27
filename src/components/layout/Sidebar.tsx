@@ -22,6 +22,8 @@ import {
   Shield,
   Gamepad2,
   Trophy,
+  Globe,
+  Check,
 } from "lucide-react";
 import {
   Tooltip,
@@ -31,11 +33,14 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useLecturerStudents } from "@/hooks/useLecturerStudents";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { readCachedProfileIdentity } from "@/lib/imagePerformance";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +93,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, role, profile, user } = useAuth();
@@ -95,14 +101,50 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   const [isStudentsExpanded, setIsStudentsExpanded] = useState(true);
   void onHoverChange;
 
+  const getNavLabel = (label: string) => {
+    switch (label) {
+      case "Dashboard": return t("common.dashboard", "Dashboard");
+      case "Assignments": return t("common.assignments", "Assignments");
+      case "Quizzes": return t("common.quizzes", "Quizzes");
+      case "Attendance": return t("common.attendance", "Attendance");
+      case "Schedule": return t("common.schedule", "Schedule");
+      case "Messages": return t("common.messages", "Messages");
+      case "Coding Contests": return t("common.contests", "Coding Contests");
+      case "Opportunities": return t("common.opportunities", "Opportunities");
+      case "Knowledge Map": return t("common.knowledgeMap", "Knowledge Map");
+      case "Eduspace AI": return t("common.aiAgent", "Eduspace AI");
+      case "AI Voice Tutor": return t("common.voiceTutor", "AI Voice Tutor");
+      case "Maths Playground": return t("common.mathsPuzzle", "Maths Playground");
+      case "Profile": return t("common.profile", "Profile");
+      case "Settings": return t("common.settings", "Settings");
+      case "All Students": return t("lecturer.students", "All Students");
+      case "Time Table": return t("lecturer.timetable", "Time Table");
+      case "AI Quiz Generator": return t("lecturer.createAIQuiz", "AI Quiz Generator");
+      default: return label;
+    }
+  };
+
   // Fetch students ONLY if user is a lecturer
   const { students } = useLecturerStudents();
   const isLecturer = role === "lecturer";
+  const { language, changeLanguage } = useLanguage();
+  const [isSidebarLangExpanded, setIsSidebarLangExpanded] = useState(false);
   const cachedIdentity = useMemo(() => readCachedProfileIdentity(user?.id), [user?.id]);
   const displayName = profile?.full_name || cachedIdentity?.fullName || "User";
   const displayEmail = profile?.email || cachedIdentity?.email || "No email provided";
   const displayAvatar = profile?.avatar_url || cachedIdentity?.avatarUrl || "";
   const displayInitials = displayName.split(" ").map((n) => n[0]).join("").toUpperCase() || "U";
+
+  const languages = [
+    { code: "en", label: "English" },
+    { code: "hi", label: "हिन्दी (Hindi)" },
+    { code: "te", label: "తెలుగు (Telugu)" },
+    { code: "es", label: "Español (Spanish)" },
+    { code: "fr", label: "Français (French)" },
+    { code: "de", label: "Deutsch (German)" },
+    { code: "zh", label: "中文 (Chinese)" },
+    { code: "ja", label: "日本語 (Japanese)" },
+  ];
 
   const navItems = isLecturer ? lecturerNavItems : studentNavItems;
 
@@ -224,7 +266,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                     ) : (
                       <item.icon className={cn("size-5 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
                     )}
-                    {!isCollapsed && <span>{item.label}</span>}
+                    {!isCollapsed && <span>{getNavLabel(item.label)}</span>}
                   </Link>
                 );
 
@@ -235,7 +277,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                         {content}
                       </TooltipTrigger>
                       <TooltipContent side="right" className="font-medium">
-                        {item.label}
+                        {getNavLabel(item.label)}
                       </TooltipContent>
                     </Tooltip>
                   );
@@ -290,14 +332,8 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
         )}>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <button className={cn(
-                "flex items-center w-full gap-3 p-2 rounded-xl border border-transparent hover:bg-muted/50 transition-all duration-300 group outline-none",
-                isCollapsed ? "justify-center px-0" : "px-3"
-              )}>
-                <Avatar className={cn(
-                  "border border-border/50 shadow-sm transition-transform duration-300 group-hover:scale-105",
-                  isCollapsed ? "size-10" : "size-9"
-                )}>
+              <button className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-muted/50 transition-colors group">
+                <Avatar className="size-9 shadow-sm shrink-0">
                   <AvatarImage src={displayAvatar} />
                   <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
                     {displayInitials}
@@ -310,13 +346,9 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
                       {displayName}
                     </p>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 truncate">
-                      {role === "lecturer" ? "Lecturer" : role === "admin" ? "Admin" : "Student"}
+                      {role === "lecturer" ? t("lecturer.lecturer", "Lecturer") : role === "admin" ? t("admin.admin", "Admin") : t("common.student", "Student")}
                     </p>
                   </div>
-                )}
-
-                {!isCollapsed && (
-                  <ChevronDown className="size-4 text-muted-foreground group-hover:text-foreground transition-colors opacity-40 group-hover:opacity-100" />
                 )}
               </button>
             </DropdownMenuTrigger>
@@ -337,22 +369,66 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
               <DropdownMenuItem asChild>
                 <Link to="/profile" className="flex items-center gap-2 cursor-pointer py-2.5 rounded-lg">
                   <User className="size-4" />
-                  <span className="font-semibold">Profile</span>
+                  <span className="font-semibold">{t("common.profile", "Profile")}</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="flex items-center gap-2 cursor-pointer py-2.5 rounded-lg">
                   <Settings className="size-4" />
-                  <span className="font-semibold">Settings</span>
+                  <span className="font-semibold">{t("common.settings", "Settings")}</span>
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center justify-between cursor-pointer py-2 rounded-lg"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setIsSidebarLangExpanded(!isSidebarLangExpanded);
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Globe className="size-4 text-sky-500" />
+                  <span className="font-semibold">{t("common.selectLanguage", "Language")}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full border border-primary/20">
+                    {languages.find((l) => l.code === (language || "en"))?.label.split(" ")[0] || "English"}
+                  </span>
+                  <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-200", isSidebarLangExpanded && "rotate-180")} />
+                </div>
+              </DropdownMenuItem>
+
+              {isSidebarLangExpanded && (
+                <div className="my-1 p-1 bg-muted/40 rounded-xl border border-border/40 space-y-0.5 animate-in fade-in-0 zoom-in-95 duration-150 max-h-48 overflow-y-auto">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => {
+                        changeLanguage(lang.code);
+                        toast.success(`Language changed to ${lang.label}`);
+                        setIsSidebarLangExpanded(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all font-medium text-left",
+                        language === lang.code
+                          ? "bg-primary/15 text-primary font-bold shadow-xs"
+                          : "hover:bg-muted text-foreground/80 hover:text-foreground"
+                      )}
+                    >
+                      <span>{lang.label}</span>
+                      {language === lang.code && <Check className="size-3.5 text-primary stroke-[3]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer py-2.5 rounded-lg"
               >
                 <LogOut className="size-4" />
-                <span className="font-black uppercase tracking-wider text-[11px]">Sign Out</span>
+                <span className="font-black uppercase tracking-wider text-[11px]">{t("common.logout", "Sign Out")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -361,4 +437,3 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
     </aside>
   );
 }
-

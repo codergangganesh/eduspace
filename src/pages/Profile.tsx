@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth, Profile as ProfileType } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -249,27 +250,8 @@ const getHeaderProfileIcons = (data: Record<string, any>, isViewOnly = false): S
   return [...active, ...defaultsToInclude];
 };
 
-const studentProfileTabs = [
-  { id: "personal", label: "Personal Info", icon: User },
-  { id: "academic", label: "Academic Details", icon: GraduationCap },
-  { id: "coding", label: "Coding Profiles", icon: Code2 },
-  { id: "social", label: "Social Links", icon: Share2 },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "preferences", label: "Settings", icon: Settings },
-];
-
-const lecturerProfileTabs = [
-  { id: "personal", label: "Personal Info", icon: User },
-  { id: "academic", label: "Academic Details", icon: GraduationCap },
-  { id: "2fa", label: "Two-Factor Auth (2FA)", icon: AndroidIcon },
-  { id: "passkeys", label: "Passkeys & Biometrics", icon: Fingerprint },
-  { id: "password", label: "Account Password", icon: Lock },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "preferences", label: "Settings", icon: Settings },
-];
-
 export default function Profile() {
+  const { t } = useTranslation();
   const { user, profile, isAuthenticated, isLoading: authLoading, updateProfile, role } = useAuth();
   const { globalHideDashboardHeader, setGlobalHideDashboardHeader } = useLayout();
   const navigate = useNavigate();
@@ -287,6 +269,27 @@ export default function Profile() {
 
   const isLecturer = role === "lecturer" || profile?.role === "lecturer";
   const isStudent = !isLecturer;
+
+  const studentProfileTabs = [
+    { id: "personal", label: t("profile.personalInfo", "Personal Info"), icon: User },
+    { id: "academic", label: t("profile.academicDetails", "Academic Details"), icon: GraduationCap },
+    { id: "coding", label: t("profile.codingProfiles", "Coding Profiles"), icon: Code2 },
+    { id: "social", label: t("profile.socialLinks", "Social Links"), icon: Share2 },
+    { id: "security", label: t("profile.security", "Security"), icon: Shield },
+    { id: "notifications", label: t("common.notifications", "Notifications"), icon: Bell },
+    { id: "preferences", label: t("common.settings", "Settings"), icon: Settings },
+  ];
+
+  const lecturerProfileTabs = [
+    { id: "personal", label: t("profile.personalInfo", "Personal Info"), icon: User },
+    { id: "academic", label: t("profile.academicDetails", "Academic Details"), icon: GraduationCap },
+    { id: "2fa", label: t("profile.twoFactorAuth", "Two-Factor Auth (2FA)"), icon: AndroidIcon },
+    { id: "passkeys", label: t("profile.passkeys", "Passkeys & Biometrics"), icon: Fingerprint },
+    { id: "password", label: t("profile.accountPassword", "Account Password"), icon: Lock },
+    { id: "notifications", label: t("common.notifications", "Notifications"), icon: Bell },
+    { id: "preferences", label: t("common.settings", "Settings"), icon: Settings },
+  ];
+
   const visibleProfileTabs = isLecturer ? lecturerProfileTabs : studentProfileTabs;
 
   const primaryMobileTabs = isLecturer
@@ -1039,7 +1042,7 @@ export default function Profile() {
                     {/* Profile Completeness Tracker */}
                     <div className="space-y-1.5 w-full sm:max-w-md flex-1">
                       <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                        <span className="text-muted-foreground font-medium uppercase tracking-widest">Completeness</span>
+                        <span className="text-muted-foreground font-medium uppercase tracking-widest">{t("profile.completeness", "Completeness")}</span>
                         <span className="text-primary font-black">{completeness}%</span>
                       </div>
                       <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden shadow-inner border border-border/30">
@@ -1059,7 +1062,7 @@ export default function Profile() {
                         className="bg-surface/50 backdrop-blur-sm whitespace-nowrap shrink-0 border-border/50"
                       >
                         <Eye className="size-4 mr-2" />
-                        Public Profile
+                        {t("profile.publicProfile", "Public Profile")}
                       </Button>
                       <Button
                         size="icon"
@@ -1084,12 +1087,12 @@ export default function Profile() {
             <>
               <div className="bg-surface border border-border rounded-xl p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-foreground">Personal Information</h2>
+                  <h2 className="text-lg font-semibold text-foreground">{t("profile.personalInfo", "Personal Information")}</h2>
                   <button
                     onClick={() => setIsEditing(!isEditing)}
                     className="text-sm font-medium text-primary hover:underline"
                   >
-                    {isEditing ? "Cancel" : "Edit Info"}
+                    {isEditing ? t("common.cancel", "Cancel") : t("common.edit", "Edit Info")}
                   </button>
                 </div>
 
@@ -2165,18 +2168,30 @@ export default function Profile() {
           {/* Preferences Section */}
           {activeTab === "preferences" && (
             <div className="bg-surface border border-border rounded-xl p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">App Preferences</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-6">{t("profile.preferences", "App Preferences")}</h2>
 
               <div className="space-y-6">
+                {/* Interface Language */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Globe className="size-4 text-sky-500" />
+                    {t("profile.language", "Language")}
+                  </label>
+                  <LanguageSelector className="w-full sm:w-64" />
+                  <p className="text-xs text-muted-foreground">
+                    {t("settings.interfaceLanguageDescription", "Choose between English, हिन्दी (Hindi), తెలుగు (Telugu), Español, and more.")}
+                  </p>
+                </div>
+
                 {/* Theme */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Palette className="size-4" />
-                    Theme
+                    {t("profile.theme", "Theme")}
                   </label>
                   <ThemeSelector />
                   <p className="text-xs text-muted-foreground">
-                    Choose your preferred theme. System will follow your device settings.
+                    {t("profile.themeDescription", "Choose your preferred theme. System will follow your device settings.")}
                   </p>
                 </div>
 
@@ -2184,10 +2199,10 @@ export default function Profile() {
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      Hide Dashboard Header
+                      {t("settings.hideDashboardHeader", "Hide Dashboard Header")}
                     </label>
                     <p className="text-xs text-muted-foreground">
-                      Remove the top navigation bar from your dashboard interface.
+                      {t("settings.hideDashboardHeaderDescription", "Remove the top navigation bar from your dashboard interface.")}
                     </p>
                   </div>
                   <Switch

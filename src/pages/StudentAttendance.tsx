@@ -1,5 +1,6 @@
 
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useStudentAttendance } from '@/hooks/useAttendance';
 import { useClasses } from '@/hooks/useClasses';
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/select";
 
 export default function StudentAttendance() {
+  const { t } = useTranslation();
   const { classes } = useClasses();
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
   
@@ -39,11 +41,11 @@ export default function StudentAttendance() {
   );
 
   const statusConfig = {
-    present: { label: 'Present', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    absent: { label: 'Absent', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-    late: { label: 'Late', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    excused: { label: 'Excused', icon: HelpCircle, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-    pending: { label: 'Not Marked', icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
+    present: { label: t("attendance.status.present", "Present"), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    absent: { label: t("attendance.status.absent", "Absent"), icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    late: { label: t("attendance.status.late", "Late"), icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    excused: { label: t("attendance.status.excused", "Excused"), icon: HelpCircle, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+    pending: { label: t("attendance.status.pending", "Not Marked"), icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-500/10' },
   };
 
   const isLowAttendance = stats && stats.total > 0 && stats.percentage < 75;
@@ -62,14 +64,14 @@ export default function StudentAttendance() {
                 <div className="flex-1 min-w-0">
                    <div className="flex items-center justify-between md:justify-start gap-4">
                       <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-foreground leading-tight truncate">
-                        Attendance Record
+                        {t("attendance.title", "Attendance Record")}
                       </h1>
                       
                       {/* Status Alert Badge - Visible on all screens */}
                       {isLowAttendance && (
                         <div className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1 md:py-1.5 bg-rose-500/10 text-rose-500 rounded-lg md:rounded-xl border border-rose-500/20 shrink-0 animate-pulse transition-all">
                            <AlertTriangle className="size-3.5 md:size-4 fill-rose-500/20" />
-                           <span className="text-[9px] md:text-xs font-black uppercase tracking-tighter md:tracking-widest">Action Required</span>
+                           <span className="text-[9px] md:text-xs font-black uppercase tracking-tighter md:tracking-widest">{t("dashboard.requireAttention", "Action Required")}</span>
                         </div>
                       )}
                    </div>
@@ -77,7 +79,7 @@ export default function StudentAttendance() {
                    <div className="flex items-center gap-2 mt-0.5 md:mt-1">
                       <div className="h-0.5 md:h-1 w-6 md:w-8 bg-primary rounded-full" />
                       <p className="text-[9px] md:text-xs text-slate-500 font-black uppercase tracking-[0.1em] md:tracking-[0.2em]">
-                        Your academic presence
+                        {t("attendance.myAttendance", "Your academic presence")}
                       </p>
                    </div>
                 </div>
@@ -86,13 +88,13 @@ export default function StudentAttendance() {
 
           <div className="flex items-center gap-3">
             <div className="flex-1 lg:w-[280px] group">
-              <label className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1 mb-1 block group-hover:text-primary transition-colors">Class</label>
+              <label className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1 mb-1 block group-hover:text-primary transition-colors">{t("lecturer.class", "Class")}</label>
               <Select value={selectedClassId} onValueChange={setSelectedClassId}>
                 <SelectTrigger className="h-10 md:h-14 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md border-slate-200/50 dark:border-white/10 font-bold shadow-sm">
-                  <SelectValue placeholder="All Classes" />
+                  <SelectValue placeholder={t("attendance.allClasses", "All Classes")} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-white/10 shadow-2xl">
-                  <SelectItem value="all" className="font-bold">All Enrolled</SelectItem>
+                  <SelectItem value="all" className="font-bold">{t("attendance.allClasses", "All Enrolled")}</SelectItem>
                   {classes.map(c => (
                     <SelectItem key={c.id} value={c.id} className="font-medium">
                       {c.course_code}
@@ -102,10 +104,10 @@ export default function StudentAttendance() {
               </Select>
             </div>
             
-            <div className="hidden xl:flex items-center gap-2 px-6 h-14 bg-slate-500/5 rounded-2xl border border-dashed border-slate-500/20">
+             <div className="hidden xl:flex items-center gap-2 px-6 h-14 bg-slate-500/5 rounded-2xl border border-dashed border-slate-500/20">
                <Users className="size-4 text-muted-foreground/40" />
                <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                 {classes.length} Enrolled
+                 {classes.length} {t("attendance.enrolled", "Enrolled")}
                </span>
             </div>
           </div>
@@ -125,7 +127,7 @@ export default function StudentAttendance() {
                         <Users className="size-5" />
                      </div>
                      <div>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Sessions</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{t("attendance.totalClasses", "Sessions")}</p>
                         <p className="text-xl font-black text-foreground tracking-tight">{isLoading ? '...' : stats?.total}</p>
                      </div>
                   </CardContent>
@@ -138,7 +140,7 @@ export default function StudentAttendance() {
                         <CheckCircle2 className="size-5" />
                      </div>
                      <div>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Present</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{t("attendance.status.present", "Present")}</p>
                         <p className="text-xl font-black text-emerald-500 tracking-tight">{isLoading ? '...' : stats?.present}</p>
                      </div>
                   </CardContent>
@@ -151,7 +153,7 @@ export default function StudentAttendance() {
                         <XCircle className="size-5" />
                      </div>
                      <div>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Absent</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{t("attendance.status.absent", "Absent")}</p>
                         <p className="text-xl font-black text-rose-500 tracking-tight">{isLoading ? '...' : stats?.absent}</p>
                      </div>
                   </CardContent>
@@ -173,7 +175,7 @@ export default function StudentAttendance() {
                         <p className={cn(
                           "text-[9px] font-black uppercase tracking-widest",
                           isLowAttendance ? "text-rose-500" : "text-primary/70"
-                        )}>Rate %</p>
+                        )}>{t("attendance.overallAttendance", "Rate %")}</p>
                         <p className={cn(
                           "text-xl font-black tracking-tight",
                           isLowAttendance ? "text-rose-600" : "text-primary"
@@ -188,20 +190,20 @@ export default function StudentAttendance() {
                <div className="flex items-center justify-between px-2">
                   <div className="flex items-center gap-2">
                     <div className="size-1 bg-primary rounded-full" />
-                    <h3 className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-foreground/80">Detailed History</h3>
+                    <h3 className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-foreground/80">{t("attendance.records", "Detailed History")}</h3>
                   </div>
                   <Badge variant="outline" className="rounded-lg border-slate-200 dark:border-white/10 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 px-2 py-0">
-                    Latest
+                    {t("common.latest", "Latest")}
                   </Badge>
                </div>
 
                <div className="bg-white/10 dark:bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl border border-slate-200/50 dark:border-white/10 overflow-hidden shadow-sm">
                   {/* Desktop Table Header */}
                   <div className="hidden md:grid grid-cols-[1.8fr,1.5fr,1.2fr,1fr] gap-4 p-5 bg-slate-500/[0.03] items-center border-b border-border/10">
-                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Context</span>
-                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 text-center">Session</span>
-                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 text-center">Status</span>
-                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 text-right pr-4">Time</span>
+                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{t("attendance.context", "Context")}</span>
+                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 text-center">{t("attendance.session", "Session")}</span>
+                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 text-center">{t("attendance.statusLabel", "Status")}</span>
+                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 text-right pr-4">{t("attendance.time", "Time")}</span>
                   </div>
 
                   <div className="divide-y divide-slate-100/50 dark:divide-white/5">
@@ -277,7 +279,7 @@ export default function StudentAttendance() {
 
                              {/* Registration Time - Desktop Only */}
                              <div className="hidden md:flex flex-col items-end pr-4 text-right opacity-60">
-                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Recorded</p>
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{t("attendance.recorded", "Recorded")}</p>
                                 <p className="text-[11px] font-black text-foreground tracking-tighter leading-none italic">
                                    {format(new Date(record.created_at), 'p')}
                                 </p>
@@ -289,7 +291,7 @@ export default function StudentAttendance() {
                       <div className="py-24 flex flex-col items-center justify-center text-center px-10">
                         <History className="size-10 text-slate-300 mb-4 opacity-20" />
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-40 leading-relaxed">
-                          Clean Slate • No Data
+                          {t("attendance.noRecords", "Clean Slate • No Data")}
                         </p>
                       </div>
                     )}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, Calendar, Play, Mic, Flame, Diamond, Award } from "lucide-react";
 import { InfiniteMarquee } from "@/components/common/InfiniteMarquee";
@@ -13,6 +14,7 @@ interface DashboardSlidingHeroProps {
 }
 
 export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
+    const { t, i18n } = useTranslation();
     const { profile } = useAuth();
     const navigate = useNavigate();
     const [[page, direction], setPage] = useState([0, 0]);
@@ -24,7 +26,8 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
 
     const today = new Date();
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const dateString = today.toLocaleDateString('en-US', options);
+    const localeCode = i18n.language === 'te' ? 'te-IN' : i18n.language === 'hi' ? 'hi-IN' : i18n.language === 'es' ? 'es-ES' : i18n.language === 'fr' ? 'fr-FR' : i18n.language === 'de' ? 'de-DE' : 'en-US';
+    const dateString = today.toLocaleDateString(localeCode, options);
 
     const SLIDE_DURATION = 8000; // 8 seconds per slide
     const slideCount = 3;
@@ -115,7 +118,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                             transition={{ delay: 0.3 }}
                             className="text-xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-tight truncate"
                         >
-                            Hi, <TypewriterName name={fullName} className="text-indigo-600 dark:text-indigo-400" />!
+                            {t("dashboard.welcomeBack", "Hi")}, <TypewriterName name={fullName} className="text-indigo-600 dark:text-indigo-400" />!
                         </motion.h1>
                         <motion.div 
                             initial={{ opacity: 0, y: 10 }}
@@ -124,11 +127,11 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                             className="hidden sm:flex flex-row items-center gap-4"
                         >
                             <p className="text-slate-500 dark:text-indigo-100/80 font-semibold text-xs sm:text-base max-w-xl">
-                                You have a few assignments due this week. Stay focused and keep learning!
+                                {t("dashboard.subtitle", "You have a few assignments due this week. Stay focused and keep learning!")}
                             </p>
                         </motion.div>
                         <p className="text-slate-500 dark:text-indigo-300 sm:hidden text-[10px] font-bold uppercase tracking-tight opacity-70">
-                            Academic Overview
+                            {t("dashboard.academicOverview", "Academic Overview")}
                         </p>
                     </div>
 
@@ -136,14 +139,14 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                         <button
                             onClick={() => window.dispatchEvent(new CustomEvent("open-app-guide"))}
                             className="size-8 sm:size-10 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/50 dark:to-indigo-800/50 border border-indigo-200/50 dark:border-indigo-700/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/60 dark:hover:to-indigo-800/60 transition-all shadow-[3px_3px_6px_rgba(0,0,0,0.08),-3px_-3px_6px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)] active:scale-95 group"
-                            title="Start Welcome Tour"
+                            title={t("dashboard.startWelcomeTour", "Start Welcome Tour")}
                         >
                             <Play className="size-4 sm:size-5 fill-indigo-600 dark:fill-indigo-400 ml-0.5 group-hover:drop-shadow-[0_0_8px_rgba(79,70,229,0.3)] transition-all" />
                         </button>
                         <button
                             onClick={() => navigate("/schedule")}
                             className="size-8 sm:size-10 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 dark:from-slate-800/80 dark:to-slate-700/80 border border-violet-200/50 dark:border-slate-600/50 flex items-center justify-center text-violet-600 dark:text-violet-400 hover:from-violet-100 hover:to-violet-200 dark:hover:from-slate-700/90 dark:hover:to-slate-600/90 transition-all shadow-[3px_3px_6px_rgba(0,0,0,0.08),-3px_-3px_6px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)] active:scale-95 group"
-                            title="View Schedule"
+                            title={t("dashboard.viewSchedule", "View Schedule")}
                         >
                             <Calendar className="size-4 sm:size-5 group-hover:drop-shadow-[0_0_8px_rgba(124,58,237,0.3)] transition-all" />
                         </button>
@@ -165,13 +168,13 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                         <div className="flex flex-col items-start text-left space-y-0.5 min-w-0">
                             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[7px] sm:text-[9px] uppercase tracking-widest font-black mb-1 shrink-0">
                                 <Mic className="size-2 text-indigo-300" />
-                                AI Tutor
+                                {t("common.aiAgent", "AI Tutor")}
                             </div>
                             <h3 className="text-lg sm:text-2xl md:text-3xl font-black font-heading text-white truncate w-full">
-                                AI Voice Tutor
+                                {t("common.voiceTutor", "AI Voice Tutor")}
                             </h3>
                             <p className="text-slate-300 text-[9px] sm:text-xs md:text-sm max-w-[180px] sm:max-w-sm opacity-80 font-medium italic truncate sm:whitespace-normal">
-                                Master communication with real-time feedback.
+                                {t("dashboard.aiVoiceTutorSubtitle", "Master communication with real-time feedback.")}
                             </p>
                         </div>
                         
@@ -179,7 +182,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                             onClick={() => navigate("/student/voice-tutor")}
                             className="bg-white/90 backdrop-blur-sm text-indigo-700 hover:bg-white hover:scale-105 active:scale-95 font-black shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.8)] rounded-full px-4 py-2.5 sm:px-8 sm:py-4.5 h-auto text-[10px] sm:text-sm md:text-base whitespace-nowrap transition-all border-none shrink-0"
                         >
-                            Start
+                            {t("common.start", "Start")}
                         </Button>
                     </div>
             </div>
@@ -195,7 +198,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[7px] sm:text-[9px] uppercase tracking-widest font-black mb-1 shrink-0"
                             >
                                 <Award className="size-2 text-amber-300" />
-                                Streak
+                                {t("common.streak", "Streak")}
                             </motion.div>
                             <h3 className="text-lg sm:text-2xl md:text-3xl font-black font-heading flex items-center gap-1.5 text-white truncate w-full">
                                 {streakHeat.iconType === 'diamond' ? (
@@ -203,10 +206,10 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                                 ) : (
                                     <Flame className="size-4 sm:size-7 md:size-8 text-amber-300 fill-amber-300 shrink-0" />
                                 )}
-                                {currentStreakCount} Day Streak
+                                {currentStreakCount} {t("streak.dayStreak", "Day Streak")}
                             </h3>
                             <p className="text-orange-50 text-[9px] sm:text-xs md:text-sm max-w-[180px] sm:max-w-sm opacity-80 font-medium italic truncate sm:whitespace-normal">
-                                "{streakHeat.label}" - Keep it up!
+                                "{streakHeat.label}" - {t("streak.keepItUp", "Keep it up!")}
                             </p>
                         </div>
                         
@@ -214,7 +217,7 @@ export function DashboardSlidingHero({ streak }: DashboardSlidingHeroProps) {
                             onClick={() => navigate("/streak")}
                             className="bg-white/90 backdrop-blur-sm text-orange-600 hover:bg-white hover:scale-105 active:scale-95 font-black shadow-[4px_4px_8px_rgba(0,0,0,0.15),inset_2px_2px_4px_rgba(255,255,255,0.8)] rounded-full px-4 py-2.5 sm:px-8 sm:py-4.5 h-auto text-[10px] sm:text-sm md:text-base whitespace-nowrap transition-all flex items-center gap-1 border-none shrink-0"
                         >
-                            View
+                            {t("common.view", "View")}
                         </Button>
                     </div>
             </div>

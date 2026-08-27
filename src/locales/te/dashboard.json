@@ -1,0 +1,31 @@
+{
+    "welcomeBack": "స్వాగతం",
+    "overview": "అవలోకనం",
+    "upcomingAssignments": "రాబోయే అసైన్‌మెంట్‌లు",
+    "upcomingClasses": "రాబోయే తరగతులు",
+    "recentActivity": "ఇటీవలి కార్యాచరణ",
+    "quickActions": "త్వరిత చర్యలు",
+    "upcomingContests": "రాబోయే కోడింగ్ పోటీలు",
+    "competitiveSchedules": "లైవ్ పోటీ షెడ్యూల్స్",
+    "live": "లైవ్",
+    "soon": "త్వరలో",
+    "addedToCalendar": "క్యాలెండర్‌కు జోడించబడింది",
+    "addToCalendar": "గూగుల్ క్యాలెండర్‌కు జోడించండి",
+    "noContests": "ప్రస్తుతం ఎలాంటి పోటీలు లేవు.",
+    "momentumTracker": "స్ట్రీక్ ట్రాకర్",
+    "stats": {
+        "totalCourses": "మొత్తం కోర్సులు",
+        "activeAssignments": "యాక్టివ్ టాస్క్‌లు",
+        "completedAssignments": "పూర్తయిన టాస్క్‌లు",
+        "requireAttention": "శ్రద్ధ అవసరం",
+        "upcomingClasses": "రాబోయే తరగతులు",
+        "dayBlaze": "నిరంతర అభ్యాస దినాలు"
+    },
+    "viewAllAssignments": "అన్ని అసైన్‌మెంట్‌లను చూడండి",
+    "viewSchedule": "షెడ్యూల్ చూడండి",
+    "noAssignments": "రాబోయే అసైన్‌మెంట్‌లు ఏవీ లేవు",
+    "noClasses": "రాబోయే తరగతులు ఏవీ లేవు",
+    "dueToday": "ఈరోజే గడువు",
+    "dueTomorrow": "రేపే గడువు",
+    "overdue": "గడువు ముగిసింది"
+}

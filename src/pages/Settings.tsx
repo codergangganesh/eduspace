@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
@@ -20,7 +21,9 @@ import {
   Database,
   Mail,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
+import { LanguageSelector } from "@/components/language/LanguageSelector";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +40,7 @@ import { cn } from "@/lib/utils";
 import SEO from "@/components/SEO";
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -107,11 +111,6 @@ export default function Settings() {
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0 }
-  };
-
   return (
     <DashboardLayout>
       <SEO
@@ -127,9 +126,9 @@ export default function Settings() {
       >
         {/* Page Header */}
         <header className="mb-12 border-b border-border/50 pb-8">
-          <h1 className="text-4xl font-black text-foreground tracking-tight mb-3">Settings</h1>
+          <h1 className="text-4xl font-black text-foreground tracking-tight mb-3">{t("settings.title", "Settings")}</h1>
           <p className="text-muted-foreground text-lg italic">
-            Control your learning identity, digital footprint, and security parameters.
+            {t("settings.subtitle", "Control your learning identity, language preferences, and security parameters.")}
           </p>
         </header>
 
@@ -139,10 +138,10 @@ export default function Settings() {
             <div className="md:col-span-1">
               <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
                 <User className="size-5 text-indigo-500" />
-                Identity
+                {t("settings.identity", "Identity")}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Management of your visual and textual presence across the EduSpace ecosystem.
+                {t("settings.identityDescription", "Management of your visual and textual presence across the EduSpace ecosystem.")}
               </p>
             </div>
 
@@ -151,29 +150,56 @@ export default function Settings() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <Mail className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold">Registered Email</span>
+                    <span className="text-sm font-semibold">{t("settings.registeredEmail", "Registered Email")}</span>
                   </div>
-                  <span className="text-xs bg-indigo-500/10 text-indigo-500 px-2 py-1 rounded-full font-bold uppercase tracking-tighter">Verified</span>
+                  <span className="text-xs bg-indigo-500/10 text-indigo-500 px-2 py-1 rounded-full font-bold uppercase tracking-tighter">{t("settings.verified", "Verified")}</span>
                 </div>
                 <p className="text-lg font-medium text-foreground">{user?.email}</p>
                 <p className="text-xs text-muted-foreground mt-2 italic">
-                  All administrative notifications and security alerts are dispatched to this address.
+                  {t("settings.emailDescription", "All administrative notifications and security alerts are dispatched to this address.")}
                 </p>
               </div>
             </div>
           </section>
 
+          {/* Language & Preferences Section */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
+            <div className="md:col-span-1">
+              <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+                <Globe className="size-5 text-sky-500" />
+                {t("settings.language", "Language & Locale")}
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {t("settings.languageDescription", "Choose the display language for your dashboard, navigation, and coursework.")}
+              </p>
+            </div>
 
+            <div className="md:col-span-2 space-y-4">
+              <div className="bg-secondary/10 border border-border/50 rounded-2xl p-6 hover:bg-secondary/20 transition-all">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-sm font-semibold">{t("settings.interfaceLanguage", "Interface Language")}</span>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("settings.interfaceLanguageDescription", "Choose between English, हिन्दी (Hindi), తెలుగు (Telugu), Español, and more.")}
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-56">
+                    <LanguageSelector />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Privacy & Governance */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
             <div className="md:col-span-1">
               <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
                 <ShieldCheck className="size-5 text-emerald-500" />
-                Transparency
+                {t("settings.transparency", "Transparency")}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Understanding how your learning metrics and behavioral data are governed.
+                {t("settings.transparencyDescription", "Understanding how your learning metrics and behavioral data are governed.")}
               </p>
             </div>
 
@@ -181,10 +207,10 @@ export default function Settings() {
               <div className="p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
                 <h3 className="text-base font-bold mb-3 flex items-center gap-2">
                   <Database className="size-4 text-emerald-600" />
-                  Metric Sovereignty
+                  {t("settings.metricSovereignty", "Metric Sovereignty")}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  EduSpace adheres to strict data minimization principles. Your academic performance data is used exclusively to generate insights in the AI Coach and is subject to automated clearing every 24 hours for ephemeral interactions.
+                  {t("settings.metricSovereigntyDescription", "EduSpace adheres to strict data minimization principles. Your academic performance data is used exclusively to generate insights in the AI Coach and is subject to automated clearing every 24 hours for ephemeral interactions.")}
                 </p>
               </div>
 
@@ -192,7 +218,7 @@ export default function Settings() {
                 <div className="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/10 border border-transparent hover:border-border/50">
                   <div className="flex items-center gap-3">
                     <Lock className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Review Governing Policies</span>
+                    <span className="text-sm font-medium">{t("settings.reviewPolicies", "Review Governing Policies")}</span>
                   </div>
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </div>
@@ -205,10 +231,10 @@ export default function Settings() {
             <div className="md:col-span-1">
               <h2 className="text-xl font-bold flex items-center gap-2 mb-2 text-destructive">
                 <AlertTriangle className="size-5" />
-                Danger Zone
+                {t("settings.dangerZone", "Danger Zone")}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Terminal operations regarding your identity and data history.
+                {t("settings.dangerZoneDescription", "Terminal operations regarding your identity and data history.")}
               </p>
             </div>
 
@@ -219,22 +245,22 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-2 relative z-10">
-                  <h4 className="text-xl font-black text-destructive tracking-tight">Erase Digital Presence</h4>
+                  <h4 className="text-xl font-black text-destructive tracking-tight">{t("settings.erasePresence", "Erase Digital Presence")}</h4>
                   <p className="text-sm text-destructive/80 font-medium leading-relaxed">
-                    Initiating an account deletion is irreversible. This will purge all associated academic metrics, enrollment tokens, and social configurations from our production databases.
+                    {t("settings.erasePresenceDescription", "Initiating an account deletion is irreversible. This will purge all associated academic metrics, enrollment tokens, and social configurations from our production databases.")}
                   </p>
                 </div>
 
                 <ul className="space-y-3 relative z-10">
                   {[
-                    "Permanent erasure of profile metadata",
-                    "Revocation of all active course enrollments",
-                    "Full deletion of submission and grading logs",
-                    "Immediate termination of platform session"
-                  ].map((item, idx) => (
-                    <li key={idx} className="flex items-center gap-3 text-xs text-muted-foreground font-semibold">
-                      <div className="size-1 bg-destructive/40 rounded-full" />
-                      {item}
+                    t("settings.bullet1", "Permanent erasure of profile metadata"),
+                    t("settings.bullet2", "Revocation of all active course enrollments"),
+                    t("settings.bullet3", "Complete purging of asynchronous assignment threads"),
+                    t("settings.bullet4", "Removal from institutional rosters & leaderboard records")
+                  ].map((text, idx) => (
+                    <li key={idx} className="flex items-center gap-3 text-xs font-semibold text-destructive/90">
+                      <div className="size-1.5 rounded-full bg-destructive" />
+                      {text}
                     </li>
                   ))}
                 </ul>
@@ -242,88 +268,68 @@ export default function Settings() {
                 <div className="pt-4 relative z-10">
                   <AlertDialog open={isConfirming} onOpenChange={setIsConfirming}>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="h-12 px-8 rounded-2xl font-bold shadow-lg shadow-destructive/20">
-                        <Trash2 className="size-4 mr-2" />
-                        Execute Erasure
+                      <Button
+                        variant="destructive"
+                        className="rounded-2xl h-12 px-6 font-bold shadow-lg shadow-destructive/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
+                      >
+                        {t("settings.deleteAccount", "Delete EduSpace Account")}
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-2xl overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
-
-                      <AlertDialogHeader className="pt-4">
-                        <AlertDialogTitle className="text-2xl font-black text-destructive tracking-tighter">Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm font-medium leading-relaxed text-muted-foreground">
-                          This action cannot be undone. We will permanently sanitize your account data from all primary storage and backup shards.
+                    <AlertDialogContent className="rounded-[2rem] border-destructive/20 bg-background/95 backdrop-blur-2xl p-8">
+                      <AlertDialogHeader className="space-y-3">
+                        <div className="size-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mb-2">
+                          <AlertTriangle className="size-6" />
+                        </div>
+                        <AlertDialogTitle className="text-2xl font-black text-foreground tracking-tight">
+                          {t("settings.finalConfirmationTitle", "Final Confirmation Required")}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground text-sm leading-relaxed">
+                          {t("settings.finalConfirmationDescription", "This action is absolute. To verify your intent, please provide your current account password and type DELETE below.")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
 
-                      <div className="py-8 space-y-6">
-                        <div className="space-y-3">
-                          <Label htmlFor="password text-xs font-black uppercase tracking-widest text-slate-400">1. Verification Key</Label>
+                      <div className="space-y-4 my-6">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("settings.accountPassword", "Account Password")}</Label>
                           <Input
-                            id="password"
                             type="password"
-                            placeholder="Current account password"
+                            placeholder={t("settings.enterPassword", "Enter password")}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="h-14 bg-muted/30 border-none rounded-2xl shadow-inner text-base font-medium"
-                            autoComplete="current-password"
+                            className="rounded-xl border-border/60 focus-visible:ring-destructive/30"
                           />
                         </div>
 
-                        <div className="space-y-3">
-                          <Label htmlFor="confirm-text" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                            2. Confirmation Token
-                          </Label>
-                          <div className="relative">
-                            <Input
-                              id="confirm-text"
-                              type="text"
-                              placeholder="Type DELETE"
-                              value={confirmText}
-                              onChange={(e) => setConfirmText(e.target.value)}
-                              className="h-14 bg-muted/30 border-none rounded-2xl shadow-inner font-mono text-center tracking-[0.2em] font-bold"
-                            />
-                            {confirmText === "DELETE" && (
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500">
-                                <ShieldCheck className="size-5" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-destructive/10 border border-destructive/10 text-[10px] text-destructive flex gap-3 items-center font-black uppercase tracking-wider">
-                          <AlertTriangle className="size-5 shrink-0" />
-                          <span>Sanitization Protocol Initialized</span>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("settings.typeDelete", "Type \"DELETE\"")}</Label>
+                          <Input
+                            placeholder="DELETE"
+                            value={confirmText}
+                            onChange={(e) => setConfirmText(e.target.value)}
+                            className="rounded-xl border-border/60 font-mono focus-visible:ring-destructive/30 uppercase"
+                          />
                         </div>
                       </div>
 
-                      <AlertDialogFooter className="flex-row gap-3 pt-4 sm:space-x-0">
-                        <AlertDialogCancel
-                          className="flex-1 h-14 rounded-2xl border-none bg-secondary/50 hover:bg-secondary font-bold"
-                          disabled={isDeleting}
-                          onClick={() => {
-                            setPassword("");
-                            setConfirmText("");
-                          }}
-                        >
-                          Cancel
+                      <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel className="rounded-xl font-bold h-11 border-border/60">
+                          {t("common.cancel", "Cancel")}
                         </AlertDialogCancel>
                         <AlertDialogAction
                           onClick={(e) => {
                             e.preventDefault();
                             handleDeleteAccount();
                           }}
-                          className="flex-[2] h-14 bg-destructive hover:bg-destructive text-white rounded-2xl font-black shadow-lg shadow-destructive/20 border-none disabled:opacity-50"
-                          disabled={isDeleting || !password || confirmText !== "DELETE"}
+                          disabled={isDeleting || confirmText !== "DELETE" || !password}
+                          className="rounded-xl font-bold h-11 bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
                         >
                           {isDeleting ? (
-                            <>
-                              <Loader2 className="size-5 mr-3 animate-spin" />
-                              WIPING...
-                            </>
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="size-4 animate-spin" />
+                              <span>{t("settings.purgingRecords", "Purging Records...")}</span>
+                            </div>
                           ) : (
-                            "CONFIRM ERASURE"
+                            t("settings.confirmDeletion", "Confirm Complete Deletion")
                           )}
                         </AlertDialogAction>
                       </AlertDialogFooter>
@@ -333,7 +339,6 @@ export default function Settings() {
               </div>
             </div>
           </section>
-
         </div>
       </motion.div>
     </DashboardLayout>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useClassFeed, FeedPost } from "@/hooks/useClassFeed";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -502,6 +503,7 @@ export default function ClassFeed() {
         toggleReaction,
     } = useClassFeed();
 
+    const { t } = useTranslation();
     const { user, role, profile } = useAuth();
     const isLecturer = role === "lecturer";
 
@@ -612,8 +614,8 @@ export default function ClassFeed() {
                                 <Megaphone className="size-4 sm:size-5 text-white" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">Class Feed</h1>
-                                <p className="hidden sm:block text-xs text-muted-foreground">Announcements & updates</p>
+                                <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">{t("common.classFeed", "Class Feed")}</h1>
+                                <p className="hidden sm:block text-xs text-muted-foreground">{t("dashboard.announcements", "Announcements & updates")}</p>
                             </div>
                         </div>
 
@@ -632,7 +634,7 @@ export default function ClassFeed() {
                                                 </span>
                                             </div>
                                             <div className="flex flex-col items-start pr-1 sm:pr-2 min-w-0 text-left">
-                                                <span className="hidden xs:block text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest leading-none mb-0.5 sm:mb-1">Current</span>
+                                                <span className="hidden xs:block text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest leading-none mb-0.5 sm:mb-1">{t("common.current", "Current")}</span>
                                                 <div className="flex items-center gap-1 min-w-0">
                                                     <span className="text-xs sm:text-sm font-semibold text-foreground truncate max-w-[70px] xs:max-w-[100px] sm:max-w-[120px]">
                                                         {classes.find(c => c.id === selectedClassId)?.course_code}
@@ -643,7 +645,7 @@ export default function ClassFeed() {
                                     </SelectTrigger>
                                     <SelectContent align="end" className="w-64 p-2 rounded-2xl border-border/50 shadow-2xl backdrop-blur-xl bg-surface/95">
                                         <div className="px-2 py-2 mb-1">
-                                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Your Registered Classes</h4>
+                                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">{t("common.registeredClasses", "Your Registered Classes")}</h4>
                                         </div>
                                         <div className="space-y-1">
                                             {classes.map(cls => (
@@ -695,7 +697,7 @@ export default function ClassFeed() {
                             </Badge>
                             <Badge variant="secondary" className="text-[10px]">
                                 <Users className="size-3 mr-1" />
-                                Active
+                                {t("common.active", "Active")}
                             </Badge>
                         </div>
                     )}
@@ -707,7 +709,7 @@ export default function ClassFeed() {
                                 <Megaphone className="size-10 text-blue-500/70" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-foreground">No Classes Yet</h3>
+                                <h3 className="text-lg font-bold text-foreground">{t("dashboard.noClasses", "No Classes Yet")}</h3>
                                 <p className="text-sm text-muted-foreground mt-1 max-w-xs">
                                     {isLecturer
                                         ? "Create a class first to start posting announcements."
@@ -736,7 +738,7 @@ export default function ClassFeed() {
                                         ref={textareaRef}
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
-                                        placeholder="Write an announcement for your class..."
+                                        placeholder={t("dashboard.writeAnnouncement", "Write an announcement for your class...")}
                                         className="min-h-[60px] resize-none border-0 bg-secondary/30 rounded-xl p-3 text-sm focus-visible:ring-1 focus-visible:ring-primary/30 placeholder:text-muted-foreground/60"
                                         rows={2}
                                     />
@@ -794,7 +796,7 @@ export default function ClassFeed() {
                                         onClick={() => fileInputRef.current?.click()}
                                     >
                                         <ImageIcon className="size-4" />
-                                        <span className="hidden sm:inline">Photo</span>
+                                        <span className="hidden sm:inline">{t("common.photo", "Photo")}</span>
                                     </Button>
                                     <Button
                                         variant="ghost"
@@ -803,7 +805,7 @@ export default function ClassFeed() {
                                         onClick={() => document.getElementById('doc-file-input')?.click()}
                                     >
                                         <Paperclip className="size-4" />
-                                        <span className="hidden sm:inline">File</span>
+                                        <span className="hidden sm:inline">{t("common.file", "File")}</span>
                                     </Button>
                                 </div>
 
@@ -818,7 +820,7 @@ export default function ClassFeed() {
                                     ) : (
                                         <Send className="size-3.5" />
                                     )}
-                                    <span>{posting ? "Posting..." : uploading ? "Uploading..." : "Post"}</span>
+                                    <span>{posting ? t("common.posting", "Posting...") : uploading ? t("common.uploading", "Uploading...") : t("common.post", "Post")}</span>
                                 </Button>
                             </div>
                         </motion.div>
@@ -840,7 +842,7 @@ export default function ClassFeed() {
                                         <MessageSquare className="size-8 text-violet-500/60" />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-bold text-foreground">No Announcements Yet</h3>
+                                        <h3 className="text-base font-bold text-foreground">{t("dashboard.noAnnouncements", "No Announcements Yet")}</h3>
                                         <p className="text-sm text-muted-foreground mt-1 max-w-xs">
                                             {isLecturer
                                                 ? "Post your first announcement to your class above! 📢"

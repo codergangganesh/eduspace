@@ -38,6 +38,7 @@ import { AttendanceSessionDialog } from '../components/attendance/AttendanceSess
 import { AttendanceMarkingDialog } from '../components/attendance/AttendanceMarkingDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -59,6 +60,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function LecturerAttendance() {
+  const { t } = useTranslation();
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const { classes } = useClasses();
@@ -255,7 +257,7 @@ export default function LecturerAttendance() {
                 <Users className="size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest truncate">Avg. Attendance</p>
+                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest truncate">{t("attendance.overallAttendance", "Avg. Attendance")}</p>
                 <p className="text-xl font-black text-foreground">{avgAttendance}%</p>
               </div>
             </CardContent>
@@ -267,9 +269,9 @@ export default function LecturerAttendance() {
                 <TrendingUp className="size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest truncate">Last Session</p>
+                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest truncate">{t("attendance.session", "Last Session")}</p>
                 <p className="text-xl font-black text-foreground uppercase text-[10px] truncate">
-                  {sessions && sessions[0] ? format(new Date(sessions[0].session_date), 'MMM d') : 'No Data'}
+                  {sessions && sessions[0] ? format(new Date(sessions[0].session_date), 'MMM d') : t("attendance.noRecords", "No Data")}
                 </p>
               </div>
             </CardContent>
@@ -292,7 +294,7 @@ export default function LecturerAttendance() {
                 <p className={cn(
                   "text-[9px] font-black uppercase tracking-widest truncate",
                   atRiskCount > 0 ? "text-rose-500" : "text-muted-foreground"
-                )}>At Risk</p>
+                )}>{t("attendance.lowAttendance", "At Risk")}</p>
                 <p className="text-xl font-black text-foreground">{atRiskCount}</p>
               </div>
             </CardContent>
@@ -307,7 +309,7 @@ export default function LecturerAttendance() {
               <div className="relative flex-1 group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input
-                  placeholder={activeTab === 'sessions' ? "Find sessions..." : "Find students..."}
+                  placeholder={activeTab === 'sessions' ? t("attendance.searchSessions", "Find sessions...") : t("lecturer.searchStudents", "Find students...")}
                   className="w-full h-12 pl-11 pr-4 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl text-[11px] md:text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -328,7 +330,7 @@ export default function LecturerAttendance() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="h-12 w-12 md:w-auto md:px-6 rounded-2xl bg-white/10 backdrop-blur-xl border-slate-200 dark:border-white/10 font-bold gap-2">
                       <ListFilter className="size-5 md:size-4" />
-                      <span className="hidden md:inline uppercase text-[10px] tracking-widest font-black">View Category</span>
+                      <span className="hidden md:inline uppercase text-[10px] tracking-widest font-black">{t("common.filter", "View Category")}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[200px] rounded-2xl border-slate-200 dark:border-white/10 p-2">
@@ -340,7 +342,7 @@ export default function LecturerAttendance() {
                       )}
                     >
                       <History className="size-4" />
-                      Attendance Sessions
+                      {t("attendance.sessions", "Attendance Sessions")}
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => setActiveTab('insights')}
@@ -350,7 +352,7 @@ export default function LecturerAttendance() {
                       )}
                     >
                       <TrendingUp className="size-4" />
-                      Student Insights
+                      {t("attendance.insights", "Attendance Insights")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

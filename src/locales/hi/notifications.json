@@ -1,0 +1,17 @@
+{
+    "title": "सूचनाएं",
+    "description": "अपने पाठ्यक्रमों, असाइनमेंट और संदेशों के साथ अपडेट रहें",
+    "unread": "अपठित",
+    "assignment": "असाइनमेंट",
+    "grade": "ग्रेड",
+    "announcement": "घोषणा",
+    "message": "संदेश",
+    "clearAllNotifications": "सभी सूचनाएं साफ़ करें",
+    "clearAllConfirm": "यह स्थायी रूप से {{count}} सूचना को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता।",
+    "clearAllConfirm_plural": "यह स्थायी रूप से सभी {{count}} सूचनाओं को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता।",
+    "allCleared": "सभी सूचनाएं साफ़ कर दी गईं",
+    "noNotifications": "अभी तक कोई सूचना नहीं",
+    "noNotificationsDescription": "आप पूरी तरह अपडेट हैं! नए अपडेट के लिए बाद में देखें।",
+    "newNotification": "{{count}} नया",
+    "newNotification_plural": "{{count}} नए"
+}

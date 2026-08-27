@@ -3,6 +3,7 @@ import { Users, FileText, TrendingUp, MapPin, CheckCircle, AlertCircle, Calendar
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { useLecturerData } from "@/hooks/useLecturerData";
 import { useNavigate } from "react-router-dom";
 import SEO from "@/components/SEO";
@@ -16,8 +17,8 @@ import { TypewriterName } from "@/components/common/TypewriterName";
 import { PremiumStatsCard } from "@/components/dashboard/PremiumStatsCard";
 import { LecturerSlidingHero } from "@/components/dashboard/LecturerSlidingHero";
 
-
 export default function LecturerDashboard() {
+  const { t } = useTranslation();
   const { profile, updateProfile } = useAuth();
   const { stats: dataStats, upcomingClasses, recentSubmissions, loading } = useLecturerData();
   const navigate = useNavigate();
@@ -60,33 +61,33 @@ export default function LecturerDashboard() {
         {/* Stats Grid - Premium Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
           <PremiumStatsCard
-            title="TOTAL STUDENTS"
+            title={t("lecturer.totalStudents", "TOTAL STUDENTS").toUpperCase()}
             value={dataStats.enrolledStudents}
-            subtitle="Unique students enrolled"
+            subtitle={t("lecturer.uniqueStudents", "Unique students enrolled")}
             icon={Users}
             backgroundColor="bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700"
             iconBackgroundColor="bg-white/10"
           />
           <PremiumStatsCard
-            title="SUBMISSIONS"
+            title={t("lecturer.submissions", "SUBMISSIONS").toUpperCase()}
             value={`${dataStats.submissionsReceived} / ${dataStats.totalExpectedSubmissions}`}
-            subtitle="Students submitted"
+            subtitle={t("lecturer.studentsSubmitted", "Students submitted")}
             icon={FileText}
             backgroundColor="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-700"
             iconBackgroundColor="bg-white/10"
           />
           <PremiumStatsCard
-            title="PENDING"
+            title={t("assignments.status.pending", "PENDING").toUpperCase()}
             value={dataStats.pendingSubmissions}
-            subtitle="Students yet to submit"
+            subtitle={t("lecturer.yetToSubmit", "Students yet to submit")}
             icon={AlertCircle}
             backgroundColor="bg-gradient-to-br from-amber-400 via-orange-500 to-rose-600"
             iconBackgroundColor="bg-white/10"
           />
           <PremiumStatsCard
-            title="NEEDS GRADING"
+            title={t("lecturer.needsGrading", "NEEDS GRADING").toUpperCase()}
             value={needsGradingCount}
-            subtitle="Awaiting your review"
+            subtitle={t("lecturer.awaitingReview", "Awaiting your review")}
             icon={PenLine}
             backgroundColor="bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-700"
             iconBackgroundColor="bg-white/10"
@@ -113,8 +114,8 @@ export default function LecturerDashboard() {
                   <Calendar className="size-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-indigo-900 dark:text-indigo-100">Schedule</h3>
-                  <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80">Manage classes</p>
+                  <h3 className="font-semibold text-sm text-indigo-900 dark:text-indigo-100">{t("common.schedule", "Schedule")}</h3>
+                  <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80">{t("lecturer.manageClasses", "Manage classes")}</p>
                 </div>
               </button>
 
@@ -126,8 +127,8 @@ export default function LecturerDashboard() {
                   <GraduationCap className="size-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">Students</h3>
-                  <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">View directory</p>
+                  <h3 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">{t("lecturer.students", "Students")}</h3>
+                  <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">{t("lecturer.viewDirectory", "View directory")}</p>
                 </div>
               </button>
 
@@ -139,8 +140,8 @@ export default function LecturerDashboard() {
                   <ClipboardList className="size-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100">Attendance Tracker</h3>
-                  <p className="text-xs text-amber-600/80 dark:text-amber-400/80">Mark & track presence</p>
+                  <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100">{t("common.attendance", "Attendance")}</h3>
+                  <p className="text-xs text-amber-600/80 dark:text-amber-400/80">{t("lecturer.trackAttendance", "Track attendance")}</p>
                 </div>
               </button>
             </div>
@@ -148,8 +149,8 @@ export default function LecturerDashboard() {
             {/* Upcoming Classes - Timeline Style */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-foreground">Upcoming Classes</h2>
-                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => navigate('/schedule')}>See all</Button>
+                <h2 className="text-lg font-bold text-foreground">{t("dashboard.upcomingClasses", "Upcoming Classes")}</h2>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => navigate('/schedule')}>{t("common.viewAll", "See all")}</Button>
               </div>
 
               <Card className="border-border/50 shadow-sm">
