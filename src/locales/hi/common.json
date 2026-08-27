@@ -13,7 +13,8 @@
     "contests": "कोडिंग प्रतियोगिताएं",
     "opportunities": "अवसर",
     "knowledgeMap": "ज्ञान मानचित्र",
-    "aiAgent": "EduSpace AI",
+    "aiAgent": "एजुस्पेस AI",
+    "eduspaceAI": "एजुस्पेस AI",
     "voiceTutor": "AI वॉयस ट्यूटर",
     "mathsPuzzle": "गणित का खेल",
     "callHistory": "कॉल इतिहास",
@@ -38,6 +39,7 @@
     "viewAll": "सभी देखें",
     "checkAgain": "पुनः जांचें",
     "streak": "अकादमिक स्ट्रीक",
+    "academicStreak": "अकादमिक स्ट्रीक",
     "momentum": "गति",
     "loading": "लोड हो रहा है...",
     "search": "खोजें",
@@ -84,5 +86,7 @@
     "post": "पोस्ट करें",
     "posting": "पोस्ट हो रहा है...",
     "uploading": "अपलोड हो रहा है...",
-    "latest": "नवीनतम"
+    "latest": "नवीनतम",
+    "invite": "आमंत्रित करें",
+    "notes": "नोट्स"
 }

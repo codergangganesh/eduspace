@@ -13,7 +13,8 @@
     "contests": "Contests",
     "opportunities": "Opportunities",
     "knowledgeMap": "Knowledge Map",
-    "aiAgent": "EduSpace AI",
+    "aiAgent": "Eduspace AI",
+    "eduspaceAI": "Eduspace AI",
     "voiceTutor": "AI Voice Tutor",
     "mathsPuzzle": "Maths Playground",
     "callHistory": "Call History",
@@ -38,6 +39,7 @@
     "viewAll": "View All",
     "checkAgain": "Check again",
     "streak": "Academic Streak",
+    "academicStreak": "Academic Streak",
     "momentum": "Momentum",
     "loading": "Loading...",
     "search": "Search",
@@ -84,5 +86,7 @@
     "post": "Post",
     "posting": "Posting...",
     "uploading": "Uploading...",
-    "latest": "Latest"
+    "latest": "Latest",
+    "invite": "Invite",
+    "notes": "Notes"
 }

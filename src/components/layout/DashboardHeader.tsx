@@ -6,6 +6,7 @@ import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStreak } from "@/contexts/StreakContext";
+import { useTranslation } from "react-i18next";
 import { ReactNode } from "react";
 import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) {
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { profile, updateProfile, role } = useAuth();
   const { streak } = useStreak();
@@ -160,7 +162,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
           className="hidden lg:block text-[14px] leading-tight font-medium text-primary hover:text-primary/80 transition-colors mr-2"
           onClick={() => window.dispatchEvent(new CustomEvent("open-feedback"))}
         >
-          Feedback
+          {t("common.feedback", "Feedback")}
         </button>
 
         <Button
@@ -169,7 +171,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
           onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
         >
           <Search className="mr-1.5 h-3.5 w-3.5 text-muted-foreground/60" />
-          <span>Search...</span>
+          <span>{t("common.search", "Search...")}</span>
           <span className="ml-auto pointer-events-none text-[11px] font-medium text-primary/70">
             Ctrl K
           </span>
@@ -216,7 +218,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <UserPlus className="size-4" />
                   </div>
-                  <span className="text-[10px] font-bold text-foreground">Invite</span>
+                  <span className="text-[10px] font-bold text-foreground">{t("common.invite", "Invite")}</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
@@ -230,7 +232,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <NotebookPen className="size-4" />
                   </div>
-                  <span className="text-[10px] font-bold text-foreground">Notes</span>
+                  <span className="text-[10px] font-bold text-foreground">{t("common.notes", "Notes")}</span>
                 </DropdownMenuItem>
               </div>
 

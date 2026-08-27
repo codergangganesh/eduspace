@@ -13,7 +13,8 @@
     "contests": "కోడింగ్ పోటీలు",
     "opportunities": "అవకాశాలు",
     "knowledgeMap": "నాలెడ్జ్ మ్యాప్",
-    "aiAgent": "EduSpace AI",
+    "aiAgent": "ఎడ్యుస్పేస్ AI",
+    "eduspaceAI": "ఎడ్యుస్పేస్ AI",
     "voiceTutor": "AI వాయిస్ ట్యూటర్",
     "mathsPuzzle": "మ్యాథ్స్ ప్లేగ్రౌండ్",
     "callHistory": "కాల్ చరిత్ర",
@@ -38,6 +39,7 @@
     "viewAll": "అన్నీ వీక్షించండి",
     "checkAgain": "మళ్లీ తనిఖీ చేయండి",
     "streak": "విద్యా స్ట్రీక్",
+    "academicStreak": "విద్యా స్ట్రీక్",
     "momentum": "మొమెంటమ్",
     "loading": "లోడ్ అవుతోంది...",
     "search": "శోధించండి",
@@ -84,5 +86,7 @@
     "post": "పోస్ట్ చేయండి",
     "posting": "పోస్ట్ చేస్తోంది...",
     "uploading": "అప్‌లోడ్ చేస్తోంది...",
-    "latest": "తాజాది"
+    "latest": "తాజాది",
+    "invite": "ఆహ్వానించండి",
+    "notes": "నోట్స్"
 }

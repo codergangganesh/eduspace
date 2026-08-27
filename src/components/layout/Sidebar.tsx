@@ -104,6 +104,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
   const getNavLabel = (label: string) => {
     switch (label) {
       case "Dashboard": return t("common.dashboard", "Dashboard");
+      case "Class Feed": return t("common.classFeed", "Class Feed");
       case "Assignments": return t("common.assignments", "Assignments");
       case "Quizzes": return t("common.quizzes", "Quizzes");
       case "Attendance": return t("common.attendance", "Attendance");
@@ -114,6 +115,7 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
       case "Knowledge Map": return t("common.knowledgeMap", "Knowledge Map");
       case "Eduspace AI": return t("common.aiAgent", "Eduspace AI");
       case "AI Voice Tutor": return t("common.voiceTutor", "AI Voice Tutor");
+      case "Academic Streak": return t("common.streak", "Academic Streak");
       case "Maths Playground": return t("common.mathsPuzzle", "Maths Playground");
       case "Profile": return t("common.profile", "Profile");
       case "Settings": return t("common.settings", "Settings");
