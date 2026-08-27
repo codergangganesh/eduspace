@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LandingPage from "./LandingPage";
-import { Helmet } from "react-helmet-async";
 import { LoadingFrame } from "@/components/ui/app-loader";
 
 const Index = () => {
@@ -26,10 +25,6 @@ const Index = () => {
   if (isLoading) {
     return (
       <div className="relative min-h-screen">
-        <Helmet>
-          <meta name="robots" content="noindex" />
-        </Helmet>
-
         <LoadingFrame
           fullScreen
           className="bg-background px-6"
@@ -46,10 +41,6 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen">
-      <Helmet>
-        <meta name="robots" content="noindex" />
-      </Helmet>
-
       <LandingPage deferMobileOnboarding={false} />
     </div>
   );
