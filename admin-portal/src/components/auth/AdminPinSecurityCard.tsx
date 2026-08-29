@@ -32,9 +32,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   Fingerprint,
+  ShieldCheck,
+  Smartphone,
 } from "lucide-react";
 import { AdminPinSetupModal } from "./AdminPinSetupModal";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const AdminPinSecurityCard: React.FC = () => {
   const {
@@ -100,188 +103,221 @@ export const AdminPinSecurityCard: React.FC = () => {
 
   return (
     <>
-      <Card className="border-border shadow-sm bg-card overflow-hidden">
-        <CardHeader className="pb-3 sm:pb-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
-                <KeyRound className="h-4 w-4 text-primary shrink-0" />
-                4-Digit In-App Screen Lock & Biometrics
-              </CardTitle>
-              {isPinLockEnabled ? (
-                <Badge variant="outline" className="text-[10px] font-bold text-emerald-500 border-emerald-500/30 py-0 px-2 uppercase tracking-wider">
-                  <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                  Enabled
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px] font-medium py-0 px-2">
-                  Disabled
-                </Badge>
+      <Card className="border-border shadow-sm bg-card overflow-hidden rounded-2xl">
+        {/* Card Header (Responsive for Mobile & Desktop) */}
+        <CardHeader className="p-4 sm:p-5 border-b border-border/40 bg-muted/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            {/* Title, Badge & Subtitle */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary mt-0.5 sm:mt-0 shadow-2xs">
+                <KeyRound className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="text-sm sm:text-base font-bold text-foreground">
+                    Screen Lock & Biometrics
+                  </CardTitle>
+                  {isPinLockEnabled ? (
+                    <Badge variant="outline" className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border-emerald-500/30 py-0 px-2 uppercase tracking-wider">
+                      <CheckCircle2 className="h-2.5 w-2.5 mr-1 inline" />
+                      Active
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px] font-medium py-0 px-2">
+                      Disabled
+                    </Badge>
+                  )}
+                </div>
+                <CardDescription className="text-xs mt-1 text-muted-foreground leading-relaxed">
+                  Protect your Admin Portal with an instant 4-digit PIN or 1-touch Biometric unlock.
+                </CardDescription>
+              </div>
+            </div>
+
+            {/* Quick Actions in Header */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isPinLockEnabled && (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={lockScreen}
+                  className="w-full sm:w-auto text-xs font-semibold h-9 px-4 gap-1.5 shadow-sm rounded-xl cursor-pointer active:scale-95 transition-all"
+                  title="Lock portal immediately"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Lock Screen Now</span>
+                </Button>
+              )}
+
+              {!isPinSetup && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setIsUpdatingPin(false);
+                    setSetupModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto text-xs font-semibold h-9 px-4 gap-1.5 shadow-sm rounded-xl cursor-pointer"
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Set Up 4-Digit PIN</span>
+                </Button>
               )}
             </div>
-            <CardDescription className="text-xs mt-1">
-              Lock the Admin Portal with an instant 4-digit PIN or 1-touch Fingerprint/Face ID when away from your desk.
-            </CardDescription>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {isPinLockEnabled && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={lockScreen}
-                className="text-xs font-semibold h-8 gap-1.5 shadow-2xs cursor-pointer"
-                title="Lock portal immediately"
-              >
-                <Lock className="h-3.5 w-3.5 text-primary" />
-                Lock Screen Now
-              </Button>
-            )}
-
-            {!isPinSetup ? (
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  setIsUpdatingPin(false);
-                  setSetupModalOpen(true);
-                }}
-                className="text-xs font-semibold h-8 gap-1.5 shadow-sm cursor-pointer"
-              >
-                <Shield className="h-3.5 w-3.5" />
-                Set Up PIN
-              </Button>
-            ) : null}
           </div>
         </CardHeader>
 
-        <CardContent className="pt-4 sm:pt-5 space-y-5">
-          {/* Main Toggle Row */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/80 bg-muted/10">
-            <div className="space-y-0.5 pr-4">
-              <Label className="text-xs font-bold text-foreground cursor-pointer" htmlFor="screen-lock-switch">
-                Enable In-App Screen Lock
-              </Label>
-              <p className="text-[11px] text-muted-foreground">
-                Requires entering your 4-digit PIN or scanning your fingerprint to access institutional controls.
-              </p>
+        <CardContent className="p-4 sm:p-5 space-y-4">
+          {/* Main Enable Screen Lock Tile */}
+          <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/30 transition-colors gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-background border border-border/80 flex items-center justify-center shrink-0 text-foreground shadow-2xs mt-0.5">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <Label className="text-xs sm:text-sm font-bold text-foreground cursor-pointer block" htmlFor="screen-lock-switch">
+                  Enable In-App Screen Lock
+                </Label>
+                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
+                  Requires entering your 4-digit PIN or fingerprint to access institutional controls.
+                </p>
+              </div>
             </div>
             <Switch
               id="screen-lock-switch"
               checked={isPinLockEnabled}
               onCheckedChange={handleToggleEnable}
-              className="cursor-pointer"
+              className="cursor-pointer shrink-0"
             />
           </div>
 
           {/* Configuration Options (Visible if PIN is configured) */}
           {isPinSetup && (
-            <div className="space-y-4 pt-2 border-t border-border/40">
-              {/* Biometric Toggle Row */}
-              {isBiometricsSupported ? (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/60">
-                  <div className="space-y-0.5 pr-4">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5" htmlFor="biometrics-switch">
-                        <Fingerprint className="h-3.5 w-3.5 text-primary" />
-                        Allow Biometric Unlock (Fingerprint / Touch ID / Face ID)
-                      </Label>
-                      <Badge variant="outline" className="text-[10px] text-primary border-primary/30 py-0 px-1.5 font-bold uppercase">
-                        1-Touch
-                      </Badge>
+            <div className="space-y-3 pt-1">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-0.5">
+                Security Preferences
+              </div>
+
+              {/* Grouped Settings Card */}
+              <div className="rounded-xl border border-border/80 bg-card divide-y divide-border/60 overflow-hidden shadow-2xs">
+                {/* 1. Biometric Unlock Row */}
+                {isBiometricsSupported ? (
+                  <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-500 shadow-2xs mt-0.5">
+                        <Fingerprint className="h-4 w-4" />
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="biometrics-switch">
+                            Biometric Unlock
+                          </Label>
+                          <Badge variant="outline" className="text-[9px] text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10 py-0 px-1.5 font-bold uppercase">
+                            1-Touch
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          Instant unlock via Fingerprint, Windows Hello, or Touch ID.
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Instantly unlock the portal using Windows Hello, Touch ID, or your device's fingerprint scanner.
-                    </p>
+                    <Switch
+                      id="biometrics-switch"
+                      checked={settings.biometricsEnabled}
+                      onCheckedChange={handleToggleBiometrics}
+                      disabled={!isPinLockEnabled}
+                      className="cursor-pointer shrink-0"
+                    />
+                  </div>
+                ) : null}
+
+                {/* 2. Auto-Lock Inactivity Timeout */}
+                <div className="p-3.5 sm:p-4 hover:bg-muted/15 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-500 shadow-2xs mt-0.5">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-semibold text-foreground">
+                        Inactivity Timeout
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Automatically lock the portal after no activity.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-full sm:w-60 shrink-0">
+                    <Select
+                      value={String(settings.autoLockTimeout)}
+                      onValueChange={(val) => {
+                        const minutes = parseInt(val, 10);
+                        updateSettings({ autoLockTimeout: minutes });
+                        toast.success(`Auto-lock timeout set to ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+                      }}
+                      disabled={!isPinLockEnabled}
+                    >
+                      <SelectTrigger className="h-9 text-xs rounded-lg w-full bg-muted/30 font-medium">
+                        <SelectValue placeholder="Select timeout" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="1" className="text-xs">After 1 minute</SelectItem>
+                        <SelectItem value="2" className="text-xs">After 2 minutes</SelectItem>
+                        <SelectItem value="5" className="text-xs font-semibold">After 5 minutes (Recommended)</SelectItem>
+                        <SelectItem value="10" className="text-xs">After 10 minutes</SelectItem>
+                        <SelectItem value="15" className="text-xs">After 15 minutes</SelectItem>
+                        <SelectItem value="30" className="text-xs">After 30 minutes</SelectItem>
+                        <SelectItem value="60" className="text-xs">After 1 hour</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* 3. Tab Switch Auto-Lock */}
+                <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-500 shadow-2xs mt-0.5">
+                      <Smartphone className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="tab-switch-lock">
+                        Lock on Tab Switch
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Lock whenever you switch browser tabs or minimize.
+                      </p>
+                    </div>
                   </div>
                   <Switch
-                    id="biometrics-switch"
-                    checked={settings.biometricsEnabled}
-                    onCheckedChange={handleToggleBiometrics}
+                    id="tab-switch-lock"
+                    checked={settings.autoLockOnTabSwitch}
+                    onCheckedChange={(checked) => updateSettings({ autoLockOnTabSwitch: checked })}
                     disabled={!isPinLockEnabled}
-                    className="cursor-pointer"
+                    className="cursor-pointer shrink-0"
                   />
                 </div>
-              ) : null}
-
-              {/* Timeout Setting */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-primary" />
-                    Auto-Lock Inactivity Timeout
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Automatically locks the portal after no mouse or keyboard activity.
-                  </p>
-                </div>
-                <Select
-                  value={String(settings.autoLockTimeout)}
-                  onValueChange={(val) => {
-                    const minutes = parseInt(val, 10);
-                    updateSettings({ autoLockTimeout: minutes });
-                    toast.success(`Auto-lock timeout set to ${minutes} minute${minutes === 1 ? "" : "s"}.`);
-                  }}
-                  disabled={!isPinLockEnabled}
-                >
-                  <SelectTrigger className="h-9 text-xs sm:text-sm">
-                    <SelectValue placeholder="Select timeout" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">After 1 minute of inactivity</SelectItem>
-                    <SelectItem value="2">After 2 minutes of inactivity</SelectItem>
-                    <SelectItem value="5">After 5 minutes of inactivity (Recommended)</SelectItem>
-                    <SelectItem value="10">After 10 minutes of inactivity</SelectItem>
-                    <SelectItem value="15">After 15 minutes of inactivity</SelectItem>
-                    <SelectItem value="30">After 30 minutes of inactivity</SelectItem>
-                    <SelectItem value="60">After 1 hour of inactivity</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
-              {/* Tab Switch Auto-Lock */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/60">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-xs font-semibold text-foreground cursor-pointer" htmlFor="tab-switch-lock">
-                    Lock on Tab Switch or Minimize
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Immediately locks the portal whenever you switch to another browser tab or minimize the browser.
-                  </p>
-                </div>
-                <Switch
-                  id="tab-switch-lock"
-                  checked={settings.autoLockOnTabSwitch}
-                  onCheckedChange={(checked) => updateSettings({ autoLockOnTabSwitch: checked })}
-                  disabled={!isPinLockEnabled}
-                  className="cursor-pointer"
-                />
-              </div>
-
-              {/* PIN Management Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <Button
+              {/* PIN Management Buttons (Clean Symmetrical Grid) */}
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={handleOpenChangePin}
-                  className="text-xs font-semibold h-8 gap-1.5 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/40 text-foreground font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
                 >
                   <KeyRound className="h-3.5 w-3.5 text-primary" />
-                  Change 4-Digit PIN
-                </Button>
+                  <span>Change 4-Digit PIN</span>
+                </button>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => setRemoveDialogOpen(true)}
-                  className="text-xs text-destructive hover:bg-destructive/10 h-8 gap-1.5 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Remove PIN & Disable
-                </Button>
+                  <span>Remove PIN & Disable</span>
+                </button>
               </div>
             </div>
           )}
@@ -298,21 +334,21 @@ export const AdminPinSecurityCard: React.FC = () => {
 
       {/* Remove PIN Confirmation Dialog */}
       <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <AlertDialogContent className="bg-card border-border">
+        <AlertDialogContent className="bg-card border-border rounded-2xl max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
               Remove 4-Digit Screen Lock?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground">
+            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
               Are you sure you want to remove your 4-digit PIN? Your portal will no longer automatically lock when you leave your desk or switch tabs.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-row gap-2 justify-end">
+            <AlertDialogCancel className="text-xs h-8.5 rounded-xl mt-0">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmRemovePin}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs h-8"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs h-8.5 rounded-xl"
             >
               Yes, Remove PIN
             </AlertDialogAction>

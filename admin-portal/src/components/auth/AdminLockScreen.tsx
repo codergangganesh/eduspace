@@ -1,14 +1,14 @@
 import * as React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAdminPinLock } from "@/hooks/useAdminPinLock";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { UserAvatar } from "@/components/users/UserAvatar";
-import { Shield, Lock, Delete, RefreshCw, LogOut, AlertCircle, ShieldAlert, Fingerprint } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Delete, RefreshCw, LogOut, AlertCircle, ShieldAlert, Fingerprint, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 
 export const AdminLockScreen: React.FC = () => {
   const {
@@ -20,6 +20,7 @@ export const AdminLockScreen: React.FC = () => {
     cooldown,
   } = useAdminPinLock();
   const { user, profile, signOut } = useAdminAuth();
+  const { setTheme, resolvedTheme } = useTheme();
   const navigate = useNavigate();
 
   const [pin, setPin] = useState<string>("");
@@ -27,6 +28,7 @@ export const AdminLockScreen: React.FC = () => {
   const [isBiometricScanning, setIsBiometricScanning] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [shake, setShake] = useState<boolean>(false);
+  const [pressedKey, setPressedKey] = useState<number | string | null>(null);
   const autoBiometricPromptedRef = useRef<boolean>(false);
 
   // Clear PIN and errors on lock state change
@@ -36,6 +38,7 @@ export const AdminLockScreen: React.FC = () => {
       setErrorMessage("");
       setShake(false);
       setIsVerifying(false);
+      setPressedKey(null);
     } else {
       autoBiometricPromptedRef.current = false;
     }
@@ -76,7 +79,6 @@ export const AdminLockScreen: React.FC = () => {
       !cooldown.isCooldown
     ) {
       autoBiometricPromptedRef.current = true;
-      // Slight delay to allow modal render animation
       const timer = setTimeout(() => {
         handleBiometricUnlock();
       }, 400);
@@ -97,7 +99,7 @@ export const AdminLockScreen: React.FC = () => {
         if (!res.success) {
           setErrorMessage(res.error || "Incorrect PIN. Please try again.");
           setShake(true);
-          setTimeout(() => setShake(false), 600);
+          setTimeout(() => setShake(false), 500);
           setPin("");
         } else {
           toast.success("Welcome back, Administrator!");
@@ -115,6 +117,10 @@ export const AdminLockScreen: React.FC = () => {
   // Keypad click handlers
   const handleNumberClick = (num: number) => {
     if (pin.length >= 4 || isVerifying || cooldown.isCooldown) return;
+
+    setPressedKey(num);
+    setTimeout(() => setPressedKey(null), 180);
+
     const nextPin = pin + num.toString();
     setPin(nextPin);
 
@@ -126,12 +132,16 @@ export const AdminLockScreen: React.FC = () => {
   const handleBackspace = () => {
     if (isVerifying || cooldown.isCooldown) return;
     setErrorMessage("");
+    setPressedKey("backspace");
+    setTimeout(() => setPressedKey(null), 180);
     setPin((prev) => prev.slice(0, -1));
   };
 
   const handleClear = () => {
-    if (isVerifying || cooldown.isCooldown) return;
+    if (isVerifying || cooldown.isCooldown || pin.length === 0) return;
     setErrorMessage("");
+    setPressedKey("clear");
+    setTimeout(() => setPressedKey(null), 180);
     setPin("");
   };
 
@@ -145,6 +155,9 @@ export const AdminLockScreen: React.FC = () => {
       if (e.key >= "0" && e.key <= "9") {
         e.preventDefault();
         const num = parseInt(e.key, 10);
+        setPressedKey(num);
+        setTimeout(() => setPressedKey(null), 180);
+
         setPin((prev) => {
           if (prev.length >= 4) return prev;
           const next = prev + num.toString();
@@ -156,10 +169,14 @@ export const AdminLockScreen: React.FC = () => {
       } else if (e.key === "Backspace") {
         e.preventDefault();
         setErrorMessage("");
+        setPressedKey("backspace");
+        setTimeout(() => setPressedKey(null), 180);
         setPin((prev) => prev.slice(0, -1));
       } else if (e.key === "Escape" || e.key === "c" || e.key === "C") {
         e.preventDefault();
         setErrorMessage("");
+        setPressedKey("clear");
+        setTimeout(() => setPressedKey(null), 180);
         setPin("");
       }
     };
@@ -180,178 +197,239 @@ export const AdminLockScreen: React.FC = () => {
 
   if (!isLocked) return null;
 
-  const displayName = profile?.full_name || user?.email || "System Administrator";
+  const displayName =
+    profile?.full_name ||
+    user?.user_metadata?.full_name ||
+    (user?.email ? user.email.split("@")[0] : "Mannam Ganesh Babu");
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 bg-background/92 backdrop-blur-2xl text-foreground select-none overflow-y-auto animate-in fade-in duration-300">
-      {/* Background Decorative Gradient Orbs */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
-      <div className="w-full max-w-sm flex flex-col items-center text-center space-y-5 my-auto">
-        {/* Admin Avatar & Security Badge */}
-        <div className="relative group">
-          <div className="relative">
-            <UserAvatar
-              name={displayName}
-              avatarUrl={profile?.avatar_url}
-              size="lg"
-              className="h-20 w-20 border-4 border-card shadow-2xl ring-2 ring-primary/40"
-            />
-            <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground p-1.5 rounded-full shadow-lg border-2 border-background">
-              <Lock className="h-3.5 w-3.5" />
+  const content = (
+    <div className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#08090C] text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+      {/* Mobile Screen Wrapper */}
+      <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-between px-6 py-6 sm:py-8">
+        {/* Top Header: Application Logo & User Profile Image with Theme Switcher */}
+        <div className="w-full flex items-center justify-between shrink-0">
+          {/* App Logo & Name */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-border/80 shadow-xs bg-card p-0.5">
+              <img
+                src="/favicon.png"
+                alt="Eduspace Logo"
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+            <span className="font-bold text-base tracking-tight text-foreground">
+              Eduspace
+            </span>
+          </div>
+
+          {/* Theme Toggle & User Profile Avatar */}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="w-9 h-9 rounded-full flex items-center justify-center border border-border/80 bg-card/80 hover:bg-accent text-foreground transition-all active:scale-90 cursor-pointer shadow-2xs"
+              title={resolvedTheme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun className="h-4 w-4 text-amber-400" />
+              ) : (
+                <Moon className="h-4 w-4 text-slate-700" />
+              )}
+            </button>
+
+            <div className="relative">
+              <UserAvatar
+                name={displayName}
+                avatarUrl={avatarUrl}
+                size="sm"
+                className="h-9 w-9 rounded-full border border-border shadow-xs object-cover"
+              />
             </div>
           </div>
         </div>
 
-        {/* Identity & Portal Info */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-center gap-2">
-            <Badge
-              variant="outline"
-              className="text-[10px] font-bold uppercase tracking-wider text-primary border-primary/30 bg-primary/5 py-0.5 px-2.5"
-            >
-              <Shield className="h-3 w-3 mr-1" />
-              Eduspace Admin Security Shield
-            </Badge>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">{displayName}</h2>
-          <p className="text-xs text-muted-foreground font-mono truncate max-w-xs">{user?.email}</p>
-        </div>
+        {/* Center Section: Greeting, PIN Subtitle & 4 Squircle Slots (Reference Style) */}
+        <div className="w-full flex flex-col items-center pt-2 sm:pt-4">
+          {/* Personalized Greeting */}
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground text-center">
+            Hi, {displayName}
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium text-center mt-1">
+            Enter your Eduspace PIN
+          </p>
 
-        {/* 1-Touch Biometric Unlock Button (If Supported) */}
-        {isBiometricsSupported && settings.biometricsEnabled && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isVerifying || isBiometricScanning || cooldown.isCooldown}
-            onClick={handleBiometricUnlock}
-            className="w-full max-w-[280px] h-11 rounded-2xl border-primary/40 bg-primary/10 hover:bg-primary hover:text-primary-foreground text-foreground font-bold text-xs sm:text-sm gap-2.5 shadow-sm shadow-primary/20 transition-all cursor-pointer group"
-          >
-            <Fingerprint className={cn("h-5 w-5 text-primary group-hover:text-primary-foreground", isBiometricScanning && "animate-pulse")} />
-            <span>{isBiometricScanning ? "Scan Fingerprint / Face ID..." : "Unlock with Fingerprint / Face ID"}</span>
-          </Button>
-        )}
-
-        {/* PIN Entry Prompt & Dot Indicators */}
-        <div className="space-y-3.5 w-full">
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-px bg-border flex-1 max-w-[60px]" />
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              {isBiometricsSupported && settings.biometricsEnabled ? "Or enter 4-digit PIN" : "Enter 4-digit PIN"}
-            </p>
-            <div className="h-px bg-border flex-1 max-w-[60px]" />
-          </div>
-
-          {/* 4 Glowing PIN Dots */}
+          {/* 4 Rounded Squircle Outline Boxes */}
           <div
             className={cn(
-              "flex items-center justify-center gap-4 py-1.5 transition-transform duration-300",
+              "flex items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-8 transition-transform duration-200",
               shake && "animate-shake"
             )}
           >
             {[0, 1, 2, 3].map((index) => {
               const isFilled = pin.length > index;
+              const isCurrent = pin.length === index;
+
               return (
                 <div
                   key={index}
                   className={cn(
-                    "w-4 h-4 rounded-full transition-all duration-200 border-2",
-                    isFilled
-                      ? "bg-primary border-primary shadow-md shadow-primary/40 scale-125"
-                      : "border-muted-foreground/30 bg-muted/40",
-                    errorMessage && "border-destructive bg-destructive/20"
+                    "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] flex items-center justify-center transition-all duration-200 relative",
+                    "bg-transparent",
+                    isCurrent
+                      ? "border-2 border-foreground dark:border-white shadow-xs"
+                      : isFilled
+                      ? "border-2 border-foreground/70 dark:border-white/80"
+                      : "border border-border/80 dark:border-zinc-800",
+                    errorMessage && "border-destructive dark:border-red-500 bg-destructive/10"
                   )}
-                />
+                >
+                  {/* Filled indicator dot inside box */}
+                  {isFilled && (
+                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-foreground dark:bg-white animate-in zoom-in-75 duration-150 shadow-xs" />
+                  )}
+                </div>
               );
             })}
           </div>
 
           {/* Error / Cooldown Feedback */}
-          {errorMessage && (
-            <div className="flex items-center justify-center gap-1.5 text-xs text-destructive font-medium animate-in fade-in">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
+          <div className="min-h-[24px] flex items-center justify-center mt-2.5">
+            {errorMessage && (
+              <div className="flex items-center justify-center gap-1.5 text-xs text-destructive dark:text-red-400 font-medium animate-in fade-in">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-          {cooldown.isCooldown && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center justify-center gap-2">
-              <ShieldAlert className="h-4 w-4 shrink-0" />
-              <span>Retry in {cooldown.remainingSeconds} seconds</span>
-            </div>
-          )}
+            {cooldown.isCooldown && (
+              <div className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-xs flex items-center justify-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                <span>Retry in {cooldown.remainingSeconds}s</span>
+              </div>
+            )}
+
+            {isVerifying && !errorMessage && !cooldown.isCooldown && (
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground animate-pulse">
+                <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                <span>Verifying...</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Fintech-grade Numeric Keypad */}
-        <div className="w-full grid grid-cols-3 gap-3 sm:gap-4 max-w-[280px]">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+        {/* Bottom Area: Use Fingerprint + Clean Frameless Keypad */}
+        <div className="w-full max-w-[270px] sm:max-w-[290px] mx-auto shrink-0 pb-3 sm:pb-4">
+          {/* "Use fingerprint" Dedicated Action (Reference Style) */}
+          {isBiometricsSupported && settings.biometricsEnabled && (
+            <div className="mb-6 sm:mb-8 flex justify-center w-full">
+              <button
+                type="button"
+                disabled={isVerifying || isBiometricScanning || cooldown.isCooldown}
+                onClick={handleBiometricUnlock}
+                className={cn(
+                  "text-emerald-500 dark:text-emerald-400 font-medium text-sm flex items-center justify-center gap-2",
+                  "transition-all active:opacity-60 cursor-pointer disabled:opacity-50"
+                )}
+              >
+                <Fingerprint className={cn("w-4 h-4 text-emerald-500 dark:text-emerald-400", isBiometricScanning && "animate-pulse")} />
+                <span>{isBiometricScanning ? "Scanning Fingerprint..." : "Use fingerprint"}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Clean Frameless Keypad with Reference Spacing */}
+          <div className="grid grid-cols-3 gap-y-7 sm:gap-y-8 gap-x-6 sm:gap-x-8 justify-items-center w-full">
+            {/* Numbers 1 to 9 */}
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+              const isPressed = pressedKey === num;
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  disabled={isVerifying || cooldown.isCooldown}
+                  onClick={() => handleNumberClick(num)}
+                  className={cn(
+                    "w-16 h-10 flex items-center justify-center transition-all duration-100",
+                    "text-foreground text-2xl sm:text-[28px] font-bold tracking-tight",
+                    "cursor-pointer select-none active:opacity-40 active:scale-90",
+                    "disabled:opacity-30 disabled:pointer-events-none",
+                    isPressed && "opacity-40 scale-90"
+                  )}
+                >
+                  <span>{num}</span>
+                </button>
+              );
+            })}
+
+            {/* Row 4: Left Slot (Clear Option) */}
             <button
-              key={num}
+              type="button"
+              disabled={isVerifying || cooldown.isCooldown || pin.length === 0}
+              onClick={handleClear}
+              className={cn(
+                "w-16 h-10 flex items-center justify-center transition-all duration-100",
+                "text-foreground text-sm sm:text-base font-bold",
+                "cursor-pointer select-none active:opacity-40 active:scale-90",
+                "disabled:opacity-20 disabled:pointer-events-none",
+                pressedKey === "clear" && "opacity-40 scale-90"
+              )}
+              title="Clear entered PIN (Esc)"
+            >
+              <span>Clear</span>
+            </button>
+
+            {/* Row 4: Center Slot (Number 0) */}
+            <button
               type="button"
               disabled={isVerifying || cooldown.isCooldown}
-              onClick={() => handleNumberClick(num)}
-              className="h-13 sm:h-14 rounded-2xl bg-card/70 hover:bg-primary hover:text-primary-foreground border border-border/70 active:scale-95 transition-all text-xl font-bold shadow-sm flex flex-col items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none group"
+              onClick={() => handleNumberClick(0)}
+              className={cn(
+                "w-16 h-10 flex items-center justify-center transition-all duration-100",
+                "text-foreground text-2xl sm:text-[28px] font-bold tracking-tight",
+                "cursor-pointer select-none active:opacity-40 active:scale-90",
+                "disabled:opacity-30 disabled:pointer-events-none",
+                pressedKey === 0 && "opacity-40 scale-90"
+              )}
             >
-              <span>{num}</span>
+              <span>0</span>
             </button>
-          ))}
 
-          {/* Clear Button */}
-          <button
-            type="button"
-            disabled={isVerifying || cooldown.isCooldown || pin.length === 0}
-            onClick={handleClear}
-            className="h-13 sm:h-14 rounded-2xl bg-card/40 hover:bg-card/80 border border-border/40 active:scale-95 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground shadow-xs flex items-center justify-center cursor-pointer disabled:opacity-20 disabled:pointer-events-none"
-            title="Clear entered digits (Esc)"
-          >
-            Clear
-          </button>
-
-          {/* Zero Button */}
-          <button
-            type="button"
-            disabled={isVerifying || cooldown.isCooldown}
-            onClick={() => handleNumberClick(0)}
-            className="h-13 sm:h-14 rounded-2xl bg-card/70 hover:bg-primary hover:text-primary-foreground border border-border/70 active:scale-95 transition-all text-xl font-bold shadow-sm flex flex-col items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-          >
-            <span>0</span>
-          </button>
-
-          {/* Backspace Button */}
-          <button
-            type="button"
-            disabled={isVerifying || cooldown.isCooldown || pin.length === 0}
-            onClick={handleBackspace}
-            className="h-13 sm:h-14 rounded-2xl bg-card/40 hover:bg-card/80 border border-border/40 active:scale-95 transition-all text-muted-foreground hover:text-foreground shadow-xs flex items-center justify-center cursor-pointer disabled:opacity-20 disabled:pointer-events-none"
-            title="Backspace"
-          >
-            <Delete className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Verification Loading Indicator */}
-        {isVerifying && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-primary animate-pulse">
-            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-            <span>Verifying PIN...</span>
+            {/* Row 4: Right Slot (Backspace Key) */}
+            <button
+              type="button"
+              disabled={isVerifying || cooldown.isCooldown || pin.length === 0}
+              onClick={handleBackspace}
+              className={cn(
+                "w-16 h-10 flex items-center justify-center transition-all duration-100",
+                "text-foreground",
+                "cursor-pointer select-none active:opacity-40 active:scale-90",
+                "disabled:opacity-20 disabled:pointer-events-none",
+                pressedKey === "backspace" && "opacity-40 scale-90"
+              )}
+              title="Backspace"
+            >
+              <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2]" />
+            </button>
           </div>
-        )}
 
-        {/* Emergency / Sign Out Option */}
-        <div className="pt-1 flex items-center justify-center gap-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer gap-1.5"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Forgot PIN? Sign Out
-          </Button>
+          {/* Forgot PIN / Sign Out option */}
+          <div className="flex justify-center pt-5 sm:pt-6">
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground transition-all cursor-pointer py-1 flex items-center gap-1"
+            >
+              <LogOut className="h-3 w-3" />
+              <span>Forgot PIN? Sign out</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 };
