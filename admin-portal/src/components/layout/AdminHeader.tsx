@@ -58,23 +58,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
   const totalAlerts = badges.unreadMessagesCount + (badges.recentAuditLogsCount > 0 ? 1 : 0);
 
-  // Global Lock Keyboard Shortcut listener (Alt + L / Ctrl + Alt + L / Ctrl + Shift + L)
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isPinLockEnabled) return;
-      if (
-        (e.altKey && e.key.toLowerCase() === "l") ||
-        (e.ctrlKey && e.altKey && e.key.toLowerCase() === "l") ||
-        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "l")
-      ) {
-        e.preventDefault();
-        lockScreen();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPinLockEnabled, lockScreen]);
-
   return (
     <header className="h-16 flex-shrink-0 flex items-center justify-between px-3.5 sm:px-6 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-30">
       {/* Left: Mobile Menu Toggle & App Title */}
@@ -214,17 +197,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         </DropdownMenu>
 
         {/* 1-Click Quick Lock Screen Button */}
-        {isPinLockEnabled && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={lockScreen}
-            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 hover:text-primary rounded-full cursor-pointer transition-all active:scale-90"
-            title="Lock Screen Now (Alt + L / Ctrl + Shift + L)"
-          >
-            <Lock className="h-4 w-4" />
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={lockScreen}
+          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 hover:text-primary rounded-full cursor-pointer transition-all active:scale-90"
+          title="Lock Screen Now (Alt + L)"
+        >
+          <Lock className="h-4 w-4" />
+        </Button>
 
         {/* Theme Toggle */}
         <Button
@@ -278,15 +259,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 System Settings
               </Link>
             </DropdownMenuItem>
-            {isPinLockEnabled && (
-              <DropdownMenuItem
-                onClick={lockScreen}
-                className="text-xs cursor-pointer text-foreground focus:bg-primary/10 focus:text-primary"
-              >
+            <DropdownMenuItem
+              onClick={lockScreen}
+              className="text-xs cursor-pointer text-foreground focus:bg-primary/10 focus:text-primary flex items-center justify-between"
+            >
+              <div className="flex items-center">
                 <Lock className="mr-2 h-4 w-4 text-primary" />
-                Lock Screen Now
-              </DropdownMenuItem>
-            )}
+                <span>Lock Screen</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                Alt+L
+              </span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={handleSignOut}

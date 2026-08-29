@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { PanelLeft, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight, MoreVertical, NotebookPen, BookOpen, Flame, Play } from "lucide-react";
+import { PanelLeft, Sun, Moon, UserPlus, Search, ChevronLeft, ChevronRight, MoreVertical, NotebookPen, BookOpen, Flame, Play, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { UserDropdown } from "./UserDropdown";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStreak } from "@/contexts/StreakContext";
+import { usePinLock } from "@/hooks/usePinLock";
 import { useTranslation } from "react-i18next";
 import { ReactNode } from "react";
 import { StudentNotesDrawer } from "../student/StudentNotesDrawer";
@@ -29,6 +30,7 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
   const { theme, setTheme } = useTheme();
   const { profile, updateProfile, role } = useAuth();
   const { streak } = useStreak();
+  const { lockScreen } = usePinLock();
   const [toolsExpanded, setToolsExpanded] = useState<boolean>(true);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -268,6 +270,15 @@ export function DashboardHeader({ onMenuClick, actions }: DashboardHeaderProps) 
           )}
           {!isLecturer ? streakBadge : tourButton}
           <NotificationsPopover />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={lockScreen}
+            className="size-9 rounded-full border border-white/20 dark:border-slate-600/30 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/60 active:scale-95 transition-all backdrop-blur-xl shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 group text-muted-foreground hover:text-primary cursor-pointer"
+            title="Lock Screen (Alt + L)"
+          >
+            <Lock className="h-4 w-4" />
+          </Button>
           <UserDropdown />
         </div>
       </div>

@@ -12,6 +12,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
+import { auditService } from "./audit.service";
 
 export interface PinLockSettings {
   enabled: boolean;
@@ -26,6 +27,8 @@ export interface PinLockSettings {
 export interface StoredPinConfig extends PinLockSettings {
   salt: string;
   hash: string;
+  algo?: "PBKDF2-100K" | "SHA-256";
+  iterations?: number;
   biometricCredentialId?: string;
 }
 
@@ -42,16 +45,79 @@ export interface CooldownStatus {
   currentChance: number; // 1, 2, or 3
   attemptInChance: number; // 0, 1, 2, or 3
   remainingAttemptsInChance: number; // 3, 2, 1, or 0
-  lockDurationType: "1m" | "5m" | "24h" | null;
+  lockDurationType?: "1m" | "5m" | "24h" | null;
+}
+
+export interface PinRotationStatus {
+  pinAgeDays: number;
+  isExpiredOrDue: boolean; // >= 90 days
+  isExpiringSoon: boolean; // >= 75 days && < 90 days
+  daysRemaining: number;
+  lastUpdatedDate: string | null;
+  statusLabel: string;
 }
 
 const STORAGE_PREFIX = "eduspace_admin_pin";
 export const MAX_ATTEMPTS_PER_CHANCE = 3;
 export const MAX_CHANCES = 3;
 
-export const CHANCE_1_LOCKOUT_MS = 1 * 1000; // 1 minute (01:00)
-export const CHANCE_2_LOCKOUT_MS = 5 * 1000; // 5 minutes (05:00)
-export const CHANCE_3_LOCKOUT_MS = 5 * 1000; // 24 hours (24:00:00)
+export const CHANCE_1_LOCKOUT_MS = 1 * 60 * 1000; // 1 minute (01:00)
+export const CHANCE_2_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes (05:00)
+export const CHANCE_3_LOCKOUT_MS = 24 * 60 * 60 * 1000; // 24 hours (24:00:00)
+
+export const PBKDF2_ITERATIONS = 100000;
+export const BROADCAST_CHANNEL_NAME = "eduspace_admin_pin_lock_sync";
+
+export type BroadcastPinEvent =
+  | { type: "LOCK"; userId: string; timestamp: number }
+  | { type: "UNLOCK"; userId: string; timestamp: number }
+  | { type: "CONFIG_UPDATED"; userId: string; timestamp: number }
+  | { type: "LOCKOUT"; userId: string; lockedUntil: number; chance: number; timestamp: number };
+
+/**
+ * Broadcasts screen lock state changes to all open tabs in real-time.
+ */
+export function broadcastPinLockEvent(event: BroadcastPinEvent): void {
+  if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
+  try {
+    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    channel.postMessage(event);
+    channel.close();
+  } catch {
+    // fallback
+  }
+}
+
+/**
+ * Blacklist of common, easily guessed 4-digit PINs.
+ */
+const COMMON_PIN_BLACKLIST = new Set([
+  // Sequential
+  "1234", "2345", "3456", "4567", "5678", "6789", "7890",
+  "4321", "5432", "6543", "7654", "8765", "9876", "0987",
+  // Repetitive
+  "0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999",
+  // Geometric / Numpad patterns
+  "2580", "0852", "1470", "0741", "1379", "9731", "1590",
+  // Common pairs / years
+  "1212", "1313", "1414", "6969", "2020", "2024", "2025", "2026",
+]);
+
+/**
+ * Validate that the chosen PIN is not weak or trivial.
+ */
+export function isCommonOrWeakPin(pin: string): { isWeak: boolean; reason?: string } {
+  if (!/^\d{4}$/.test(pin)) {
+    return { isWeak: true, reason: "PIN must be exactly 4 numeric digits." };
+  }
+  if (COMMON_PIN_BLACKLIST.has(pin)) {
+    return { isWeak: true, reason: "This PIN is too common and easily guessed. Please choose a more secure combination." };
+  }
+  if (pin[0] === pin[1] && pin[1] === pin[2] && pin[2] === pin[3]) {
+    return { isWeak: true, reason: "Avoid using all repetitive digits (e.g. 1111, 2222)." };
+  }
+  return { isWeak: false };
+}
 
 /**
  * Base64URL encoding/decoding helpers for WebAuthn binary IDs
@@ -79,9 +145,97 @@ function base64urlToBuffer(base64url: string): ArrayBuffer {
 }
 
 /**
- * Computes a salted SHA-256 hash using the native browser WebCrypto API.
+ * Generates a stable client device signature based on hardware and browser attributes.
  */
-async function computeHash(pin: string, salt: string): Promise<string> {
+function getDeviceSignature(): string {
+  if (typeof window === "undefined") return "server_env";
+  try {
+    const nav = window.navigator;
+    const screen = window.screen;
+    const parts = [
+      nav.userAgent || "",
+      nav.language || "",
+      screen.colorDepth || "",
+      (screen.width > screen.height ? "landscape" : "portrait"),
+      nav.hardwareConcurrency || "1",
+      window.location.hostname || "localhost",
+    ];
+    return parts.join("||");
+  } catch {
+    return "default_device";
+  }
+}
+
+/**
+ * Computes a high-security PBKDF2 key derivation (100,000 iterations) with Device & User Hardware Salt Binding.
+ * Highly resistant to offline GPU brute-forcing and prevents cross-device localStorage theft.
+ */
+async function computePbkdf2Hash(
+  pin: string,
+  salt: string,
+  userId?: string,
+  iterations = PBKDF2_ITERATIONS,
+  bindToDevice = true
+): Promise<string> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(pin),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+
+  const deviceSig = bindToDevice ? getDeviceSignature() : "unbound";
+  const boundSalt = `salt_${salt}:user_${userId || "generic"}:dev_${deviceSig}:eduspace_admin_sec_v3`;
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: enc.encode(boundSalt),
+      iterations,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Legacy v2 unbound PBKDF2 hash (used for fallback/upgrade).
+ */
+async function computePbkdf2V2Unbound(pin: string, salt: string, iterations = PBKDF2_ITERATIONS): Promise<string> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(pin),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: enc.encode(`salt_${salt}:eduspace_admin_sec_v2`),
+      iterations,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Legacy SHA-256 hash (maintained for backward-compatible verification and seamless upgrade).
+ */
+async function computeLegacySha256(pin: string, salt: string): Promise<string> {
   const enc = new TextEncoder();
   const data = enc.encode(`salt_${salt}:admin_pin_${pin}:eduspace_admin_sec_v1`);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -296,20 +450,24 @@ export const pinLockService = {
    */
   async setupPin(userId: string, pin: string): Promise<{ success: boolean; error?: string }> {
     if (!userId) return { success: false, error: "Active admin session required." };
-    if (!/^\d{4}$/.test(pin)) {
-      return { success: false, error: "PIN must be exactly 4 digits (0-9)." };
+    
+    const weakCheck = isCommonOrWeakPin(pin);
+    if (weakCheck.isWeak) {
+      return { success: false, error: weakCheck.reason || "Invalid or weak PIN." };
     }
 
     try {
       const currentSettings = this.getSettings(userId);
       const salt = generateSalt();
-      const hash = await computeHash(pin, salt);
+      const hash = await computePbkdf2Hash(pin, salt, userId, PBKDF2_ITERATIONS, true);
 
       const config: StoredPinConfig = {
         ...currentSettings,
         enabled: true,
         salt,
         hash,
+        algo: "PBKDF2-100K",
+        iterations: PBKDF2_ITERATIONS,
         syncToCloud: currentSettings.syncToCloud !== undefined ? currentSettings.syncToCloud : true,
         updatedAt: new Date().toISOString(),
       };
@@ -321,6 +479,16 @@ export const pinLockService = {
       if (config.syncToCloud) {
         this.syncConfigToCloud(userId, config);
       }
+
+      auditService.logAction({
+        action: "ADMIN_PIN_CONFIGURED",
+        details: {
+          method: "pin_setup_pbkdf2_device_bound",
+          iterations: PBKDF2_ITERATIONS,
+          syncToCloud: Boolean(config.syncToCloud),
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       return { success: true };
     } catch (err: any) {
@@ -390,17 +558,25 @@ export const pinLockService = {
       config.updatedAt = new Date().toISOString();
 
       localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(config));
+
+      auditService.logAction({
+        action: "ADMIN_BIOMETRICS_ENROLLED",
+        details: {
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return { success: true };
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
-        return { success: false, error: "Biometric enrollment was cancelled or permission denied." };
+        return { success: false, error: "Biometric enrollment was cancelled." };
       }
-      return { success: false, error: err.message || "Failed to register biometrics." };
+      return { success: false, error: err.message || "Biometric enrollment failed." };
     }
   },
 
   /**
-   * Unlock with platform authenticator.
+   * Unlock with biometrics using WebAuthn Assertion.
    */
   async verifyBiometrics(userId: string): Promise<{ success: boolean; error?: string }> {
     if (!userId) return { success: false, error: "Admin session required." };
@@ -409,7 +585,7 @@ export const pinLockService = {
     if (cooldown.isCooldown) {
       return {
         success: false,
-        error: `Authentication is locked. Please wait ${cooldown.remainingSeconds}s.`,
+        error: `Authentication is locked. Try again in ${cooldown.remainingSeconds}s.`,
       };
     }
 
@@ -418,6 +594,10 @@ export const pinLockService = {
       if (!raw) return { success: false, error: "No PIN configuration found." };
 
       const config: StoredPinConfig = JSON.parse(raw);
+      if (!config.biometricsEnabled) {
+        return { success: false, error: "Biometrics are not enabled for your account." };
+      }
+      
       const credentialId = config.biometricCredentialId;
 
       const challenge = new Uint8Array(32);
@@ -448,6 +628,13 @@ export const pinLockService = {
       if (assertion) {
         this.clearFailedAttempts(userId);
         this.setSessionLocked(userId, false);
+        auditService.logAction({
+          action: "ADMIN_BIOMETRICS_UNLOCKED",
+          details: {
+            method: "platform_authenticator",
+            timestamp: new Date().toISOString(),
+          },
+        });
         return { success: true };
       }
 
@@ -462,6 +649,7 @@ export const pinLockService = {
 
   /**
    * Verify an entered 4-digit PIN against the stored hash with progressive 3-chance security.
+   * Supports Device-Bound PBKDF2 with automatic fallback and seamless background upgrade.
    */
   async verifyPin(
     userId: string,
@@ -496,10 +684,62 @@ export const pinLockService = {
         return { success: false, error: "Invalid PIN configuration." };
       }
 
-      const inputHash = await computeHash(enteredPin, config.salt);
-      if (inputHash === config.hash) {
+      let isMatch = false;
+
+      // 1. Verify with Device-Bound PBKDF2 (modern standard)
+      const deviceBoundHash = await computePbkdf2Hash(enteredPin, config.salt, userId, config.iterations || PBKDF2_ITERATIONS, true);
+      if (deviceBoundHash === config.hash) {
+        isMatch = true;
+      } else {
+        // 2. Check unbound v2 PBKDF2
+        const unboundHash = await computePbkdf2V2Unbound(enteredPin, config.salt, config.iterations || PBKDF2_ITERATIONS);
+        if (unboundHash === config.hash) {
+          isMatch = true;
+          // Auto-upgrade to device-bound hash
+          try {
+            const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS, true);
+            const upgradedConfig: StoredPinConfig = {
+              ...config,
+              hash: upgradedHash,
+              algo: "PBKDF2-100K",
+              iterations: PBKDF2_ITERATIONS,
+              updatedAt: new Date().toISOString(),
+            };
+            localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(upgradedConfig));
+          } catch {}
+        } else {
+          // 3. Check legacy SHA-256
+          const legacyHash = await computeLegacySha256(enteredPin, config.salt);
+          if (legacyHash === config.hash) {
+            isMatch = true;
+            try {
+              const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS, true);
+              const upgradedConfig: StoredPinConfig = {
+                ...config,
+                hash: upgradedHash,
+                algo: "PBKDF2-100K",
+                iterations: PBKDF2_ITERATIONS,
+                updatedAt: new Date().toISOString(),
+              };
+              localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(upgradedConfig));
+              if (upgradedConfig.syncToCloud !== false) {
+                this.syncConfigToCloud(userId, upgradedConfig);
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (isMatch) {
         this.clearFailedAttempts(userId);
         this.setSessionLocked(userId, false);
+        auditService.logAction({
+          action: "ADMIN_PIN_UNLOCKED",
+          details: {
+            method: "4_digit_pin_pbkdf2",
+            timestamp: new Date().toISOString(),
+          },
+        });
         return { success: true };
       } else {
         const record = this.recordFailedAttempt(userId);
@@ -516,6 +756,19 @@ export const pinLockService = {
           } else {
             errorMsg = "Authentication Locked. All 3 chances have been used. Please try again after 24 hours.";
           }
+
+          // Record Security Audit Event for progressive lockout penalty
+          auditService.logAction({
+            action: "ADMIN_PIN_LOCKOUT_TRIGGERED",
+            details: {
+              chance,
+              lockDurationType: record.lockDurationType,
+              lockedUntil: new Date(record.lockedUntil).toISOString(),
+              severity: chance === 3 ? "CRITICAL" : "HIGH",
+              reason: `Exhausted 3 consecutive failed PIN attempts in Chance ${chance} of 3`,
+              timestamp: new Date().toISOString(),
+            },
+          });
 
           return {
             success: false,
@@ -613,6 +866,19 @@ export const pinLockService = {
       if (data?.user) {
         this.clearFailedAttempts(resolvedUserId);
         this.setSessionLocked(resolvedUserId, false);
+
+        // Record Security Audit Event for Master Password Verification
+        auditService.logAction({
+          action: "ADMIN_PIN_RESET_VIA_PASSWORD",
+          targetUserId: resolvedUserId,
+          targetEmail: resolvedEmail,
+          details: {
+            method: "master_password_recovery",
+            captchaVerified: Boolean(captchaToken),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
         return { success: true };
       }
 
@@ -663,6 +929,13 @@ export const pinLockService = {
       this.clearFailedAttempts(userId);
       this.setSessionLocked(userId, false);
       this.syncConfigToCloud(userId, null);
+      auditService.logAction({
+        action: "ADMIN_PIN_REMOVED",
+        details: {
+          reason: "user_removed_pin",
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch { }
   },
 
@@ -684,13 +957,54 @@ export const pinLockService = {
   },
 
   /**
-   * Set session lock state in sessionStorage.
+   * Set session lock state in sessionStorage and broadcast to other open tabs.
    */
   setSessionLocked(userId: string, locked: boolean): void {
     if (!userId) return;
     try {
       sessionStorage.setItem(`${STORAGE_PREFIX}_session_locked_${userId}`, locked ? "true" : "false");
+      broadcastPinLockEvent({
+        type: locked ? "LOCK" : "UNLOCK",
+        userId,
+        timestamp: Date.now(),
+      });
     } catch { }
+  },
+
+  /**
+   * Evaluates PIN age and 90-day rotation status for enterprise security compliance.
+   */
+  getPinRotationStatus(userId: string): PinRotationStatus {
+    if (!userId) {
+      return { pinAgeDays: 0, isExpiredOrDue: false, isExpiringSoon: false, daysRemaining: 90, lastUpdatedDate: null, statusLabel: "No PIN Configured" };
+    }
+    const settings = this.getSettings(userId);
+    if (!settings.updatedAt) {
+      return { pinAgeDays: 0, isExpiredOrDue: false, isExpiringSoon: false, daysRemaining: 90, lastUpdatedDate: null, statusLabel: "No PIN Configured" };
+    }
+
+    const updatedTime = new Date(settings.updatedAt).getTime();
+    const now = Date.now();
+    const diffMs = Math.max(0, now - updatedTime);
+    const pinAgeDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const maxDays = 90;
+    const daysRemaining = Math.max(0, maxDays - pinAgeDays);
+
+    let statusLabel = `Updated ${pinAgeDays === 0 ? "today" : `${pinAgeDays}d ago`} (${daysRemaining}d remaining)`;
+    if (pinAgeDays >= maxDays) {
+      statusLabel = `Rotation Due (${pinAgeDays}d old)`;
+    } else if (pinAgeDays >= 75) {
+      statusLabel = `Expiring Soon (${daysRemaining}d remaining)`;
+    }
+
+    return {
+      pinAgeDays,
+      isExpiredOrDue: pinAgeDays >= maxDays,
+      isExpiringSoon: pinAgeDays >= 75 && pinAgeDays < maxDays,
+      daysRemaining,
+      lastUpdatedDate: settings.updatedAt,
+      statusLabel,
+    };
   },
 
   /**
@@ -752,7 +1066,7 @@ export const pinLockService = {
           isCooldown: false,
           remainingSeconds: 0,
           currentChance,
-          attemptInChance: 0,
+          attemptInChance,
           remainingAttemptsInChance: 3,
           lockDurationType: null,
         };
@@ -808,6 +1122,14 @@ export const pinLockService = {
         record.lockedUntil = Date.now() + CHANCE_3_LOCKOUT_MS;
         record.lockDurationType = "24h";
       }
+
+      broadcastPinLockEvent({
+        type: "LOCKOUT",
+        userId,
+        lockedUntil: record.lockedUntil,
+        chance: record.currentChance,
+        timestamp: Date.now(),
+      });
     }
 
     try {

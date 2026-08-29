@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { auditService } from "@/services/audit.service";
 
 // Mobile Haptic Vibration Helper
 const triggerHaptic = (pattern: number | number[] = 12) => {
@@ -75,6 +76,7 @@ export const AdminLockScreen: React.FC = () => {
   const [shake, setShake] = useState<boolean>(false);
   const [pressedKey, setPressedKey] = useState<number | string | null>(null);
   const [keypadLayout, setKeypadLayout] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
+  const [tamperTrigger, setTamperTrigger] = useState<number>(0);
 
   // Forgot PIN / Password verification states
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -96,6 +98,80 @@ export const AdminLockScreen: React.FC = () => {
   // Synchronous verification lock to prevent double-submitting and burning 2 attempts at once
   const isVerifyingRef = useRef<boolean>(false);
   const autoBiometricPromptedRef = useRef<boolean>(false);
+
+  // 🛡️ Anti-Tamper DevTools MutationObserver & DOM Watchdog Shield
+  useEffect(() => {
+    if (!isLocked) {
+      document.body.classList.remove("eduspace-tamper-blackout");
+      return;
+    }
+
+    const checkTampering = () => {
+      if (!isLocked) return;
+
+      const overlayEl = document.getElementById("eduspace-lock-screen-root");
+
+      // 1. Element deleted/detached from body
+      if (!overlayEl || !document.body.contains(overlayEl)) {
+        document.body.classList.add("eduspace-tamper-blackout");
+        setTamperTrigger((prev) => prev + 1);
+        auditService.logAction({
+          action: "ADMIN_DOM_TAMPER_DETECTED",
+          details: {
+            reason: "lock_screen_element_detached_or_deleted",
+            timestamp: new Date().toISOString(),
+          },
+        });
+        return;
+      }
+
+      // 2. Element hidden via inline CSS or style mutation
+      const computed = window.getComputedStyle(overlayEl);
+      const isTampered =
+        computed.display === "none" ||
+        computed.visibility === "hidden" ||
+        parseFloat(computed.opacity || "1") < 0.5 ||
+        computed.pointerEvents === "none";
+
+      if (isTampered) {
+        document.body.classList.add("eduspace-tamper-blackout");
+        overlayEl.style.setProperty("display", "flex", "important");
+        overlayEl.style.setProperty("visibility", "visible", "important");
+        overlayEl.style.setProperty("opacity", "1", "important");
+        overlayEl.style.setProperty("pointer-events", "auto", "important");
+        setTamperTrigger((prev) => prev + 1);
+        auditService.logAction({
+          action: "ADMIN_DOM_TAMPER_DETECTED",
+          details: {
+            reason: "lock_screen_style_tampered",
+            timestamp: new Date().toISOString(),
+          },
+        });
+      } else {
+        document.body.classList.remove("eduspace-tamper-blackout");
+      }
+    };
+
+    const observer = new MutationObserver(() => {
+      checkTampering();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "class", "hidden"],
+    });
+
+    // 400ms Heartbeat Watchdog
+    const interval = setInterval(checkTampering, 400);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+      document.body.classList.remove("eduspace-tamper-blackout");
+    };
+  }, [isLocked]);
 
   // Clear PIN, errors and generate randomized keypad on lock state change
   useEffect(() => {
@@ -331,9 +407,13 @@ export const AdminLockScreen: React.FC = () => {
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   const content = (
-    <div className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#08090C] text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+    <div
+      id="eduspace-lock-screen-root"
+      key={`admin-lock-root-${tamperTrigger}`}
+      className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#060709] text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200"
+    >
       {/* Mobile Frame Container */}
-      <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-between px-6 py-6 sm:py-8">
+      <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-between px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:py-8">
         {/* Top Bar: Brand Logo & User Profile with Theme Toggle */}
         <div className="w-full flex items-center justify-between shrink-0">
           {/* App Logo */}
@@ -380,8 +460,8 @@ export const AdminLockScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Center Section: Greeting & 4 Squircle Slots */}
-        <div className="w-full flex flex-col items-center pt-2 sm:pt-4">
+        {/* Center/Top Section: Greeting & 4 Squircle Slots */}
+        <div className="w-full flex flex-col items-center pt-3 sm:pt-5">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground text-center">
             Hi, {displayName}
           </h1>
@@ -404,7 +484,7 @@ export const AdminLockScreen: React.FC = () => {
                 <div
                   key={index}
                   className={cn(
-                    "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] flex items-center justify-center transition-all duration-200 relative",
+                    "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] sm:rounded-[22px] flex items-center justify-center transition-all duration-200 relative",
                     "bg-transparent",
                     isSuccessUnlocked
                       ? "border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-500/10"
@@ -442,7 +522,7 @@ export const AdminLockScreen: React.FC = () => {
           )}
 
           {/* Feedback & Error / Cooldown Area */}
-          <div className="min-h-[30px] flex items-center justify-center mt-2 px-2 text-center">
+          <div className="min-h-[28px] flex items-center justify-center mt-2 px-2 text-center">
             {cooldown.isCooldown ? (
               <div className="flex items-center justify-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full font-semibold animate-pulse">
                 <ShieldAlert className="h-4 w-4 shrink-0" />
@@ -462,26 +542,28 @@ export const AdminLockScreen: React.FC = () => {
               </div>
             ) : null}
           </div>
-
-          {/* Biometric Button */}
-          {settings.biometricsEnabled && isBiometricsSupported && !cooldown.isCooldown && !isSuccessUnlocked && (
-            <div className="mt-1">
-              <button
-                type="button"
-                onClick={handleBiometricUnlock}
-                disabled={isBiometricScanning || isVerifying}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-3 rounded-full hover:bg-muted/40 cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                <Fingerprint className={cn("w-4 h-4 text-emerald-500", isBiometricScanning && "animate-pulse")} />
-                <span className="font-medium">Use fingerprint</span>
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Clean Frameless Keypad */}
-        <div className="w-full max-w-[270px] sm:max-w-[290px] mx-auto shrink-0 pb-2 sm:pb-3">
-          <div className="grid grid-cols-3 gap-y-6 sm:gap-y-7 gap-x-6 sm:gap-x-8 justify-items-center w-full">
+        {/* Flexible spacer to push keypad down to bottom thumb zone */}
+        <div className="flex-1 min-h-[16px] max-h-[80px]" />
+
+        {/* Lower Ergonomic Section: Biometric prompt + Mobile Keypad */}
+        <div className="w-full max-w-[310px] sm:max-w-[330px] mx-auto shrink-0 flex flex-col items-center">
+          {/* Biometric Button: Positioned directly above keypad in emerald green like Groww */}
+          {settings.biometricsEnabled && isBiometricsSupported && !cooldown.isCooldown && !isSuccessUnlocked && (
+            <button
+              type="button"
+              onClick={handleBiometricUnlock}
+              disabled={isBiometricScanning || isVerifying}
+              className="mb-5 sm:mb-7 flex items-center gap-1.5 text-sm font-semibold text-emerald-500 hover:text-emerald-400 active:scale-95 transition-all cursor-pointer select-none"
+            >
+              <Fingerprint className={cn("w-4 h-4", isBiometricScanning && "animate-pulse")} />
+              <span>Use fingerprint</span>
+            </button>
+          )}
+
+          {/* Clean Frameless Keypad */}
+          <div className="grid grid-cols-3 gap-y-7 sm:gap-y-8 gap-x-12 sm:gap-x-14 justify-items-center w-full">
             {keypadLayout.slice(0, 9).map((num) => {
               const isPressed = pressedKey === num;
               return (
@@ -491,11 +573,11 @@ export const AdminLockScreen: React.FC = () => {
                   disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
                   onClick={() => handleNumberClick(num)}
                   className={cn(
-                    "w-16 h-10 flex items-center justify-center transition-all duration-100",
-                    "text-foreground text-2xl sm:text-[28px] font-bold tracking-tight",
-                    "cursor-pointer select-none active:opacity-40 active:scale-90",
+                    "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                    "text-foreground text-[28px] sm:text-[30px] font-medium tracking-tight",
+                    "cursor-pointer select-none active:opacity-30 active:scale-90",
                     "disabled:opacity-30 disabled:pointer-events-none",
-                    isPressed && "opacity-40 scale-90"
+                    isPressed && "opacity-30 scale-90"
                   )}
                 >
                   <span>{num}</span>
@@ -503,24 +585,24 @@ export const AdminLockScreen: React.FC = () => {
               );
             })}
 
-            {/* Row 4: Left Slot (Clear Option) */}
+            {/* Row 4: Left Slot (Dot bullet • or Clear) */}
             <button
               type="button"
               disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
               onClick={handleClear}
               className={cn(
-                "w-16 h-10 flex items-center justify-center transition-all duration-100",
-                "text-foreground text-sm sm:text-base font-bold",
-                "cursor-pointer select-none active:opacity-40 active:scale-90",
+                "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                "text-muted-foreground/60 text-2xl font-bold",
+                "cursor-pointer select-none active:opacity-30 active:scale-90",
                 "disabled:opacity-20 disabled:pointer-events-none",
-                pressedKey === "clear" && "opacity-40 scale-90"
+                pressedKey === "clear" && "opacity-30 scale-90"
               )}
-              title="Clear entered PIN (Esc)"
+              title="Clear entered PIN"
             >
-              <span>Clear</span>
+              <span className="leading-none select-none">.</span>
             </button>
 
-            {/* Row 4: Center Slot (10th digit, default 0 or shuffled) */}
+            {/* Row 4: Center Slot (10th digit, 0) */}
             {(() => {
               const centerDigit = keypadLayout[9] ?? 0;
               return (
@@ -530,11 +612,11 @@ export const AdminLockScreen: React.FC = () => {
                   disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
                   onClick={() => handleNumberClick(centerDigit)}
                   className={cn(
-                    "w-16 h-10 flex items-center justify-center transition-all duration-100",
-                    "text-foreground text-2xl sm:text-[28px] font-bold tracking-tight",
-                    "cursor-pointer select-none active:opacity-40 active:scale-90",
+                    "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                    "text-foreground text-[28px] sm:text-[30px] font-medium tracking-tight",
+                    "cursor-pointer select-none active:opacity-30 active:scale-90",
                     "disabled:opacity-30 disabled:pointer-events-none",
-                    pressedKey === centerDigit && "opacity-40 scale-90"
+                    pressedKey === centerDigit && "opacity-30 scale-90"
                   )}
                 >
                   <span>{centerDigit}</span>
@@ -548,20 +630,20 @@ export const AdminLockScreen: React.FC = () => {
               disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
               onClick={handleBackspace}
               className={cn(
-                "w-16 h-10 flex items-center justify-center transition-all duration-100",
+                "w-16 h-12 flex items-center justify-center transition-all duration-100",
                 "text-foreground",
-                "cursor-pointer select-none active:opacity-40 active:scale-90",
+                "cursor-pointer select-none active:opacity-30 active:scale-90",
                 "disabled:opacity-20 disabled:pointer-events-none",
-                pressedKey === "backspace" && "opacity-40 scale-90"
+                pressedKey === "backspace" && "opacity-30 scale-90"
               )}
               title="Backspace"
             >
-              <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2]" />
+              <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
             </button>
           </div>
 
-          {/* Bottom Actions: Forgot PIN & Sign Out (Cleanly Separated) */}
-          <div className="flex items-center justify-center gap-3 pt-5 sm:pt-6">
+          {/* Bottom Actions: Forgot PIN & Sign Out */}
+          <div className="flex items-center justify-center gap-3 pt-6 sm:pt-7">
             <button
               type="button"
               onClick={handleOpenForgotPin}
@@ -758,5 +840,8 @@ export const AdminLockScreen: React.FC = () => {
     </div>
   );
 
-  return createPortal(content, document.body);
+  return createPortal(
+    <div id="eduspace-lock-screen-portal">{content}</div>,
+    document.body
+  );
 };

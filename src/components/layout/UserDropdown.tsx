@@ -129,23 +129,21 @@ export function UserDropdown() {
           </Link>
         </DropdownMenuItem>
 
-        {isPinLockEnabled && (
-          <DropdownMenuItem
-            onClick={() => {
-              setOpen(false);
-              lockScreen();
-            }}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Lock className="size-4 text-amber-500" />
-              <span>{t("common.lockScreen", "Lock Screen")}</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
-              Alt+L
-            </span>
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            lockScreen();
+          }}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Lock className="size-4 text-amber-500" />
+            <span>{t("common.lockScreen", "Lock Screen")}</span>
+          </div>
+          <span className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+            Alt+L
+          </span>
+        </DropdownMenuItem>
 
         <DropdownMenuItem
           className="flex items-center justify-between cursor-pointer"

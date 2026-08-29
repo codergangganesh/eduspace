@@ -37,6 +37,8 @@ import {
   Keyboard,
   Shuffle,
   Cloud,
+  History,
+  ShieldAlert,
 } from "lucide-react";
 import { AdminPinSetupModal } from "./AdminPinSetupModal";
 import { toast } from "sonner";
@@ -48,6 +50,7 @@ export const AdminPinSecurityCard: React.FC = () => {
     isPinLockEnabled,
     isBiometricsSupported,
     settings,
+    pinRotation,
     lockScreen,
     setupPin,
     removePin,
@@ -396,8 +399,65 @@ export const AdminPinSecurityCard: React.FC = () => {
                 </div>
               </div>
 
+              {/* 90-Day PIN Rotation & Security Compliance Banner */}
+              <div
+                className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all ${pinRotation?.isExpiredOrDue
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200"
+                    : pinRotation?.isExpiringSoon
+                      ? "bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200"
+                      : "bg-muted/30 border-border/70 text-muted-foreground"
+                  }`}
+              >
+                <div className="flex items-start gap-2.5 min-w-0">
+                  {pinRotation?.isExpiredOrDue ? (
+                    <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  ) : pinRotation?.isExpiringSoon ? (
+                    <History className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+                      <span>PIN Security Compliance</span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] py-0 px-1.5 font-bold uppercase ${pinRotation?.isExpiredOrDue
+                            ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                            : pinRotation?.isExpiringSoon
+                              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                          }`}
+                      >
+                        {pinRotation?.isExpiredOrDue
+                          ? "Rotation Due (90+ Days)"
+                          : pinRotation?.isExpiringSoon
+                            ? "Expiring Soon"
+                            : "Compliant (90-Day Cycle)"}
+                      </Badge>
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      {pinRotation?.isExpiredOrDue
+                        ? `Your 4-digit PIN was created ${pinRotation.pinAgeDays} days ago. For optimal security, consider rotating your PIN.`
+                        : pinRotation?.isExpiringSoon
+                          ? `PIN rotation recommended in ${pinRotation.daysRemaining} days (Current age: ${pinRotation.pinAgeDays} days).`
+                          : `PIN updated ${pinRotation?.pinAgeDays === 0 ? "today" : `${pinRotation?.pinAgeDays} days ago`} • ${pinRotation?.daysRemaining} days remaining in compliance cycle.`}
+                    </p>
+                  </div>
+                </div>
+
+                {pinRotation?.isExpiredOrDue && (
+                  <button
+                    type="button"
+                    onClick={handleOpenChangePin}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs cursor-pointer active:scale-95 transition-all self-start sm:self-auto"
+                  >
+                    Rotate PIN Now
+                  </button>
+                )}
+              </div>
+
               {/* PIN Management Buttons (Clean Symmetrical Grid) */}
-              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={handleOpenChangePin}

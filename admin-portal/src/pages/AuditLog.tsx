@@ -87,8 +87,10 @@ export const AuditLog: React.FC = () => {
   }));
 
   const getActionBadgeVariant = (action: string) => {
-    if (action.includes("suspend") || action.includes("delete")) return "destructive";
-    if (action.includes("activate") || action.includes("promote") || action.includes("SET_MAINTENANCE")) return "success";
+    const act = (action || "").toLowerCase();
+    if (act.includes("suspend") || act.includes("delete") || act.includes("lockout") || act.includes("removed") || act.includes("tamper")) return "destructive";
+    if (act.includes("activate") || act.includes("promote") || act.includes("set_maintenance") || act.includes("configured") || act.includes("enrolled") || act.includes("unlocked")) return "success";
+    if (act.includes("reset") || act.includes("locked")) return "warning";
     return "info";
   };
 
@@ -173,8 +175,8 @@ export const AuditLog: React.FC = () => {
                     <p className="text-[11px] text-muted-foreground font-mono">{log.admin_email}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getActionBadgeVariant(log.action) as any} className="capitalize text-xs">
-                      {log.action.replace("_", " ")}
+                    <Badge variant={getActionBadgeVariant(log.action) as any} className="capitalize text-xs font-semibold">
+                      {(log.action || "").replace(/_/g, " ")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs font-medium text-foreground">
@@ -229,12 +231,12 @@ export const AuditLog: React.FC = () => {
                 <Lock className="h-3 w-3" />
                 Audit Record
               </span>
-              <Badge variant={getActionBadgeVariant(selectedAudit?.action || "") as any} className="capitalize text-xs">
-                {(selectedAudit?.action || "").replace("_", " ")}
+              <Badge variant={getActionBadgeVariant(selectedAudit?.action || "") as any} className="capitalize text-xs font-semibold">
+                {(selectedAudit?.action || "").replace(/_/g, " ")}
               </Badge>
             </div>
             <SheetTitle className="text-base sm:text-lg font-bold text-foreground capitalize text-left leading-tight break-words">
-              {(selectedAudit?.action || "Audit Event").replace("_", " ")}
+              {(selectedAudit?.action || "Audit Event").replace(/_/g, " ")}
             </SheetTitle>
             <SheetDescription className="text-xs text-left flex items-center gap-1 text-muted-foreground">
               <Clock className="h-3 w-3" />

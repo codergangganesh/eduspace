@@ -663,4 +663,13 @@
   animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
+/* Anti-Tamper DevTools Blackout Shield */
+body.eduspace-tamper-blackout > *:not(#eduspace-lock-screen-portal) {
+  filter: blur(120px) brightness(0.05) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  opacity: 0.02 !important;
+  transition: filter 0.15s ease-out, opacity 0.15s ease-out;
+}
+
 

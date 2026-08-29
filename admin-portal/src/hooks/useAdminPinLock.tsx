@@ -1,8 +1,10 @@
 import * as React from "react";
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAdminAuth } from "./useAdminAuth";
-import { pinLockService, PinLockSettings, CooldownStatus } from "@/services/pinLock.service";
+import { pinLockService, PinLockSettings, CooldownStatus, PinRotationStatus, BROADCAST_CHANNEL_NAME } from "@/services/pinLock.service";
+import { auditService } from "@/services/audit.service";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface AdminPinLockContextType {
   isLocked: boolean;
@@ -11,6 +13,7 @@ interface AdminPinLockContextType {
   isBiometricsSupported: boolean;
   settings: PinLockSettings;
   cooldown: CooldownStatus;
+  pinRotation: PinRotationStatus;
   lockScreen: () => void;
   unlockWithPin: (pin: string) => Promise<{
     success: boolean;
@@ -48,6 +51,9 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
     remainingAttemptsInChance: 3,
     lockDurationType: null,
   });
+  const [pinRotation, setPinRotation] = useState<PinRotationStatus>(() =>
+    pinLockService.getPinRotationStatus("")
+  );
 
   const lastActivityRef = useRef<number>(Date.now());
   const hiddenTimeRef = useRef<number | null>(null);
@@ -65,6 +71,7 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
       setIsLocked(false);
       setIsPinSetup(false);
       setIsPinLockEnabled(false);
+      setPinRotation(pinLockService.getPinRotationStatus(""));
       return;
     }
 
@@ -73,13 +80,44 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
     const currentSettings = pinLockService.getSettings(userId);
     const locked = pinLockService.isSessionLocked(userId);
     const currentCooldown = pinLockService.getCooldownStatus(userId);
+    const rotation = pinLockService.getPinRotationStatus(userId);
 
     setIsPinSetup(hasPin);
     setIsPinLockEnabled(isEnabled);
     setSettings(currentSettings);
     setIsLocked(isEnabled && locked);
     setCooldown(currentCooldown);
+    setPinRotation(rotation);
   }, [userId, isAdmin]);
+
+  // Real-time Multi-Tab BroadcastChannel Synchronization
+  useEffect(() => {
+    if (!userId || typeof window === "undefined" || !("BroadcastChannel" in window)) return;
+
+    const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    const handleBroadcastMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || data.userId !== userId) return;
+
+      if (data.type === "LOCK") {
+        setIsLocked(true);
+        setCooldown(pinLockService.getCooldownStatus(userId));
+      } else if (data.type === "UNLOCK") {
+        setIsLocked(false);
+        setCooldown(pinLockService.getCooldownStatus(userId));
+      } else if (data.type === "CONFIG_UPDATED") {
+        refreshStatus();
+      } else if (data.type === "LOCKOUT") {
+        setCooldown(pinLockService.getCooldownStatus(userId));
+      }
+    };
+
+    channel.addEventListener("message", handleBroadcastMessage);
+    return () => {
+      channel.removeEventListener("message", handleBroadcastMessage);
+      channel.close();
+    };
+  }, [userId, refreshStatus]);
 
   // Initial load when user changes: check local and sync with cloud
   useEffect(() => {
@@ -112,11 +150,55 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
 
   // Lock Screen action
   const lockScreen = useCallback(() => {
-    if (!userId || !pinLockService.isPinLockEnabled(userId)) return;
+    if (!userId) return;
+    const isSetup = pinLockService.hasPin(userId);
+    const isEnabled = pinLockService.isPinLockEnabled(userId);
+
+    if (!isSetup) {
+      toast.error("Please create your lock screen PIN first", {
+        description: "You haven't set up an in-app lock PIN yet. Navigate to Settings → In-App Lock to create your 4-digit PIN.",
+        duration: 4500,
+      });
+      return;
+    }
+
+    if (!isEnabled) {
+      toast.error("PIN Lock is disabled", {
+        description: "Please enable PIN lock in Settings → In-App Lock to lock your screen.",
+        duration: 4000,
+      });
+      return;
+    }
+
     pinLockService.setSessionLocked(userId, true);
     setCooldown(pinLockService.getCooldownStatus(userId));
     setIsLocked(true);
+
+    auditService.logAction({
+      action: "ADMIN_SCREEN_LOCKED",
+      details: {
+        trigger: "manual_or_shortcut",
+        timestamp: new Date().toISOString(),
+      },
+    });
   }, [userId]);
+
+  // Global Alt + L keyboard shortcut to instantly lock screen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.altKey && (e.key === "l" || e.key === "L")) ||
+        (e.ctrlKey && e.altKey && (e.key === "l" || e.key === "L")) ||
+        (e.ctrlKey && e.shiftKey && (e.key === "l" || e.key === "L"))
+      ) {
+        e.preventDefault();
+        lockScreen();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lockScreen]);
 
   // Unlock with PIN
   const unlockWithPin = useCallback(
@@ -350,6 +432,7 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
         isBiometricsSupported,
         settings,
         cooldown,
+        pinRotation,
         lockScreen,
         unlockWithPin,
         unlockWithBiometrics,
