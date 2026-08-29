@@ -328,11 +328,13 @@ export function PinLockProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId || !isPinLockEnabled || isLocked) return;
 
+    let lastStorageWrite = 0;
     const onUserActivity = () => {
       const now = Date.now();
-      // Throttle storage writes to once per 500ms
-      if (now - lastActivityRef.current > 500) {
-        lastActivityRef.current = now;
+      lastActivityRef.current = now;
+      // Throttle localStorage disk writes to once per 5 seconds
+      if (now - lastStorageWrite > 5000) {
+        lastStorageWrite = now;
         try {
           localStorage.setItem(`eduspace_user_last_act_${userId}`, String(now));
         } catch (_) {}
@@ -341,15 +343,11 @@ export function PinLockProvider({ children }: { children: ReactNode }) {
 
     const events = [
       "mousedown",
-      "mouseup",
-      "click",
       "keydown",
       "touchstart",
-      "touchend",
       "scroll",
-      "mousemove",
-      "wheel",
       "pointerdown",
+      "mousemove",
     ];
     events.forEach((ev) => window.addEventListener(ev, onUserActivity, { passive: true }));
 

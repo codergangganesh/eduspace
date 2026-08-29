@@ -75,7 +75,6 @@ export const UserLockScreen: React.FC = () => {
   const [shake, setShake] = useState<boolean>(false);
   const [pressedKey, setPressedKey] = useState<number | string | null>(null);
   const [keypadLayout, setKeypadLayout] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
-  const [tamperTrigger, setTamperTrigger] = useState<number>(0);
 
   // Forgot PIN / Password verification states
   const [forgotModalOpen, setForgotModalOpen] = useState<boolean>(false);
@@ -97,8 +96,9 @@ export const UserLockScreen: React.FC = () => {
   // Synchronous verification lock to prevent double-submitting and burning 2 attempts at once
   const isVerifyingRef = useRef<boolean>(false);
   const autoBiometricPromptedRef = useRef<boolean>(false);
+  const isEnforcingStyleRef = useRef<boolean>(false);
 
-  // 🛡️ Anti-Tamper DevTools MutationObserver & DOM Watchdog Shield
+  // 🛡️ Anti-Tamper DevTools Watchdog Shield (Safe, Loop-Free)
   useEffect(() => {
     if (!isLocked) {
       document.body.classList.remove("eduspace-tamper-blackout");
@@ -106,53 +106,46 @@ export const UserLockScreen: React.FC = () => {
     }
 
     const checkTampering = () => {
-      if (!isLocked) return;
+      if (!isLocked || isEnforcingStyleRef.current) return;
 
       const overlayEl = document.getElementById("eduspace-lock-screen-root");
-
-      // 1. Element deleted/detached from body
       if (!overlayEl || !document.body.contains(overlayEl)) {
-        document.body.classList.add("eduspace-tamper-blackout");
-        setTamperTrigger((prev) => prev + 1);
+        if (!document.body.classList.contains("eduspace-tamper-blackout")) {
+          document.body.classList.add("eduspace-tamper-blackout");
+        }
         return;
       }
 
-      // 2. Element hidden via inline CSS or style mutation
-      const computed = window.getComputedStyle(overlayEl);
-      const isTampered =
-        computed.display === "none" ||
-        computed.visibility === "hidden" ||
-        parseFloat(computed.opacity || "1") < 0.5 ||
-        computed.pointerEvents === "none";
+      // Check if element was hidden via devtools inline styles
+      const inlineDisplay = overlayEl.style.display;
+      const inlineVisibility = overlayEl.style.visibility;
+      const inlineOpacity = overlayEl.style.opacity;
 
-      if (isTampered) {
-        document.body.classList.add("eduspace-tamper-blackout");
-        overlayEl.style.setProperty("display", "flex", "important");
-        overlayEl.style.setProperty("visibility", "visible", "important");
-        overlayEl.style.setProperty("opacity", "1", "important");
-        overlayEl.style.setProperty("pointer-events", "auto", "important");
-        setTamperTrigger((prev) => prev + 1);
+      if (
+        inlineDisplay === "none" ||
+        inlineVisibility === "hidden" ||
+        (inlineOpacity && parseFloat(inlineOpacity) < 0.5)
+      ) {
+        try {
+          isEnforcingStyleRef.current = true;
+          overlayEl.style.setProperty("display", "flex", "important");
+          overlayEl.style.setProperty("visibility", "visible", "important");
+          overlayEl.style.setProperty("opacity", "1", "important");
+          overlayEl.style.setProperty("pointer-events", "auto", "important");
+        } finally {
+          isEnforcingStyleRef.current = false;
+        }
       } else {
-        document.body.classList.remove("eduspace-tamper-blackout");
+        if (document.body.classList.contains("eduspace-tamper-blackout")) {
+          document.body.classList.remove("eduspace-tamper-blackout");
+        }
       }
     };
 
-    const observer = new MutationObserver(() => {
-      checkTampering();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["style", "class", "hidden"],
-    });
-
-    // 400ms Heartbeat Watchdog
-    const interval = setInterval(checkTampering, 400);
+    // Lightweight 1.5s periodic watchdog (No heavy DOM subtree mutation observer loops)
+    const interval = setInterval(checkTampering, 1500);
 
     return () => {
-      observer.disconnect();
       clearInterval(interval);
       document.body.classList.remove("eduspace-tamper-blackout");
     };
@@ -233,33 +226,45 @@ export const UserLockScreen: React.FC = () => {
   }, [isLocked, settings.biometricsEnabled, isBiometricsSupported, cooldown.isCooldown, isSuccessUnlocked, handleBiometricUnlock]);
 
   // Handle Number click
-  const handleNumberClick = async (num: number) => {
-    if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked || pin.length >= 4) {
-      return;
-    }
+  const handleNumberClick = useCallback(
+    async (num: number) => {
+      if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked || pin.length >= 4) {
+        return;
+      }
 
-    triggerHaptic(12);
-    setErrorMessage("");
-    setPressedKey(num);
-    setTimeout(() => setPressedKey(null), 180);
+      triggerHaptic(12);
+      setErrorMessage("");
+      setPressedKey(num);
+      setTimeout(() => setPressedKey(null), 180);
 
-    const nextPin = pin + num.toString();
-    setPin(nextPin);
+      const nextPin = pin + num.toString();
+      setPin(nextPin);
 
-    // If 4 digits entered, automatically verify
-    if (nextPin.length === 4) {
-      isVerifyingRef.current = true;
-      setIsVerifying(true);
+      // If 4 digits entered, automatically verify
+      if (nextPin.length === 4) {
+        isVerifyingRef.current = true;
+        setIsVerifying(true);
 
-      try {
-        const res = await unlockWithPin(nextPin);
-        if (res.success) {
-          setIsSuccessUnlocked(true);
-          triggerHaptic([20, 30, 20]);
-        } else {
+        try {
+          const res = await unlockWithPin(nextPin);
+          if (res.success) {
+            setIsSuccessUnlocked(true);
+            triggerHaptic([20, 30, 20]);
+          } else {
+            triggerHaptic([40, 60, 40]);
+            setShake(true);
+            setErrorMessage(res.error || "Incorrect PIN");
+            setTimeout(() => {
+              setShake(false);
+              setPin("");
+              isVerifyingRef.current = false;
+              setIsVerifying(false);
+            }, 500);
+          }
+        } catch (err: any) {
           triggerHaptic([40, 60, 40]);
           setShake(true);
-          setErrorMessage(res.error || "Incorrect PIN");
+          setErrorMessage(err.message || "Verification failed");
           setTimeout(() => {
             setShake(false);
             setPin("");
@@ -267,39 +272,30 @@ export const UserLockScreen: React.FC = () => {
             setIsVerifying(false);
           }, 500);
         }
-      } catch (err: any) {
-        triggerHaptic([40, 60, 40]);
-        setShake(true);
-        setErrorMessage(err.message || "Verification failed");
-        setTimeout(() => {
-          setShake(false);
-          setPin("");
-          isVerifyingRef.current = false;
-          setIsVerifying(false);
-        }, 500);
       }
-    }
-  };
+    },
+    [isVerifying, cooldown.isCooldown, isSuccessUnlocked, pin, unlockWithPin]
+  );
 
   // Backspace key handler
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
     triggerHaptic(10);
     setErrorMessage("");
     setPressedKey("backspace");
     setTimeout(() => setPressedKey(null), 180);
     setPin((prev) => prev.slice(0, -1));
-  };
+  }, [isVerifying, cooldown.isCooldown, isSuccessUnlocked]);
 
   // Clear key handler
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
     triggerHaptic(15);
     setErrorMessage("");
     setPressedKey("clear");
     setTimeout(() => setPressedKey(null), 180);
     setPin("");
-  };
+  }, [isVerifying, cooldown.isCooldown, isSuccessUnlocked]);
 
   // Open Forgot PIN Drawer
   const handleOpenForgotPin = () => {
@@ -383,7 +379,17 @@ export const UserLockScreen: React.FC = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, [
+    isLocked,
+    forgotModalOpen,
+    setupModalOpen,
+    isVerifying,
+    cooldown.isCooldown,
+    isSuccessUnlocked,
+    handleNumberClick,
+    handleBackspace,
+    handleClear,
+  ]);
 
   if (!isLocked && !setupModalOpen) return null;
 
@@ -404,7 +410,6 @@ export const UserLockScreen: React.FC = () => {
   const content = (
     <div
       id="eduspace-lock-screen-root"
-      key={`user-lock-root-${tamperTrigger}`}
       className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#060709] text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200"
     >
       {/* Mobile Frame Container */}
