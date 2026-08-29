@@ -10,6 +10,30 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 
+// Mobile Haptic Vibration Helper
+const triggerHaptic = (pattern: number | number[] = 12) => {
+  if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Ignore vibration errors if unsupported
+    }
+  }
+};
+
+// Formats countdown seconds into clean mm:ss or hh:mm:ss
+const formatCountdown = (totalSeconds: number): string => {
+  if (totalSeconds <= 0) return "00:00";
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+};
+
 export const AdminLockScreen: React.FC = () => {
   const {
     isLocked,
@@ -29,6 +53,9 @@ export const AdminLockScreen: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [shake, setShake] = useState<boolean>(false);
   const [pressedKey, setPressedKey] = useState<number | string | null>(null);
+
+  // Synchronous verification lock to prevent double-submitting and burning 2 attempts at once
+  const isVerifyingRef = useRef<boolean>(false);
   const autoBiometricPromptedRef = useRef<boolean>(false);
 
   // Clear PIN and errors on lock state change
@@ -38,6 +65,7 @@ export const AdminLockScreen: React.FC = () => {
       setErrorMessage("");
       setShake(false);
       setIsVerifying(false);
+      isVerifyingRef.current = false;
       setPressedKey(null);
     } else {
       autoBiometricPromptedRef.current = false;
@@ -46,22 +74,26 @@ export const AdminLockScreen: React.FC = () => {
 
   // Handle Biometric Unlock
   const handleBiometricUnlock = useCallback(async () => {
-    if (isVerifying || isBiometricScanning || cooldown.isCooldown) return;
+    if (isVerifyingRef.current || isVerifying || isBiometricScanning || cooldown.isCooldown) return;
 
+    triggerHaptic(15);
     setIsBiometricScanning(true);
     setErrorMessage("");
 
     try {
       const res = await unlockWithBiometrics();
       if (res.success) {
+        triggerHaptic([20, 30, 20]);
         toast.success("Unlocked with Biometrics! Welcome back.");
       } else {
         if (!res.error?.includes("cancelled")) {
+          triggerHaptic([40, 60, 40]);
           setErrorMessage(res.error || "Biometric unlock failed.");
         }
       }
     } catch (err: any) {
       if (!err.message?.includes("cancelled")) {
+        triggerHaptic([40, 60, 40]);
         setErrorMessage(err.message || "Biometric unlock failed.");
       }
     } finally {
@@ -86,38 +118,44 @@ export const AdminLockScreen: React.FC = () => {
     }
   }, [isLocked, isBiometricsSupported, settings.biometricsEnabled, cooldown.isCooldown, handleBiometricUnlock]);
 
-  // Handle PIN verification
+  // Handle PIN verification (protected by isVerifyingRef)
   const handleVerify = useCallback(
     async (pinToVerify: string) => {
-      if (pinToVerify.length !== 4 || isVerifying || cooldown.isCooldown) return;
+      if (pinToVerify.length !== 4 || isVerifyingRef.current || cooldown.isCooldown) return;
 
+      isVerifyingRef.current = true;
       setIsVerifying(true);
       setErrorMessage("");
 
       try {
         const res = await unlockWithPin(pinToVerify);
         if (!res.success) {
+          triggerHaptic([40, 60, 40]);
           setErrorMessage(res.error || "Incorrect PIN. Please try again.");
           setShake(true);
           setTimeout(() => setShake(false), 500);
           setPin("");
         } else {
+          triggerHaptic([20, 30, 20]);
           toast.success("Welcome back, Administrator!");
         }
       } catch (err: any) {
+        triggerHaptic([40, 60, 40]);
         setErrorMessage(err.message || "Failed to unlock.");
         setPin("");
       } finally {
         setIsVerifying(false);
+        isVerifyingRef.current = false;
       }
     },
-    [isVerifying, cooldown.isCooldown, unlockWithPin]
+    [cooldown.isCooldown, unlockWithPin]
   );
 
   // Keypad click handlers
   const handleNumberClick = (num: number) => {
-    if (pin.length >= 4 || isVerifying || cooldown.isCooldown) return;
+    if (pin.length >= 4 || isVerifyingRef.current || isVerifying || cooldown.isCooldown) return;
 
+    triggerHaptic(12);
     setPressedKey(num);
     setTimeout(() => setPressedKey(null), 180);
 
@@ -130,7 +168,8 @@ export const AdminLockScreen: React.FC = () => {
   };
 
   const handleBackspace = () => {
-    if (isVerifying || cooldown.isCooldown) return;
+    if (isVerifyingRef.current || isVerifying || cooldown.isCooldown) return;
+    triggerHaptic(10);
     setErrorMessage("");
     setPressedKey("backspace");
     setTimeout(() => setPressedKey(null), 180);
@@ -138,7 +177,8 @@ export const AdminLockScreen: React.FC = () => {
   };
 
   const handleClear = () => {
-    if (isVerifying || cooldown.isCooldown || pin.length === 0) return;
+    if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0) return;
+    triggerHaptic(15);
     setErrorMessage("");
     setPressedKey("clear");
     setTimeout(() => setPressedKey(null), 180);
@@ -150,43 +190,28 @@ export const AdminLockScreen: React.FC = () => {
     if (!isLocked) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (cooldown.isCooldown || isVerifying) return;
+      if (cooldown.isCooldown || isVerifyingRef.current || isVerifying) return;
 
       if (e.key >= "0" && e.key <= "9") {
         e.preventDefault();
         const num = parseInt(e.key, 10);
-        setPressedKey(num);
-        setTimeout(() => setPressedKey(null), 180);
-
-        setPin((prev) => {
-          if (prev.length >= 4) return prev;
-          const next = prev + num.toString();
-          if (next.length === 4) {
-            handleVerify(next);
-          }
-          return next;
-        });
+        handleNumberClick(num);
       } else if (e.key === "Backspace") {
         e.preventDefault();
-        setErrorMessage("");
-        setPressedKey("backspace");
-        setTimeout(() => setPressedKey(null), 180);
-        setPin((prev) => prev.slice(0, -1));
+        handleBackspace();
       } else if (e.key === "Escape" || e.key === "c" || e.key === "C") {
         e.preventDefault();
-        setErrorMessage("");
-        setPressedKey("clear");
-        setTimeout(() => setPressedKey(null), 180);
-        setPin("");
+        handleClear();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isLocked, cooldown.isCooldown, isVerifying, handleVerify]);
+  }, [isLocked, cooldown.isCooldown, isVerifying, pin, handleVerify]);
 
   const handleSignOut = async () => {
     try {
+      triggerHaptic(15);
       await signOut();
       toast.success("Signed out of Admin Portal.");
       navigate("/login", { replace: true });
@@ -204,8 +229,10 @@ export const AdminLockScreen: React.FC = () => {
 
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
+  const currentAttemptDisplay = Math.min(3, (cooldown.attemptInChance || 0) + 1);
+
   const content = (
-    <div className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#08090C] text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background/80 dark:bg-[#08090C]/85 backdrop-blur-2xl text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
       {/* Mobile Screen Wrapper */}
       <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-between px-6 py-6 sm:py-8">
         {/* Top Header: Application Logo & User Profile Image with Theme Switcher */}
@@ -228,7 +255,10 @@ export const AdminLockScreen: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => {
+                triggerHaptic(10);
+                setTheme(resolvedTheme === "dark" ? "light" : "dark");
+              }}
               className="w-9 h-9 rounded-full flex items-center justify-center border border-border/80 bg-card/80 hover:bg-accent text-foreground transition-all active:scale-90 cursor-pointer shadow-2xs"
               title={resolvedTheme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle theme"
@@ -251,7 +281,7 @@ export const AdminLockScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Center Section: Greeting, PIN Subtitle & 4 Squircle Slots (Reference Style) */}
+        {/* Center Section: Greeting, Subtitle, 4 Squircle Slots & Progress Text */}
         <div className="w-full flex flex-col items-center pt-2 sm:pt-4">
           {/* Personalized Greeting */}
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground text-center">
@@ -281,9 +311,9 @@ export const AdminLockScreen: React.FC = () => {
                     isCurrent
                       ? "border-2 border-foreground dark:border-white shadow-xs"
                       : isFilled
-                      ? "border-2 border-foreground/70 dark:border-white/80"
-                      : "border border-border/80 dark:border-zinc-800",
-                    errorMessage && "border-destructive dark:border-red-500 bg-destructive/10"
+                        ? "border-2 border-foreground/70 dark:border-white/80"
+                        : "border border-border/80 dark:border-zinc-800",
+                    (errorMessage || cooldown.isCooldown) && "border-destructive dark:border-red-500 bg-destructive/10"
                   )}
                 >
                   {/* Filled indicator dot inside box */}
@@ -295,26 +325,57 @@ export const AdminLockScreen: React.FC = () => {
             })}
           </div>
 
-          {/* Error / Cooldown Feedback */}
-          <div className="min-h-[24px] flex items-center justify-center mt-2.5">
-            {errorMessage && (
-              <div className="flex items-center justify-center gap-1.5 text-xs text-destructive dark:text-red-400 font-medium animate-in fade-in">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
+          {/* Below Number Inputs Area: Small Underlined Chance & Attempt Progress / Cooldown Banner */}
+          <div className="min-h-[46px] flex flex-col items-center justify-center mt-3 sm:mt-4 px-3 text-center w-full">
+            {!cooldown.isCooldown ? (
+              <div className="flex flex-col items-center justify-center gap-1.5">
+                {/* Smallest Underlined Progress Text */}
+                <span className="text-[10px] text-muted-foreground/80 font-medium underline underline-offset-3 decoration-muted-foreground/30 tracking-wide select-none">
+                  Chance {cooldown.currentChance} of 3 · Attempt {currentAttemptDisplay} of 3
+                </span>
 
-            {cooldown.isCooldown && (
-              <div className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-xs flex items-center justify-center gap-1.5">
-                <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-                <span>Retry in {cooldown.remainingSeconds}s</span>
-              </div>
-            )}
+                {/* Error Message if any */}
+                {errorMessage && (
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-destructive dark:text-red-400 font-medium animate-in fade-in text-center max-w-xs">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-destructive dark:text-red-400" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
 
-            {isVerifying && !errorMessage && !cooldown.isCooldown && (
-              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground animate-pulse">
-                <RefreshCw className="h-3 w-3 animate-spin text-primary" />
-                <span>Verifying...</span>
+                {isVerifying && !errorMessage && (
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground animate-pulse">
+                    <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                    <span>Verifying PIN...</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-1 animate-in fade-in w-full">
+                {/* Dedicated Countdown Display */}
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-500 dark:text-amber-300 text-xs font-semibold whitespace-nowrap shadow-2xs">
+                  <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-500 animate-pulse" />
+                  <span>
+                    Try again in{" "}
+                    <strong className="tabular-nums font-bold text-foreground dark:text-white underline decoration-amber-500/50">
+                      {formatCountdown(cooldown.remainingSeconds)}
+                    </strong>
+                  </span>
+                </div>
+
+                {/* Subtext description according to Chance tier */}
+                {cooldown.lockDurationType === "24h" ? (
+                  <p className="text-[11px] text-destructive dark:text-red-400 font-medium">
+                    All 3 chances have been used. Please try again after 24 hours.
+                  </p>
+                ) : cooldown.lockDurationType === "5m" ? (
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Too Many Attempts · Keypad locked for 5 minutes.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Chance 1 exhausted · Keypad locked for 1 minute.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -324,10 +385,10 @@ export const AdminLockScreen: React.FC = () => {
         <div className="w-full max-w-[270px] sm:max-w-[290px] mx-auto shrink-0 pb-3 sm:pb-4">
           {/* "Use fingerprint" Dedicated Action (Reference Style) */}
           {isBiometricsSupported && settings.biometricsEnabled && (
-            <div className="mb-6 sm:mb-8 flex justify-center w-full">
+            <div className="mb-5 sm:mb-7 flex justify-center w-full">
               <button
                 type="button"
-                disabled={isVerifying || isBiometricScanning || cooldown.isCooldown}
+                disabled={isVerifyingRef.current || isVerifying || isBiometricScanning || cooldown.isCooldown}
                 onClick={handleBiometricUnlock}
                 className={cn(
                   "text-emerald-500 dark:text-emerald-400 font-medium text-sm flex items-center justify-center gap-2",
@@ -349,7 +410,7 @@ export const AdminLockScreen: React.FC = () => {
                 <button
                   key={num}
                   type="button"
-                  disabled={isVerifying || cooldown.isCooldown}
+                  disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown}
                   onClick={() => handleNumberClick(num)}
                   className={cn(
                     "w-16 h-10 flex items-center justify-center transition-all duration-100",
@@ -367,7 +428,7 @@ export const AdminLockScreen: React.FC = () => {
             {/* Row 4: Left Slot (Clear Option) */}
             <button
               type="button"
-              disabled={isVerifying || cooldown.isCooldown || pin.length === 0}
+              disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
               onClick={handleClear}
               className={cn(
                 "w-16 h-10 flex items-center justify-center transition-all duration-100",
@@ -384,7 +445,7 @@ export const AdminLockScreen: React.FC = () => {
             {/* Row 4: Center Slot (Number 0) */}
             <button
               type="button"
-              disabled={isVerifying || cooldown.isCooldown}
+              disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown}
               onClick={() => handleNumberClick(0)}
               className={cn(
                 "w-16 h-10 flex items-center justify-center transition-all duration-100",
@@ -400,7 +461,7 @@ export const AdminLockScreen: React.FC = () => {
             {/* Row 4: Right Slot (Backspace Key) */}
             <button
               type="button"
-              disabled={isVerifying || cooldown.isCooldown || pin.length === 0}
+              disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
               onClick={handleBackspace}
               className={cn(
                 "w-16 h-10 flex items-center justify-center transition-all duration-100",

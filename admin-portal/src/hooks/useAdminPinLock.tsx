@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAdminAuth } from "./useAdminAuth";
-import { pinLockService, PinLockSettings } from "@/services/pinLock.service";
+import { pinLockService, PinLockSettings, CooldownStatus } from "@/services/pinLock.service";
 
 interface AdminPinLockContextType {
   isLocked: boolean;
@@ -9,13 +9,15 @@ interface AdminPinLockContextType {
   isPinLockEnabled: boolean;
   isBiometricsSupported: boolean;
   settings: PinLockSettings;
-  cooldown: { isCooldown: boolean; remainingSeconds: number };
+  cooldown: CooldownStatus;
   lockScreen: () => void;
   unlockWithPin: (pin: string) => Promise<{
     success: boolean;
     error?: string;
-    remainingAttempts?: number;
+    remainingAttemptsInChance?: number;
+    currentChance?: number;
     lockedUntil?: number;
+    lockDurationType?: "1m" | "5m" | "24h" | null;
   }>;
   unlockWithBiometrics: () => Promise<{ success: boolean; error?: string }>;
   enableBiometrics: () => Promise<{ success: boolean; error?: string }>;
@@ -36,9 +38,13 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
   const [isPinLockEnabled, setIsPinLockEnabled] = useState<boolean>(false);
   const [isBiometricsSupported, setIsBiometricsSupported] = useState<boolean>(false);
   const [settings, setSettings] = useState<PinLockSettings>(() => pinLockService.getSettings(""));
-  const [cooldown, setCooldown] = useState<{ isCooldown: boolean; remainingSeconds: number }>({
+  const [cooldown, setCooldown] = useState<CooldownStatus>({
     isCooldown: false,
     remainingSeconds: 0,
+    currentChance: 1,
+    attemptInChance: 0,
+    remainingAttemptsInChance: 3,
+    lockDurationType: null,
   });
 
   const lastActivityRef = useRef<number>(Date.now());
@@ -98,6 +104,7 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
   const lockScreen = useCallback(() => {
     if (!userId || !pinLockService.isPinLockEnabled(userId)) return;
     pinLockService.setSessionLocked(userId, true);
+    setCooldown(pinLockService.getCooldownStatus(userId));
     setIsLocked(true);
   }, [userId]);
 
@@ -108,6 +115,7 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
       const res = await pinLockService.verifyPin(userId, (pin || "").trim());
       if (res.success) {
         setIsLocked(false);
+        setCooldown(pinLockService.getCooldownStatus(userId));
         lastActivityRef.current = Date.now();
         try {
           localStorage.setItem(`eduspace_admin_last_act_${userId}`, String(Date.now()));
@@ -127,6 +135,7 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
     const res = await pinLockService.verifyBiometrics(userId);
     if (res.success) {
       setIsLocked(false);
+      setCooldown(pinLockService.getCooldownStatus(userId));
       lastActivityRef.current = Date.now();
       try {
         localStorage.setItem(`eduspace_admin_last_act_${userId}`, String(Date.now()));

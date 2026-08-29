@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { useTheme } from "next-themes";
-import { Delete, AlertCircle, ArrowLeft, Sun, Moon } from "lucide-react";
+import { Delete, AlertCircle, ArrowLeft, Sun, Moon, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -15,6 +15,17 @@ interface AdminPinSetupModalProps {
   onPinConfigured: (pin: string) => Promise<{ success: boolean; error?: string }>;
   isUpdating?: boolean;
 }
+
+// Mobile Haptic Vibration Helper
+const triggerHaptic = (pattern: number | number[] = 12) => {
+  if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Ignore vibration errors if unsupported
+    }
+  }
+};
 
 export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
   open,
@@ -28,6 +39,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
   const [step, setStep] = useState<1 | 2>(1);
   const [firstPin, setFirstPin] = useState<string>("");
   const [confirmPin, setConfirmPin] = useState<string>("");
+  const [showPin, setShowPin] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [shake, setShake] = useState<boolean>(false);
@@ -38,6 +50,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
       setStep(1);
       setFirstPin("");
       setConfirmPin("");
+      setShowPin(false);
       setErrorMessage("");
       setShake(false);
       setIsSubmitting(false);
@@ -56,6 +69,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
 
   const handleNumberClick = (num: number) => {
     if (isSubmitting || activePin.length >= 4) return;
+    triggerHaptic(12);
     setErrorMessage("");
     setPressedKey(num);
     setTimeout(() => setPressedKey(null), 180);
@@ -79,6 +93,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
 
   const handleBackspace = () => {
     if (isSubmitting) return;
+    triggerHaptic(10);
     setErrorMessage("");
     setPressedKey("backspace");
     setTimeout(() => setPressedKey(null), 180);
@@ -91,6 +106,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
 
   const handleClear = () => {
     if (isSubmitting) return;
+    triggerHaptic(15);
     setErrorMessage("");
     setPressedKey("clear");
     setTimeout(() => setPressedKey(null), 180);
@@ -103,6 +119,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
 
   const handleSubmit = async (p1: string, p2: string) => {
     if (p1 !== p2) {
+      triggerHaptic([40, 60, 40]);
       setErrorMessage("PINs do not match. Please try again.");
       setShake(true);
       setTimeout(() => setShake(false), 500);
@@ -116,13 +133,16 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
     try {
       const res = await onPinConfigured(p1);
       if (res.success) {
+        triggerHaptic([20, 30, 20]);
         toast.success(isUpdating ? "4-Digit PIN updated successfully!" : "4-Digit PIN Lock activated!");
         onOpenChange(false);
       } else {
+        triggerHaptic([40, 60, 40]);
         setErrorMessage(res.error || "Failed to set up PIN.");
         setConfirmPin("");
       }
     } catch (err: any) {
+      triggerHaptic([40, 60, 40]);
       setErrorMessage(err.message || "An error occurred.");
       setConfirmPin("");
     } finally {
@@ -179,7 +199,10 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => {
+                triggerHaptic(10);
+                setTheme(resolvedTheme === "dark" ? "light" : "dark");
+              }}
               className="w-9 h-9 rounded-full flex items-center justify-center border border-border/80 bg-card/80 hover:bg-accent text-foreground transition-all active:scale-90 cursor-pointer shadow-2xs"
               title={resolvedTheme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle theme"
@@ -233,10 +256,10 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
             </Badge>
           </div>
 
-          {/* 4 Rounded Squircle Outline Boxes (Exact Reference Layout) */}
+          {/* 4 Rounded Squircle Outline Boxes */}
           <div
             className={cn(
-              "flex items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-8 transition-transform duration-200",
+              "flex items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-7 transition-transform duration-200",
               shake && "animate-shake"
             )}
           >
@@ -258,17 +281,48 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
                     errorMessage && "border-destructive dark:border-red-500 bg-destructive/10"
                   )}
                 >
-                  {/* Filled indicator dot inside box */}
+                  {/* Filled indicator: Digit if Peek enabled, otherwise solid dot */}
                   {isFilled && (
-                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-foreground dark:bg-white animate-in zoom-in-75 duration-150 shadow-xs" />
+                    showPin ? (
+                      <span className="text-xl sm:text-2xl font-bold text-foreground animate-in zoom-in-75 duration-150">
+                        {activePin[index]}
+                      </span>
+                    ) : (
+                      <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-foreground dark:bg-white animate-in zoom-in-75 duration-150 shadow-xs" />
+                    )
                   )}
                 </div>
               );
             })}
           </div>
 
+          {/* PIN Peek / Reveal Toggle Button */}
+          <div className="flex items-center justify-center mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                setShowPin(!showPin);
+              }}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2.5 rounded-lg hover:bg-muted/40 cursor-pointer select-none"
+              title={showPin ? "Hide PIN digits" : "Show PIN digits"}
+            >
+              {showPin ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-medium text-primary">Hide digits</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Peek PIN</span>
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Error Feedback */}
-          <div className="min-h-[24px] flex items-center justify-center mt-2.5">
+          <div className="min-h-[22px] flex items-center justify-center mt-1">
             {errorMessage && (
               <div className="flex items-center justify-center gap-1.5 text-xs text-destructive dark:text-red-400 font-medium animate-in fade-in">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -290,6 +344,7 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => {
+                  triggerHaptic(10);
                   setStep(1);
                   setConfirmPin("");
                   setErrorMessage("");
@@ -383,7 +438,10 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
           <div className="flex justify-center pt-5 sm:pt-6">
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                triggerHaptic(10);
+                onOpenChange(false);
+              }}
               className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground transition-all cursor-pointer py-1"
             >
               Cancel setup

@@ -3,7 +3,10 @@
  * Provides:
  * 1. Cryptographic salting + SHA-256 hashing via WebCrypto API for 4-digit PIN.
  * 2. Native WebAuthn platform authenticator (Touch ID, Windows Hello, Face ID, Android Fingerprint).
- * 3. Auto-lock timing, brute-force cooldown tracking, and session persistence.
+ * 3. Multi-tier Progressive 3-Chance x 3-Attempt Security Lockout:
+ *    - Chance 1 (3 attempts) -> 1 minute lockout (00:59 countdown)
+ *    - Chance 2 (3 attempts) -> 5 minutes lockout (04:59 countdown)
+ *    - Chance 3 (3 attempts) -> 24 hours lockout (23:59:59 countdown)
  */
 
 export interface PinLockSettings {
@@ -20,14 +23,29 @@ interface StoredPinConfig extends PinLockSettings {
   biometricCredentialId?: string;
 }
 
-interface FailedAttemptsRecord {
-  count: number;
-  lockedUntil: number | null;
+export interface FailedAttemptsRecord {
+  currentChance: number; // 1, 2, or 3
+  attemptInChance: number; // 0, 1, 2, or 3
+  lockedUntil: number | null; // epoch timestamp in ms
+  lockDurationType: "1m" | "5m" | "24h" | null;
+}
+
+export interface CooldownStatus {
+  isCooldown: boolean;
+  remainingSeconds: number;
+  currentChance: number; // 1, 2, or 3
+  attemptInChance: number; // 0, 1, 2, or 3
+  remainingAttemptsInChance: number; // 3, 2, 1, or 0
+  lockDurationType: "1m" | "5m" | "24h" | null;
 }
 
 const STORAGE_PREFIX = "eduspace_admin_pin";
-const MAX_FAILED_ATTEMPTS = 3;
-const COOLDOWN_DURATION_MS = 30 * 1000; // 30 seconds cooldown after 3 failed attempts
+export const MAX_ATTEMPTS_PER_CHANCE = 3;
+export const MAX_CHANCES = 3;
+
+export const CHANCE_1_LOCKOUT_MS = 5 * 1000; // 5 seconds (testing)
+export const CHANCE_2_LOCKOUT_MS = 5 * 1000; // 5 seconds (testing)
+export const CHANCE_3_LOCKOUT_MS = 5 * 1000; // 5 seconds (testing)
 
 /**
  * Base64URL encoding/decoding helpers for WebAuthn binary IDs
@@ -79,14 +97,13 @@ export const pinLockService = {
    * Check if the current browser and device support native Biometrics (Touch ID / Windows Hello / Face ID).
    */
   async isBiometricsSupported(): Promise<boolean> {
-    if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator.credentials) {
-      return false;
-    }
+    if (typeof window === "undefined") return false;
+    if (!window.PublicKeyCredential) return false;
     try {
-      if (typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function") {
-        return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function") {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       }
-      return true;
+      return false;
     } catch {
       return false;
     }
@@ -101,14 +118,14 @@ export const pinLockService = {
       const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
       if (!raw) return false;
       const config: StoredPinConfig = JSON.parse(raw);
-      return Boolean(config?.hash && config?.salt);
+      return Boolean(config.hash && config.salt);
     } catch {
       return false;
     }
   },
 
   /**
-   * Check if PIN Screen Lock is currently enabled for the given user.
+   * Check if PIN lock is actively enabled by the user.
    */
   isPinLockEnabled(userId: string): boolean {
     if (!userId) return false;
@@ -116,44 +133,49 @@ export const pinLockService = {
       const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
       if (!raw) return false;
       const config: StoredPinConfig = JSON.parse(raw);
-      return Boolean(config?.enabled && config?.hash && config?.salt);
+      return Boolean(config.enabled && config.hash && config.salt);
     } catch {
       return false;
     }
   },
 
   /**
-   * Check if Biometric Unlock is enabled and enrolled for the user.
+   * Check if biometric unlock is enabled for this user.
    */
   isBiometricsEnabled(userId: string): boolean {
     if (!userId) return false;
-    const settings = this.getSettings(userId);
-    return Boolean(settings.enabled && settings.biometricsEnabled);
+    try {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
+      if (!raw) return false;
+      const config: StoredPinConfig = JSON.parse(raw);
+      return Boolean(config.biometricsEnabled && config.biometricCredentialId);
+    } catch {
+      return false;
+    }
   },
 
   /**
-   * Get user PIN & Biometric settings.
+   * Get all security settings for a user.
    */
   getSettings(userId: string): PinLockSettings {
     const defaults: PinLockSettings = {
       enabled: false,
-      biometricsEnabled: true,
-      autoLockTimeout: 5, // 5 minutes default
+      biometricsEnabled: false,
+      autoLockTimeout: 5,
       autoLockOnTabSwitch: true,
       updatedAt: new Date().toISOString(),
     };
 
     if (!userId) return defaults;
-
     try {
       const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
       if (!raw) return defaults;
       const config: StoredPinConfig = JSON.parse(raw);
       return {
         enabled: Boolean(config.enabled),
-        biometricsEnabled: config.biometricsEnabled !== false,
+        biometricsEnabled: Boolean(config.biometricsEnabled),
         autoLockTimeout: typeof config.autoLockTimeout === "number" ? config.autoLockTimeout : 5,
-        autoLockOnTabSwitch: config.autoLockOnTabSwitch !== false,
+        autoLockOnTabSwitch: config.autoLockOnTabSwitch !== undefined ? Boolean(config.autoLockOnTabSwitch) : true,
         updatedAt: config.updatedAt || new Date().toISOString(),
       };
     } catch {
@@ -222,65 +244,66 @@ export const pinLockService = {
           user: {
             id: userIdBytes,
             name: email || "admin@eduspace.internal",
-            displayName: displayName || "Administrator",
+            displayName: displayName || "Eduspace Administrator",
           },
           pubKeyCredParams: [
             { alg: -7, type: "public-key" }, // ES256
             { alg: -257, type: "public-key" }, // RS256
           ],
           authenticatorSelection: {
-            authenticatorAttachment: "platform", // Built-in fingerprint / Face ID / Touch ID / Windows Hello
+            authenticatorAttachment: "platform",
             userVerification: "required",
             residentKey: "preferred",
           },
           timeout: 60000,
           attestation: "none",
         },
-      })) as any;
+      })) as PublicKeyCredential;
 
       if (!credential) {
-        return { success: false, error: "Biometric registration was cancelled." };
+        return { success: false, error: "Biometric enrollment was cancelled." };
       }
 
       const credentialId = bufferToBase64url(credential.rawId);
 
-      // Save credential ID in user config
       const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
-      if (raw) {
-        const config: StoredPinConfig = JSON.parse(raw);
-        config.biometricCredentialId = credentialId;
-        config.biometricsEnabled = true;
-        config.updatedAt = new Date().toISOString();
-        localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(config));
-      }
+      if (!raw) return { success: false, error: "Please set up a 4-digit PIN first." };
 
+      const config: StoredPinConfig = JSON.parse(raw);
+      config.biometricsEnabled = true;
+      config.biometricCredentialId = credentialId;
+      config.updatedAt = new Date().toISOString();
+
+      localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(config));
       return { success: true };
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
-        return { success: false, error: "Biometric registration was cancelled or timed out." };
+        return { success: false, error: "Biometric enrollment was cancelled or permission denied." };
       }
-      return { success: false, error: err.message || "Failed to enable biometric authentication." };
+      return { success: false, error: err.message || "Failed to register biometrics." };
     }
   },
 
   /**
-   * Unlock session using the native device Biometric sensor (Fingerprint / Touch ID / Windows Hello).
+   * Unlock with platform authenticator.
    */
   async verifyBiometrics(userId: string): Promise<{ success: boolean; error?: string }> {
     if (!userId) return { success: false, error: "User session required." };
 
-    const supported = await this.isBiometricsSupported();
-    if (!supported) {
-      return { success: false, error: "Biometric authentication not supported." };
+    const cooldown = this.getCooldownStatus(userId);
+    if (cooldown.isCooldown) {
+      return {
+        success: false,
+        error: `Authentication is locked. Please wait ${cooldown.remainingSeconds}s.`,
+      };
     }
 
     try {
       const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
-      let credentialId: string | undefined;
-      if (raw) {
-        const config: StoredPinConfig = JSON.parse(raw);
-        credentialId = config.biometricCredentialId;
-      }
+      if (!raw) return { success: false, error: "No PIN configuration found." };
+
+      const config: StoredPinConfig = JSON.parse(raw);
+      const credentialId = config.biometricCredentialId;
 
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
@@ -323,7 +346,7 @@ export const pinLockService = {
   },
 
   /**
-   * Verify an entered 4-digit PIN against the stored hash.
+   * Verify an entered 4-digit PIN against the stored hash with progressive 3-chance security.
    */
   async verifyPin(
     userId: string,
@@ -331,8 +354,10 @@ export const pinLockService = {
   ): Promise<{
     success: boolean;
     error?: string;
-    remainingAttempts?: number;
+    remainingAttemptsInChance?: number;
+    currentChance?: number;
     lockedUntil?: number;
+    lockDurationType?: "1m" | "5m" | "24h" | null;
   }> {
     if (!userId) return { success: false, error: "User session not found." };
 
@@ -341,8 +366,10 @@ export const pinLockService = {
     if (cooldown.isCooldown) {
       return {
         success: false,
-        error: `Too many failed attempts. Please wait ${cooldown.remainingSeconds}s.`,
+        error: `Authentication is locked. Try again in ${cooldown.remainingSeconds}s.`,
         lockedUntil: Date.now() + cooldown.remainingSeconds * 1000,
+        currentChance: cooldown.currentChance,
+        lockDurationType: cooldown.lockDurationType,
       };
     }
 
@@ -362,21 +389,35 @@ export const pinLockService = {
         return { success: true };
       } else {
         const record = this.recordFailedAttempt(userId);
-        const remaining = Math.max(0, MAX_FAILED_ATTEMPTS - record.count);
+        const chance = record.currentChance;
+        const attempt = record.attemptInChance;
+        const remainingInChance = Math.max(0, MAX_ATTEMPTS_PER_CHANCE - attempt);
 
         if (record.lockedUntil) {
+          let errorMsg = "";
+          if (record.lockDurationType === "1m") {
+            errorMsg = "Chance 1 of 3 exhausted. Authentication locked for 1 minute.";
+          } else if (record.lockDurationType === "5m") {
+            errorMsg = "Too Many Attempts. Authentication locked for 5 minutes.";
+          } else {
+            errorMsg = "Authentication Locked. All 3 chances have been used. Please try again after 24 hours.";
+          }
+
           return {
             success: false,
-            error: "Too many incorrect attempts. Keypad temporarily locked for 30 seconds.",
+            error: errorMsg,
             lockedUntil: record.lockedUntil,
-            remainingAttempts: 0,
+            remainingAttemptsInChance: 0,
+            currentChance: chance,
+            lockDurationType: record.lockDurationType,
           };
         }
 
         return {
           success: false,
-          error: `Incorrect PIN. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
-          remainingAttempts: remaining,
+          error: `${remainingInChance} attempt${remainingInChance === 1 ? "" : "s"} remaining`,
+          remainingAttemptsInChance: remainingInChance,
+          currentChance: chance,
         };
       }
     } catch (err: any) {
@@ -446,56 +487,145 @@ export const pinLockService = {
   },
 
   /**
-   * Check cooldown timer.
+   * Check if a progressive lockout cooldown is currently active.
    */
-  getCooldownStatus(userId: string): { isCooldown: boolean; remainingSeconds: number } {
-    if (!userId) return { isCooldown: false, remainingSeconds: 0 };
+  getCooldownStatus(userId: string): CooldownStatus {
+    const defaultStatus: CooldownStatus = {
+      isCooldown: false,
+      remainingSeconds: 0,
+      currentChance: 1,
+      attemptInChance: 0,
+      remainingAttemptsInChance: 3,
+      lockDurationType: null,
+    };
+
+    if (!userId) return defaultStatus;
+
     try {
-      const raw = sessionStorage.getItem(`${STORAGE_PREFIX}_attempts_${userId}`);
-      if (!raw) return { isCooldown: false, remainingSeconds: 0 };
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}_attempts_${userId}`);
+      if (!raw) return defaultStatus;
+
       const record: FailedAttemptsRecord = JSON.parse(raw);
+      let currentChance = record.currentChance || 1;
+      let attemptInChance = record.attemptInChance || 0;
+      let lockDurationType = record.lockDurationType || null;
+
+      // Check if lockout is active
       if (record.lockedUntil && record.lockedUntil > Date.now()) {
+        const maxAllowed = Date.now() + 5000;
+        if (record.lockedUntil > maxAllowed) {
+          record.lockedUntil = maxAllowed;
+          localStorage.setItem(`${STORAGE_PREFIX}_attempts_${userId}`, JSON.stringify(record));
+        }
         const remainingSeconds = Math.ceil((record.lockedUntil - Date.now()) / 1000);
-        return { isCooldown: true, remainingSeconds };
+        return {
+          isCooldown: true,
+          remainingSeconds,
+          currentChance,
+          attemptInChance,
+          remainingAttemptsInChance: 0,
+          lockDurationType,
+        };
       }
-      return { isCooldown: false, remainingSeconds: 0 };
+
+      // If cooldown finished, automatically progress to next chance
+      if (record.lockedUntil && record.lockedUntil <= Date.now()) {
+        if (currentChance < MAX_CHANCES) {
+          currentChance += 1;
+          attemptInChance = 0;
+        } else {
+          // 24h lockout finished, reset to Chance 1
+          currentChance = 1;
+          attemptInChance = 0;
+        }
+
+        const updatedRecord: FailedAttemptsRecord = {
+          currentChance,
+          attemptInChance: 0,
+          lockedUntil: null,
+          lockDurationType: null,
+        };
+        localStorage.setItem(`${STORAGE_PREFIX}_attempts_${userId}`, JSON.stringify(updatedRecord));
+
+        return {
+          isCooldown: false,
+          remainingSeconds: 0,
+          currentChance,
+          attemptInChance: 0,
+          remainingAttemptsInChance: 3,
+          lockDurationType: null,
+        };
+      }
+
+      const remainingAttemptsInChance = Math.max(0, MAX_ATTEMPTS_PER_CHANCE - attemptInChance);
+
+      return {
+        isCooldown: false,
+        remainingSeconds: 0,
+        currentChance,
+        attemptInChance,
+        remainingAttemptsInChance,
+        lockDurationType: null,
+      };
     } catch {
-      return { isCooldown: false, remainingSeconds: 0 };
+      return defaultStatus;
     }
   },
 
   /**
-   * Record a failed PIN attempt and trigger cooldown if exceeded.
+   * Record a failed PIN attempt and trigger progressive lockout when a chance is exhausted.
    */
   recordFailedAttempt(userId: string): FailedAttemptsRecord {
-    const raw = sessionStorage.getItem(`${STORAGE_PREFIX}_attempts_${userId}`);
-    let record: FailedAttemptsRecord = { count: 0, lockedUntil: null };
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}_attempts_${userId}`);
+    let record: FailedAttemptsRecord = {
+      currentChance: 1,
+      attemptInChance: 0,
+      lockedUntil: null,
+      lockDurationType: null,
+    };
+
     if (raw) {
       try {
         record = JSON.parse(raw);
+        if (!record.currentChance) record.currentChance = 1;
+        if (typeof record.attemptInChance !== "number") record.attemptInChance = 0;
       } catch {}
     }
 
-    record.count += 1;
-    if (record.count >= MAX_FAILED_ATTEMPTS) {
-      record.lockedUntil = Date.now() + COOLDOWN_DURATION_MS;
-      record.count = 0; // Reset count for next cycle after cooldown
+    // Increment attempt in current chance
+    record.attemptInChance += 1;
+
+    // Check if 3 attempts reached in this chance
+    if (record.attemptInChance >= MAX_ATTEMPTS_PER_CHANCE) {
+      if (record.currentChance === 1) {
+        // Chance 1 exhausted -> 1 minute lockout
+        record.lockedUntil = Date.now() + CHANCE_1_LOCKOUT_MS;
+        record.lockDurationType = "1m";
+      } else if (record.currentChance === 2) {
+        // Chance 2 exhausted -> 5 minutes lockout
+        record.lockedUntil = Date.now() + CHANCE_2_LOCKOUT_MS;
+        record.lockDurationType = "5m";
+      } else {
+        // Chance 3 exhausted -> 24 hours lockout
+        record.lockedUntil = Date.now() + CHANCE_3_LOCKOUT_MS;
+        record.lockDurationType = "24h";
+      }
     }
 
     try {
-      sessionStorage.setItem(`${STORAGE_PREFIX}_attempts_${userId}`, JSON.stringify(record));
+      localStorage.setItem(`${STORAGE_PREFIX}_attempts_${userId}`, JSON.stringify(record));
     } catch {}
 
     return record;
   },
 
   /**
-   * Clear failed attempt counts.
+   * Clear failed attempt counts upon successful unlock or PIN change.
    */
   clearFailedAttempts(userId: string): void {
     if (!userId) return;
     try {
-      sessionStorage.removeItem(`${STORAGE_PREFIX}_attempts_${userId}`);
+      localStorage.removeItem(`${STORAGE_PREFIX}_attempts_${userId}`);
     } catch {}
   },
 };
