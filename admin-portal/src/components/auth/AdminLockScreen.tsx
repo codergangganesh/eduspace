@@ -4,9 +4,8 @@ import { createPortal } from "react-dom";
 import { useAdminPinLock } from "@/hooks/useAdminPinLock";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { UserAvatar } from "@/components/users/UserAvatar";
-import { Delete, RefreshCw, LogOut, AlertCircle, ShieldAlert, Fingerprint, Sun, Moon } from "lucide-react";
+import { Delete, RefreshCw, LogOut, AlertCircle, ShieldAlert, Fingerprint, Sun, Moon, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 
@@ -51,26 +50,41 @@ export const AdminLockScreen: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isBiometricScanning, setIsBiometricScanning] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isSuccessUnlocked, setIsSuccessUnlocked] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   const [pressedKey, setPressedKey] = useState<number | string | null>(null);
+  const [keypadLayout, setKeypadLayout] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
 
   // Synchronous verification lock to prevent double-submitting and burning 2 attempts at once
   const isVerifyingRef = useRef<boolean>(false);
   const autoBiometricPromptedRef = useRef<boolean>(false);
 
-  // Clear PIN and errors on lock state change
+  // Clear PIN, errors and generate randomized keypad on lock state change
   useEffect(() => {
     if (isLocked) {
       setPin("");
       setErrorMessage("");
       setShake(false);
       setIsVerifying(false);
+      setIsSuccessUnlocked(false);
       isVerifyingRef.current = false;
       setPressedKey(null);
+
+      // Randomize digits if anti-shoulder surfing is enabled
+      if (settings.randomizeKeypad) {
+        const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        for (let i = digits.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [digits[i], digits[j]] = [digits[j], digits[i]];
+        }
+        setKeypadLayout(digits);
+      } else {
+        setKeypadLayout([1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
+      }
     } else {
       autoBiometricPromptedRef.current = false;
     }
-  }, [isLocked]);
+  }, [isLocked, settings.randomizeKeypad]);
 
   // Handle Biometric Unlock
   const handleBiometricUnlock = useCallback(async () => {
@@ -83,8 +97,8 @@ export const AdminLockScreen: React.FC = () => {
     try {
       const res = await unlockWithBiometrics();
       if (res.success) {
+        setIsSuccessUnlocked(true);
         triggerHaptic([20, 30, 20]);
-        toast.success("Unlocked with Biometrics! Welcome back.");
       } else {
         if (!res.error?.includes("cancelled")) {
           triggerHaptic([40, 60, 40]);
@@ -136,8 +150,8 @@ export const AdminLockScreen: React.FC = () => {
           setTimeout(() => setShake(false), 500);
           setPin("");
         } else {
+          setIsSuccessUnlocked(true);
           triggerHaptic([20, 30, 20]);
-          toast.success("Welcome back, Administrator!");
         }
       } catch (err: any) {
         triggerHaptic([40, 60, 40]);
@@ -213,7 +227,6 @@ export const AdminLockScreen: React.FC = () => {
     try {
       triggerHaptic(15);
       await signOut();
-      toast.success("Signed out of Admin Portal.");
       navigate("/login", { replace: true });
     } catch {
       window.location.href = "/login";
@@ -306,20 +319,24 @@ export const AdminLockScreen: React.FC = () => {
                 <div
                   key={index}
                   className={cn(
-                    "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] flex items-center justify-center transition-all duration-200 relative",
+                    "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] flex items-center justify-center transition-all duration-300 relative",
                     "bg-transparent",
-                    isCurrent
-                      ? "border-2 border-foreground dark:border-white shadow-xs"
-                      : isFilled
-                        ? "border-2 border-foreground/70 dark:border-white/80"
-                        : "border border-border/80 dark:border-zinc-800",
+                    isSuccessUnlocked
+                      ? "border-2 border-emerald-500 bg-emerald-500/15 shadow-[0_0_24px_rgba(16,185,129,0.35)] scale-105"
+                      : isCurrent
+                        ? "border-2 border-foreground dark:border-white shadow-xs"
+                        : isFilled
+                          ? "border-2 border-foreground/70 dark:border-white/80"
+                          : "border border-border/80 dark:border-zinc-800",
                     (errorMessage || cooldown.isCooldown) && "border-destructive dark:border-red-500 bg-destructive/10"
                   )}
                 >
-                  {/* Filled indicator dot inside box */}
-                  {isFilled && (
+                  {/* Filled indicator dot inside box or Checkmark on success */}
+                  {isSuccessUnlocked ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 animate-in zoom-in-50 duration-200" />
+                  ) : isFilled ? (
                     <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-foreground dark:bg-white animate-in zoom-in-75 duration-150 shadow-xs" />
-                  )}
+                  ) : null}
                 </div>
               );
             })}
@@ -327,7 +344,12 @@ export const AdminLockScreen: React.FC = () => {
 
           {/* Below Number Inputs Area: Small Underlined Chance & Attempt Progress / Cooldown Banner */}
           <div className="min-h-[46px] flex flex-col items-center justify-center mt-3 sm:mt-4 px-3 text-center w-full">
-            {!cooldown.isCooldown ? (
+            {isSuccessUnlocked ? (
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500 animate-in zoom-in-95 duration-200">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span>Verified! Welcome back.</span>
+              </div>
+            ) : !cooldown.isCooldown ? (
               <div className="flex flex-col items-center justify-center gap-1.5">
                 {/* Smallest Underlined Progress Text */}
                 <span className="text-[10px] text-muted-foreground/80 font-medium underline underline-offset-3 decoration-muted-foreground/30 tracking-wide select-none">
@@ -403,8 +425,8 @@ export const AdminLockScreen: React.FC = () => {
 
           {/* Clean Frameless Keypad with Reference Spacing */}
           <div className="grid grid-cols-3 gap-y-7 sm:gap-y-8 gap-x-6 sm:gap-x-8 justify-items-center w-full">
-            {/* Numbers 1 to 9 */}
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+            {/* Grid Digits: First 9 numbers from keypadLayout */}
+            {keypadLayout.slice(0, 9).map((num) => {
               const isPressed = pressedKey === num;
               return (
                 <button
@@ -442,21 +464,27 @@ export const AdminLockScreen: React.FC = () => {
               <span>Clear</span>
             </button>
 
-            {/* Row 4: Center Slot (Number 0) */}
-            <button
-              type="button"
-              disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown}
-              onClick={() => handleNumberClick(0)}
-              className={cn(
-                "w-16 h-10 flex items-center justify-center transition-all duration-100",
-                "text-foreground text-2xl sm:text-[28px] font-bold tracking-tight",
-                "cursor-pointer select-none active:opacity-40 active:scale-90",
-                "disabled:opacity-30 disabled:pointer-events-none",
-                pressedKey === 0 && "opacity-40 scale-90"
-              )}
-            >
-              <span>0</span>
-            </button>
+            {/* Row 4: Center Slot (10th digit, default 0 or shuffled) */}
+            {(() => {
+              const centerDigit = keypadLayout[9] ?? 0;
+              return (
+                <button
+                  key={centerDigit}
+                  type="button"
+                  disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown}
+                  onClick={() => handleNumberClick(centerDigit)}
+                  className={cn(
+                    "w-16 h-10 flex items-center justify-center transition-all duration-100",
+                    "text-foreground text-2xl sm:text-[28px] font-bold tracking-tight",
+                    "cursor-pointer select-none active:opacity-40 active:scale-90",
+                    "disabled:opacity-30 disabled:pointer-events-none",
+                    pressedKey === centerDigit && "opacity-40 scale-90"
+                  )}
+                >
+                  <span>{centerDigit}</span>
+                </button>
+              );
+            })()}
 
             {/* Row 4: Right Slot (Backspace Key) */}
             <button

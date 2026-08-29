@@ -73,7 +73,6 @@ export const TermsAgreement: React.FC = () => {
   const handleDecline = async () => {
     if (window.confirm("Declining the legal agreements will sign you out. Are you sure?")) {
       await signOut();
-      toast.info("Signed out.");
       navigate("/login", { replace: true });
     }
   };

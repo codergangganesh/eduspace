@@ -28,7 +28,6 @@ export const Courses: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Course catalog refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh courses.");
     } finally {

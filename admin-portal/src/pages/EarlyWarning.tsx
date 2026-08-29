@@ -44,7 +44,6 @@ export const EarlyWarning: React.FC = () => {
     setRefreshState(true);
     try {
       await refetch();
-      toast.success("Early warning analytics updated with real-time data!");
     } catch (err) {
       toast.error("Failed to refresh retention analytics.");
     } finally {

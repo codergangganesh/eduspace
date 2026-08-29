@@ -51,7 +51,6 @@ export const Classes: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Classroom records refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh classrooms.");
     } finally {

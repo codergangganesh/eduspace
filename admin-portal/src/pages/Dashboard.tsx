@@ -32,7 +32,6 @@ export const Dashboard: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Dashboard metrics refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh dashboard data.");
     } finally {

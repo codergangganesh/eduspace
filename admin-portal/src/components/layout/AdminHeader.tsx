@@ -28,8 +28,8 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import { useAdminPinLock } from "@/hooks/useAdminPinLock";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 interface AdminHeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -42,13 +42,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 }) => {
   const { user, profile, signOut } = useAdminAuth();
   const { lockScreen, isPinLockEnabled } = useAdminPinLock();
+  const { isOnline } = useNetworkStatus();
   const { theme, setTheme } = useTheme();
   const { badges } = useAdminBadges();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success("Signed out of Admin Portal.");
     navigate("/login", { replace: true });
   };
 
@@ -57,6 +57,23 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   };
 
   const totalAlerts = badges.unreadMessagesCount + (badges.recentAuditLogsCount > 0 ? 1 : 0);
+
+  // Global Lock Keyboard Shortcut listener (Alt + L / Ctrl + Alt + L / Ctrl + Shift + L)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isPinLockEnabled) return;
+      if (
+        (e.altKey && e.key.toLowerCase() === "l") ||
+        (e.ctrlKey && e.altKey && e.key.toLowerCase() === "l") ||
+        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "l")
+      ) {
+        e.preventDefault();
+        lockScreen();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPinLockEnabled, lockScreen]);
 
   return (
     <header className="h-16 flex-shrink-0 flex items-center justify-between px-3.5 sm:px-6 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-30">
@@ -82,6 +99,14 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       {/* Right Action Icons & User Dropdown */}
       <div className="flex items-center space-x-2 sm:space-x-3 ml-auto">
+        {/* Live Offline Warning Badge */}
+        {!isOnline && (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-[11px] font-semibold animate-pulse shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-flex" />
+            <span>Offline</span>
+          </div>
+        )}
+
         {/* Desktop Spotlight Search Trigger Button (Ctrl + K) aligned near Student App */}
         <button
           type="button"
@@ -187,6 +212,19 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* 1-Click Quick Lock Screen Button */}
+        {isPinLockEnabled && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={lockScreen}
+            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 hover:text-primary rounded-full cursor-pointer transition-all active:scale-90"
+            title="Lock Screen Now (Alt + L / Ctrl + Shift + L)"
+          >
+            <Lock className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* Theme Toggle */}
         <Button

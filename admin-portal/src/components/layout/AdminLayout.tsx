@@ -5,6 +5,7 @@ import { AdminHeader } from "./AdminHeader";
 import { MobileSidebar } from "./MobileSidebar";
 import { CommandPalette } from "./CommandPalette";
 import { MaintenanceModeBanner } from "./MaintenanceModeBanner";
+import { NetworkStatusBar } from "./NetworkStatusBar";
 import { AdminLockScreen } from "@/components/auth/AdminLockScreen";
 
 export const AdminLayout: React.FC = () => {
@@ -76,6 +77,9 @@ export const AdminLayout: React.FC = () => {
 
       {/* Global 4-Digit In-App PIN Lock Screen Overlay */}
       <AdminLockScreen />
+
+      {/* Live Network Offline / Reconnection Indicator */}
+      <NetworkStatusBar />
     </div>
   );
 };

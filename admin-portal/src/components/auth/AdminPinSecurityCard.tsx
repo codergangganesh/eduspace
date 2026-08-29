@@ -34,6 +34,8 @@ import {
   Fingerprint,
   ShieldCheck,
   Smartphone,
+  Keyboard,
+  Shuffle,
 } from "lucide-react";
 import { AdminPinSetupModal } from "./AdminPinSetupModal";
 import { toast } from "sonner";
@@ -142,11 +144,14 @@ export const AdminPinSecurityCard: React.FC = () => {
                   variant="default"
                   size="sm"
                   onClick={lockScreen}
-                  className="w-full sm:w-auto text-xs font-semibold h-9 px-4 gap-1.5 shadow-sm rounded-xl cursor-pointer active:scale-95 transition-all"
-                  title="Lock portal immediately"
+                  className="w-full sm:w-auto text-xs font-semibold h-9 px-3.5 gap-2 shadow-sm rounded-xl cursor-pointer active:scale-95 transition-all"
+                  title="Lock portal immediately (Alt + L)"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   <span>Lock Screen Now</span>
+                  <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono font-bold bg-primary-foreground/20 text-primary-foreground px-1.5 py-0.5 rounded shadow-2xs">
+                    Alt + L
+                  </kbd>
                 </Button>
               )}
 
@@ -254,7 +259,6 @@ export const AdminPinSecurityCard: React.FC = () => {
                       onValueChange={(val) => {
                         const minutes = parseInt(val, 10);
                         updateSettings({ autoLockTimeout: minutes });
-                        toast.success(`Auto-lock timeout set to ${minutes} minute${minutes === 1 ? "" : "s"}.`);
                       }}
                       disabled={!isPinLockEnabled}
                     >
@@ -293,6 +297,62 @@ export const AdminPinSecurityCard: React.FC = () => {
                     id="tab-switch-lock"
                     checked={settings.autoLockOnTabSwitch}
                     onCheckedChange={(checked) => updateSettings({ autoLockOnTabSwitch: checked })}
+                    disabled={!isPinLockEnabled}
+                    className="cursor-pointer shrink-0"
+                  />
+                </div>
+
+                {/* 4. Instant Lock Shortcut Row */}
+                <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-500 shadow-2xs mt-0.5">
+                      <Keyboard className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Label className="text-xs sm:text-sm font-semibold text-foreground">
+                          Instant Lock Shortcut
+                        </Label>
+                        <Badge variant="outline" className="text-[9px] text-purple-600 dark:text-purple-400 border-purple-500/30 bg-purple-500/10 py-0 px-1.5 font-bold uppercase">
+                          Global
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Press this keyboard shortcut anytime across the portal to lock immediately.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <kbd className="inline-flex items-center px-2 py-1 text-xs font-mono font-bold text-foreground bg-muted/80 border border-border/80 rounded-lg shadow-2xs">
+                      Alt + L
+                    </kbd>
+                  </div>
+                </div>
+
+                {/* 5. Randomize Keypad Layout Row */}
+                <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-500 shadow-2xs mt-0.5">
+                      <Shuffle className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="scramble-keypad-switch">
+                          Randomize Keypad Numbers
+                        </Label>
+                        <Badge variant="outline" className="text-[9px] text-indigo-600 dark:text-indigo-400 border-indigo-500/30 bg-indigo-500/10 py-0 px-1.5 font-bold uppercase">
+                          Anti-Surfing
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Shuffles digits (0–9) on the lock screen to prevent pattern watching.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="scramble-keypad-switch"
+                    checked={settings.randomizeKeypad}
+                    onCheckedChange={(checked) => updateSettings({ randomizeKeypad: checked })}
                     disabled={!isPinLockEnabled}
                     className="cursor-pointer shrink-0"
                   />

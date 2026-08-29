@@ -73,7 +73,6 @@ export const Students: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Student records refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh student records.");
     } finally {

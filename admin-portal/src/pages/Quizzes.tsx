@@ -47,7 +47,6 @@ export const Quizzes: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Quiz records refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh quizzes.");
     } finally {

@@ -27,6 +27,33 @@ const triggerHaptic = (pattern: number | number[] = 12) => {
   }
 };
 
+// Detects weak/predictable 4-digit PIN combinations
+function checkWeakPin(pin: string): { isWeak: boolean; message?: string } {
+  if (pin.length < 4) return { isWeak: false };
+
+  // Repeating digits: e.g. 0000, 1111, 2222, ...
+  if (/^(\d)\1{3}$/.test(pin)) {
+    return { isWeak: true, message: "Avoid repeating digits (e.g. 0000, 1111)." };
+  }
+
+  // Sequential digits
+  const sequential = [
+    "0123", "1234", "2345", "3456", "4567", "5678", "6789",
+    "9876", "8765", "7654", "6543", "5432", "4321", "3210",
+  ];
+  if (sequential.includes(pin)) {
+    return { isWeak: true, message: "Avoid sequential numbers (e.g. 1234, 4321)." };
+  }
+
+  // Common patterns
+  const common = ["1212", "1313", "6969", "2580", "0852", "2024", "2025", "2026"];
+  if (common.includes(pin)) {
+    return { isWeak: true, message: "Easily guessable PIN. Please choose a stronger PIN." };
+  }
+
+  return { isWeak: false };
+}
+
 export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
   open,
   onOpenChange,
@@ -78,6 +105,18 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
       const next = firstPin + num.toString();
       setFirstPin(next);
       if (next.length === 4) {
+        const weakCheck = checkWeakPin(next);
+        if (weakCheck.isWeak) {
+          triggerHaptic([40, 60, 40]);
+          setErrorMessage(weakCheck.message || "Weak PIN: Choose a stronger 4-digit code.");
+          setShake(true);
+          setTimeout(() => {
+            setShake(false);
+            setFirstPin("");
+          }, 600);
+          return;
+        }
+
         setTimeout(() => {
           setStep(2);
         }, 180);

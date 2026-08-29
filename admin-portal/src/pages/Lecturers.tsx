@@ -65,7 +65,6 @@ export const Lecturers: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Faculty records refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh faculty records.");
     } finally {

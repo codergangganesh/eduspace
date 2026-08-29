@@ -38,7 +38,6 @@ import {
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAdminBadges } from "@/hooks/useAdminBadges";
 import { cn, getInitials } from "@/lib/utils";
-import { toast } from "sonner";
 
 interface NavItem {
   label: string;
@@ -78,7 +77,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const handleLogout = async () => {
     await signOut();
-    toast.success("Signed out of Admin Portal.");
     navigate("/login", { replace: true });
   };
 

@@ -14,6 +14,7 @@ export interface PinLockSettings {
   biometricsEnabled: boolean;
   autoLockTimeout: number; // in minutes (1, 5, 15, 30)
   autoLockOnTabSwitch: boolean;
+  randomizeKeypad: boolean;
   updatedAt: string;
 }
 
@@ -43,9 +44,9 @@ const STORAGE_PREFIX = "eduspace_admin_pin";
 export const MAX_ATTEMPTS_PER_CHANCE = 3;
 export const MAX_CHANCES = 3;
 
-export const CHANCE_1_LOCKOUT_MS = 5 * 1000; // 5 seconds (testing)
-export const CHANCE_2_LOCKOUT_MS = 5 * 1000; // 5 seconds (testing)
-export const CHANCE_3_LOCKOUT_MS = 5 * 1000; // 5 seconds (testing)
+export const CHANCE_1_LOCKOUT_MS = 1 * 60 * 1000; // 1 minute (01:00)
+export const CHANCE_2_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes (05:00)
+export const CHANCE_3_LOCKOUT_MS = 24 * 60 * 60 * 1000; // 24 hours (24:00:00)
 
 /**
  * Base64URL encoding/decoding helpers for WebAuthn binary IDs
@@ -163,6 +164,7 @@ export const pinLockService = {
       biometricsEnabled: false,
       autoLockTimeout: 5,
       autoLockOnTabSwitch: true,
+      randomizeKeypad: false,
       updatedAt: new Date().toISOString(),
     };
 
@@ -176,6 +178,7 @@ export const pinLockService = {
         biometricsEnabled: Boolean(config.biometricsEnabled),
         autoLockTimeout: typeof config.autoLockTimeout === "number" ? config.autoLockTimeout : 5,
         autoLockOnTabSwitch: config.autoLockOnTabSwitch !== undefined ? Boolean(config.autoLockOnTabSwitch) : true,
+        randomizeKeypad: Boolean(config.randomizeKeypad),
         updatedAt: config.updatedAt || new Date().toISOString(),
       };
     } catch {
@@ -512,11 +515,6 @@ export const pinLockService = {
 
       // Check if lockout is active
       if (record.lockedUntil && record.lockedUntil > Date.now()) {
-        const maxAllowed = Date.now() + 5000;
-        if (record.lockedUntil > maxAllowed) {
-          record.lockedUntil = maxAllowed;
-          localStorage.setItem(`${STORAGE_PREFIX}_attempts_${userId}`, JSON.stringify(record));
-        }
         const remainingSeconds = Math.ceil((record.lockedUntil - Date.now()) / 1000);
         return {
           isCooldown: true,

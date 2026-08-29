@@ -40,7 +40,6 @@ export const MessagesModeration: React.FC = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      toast.success("Messages feed refreshed successfully!");
     } catch (err) {
       toast.error("Failed to refresh messages feed.");
     } finally {
