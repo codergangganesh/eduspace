@@ -13,6 +13,7 @@ import { AICoachWidget } from "@/components/dashboard/AICoachWidget";
 import { SuspensionBanner } from "@/components/common/SuspensionBanner";
 import { SuspensionModal } from "@/components/common/SuspensionModal";
 import { LanguageDialog } from "@/components/language/LanguageDialog";
+import { UserLockScreen } from "@/components/auth/UserLockScreen";
 
 
 export function RootLayout() {
@@ -107,6 +108,7 @@ export function RootLayout() {
             <CommandPalette />
             <SuspensionModal />
             <LanguageDialog />
+            <UserLockScreen />
             {!options.hideSidebar && (
                 <>
                     <Sidebar

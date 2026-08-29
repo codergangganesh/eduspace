@@ -38,6 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import SEO from "@/components/SEO";
+import { PinSecurityCard } from "@/components/auth/PinSecurityCard";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -188,6 +189,23 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Security & Screen Lock Section */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-border/50">
+            <div className="md:col-span-1">
+              <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+                <Shield className="size-5 text-indigo-500" />
+                {t("settings.security", "Security & Screen Lock")}
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {t("settings.securityDescription", "Protect your active session with an in-app 4-digit PIN and hardware biometric authentication.")}
+              </p>
+            </div>
+
+            <div className="md:col-span-2 space-y-4">
+              <PinSecurityCard />
             </div>
           </section>
 
