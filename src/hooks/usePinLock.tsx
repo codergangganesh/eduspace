@@ -2,6 +2,7 @@ import * as React from "react";
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { pinLockService, PinLockSettings, CooldownStatus } from "@/services/pinLock.service";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PinLockContextType {
   isLocked: boolean;
@@ -20,6 +21,7 @@ interface PinLockContextType {
     lockDurationType?: "1m" | "5m" | "24h" | null;
   }>;
   unlockWithBiometrics: () => Promise<{ success: boolean; error?: string }>;
+  unlockWithPassword: (password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
   enableBiometrics: () => Promise<{ success: boolean; error?: string }>;
   setupPin: (pin: string) => Promise<{ success: boolean; error?: string }>;
   removePin: () => void;
@@ -79,11 +81,19 @@ export function PinLockProvider({ children }: { children: ReactNode }) {
     setCooldown(currentCooldown);
   }, [userId, isAuthenticated]);
 
-  // Initial load when user changes
+  // Initial load when user changes: check local and sync with cloud
   useEffect(() => {
     refreshStatus();
     lastActivityRef.current = Date.now();
-  }, [refreshStatus]);
+
+    if (userId && isAuthenticated) {
+      pinLockService.syncFromCloudIfNewer(userId).then((didUpdate) => {
+        if (didUpdate) {
+          refreshStatus();
+        }
+      });
+    }
+  }, [userId, isAuthenticated, refreshStatus]);
 
   // Cooldown countdown interval
   useEffect(() => {
@@ -156,6 +166,50 @@ export function PinLockProvider({ children }: { children: ReactNode }) {
     }
     return res;
   }, [userId]);
+
+  // Unlock with Account Password (Forgot PIN Recovery)
+  const unlockWithPassword = useCallback(
+    async (password: string, captchaToken?: string) => {
+      let activeEmail = user?.email || "";
+      let activeId = userId;
+
+      if (!activeEmail || !activeId) {
+        try {
+          const {
+            data: { session: currentSession },
+          } = await supabase.auth.getSession();
+          if (currentSession?.user) {
+            activeEmail = activeEmail || currentSession.user.email || "";
+            activeId = activeId || currentSession.user.id || "";
+          }
+        } catch (_) {}
+      }
+
+      if (!activeId && !activeEmail) {
+        try {
+          const {
+            data: { user: currentUser },
+          } = await supabase.auth.getUser();
+          if (currentUser) {
+            activeEmail = activeEmail || currentUser.email || "";
+            activeId = activeId || currentUser.id || "";
+          }
+        } catch (_) {}
+      }
+
+      const res = await pinLockService.unlockWithPassword(activeId, activeEmail, password, captchaToken);
+      if (res.success && activeId) {
+        setIsLocked(false);
+        setCooldown(pinLockService.getCooldownStatus(activeId));
+        lastActivityRef.current = Date.now();
+        try {
+          localStorage.setItem(`eduspace_user_last_act_${activeId}`, String(Date.now()));
+        } catch (_) {}
+      }
+      return res;
+    },
+    [userId, user?.email]
+  );
 
   // Enable / Enroll Biometrics
   const enableBiometrics = useCallback(async () => {
@@ -312,6 +366,7 @@ export function PinLockProvider({ children }: { children: ReactNode }) {
         lockScreen,
         unlockWithPin,
         unlockWithBiometrics,
+        unlockWithPassword,
         enableBiometrics,
         setupPin,
         removePin,

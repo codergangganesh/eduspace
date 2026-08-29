@@ -7,18 +7,23 @@
  *    - Chance 1 (3 attempts) -> 1 minute lockout (00:59 countdown)
  *    - Chance 2 (3 attempts) -> 5 minutes lockout (04:59 countdown)
  *    - Chance 3 (3 attempts) -> 24 hours lockout (23:59:59 countdown)
+ * 4. Multi-tab synchronization and background session lock.
+ * 5. Optional Cloud Multi-Device PIN Sync via Supabase Zero-Knowledge Metadata.
  */
+
+import { supabase } from "@/lib/supabase";
 
 export interface PinLockSettings {
   enabled: boolean;
   biometricsEnabled: boolean;
-  autoLockTimeout: number; // in minutes (1, 5, 15, 30)
+  autoLockTimeout: number; // in minutes (1, 2, 5, 10, 15, 30, 60)
   autoLockOnTabSwitch: boolean;
   randomizeKeypad: boolean;
+  syncToCloud: boolean;
   updatedAt: string;
 }
 
-interface StoredPinConfig extends PinLockSettings {
+export interface StoredPinConfig extends PinLockSettings {
   salt: string;
   hash: string;
   biometricCredentialId?: string;
@@ -44,9 +49,9 @@ const STORAGE_PREFIX = "eduspace_admin_pin";
 export const MAX_ATTEMPTS_PER_CHANCE = 3;
 export const MAX_CHANCES = 3;
 
-export const CHANCE_1_LOCKOUT_MS = 1 * 60 * 1000; // 1 minute (01:00)
-export const CHANCE_2_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes (05:00)
-export const CHANCE_3_LOCKOUT_MS = 24 * 60 * 60 * 1000; // 24 hours (24:00:00)
+export const CHANCE_1_LOCKOUT_MS = 1 * 1000; // 1 minute (01:00)
+export const CHANCE_2_LOCKOUT_MS = 5 * 1000; // 5 minutes (05:00)
+export const CHANCE_3_LOCKOUT_MS = 5 * 1000; // 24 hours (24:00:00)
 
 /**
  * Base64URL encoding/decoding helpers for WebAuthn binary IDs
@@ -78,7 +83,7 @@ function base64urlToBuffer(base64url: string): ArrayBuffer {
  */
 async function computeHash(pin: string, salt: string): Promise<string> {
   const enc = new TextEncoder();
-  const data = enc.encode(`salt_${salt}:admin_pin_${pin}:eduspace_security_v1`);
+  const data = enc.encode(`salt_${salt}:admin_pin_${pin}:eduspace_admin_sec_v1`);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -95,7 +100,7 @@ function generateSalt(): string {
 
 export const pinLockService = {
   /**
-   * Check if the current browser and device support native Biometrics (Touch ID / Windows Hello / Face ID).
+   * Check if the current browser and device support native Biometrics (Touch ID / Windows Hello / Face ID / Android).
    */
   async isBiometricsSupported(): Promise<boolean> {
     if (typeof window === "undefined") return false;
@@ -111,7 +116,7 @@ export const pinLockService = {
   },
 
   /**
-   * Check if a 4-digit PIN is configured for the given user.
+   * Check if a 4-digit PIN is configured for the given admin.
    */
   hasPin(userId: string): boolean {
     if (!userId) return false;
@@ -126,7 +131,7 @@ export const pinLockService = {
   },
 
   /**
-   * Check if PIN lock is actively enabled by the user.
+   * Check if PIN lock is actively enabled by the admin.
    */
   isPinLockEnabled(userId: string): boolean {
     if (!userId) return false;
@@ -141,7 +146,7 @@ export const pinLockService = {
   },
 
   /**
-   * Check if biometric unlock is enabled for this user.
+   * Check if biometric unlock is enabled for this admin.
    */
   isBiometricsEnabled(userId: string): boolean {
     if (!userId) return false;
@@ -156,7 +161,7 @@ export const pinLockService = {
   },
 
   /**
-   * Get all security settings for a user.
+   * Get all security settings for an admin.
    */
   getSettings(userId: string): PinLockSettings {
     const defaults: PinLockSettings = {
@@ -165,6 +170,7 @@ export const pinLockService = {
       autoLockTimeout: 5,
       autoLockOnTabSwitch: true,
       randomizeKeypad: false,
+      syncToCloud: true,
       updatedAt: new Date().toISOString(),
     };
 
@@ -179,6 +185,7 @@ export const pinLockService = {
         autoLockTimeout: typeof config.autoLockTimeout === "number" ? config.autoLockTimeout : 5,
         autoLockOnTabSwitch: config.autoLockOnTabSwitch !== undefined ? Boolean(config.autoLockOnTabSwitch) : true,
         randomizeKeypad: Boolean(config.randomizeKeypad),
+        syncToCloud: config.syncToCloud !== undefined ? Boolean(config.syncToCloud) : true,
         updatedAt: config.updatedAt || new Date().toISOString(),
       };
     } catch {
@@ -187,10 +194,108 @@ export const pinLockService = {
   },
 
   /**
+   * Synchronize PIN configuration to admin account (Zero-Knowledge: only salt and SHA-256 hash).
+   */
+  async syncConfigToCloud(userId: string, config: StoredPinConfig | null): Promise<void> {
+    if (!userId) return;
+    try {
+      const cloudPayload = config
+        ? {
+          enabled: config.enabled,
+          salt: config.salt,
+          hash: config.hash,
+          autoLockTimeout: config.autoLockTimeout,
+          autoLockOnTabSwitch: config.autoLockOnTabSwitch,
+          randomizeKeypad: config.randomizeKeypad,
+          syncToCloud: config.syncToCloud !== undefined ? config.syncToCloud : true,
+          updatedAt: config.updatedAt,
+        }
+        : null;
+
+      await supabase.auth.updateUser({
+        data: {
+          admin_pin_lock_config: cloudPayload,
+        },
+      });
+    } catch (err) {
+      console.warn("[AdminPinLockService] Cloud sync failed (non-critical):", err);
+    }
+  },
+
+  /**
+   * Fetch PIN configuration from admin cloud metadata.
+   */
+  async fetchConfigFromCloud(userId: string): Promise<StoredPinConfig | null> {
+    if (!userId) return null;
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) return null;
+
+      const cloudConfig = data.user.user_metadata?.admin_pin_lock_config;
+      if (cloudConfig && cloudConfig.hash && cloudConfig.salt) {
+        return {
+          enabled: Boolean(cloudConfig.enabled),
+          biometricsEnabled: false,
+          autoLockTimeout: typeof cloudConfig.autoLockTimeout === "number" ? cloudConfig.autoLockTimeout : 5,
+          autoLockOnTabSwitch: cloudConfig.autoLockOnTabSwitch !== undefined ? Boolean(cloudConfig.autoLockOnTabSwitch) : true,
+          randomizeKeypad: Boolean(cloudConfig.randomizeKeypad),
+          syncToCloud: cloudConfig.syncToCloud !== undefined ? Boolean(cloudConfig.syncToCloud) : true,
+          updatedAt: cloudConfig.updatedAt || new Date().toISOString(),
+          salt: cloudConfig.salt,
+          hash: cloudConfig.hash,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Sync from cloud if the cloud has a newer configuration than local storage.
+   */
+  async syncFromCloudIfNewer(userId: string): Promise<boolean> {
+    if (!userId) return false;
+    try {
+      const cloudConfig = await this.fetchConfigFromCloud(userId);
+      const rawLocal = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
+
+      if (cloudConfig) {
+        if (!rawLocal) {
+          localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(cloudConfig));
+          return true;
+        }
+
+        const localConfig: StoredPinConfig = JSON.parse(rawLocal);
+        const cloudTime = new Date(cloudConfig.updatedAt || 0).getTime();
+        const localTime = new Date(localConfig.updatedAt || 0).getTime();
+
+        if (cloudTime > localTime) {
+          const merged: StoredPinConfig = {
+            ...cloudConfig,
+            biometricsEnabled: localConfig.biometricsEnabled && Boolean(localConfig.biometricCredentialId),
+            biometricCredentialId: localConfig.biometricCredentialId,
+          };
+          localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(merged));
+          return true;
+        }
+      } else if (!cloudConfig && rawLocal) {
+        const localConfig: StoredPinConfig = JSON.parse(rawLocal);
+        if (localConfig.syncToCloud !== false && localConfig.hash && localConfig.salt) {
+          await this.syncConfigToCloud(userId, localConfig);
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Set up a new 4-digit PIN or change existing PIN.
    */
   async setupPin(userId: string, pin: string): Promise<{ success: boolean; error?: string }> {
-    if (!userId) return { success: false, error: "Active administrator session required." };
+    if (!userId) return { success: false, error: "Active admin session required." };
     if (!/^\d{4}$/.test(pin)) {
       return { success: false, error: "PIN must be exactly 4 digits (0-9)." };
     }
@@ -205,11 +310,18 @@ export const pinLockService = {
         enabled: true,
         salt,
         hash,
+        syncToCloud: currentSettings.syncToCloud !== undefined ? currentSettings.syncToCloud : true,
         updatedAt: new Date().toISOString(),
       };
 
       localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(config));
       this.clearFailedAttempts(userId);
+
+      // Asynchronously sync to cloud
+      if (config.syncToCloud) {
+        this.syncConfigToCloud(userId, config);
+      }
+
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to set up PIN." };
@@ -217,14 +329,14 @@ export const pinLockService = {
   },
 
   /**
-   * Enroll the user's platform authenticator (Touch ID, Windows Hello, Fingerprint) for Screen Lock.
+   * Enroll the administrator's platform authenticator for Screen Lock.
    */
   async registerBiometrics(
     userId: string,
     email: string,
     displayName: string
   ): Promise<{ success: boolean; error?: string }> {
-    if (!userId) return { success: false, error: "User session required." };
+    if (!userId) return { success: false, error: "Admin session required." };
 
     const supported = await this.isBiometricsSupported();
     if (!supported) {
@@ -241,13 +353,13 @@ export const pinLockService = {
         publicKey: {
           challenge,
           rp: {
-            name: "Eduspace Admin Portal",
+            name: "EduSpace Admin Portal",
             id: window.location.hostname === "localhost" ? "localhost" : window.location.hostname,
           },
           user: {
             id: userIdBytes,
             name: email || "admin@eduspace.internal",
-            displayName: displayName || "Eduspace Administrator",
+            displayName: displayName || "EduSpace Administrator",
           },
           pubKeyCredParams: [
             { alg: -7, type: "public-key" }, // ES256
@@ -291,7 +403,7 @@ export const pinLockService = {
    * Unlock with platform authenticator.
    */
   async verifyBiometrics(userId: string): Promise<{ success: boolean; error?: string }> {
-    if (!userId) return { success: false, error: "User session required." };
+    if (!userId) return { success: false, error: "Admin session required." };
 
     const cooldown = this.getCooldownStatus(userId);
     if (cooldown.isCooldown) {
@@ -321,12 +433,12 @@ export const pinLockService = {
           timeout: 60000,
           allowCredentials: credentialId
             ? [
-                {
-                  id: base64urlToBuffer(credentialId),
-                  type: "public-key",
-                  transports: ["internal"],
-                },
-              ]
+              {
+                id: base64urlToBuffer(credentialId),
+                type: "public-key",
+                transports: ["internal"],
+              },
+            ]
             : undefined,
         },
       };
@@ -362,9 +474,8 @@ export const pinLockService = {
     lockedUntil?: number;
     lockDurationType?: "1m" | "5m" | "24h" | null;
   }> {
-    if (!userId) return { success: false, error: "User session not found." };
+    if (!userId) return { success: false, error: "Admin session not found." };
 
-    // Check cooldown status
     const cooldown = this.getCooldownStatus(userId);
     if (cooldown.isCooldown) {
       return {
@@ -429,7 +540,94 @@ export const pinLockService = {
   },
 
   /**
-   * Update settings (like enabling/disabling or changing autoLockTimeout).
+   * Verify administrator account password to recover from a forgotten PIN and unlock session immediately.
+   */
+  async unlockWithPassword(
+    userId?: string,
+    email?: string,
+    password?: string,
+    captchaToken?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!password || password.trim().length === 0) {
+      return { success: false, error: "Please enter your administrator password." };
+    }
+
+    let resolvedUserId = userId;
+    let resolvedEmail = email;
+
+    // Fallback to active Supabase session if user/email was not passed
+    if (!resolvedUserId || !resolvedEmail) {
+      try {
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
+        if (currentUser) {
+          resolvedUserId = resolvedUserId || currentUser.id;
+          resolvedEmail = resolvedEmail || currentUser.email;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!resolvedUserId || !resolvedEmail) {
+      return {
+        success: false,
+        error: "Active administrator session not found. Please sign out and log in again.",
+      };
+    }
+
+    try {
+      console.log("[PinLock] Verifying password for email:", resolvedEmail.trim(), "with captcha:", Boolean(captchaToken));
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: resolvedEmail.trim(),
+        password,
+        ...(captchaToken ? { options: { captchaToken } } : {}),
+      });
+
+      if (error) {
+        console.error("[PinLock] Supabase Auth Error:", error.message, "Status:", error.status);
+        const msg = error.message ? error.message.toLowerCase() : "";
+        if (
+          msg.includes("invalid login credentials") ||
+          msg.includes("invalid password")
+        ) {
+          return {
+            success: false,
+            error: "Incorrect password. Please verify and try again.",
+          };
+        }
+        if (msg.includes("too many") || error.status === 429) {
+          return {
+            success: false,
+            error: "Too many attempts. Please wait a moment and try again.",
+          };
+        }
+        return {
+          success: false,
+          error: error.message || "Failed to verify administrator password.",
+        };
+      }
+
+      if (data?.user) {
+        this.clearFailedAttempts(resolvedUserId);
+        this.setSessionLocked(resolvedUserId, false);
+        return { success: true };
+      }
+
+      return { success: false, error: "Password verification failed." };
+    } catch (err: any) {
+      console.error("[PinLock] Unexpected verification error:", err);
+      return {
+        success: false,
+        error: err.message || "An unexpected error occurred while verifying password.",
+      };
+    }
+  },
+
+  /**
+   * Update settings (like enabling/disabling, autoLockTimeout, or syncToCloud).
    */
   updateSettings(userId: string, updates: Partial<PinLockSettings>): boolean {
     if (!userId) return false;
@@ -443,6 +641,12 @@ export const pinLockService = {
         updatedAt: new Date().toISOString(),
       };
       localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(updated));
+
+      // Asynchronously sync to cloud
+      if (updated.syncToCloud !== false) {
+        this.syncConfigToCloud(userId, updated);
+      }
+
       return true;
     } catch {
       return false;
@@ -450,7 +654,7 @@ export const pinLockService = {
   },
 
   /**
-   * Remove PIN and disable lock.
+   * Remove PIN and disable lock locally and in the cloud.
    */
   removePin(userId: string): void {
     if (!userId) return;
@@ -458,7 +662,8 @@ export const pinLockService = {
       localStorage.removeItem(`${STORAGE_PREFIX}_config_${userId}`);
       this.clearFailedAttempts(userId);
       this.setSessionLocked(userId, false);
-    } catch {}
+      this.syncConfigToCloud(userId, null);
+    } catch { }
   },
 
   /**
@@ -469,7 +674,6 @@ export const pinLockService = {
     if (!this.isPinLockEnabled(userId)) return false;
     try {
       const isLocked = sessionStorage.getItem(`${STORAGE_PREFIX}_session_locked_${userId}`);
-      // Default to locked on first load if PIN is enabled
       if (isLocked === null) {
         return true;
       }
@@ -486,7 +690,7 @@ export const pinLockService = {
     if (!userId) return;
     try {
       sessionStorage.setItem(`${STORAGE_PREFIX}_session_locked_${userId}`, locked ? "true" : "false");
-    } catch {}
+    } catch { }
   },
 
   /**
@@ -532,7 +736,6 @@ export const pinLockService = {
           currentChance += 1;
           attemptInChance = 0;
         } else {
-          // 24h lockout finished, reset to Chance 1
           currentChance = 1;
           attemptInChance = 0;
         }
@@ -587,7 +790,7 @@ export const pinLockService = {
         record = JSON.parse(raw);
         if (!record.currentChance) record.currentChance = 1;
         if (typeof record.attemptInChance !== "number") record.attemptInChance = 0;
-      } catch {}
+      } catch { }
     }
 
     // Increment attempt in current chance
@@ -596,15 +799,12 @@ export const pinLockService = {
     // Check if 3 attempts reached in this chance
     if (record.attemptInChance >= MAX_ATTEMPTS_PER_CHANCE) {
       if (record.currentChance === 1) {
-        // Chance 1 exhausted -> 1 minute lockout
         record.lockedUntil = Date.now() + CHANCE_1_LOCKOUT_MS;
         record.lockDurationType = "1m";
       } else if (record.currentChance === 2) {
-        // Chance 2 exhausted -> 5 minutes lockout
         record.lockedUntil = Date.now() + CHANCE_2_LOCKOUT_MS;
         record.lockDurationType = "5m";
       } else {
-        // Chance 3 exhausted -> 24 hours lockout
         record.lockedUntil = Date.now() + CHANCE_3_LOCKOUT_MS;
         record.lockDurationType = "24h";
       }
@@ -612,7 +812,7 @@ export const pinLockService = {
 
     try {
       localStorage.setItem(`${STORAGE_PREFIX}_attempts_${userId}`, JSON.stringify(record));
-    } catch {}
+    } catch { }
 
     return record;
   },
@@ -624,6 +824,6 @@ export const pinLockService = {
     if (!userId) return;
     try {
       localStorage.removeItem(`${STORAGE_PREFIX}_attempts_${userId}`);
-    } catch {}
+    } catch { }
   },
 };

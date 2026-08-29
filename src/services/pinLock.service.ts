@@ -9,18 +9,22 @@
  *    - Chance 2 (3 attempts) -> 5 minutes lockout (04:59 countdown)
  *    - Chance 3 (3 attempts) -> 24 hours lockout (23:59:59 countdown)
  * 4. Multi-tab synchronization and background session lock.
+ * 5. Optional Cloud Multi-Device PIN Sync via Supabase Zero-Knowledge Metadata.
  */
+
+import { supabase } from "@/integrations/supabase/client";
 
 export interface PinLockSettings {
   enabled: boolean;
   biometricsEnabled: boolean;
-  autoLockTimeout: number; // in minutes (1, 5, 15, 30)
+  autoLockTimeout: number; // in minutes (1, 2, 5, 10, 15, 30, 60)
   autoLockOnTabSwitch: boolean;
   randomizeKeypad: boolean;
+  syncToCloud: boolean;
   updatedAt: string;
 }
 
-interface StoredPinConfig extends PinLockSettings {
+export interface StoredPinConfig extends PinLockSettings {
   salt: string;
   hash: string;
   biometricCredentialId?: string;
@@ -167,6 +171,7 @@ export const pinLockService = {
       autoLockTimeout: 5,
       autoLockOnTabSwitch: true,
       randomizeKeypad: false,
+      syncToCloud: true,
       updatedAt: new Date().toISOString(),
     };
 
@@ -181,10 +186,114 @@ export const pinLockService = {
         autoLockTimeout: typeof config.autoLockTimeout === "number" ? config.autoLockTimeout : 5,
         autoLockOnTabSwitch: config.autoLockOnTabSwitch !== undefined ? Boolean(config.autoLockOnTabSwitch) : true,
         randomizeKeypad: Boolean(config.randomizeKeypad),
+        syncToCloud: config.syncToCloud !== undefined ? Boolean(config.syncToCloud) : true,
         updatedAt: config.updatedAt || new Date().toISOString(),
       };
     } catch {
       return defaults;
+    }
+  },
+
+  /**
+   * Synchronize PIN configuration to cloud account (Zero-Knowledge: only salt and SHA-256 hash).
+   */
+  async syncConfigToCloud(userId: string, config: StoredPinConfig | null): Promise<void> {
+    if (!userId) return;
+    try {
+      // Clean biometricCredentialId before cloud upload (biometrics are hardware-device-bound)
+      const cloudPayload = config
+        ? {
+            enabled: config.enabled,
+            salt: config.salt,
+            hash: config.hash,
+            autoLockTimeout: config.autoLockTimeout,
+            autoLockOnTabSwitch: config.autoLockOnTabSwitch,
+            randomizeKeypad: config.randomizeKeypad,
+            syncToCloud: config.syncToCloud !== undefined ? config.syncToCloud : true,
+            updatedAt: config.updatedAt,
+          }
+        : null;
+
+      await supabase.auth.updateUser({
+        data: {
+          pin_lock_config: cloudPayload,
+        },
+      });
+    } catch (err) {
+      console.warn("[PinLockService] Cloud sync failed (non-critical):", err);
+    }
+  },
+
+  /**
+   * Fetch PIN configuration from cloud account metadata.
+   */
+  async fetchConfigFromCloud(userId: string): Promise<StoredPinConfig | null> {
+    if (!userId) return null;
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) return null;
+
+      const cloudConfig = data.user.user_metadata?.pin_lock_config;
+      if (cloudConfig && cloudConfig.hash && cloudConfig.salt) {
+        return {
+          enabled: Boolean(cloudConfig.enabled),
+          biometricsEnabled: false, // Biometrics must be enabled per physical device
+          autoLockTimeout: typeof cloudConfig.autoLockTimeout === "number" ? cloudConfig.autoLockTimeout : 5,
+          autoLockOnTabSwitch: cloudConfig.autoLockOnTabSwitch !== undefined ? Boolean(cloudConfig.autoLockOnTabSwitch) : true,
+          randomizeKeypad: Boolean(cloudConfig.randomizeKeypad),
+          syncToCloud: cloudConfig.syncToCloud !== undefined ? Boolean(cloudConfig.syncToCloud) : true,
+          updatedAt: cloudConfig.updatedAt || new Date().toISOString(),
+          salt: cloudConfig.salt,
+          hash: cloudConfig.hash,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Sync from cloud if the cloud has a newer configuration than local storage.
+   * Useful when signing in on a second device (e.g. iPad, phone, new laptop).
+   */
+  async syncFromCloudIfNewer(userId: string): Promise<boolean> {
+    if (!userId) return false;
+    try {
+      const cloudConfig = await this.fetchConfigFromCloud(userId);
+      const rawLocal = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
+
+      if (cloudConfig) {
+        if (!rawLocal) {
+          // New device with no local PIN config: adopt cloud PIN config!
+          localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(cloudConfig));
+          return true;
+        }
+
+        const localConfig: StoredPinConfig = JSON.parse(rawLocal);
+        const cloudTime = new Date(cloudConfig.updatedAt || 0).getTime();
+        const localTime = new Date(localConfig.updatedAt || 0).getTime();
+
+        if (cloudTime > localTime) {
+          // Cloud has newer PIN config: preserve local biometrics if present
+          const merged: StoredPinConfig = {
+            ...cloudConfig,
+            biometricsEnabled: localConfig.biometricsEnabled && Boolean(localConfig.biometricCredentialId),
+            biometricCredentialId: localConfig.biometricCredentialId,
+          };
+          localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(merged));
+          return true;
+        }
+      } else if (!cloudConfig && rawLocal) {
+        // Local exists, upload to cloud to keep in sync
+        const localConfig: StoredPinConfig = JSON.parse(rawLocal);
+        if (localConfig.syncToCloud !== false && localConfig.hash && localConfig.salt) {
+          await this.syncConfigToCloud(userId, localConfig);
+        }
+      }
+      return false;
+    } catch {
+      return false;
     }
   },
 
@@ -207,11 +316,18 @@ export const pinLockService = {
         enabled: true,
         salt,
         hash,
+        syncToCloud: currentSettings.syncToCloud !== undefined ? currentSettings.syncToCloud : true,
         updatedAt: new Date().toISOString(),
       };
 
       localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(config));
       this.clearFailedAttempts(userId);
+
+      // Asynchronously sync to cloud
+      if (config.syncToCloud) {
+        this.syncConfigToCloud(userId, config);
+      }
+
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to set up PIN." };
@@ -431,7 +547,94 @@ export const pinLockService = {
   },
 
   /**
-   * Update settings (like enabling/disabling or changing autoLockTimeout).
+   * Verify primary account password to recover from a forgotten PIN and unlock session immediately.
+   */
+  async unlockWithPassword(
+    userId?: string,
+    email?: string,
+    password?: string,
+    captchaToken?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!password || password.trim().length === 0) {
+      return { success: false, error: "Please enter your account password." };
+    }
+
+    let resolvedUserId = userId;
+    let resolvedEmail = email;
+
+    // Fallback to active Supabase session if user/email was not passed
+    if (!resolvedUserId || !resolvedEmail) {
+      try {
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
+        if (currentUser) {
+          resolvedUserId = resolvedUserId || currentUser.id;
+          resolvedEmail = resolvedEmail || currentUser.email;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!resolvedUserId || !resolvedEmail) {
+      return {
+        success: false,
+        error: "Active user session not found. Please sign out and log in again.",
+      };
+    }
+
+    try {
+      console.log("[PinLock] Verifying password for email:", resolvedEmail.trim(), "with captcha:", Boolean(captchaToken));
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: resolvedEmail.trim(),
+        password,
+        ...(captchaToken ? { options: { captchaToken } } : {}),
+      });
+
+      if (error) {
+        console.error("[PinLock] Supabase Auth Error:", error.message, "Status:", error.status);
+        const msg = error.message ? error.message.toLowerCase() : "";
+        if (
+          msg.includes("invalid login credentials") ||
+          msg.includes("invalid password")
+        ) {
+          return {
+            success: false,
+            error: "Incorrect password. Please verify and try again.",
+          };
+        }
+        if (msg.includes("too many") || error.status === 429) {
+          return {
+            success: false,
+            error: "Too many attempts. Please wait a moment and try again.",
+          };
+        }
+        return {
+          success: false,
+          error: error.message || "Failed to verify account password.",
+        };
+      }
+
+      if (data?.user) {
+        this.clearFailedAttempts(resolvedUserId);
+        this.setSessionLocked(resolvedUserId, false);
+        return { success: true };
+      }
+
+      return { success: false, error: "Password verification failed." };
+    } catch (err: any) {
+      console.error("[PinLock] Unexpected verification error:", err);
+      return {
+        success: false,
+        error: err.message || "An unexpected error occurred while verifying password.",
+      };
+    }
+  },
+
+  /**
+   * Update settings (like enabling/disabling or changing autoLockTimeout or syncToCloud).
    */
   updateSettings(userId: string, updates: Partial<PinLockSettings>): boolean {
     if (!userId) return false;
@@ -445,6 +648,12 @@ export const pinLockService = {
         updatedAt: new Date().toISOString(),
       };
       localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(updated));
+
+      // Asynchronously sync to cloud
+      if (updated.syncToCloud !== false) {
+        this.syncConfigToCloud(userId, updated);
+      }
+
       return true;
     } catch {
       return false;
@@ -452,7 +661,7 @@ export const pinLockService = {
   },
 
   /**
-   * Remove PIN and disable lock.
+   * Remove PIN and disable lock locally and on the cloud.
    */
   removePin(userId: string): void {
     if (!userId) return;
@@ -460,6 +669,7 @@ export const pinLockService = {
       localStorage.removeItem(`${STORAGE_PREFIX}_config_${userId}`);
       this.clearFailedAttempts(userId);
       this.setSessionLocked(userId, false);
+      this.syncConfigToCloud(userId, null);
     } catch {}
   },
 
@@ -471,7 +681,6 @@ export const pinLockService = {
     if (!this.isPinLockEnabled(userId)) return false;
     try {
       const isLocked = sessionStorage.getItem(`${STORAGE_PREFIX}_session_locked_${userId}`);
-      // Default to locked on first load if PIN is enabled
       if (isLocked === null) {
         return true;
       }
