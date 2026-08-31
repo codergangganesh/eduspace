@@ -1575,13 +1575,13 @@ export const AdminProfile: React.FC = () => {
             <Sheet open={isMoreDrawerOpen} onOpenChange={setIsMoreDrawerOpen}>
               <SheetContent
                 side="bottom"
-                className="rounded-t-2xl p-4 pb-6 bg-card/98 backdrop-blur-xl border-t border-border shadow-2xl safe-area-inset-bottom"
+                className="rounded-t-2xl p-4 pb-6 bg-card text-card-foreground border-t border-border shadow-2xl safe-area-inset-bottom focus:outline-none"
               >
                 {/* Small Pull Handle */}
-                <div className="w-8 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-2" />
+                <div className="w-9 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
 
-                <SheetHeader className="text-left pb-1">
-                  <SheetTitle className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <SheetHeader className="text-left pb-1.5">
+                  <SheetTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                     More Options
                   </SheetTitle>
                   <SheetDescription className="sr-only">
@@ -1602,10 +1602,10 @@ export const AdminProfile: React.FC = () => {
                           setIsMoreDrawerOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer",
+                          "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-colors text-left cursor-pointer",
                           isSelected
                             ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                            : "text-foreground hover:bg-muted/60 active:bg-muted"
+                            : "text-foreground hover:bg-muted/80 active:bg-muted font-medium"
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
