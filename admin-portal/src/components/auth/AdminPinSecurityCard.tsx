@@ -373,36 +373,39 @@ export const AdminPinSecurityCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 6. Randomize Keypad Layout Row (Only in PIN Mode) */}
-                {!isPasswordLock && (
-                  <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-500 shadow-2xs mt-0.5">
-                        <Shuffle className="h-4 w-4" />
-                      </div>
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="scramble-keypad-switch">
-                            Randomize Keypad Numbers
-                          </Label>
-                          <Badge variant="outline" className="text-[9px] text-indigo-600 dark:text-indigo-400 border-indigo-500/30 bg-indigo-500/10 py-0 px-1.5 font-bold uppercase">
-                            Anti-Surfing
-                          </Badge>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">
-                          Shuffles digits (0–9) on the lock screen to prevent pattern watching.
-                        </p>
-                      </div>
+                {/* 6. Randomize Keypad Layout Row */}
+                <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-500 shadow-2xs mt-0.5">
+                      <Shuffle className="h-4 w-4" />
                     </div>
-                    <Switch
-                      id="scramble-keypad-switch"
-                      checked={settings.randomizeKeypad}
-                      onCheckedChange={(checked) => updateSettings({ randomizeKeypad: checked })}
-                      disabled={!isPinLockEnabled}
-                      className="cursor-pointer shrink-0"
-                    />
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="scramble-keypad-switch">
+                          Randomize Keypad Numbers
+                        </Label>
+                        <Badge variant="outline" className="text-[9px] text-indigo-600 dark:text-indigo-400 border-indigo-500/30 bg-indigo-500/10 py-0 px-1.5 font-bold uppercase">
+                          Anti-Surfing
+                        </Badge>
+                        {isPasswordLock && (
+                          <Badge variant="secondary" className="text-[8px] py-0 px-1 font-semibold uppercase">
+                            PIN Mode
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Shuffles digits (0–9) on the lock screen to prevent pattern watching when unlocking with PIN.
+                      </p>
+                    </div>
                   </div>
-                )}
+                  <Switch
+                    id="scramble-keypad-switch"
+                    checked={settings.randomizeKeypad}
+                    onCheckedChange={(checked) => updateSettings({ randomizeKeypad: checked })}
+                    disabled={!isPinLockEnabled}
+                    className="cursor-pointer shrink-0"
+                  />
+                </div>
 
                 {/* 7. Multi-Device Cloud Sync Row */}
                 <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">

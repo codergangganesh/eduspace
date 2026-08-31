@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface PinLockSettings {
   enabled: boolean;
+  lockType?: "pin" | "password"; // "pin" = 4-digit PIN, "password" = custom alphanumeric password
   biometricsEnabled: boolean;
   autoLockTimeout: number; // in minutes (1, 2, 5, 10, 15, 30, 60)
   autoLockOnTabSwitch: boolean;
@@ -117,6 +118,64 @@ export function isCommonOrWeakPin(pin: string): { isWeak: boolean; reason?: stri
     return { isWeak: true, reason: "Avoid using all repetitive digits (e.g. 1111, 2222)." };
   }
   return { isWeak: false };
+}
+
+export interface PasswordValidationResult {
+  isValid: boolean;
+  hasMinLength: boolean;
+  hasUpper: boolean;
+  hasLower: boolean;
+  hasNumber: boolean;
+  hasSpecial: boolean;
+  score: number; // 0 to 4
+  reason?: string;
+}
+
+/**
+ * Validate that the chosen alphanumeric lock password meets security standards:
+ * - At least 8 characters
+ * - At least 1 uppercase letter (A-Z)
+ * - At least 1 numeric digit (0-9)
+ * - At least 1 special character (!@#$%^&*...)
+ */
+export function validateLockPassword(password: string): PasswordValidationResult {
+  const hasMinLength = Boolean(password && password.length >= 8);
+  const hasUpper = /[A-Z]/.test(password || "");
+  const hasLower = /[a-z]/.test(password || "");
+  const hasNumber = /[0-9]/.test(password || "");
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password || "");
+
+  let score = 0;
+  if (hasMinLength) score++;
+  if (hasUpper && hasLower) score++;
+  if (hasNumber) score++;
+  if (hasSpecial) score++;
+
+  if (!hasMinLength) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must be at least 8 characters long." };
+  }
+  if (!hasUpper) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must contain at least 1 uppercase letter (A-Z)." };
+  }
+  if (!hasNumber) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must contain at least 1 numeric digit (0-9)." };
+  }
+  if (!hasSpecial) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must contain at least 1 special character (!@#$%...)." };
+  }
+  if (password.length > 64) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must be at most 64 characters long." };
+  }
+
+  return { isValid: true, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: undefined };
+}
+
+/**
+ * Validates alphanumeric custom password complexity for Screen Lock.
+ */
+export function isWeakPassword(password: string): { isWeak: boolean; reason?: string } {
+  const result = validateLockPassword(password);
+  return { isWeak: !result.isValid, reason: result.reason };
 }
 
 /**
@@ -355,6 +414,7 @@ export const pinLockService = {
   getSettings(userId: string): PinLockSettings {
     const defaults: PinLockSettings = {
       enabled: false,
+      lockType: "pin",
       biometricsEnabled: false,
       autoLockTimeout: 5,
       autoLockOnTabSwitch: true,
@@ -370,6 +430,7 @@ export const pinLockService = {
       const config: StoredPinConfig = JSON.parse(raw);
       return {
         enabled: Boolean(config.enabled),
+        lockType: config.lockType === "password" ? "password" : "pin",
         biometricsEnabled: Boolean(config.biometricsEnabled),
         autoLockTimeout: typeof config.autoLockTimeout === "number" ? config.autoLockTimeout : 5,
         autoLockOnTabSwitch: config.autoLockOnTabSwitch !== undefined ? Boolean(config.autoLockOnTabSwitch) : true,
@@ -396,6 +457,7 @@ export const pinLockService = {
       const cloudPayload = config
         ? {
             enabled: config.enabled,
+            lockType: config.lockType || "pin",
             salt: config.salt,
             hash: config.hash,
             autoLockTimeout: config.autoLockTimeout,
@@ -433,6 +495,7 @@ export const pinLockService = {
       if (cloudConfig && cloudConfig.hash && cloudConfig.salt) {
         return {
           enabled: Boolean(cloudConfig.enabled),
+          lockType: cloudConfig.lockType === "password" ? "password" : "pin",
           biometricsEnabled: false, // Biometrics must be enabled per physical device
           autoLockTimeout: typeof cloudConfig.autoLockTimeout === "number" ? cloudConfig.autoLockTimeout : 5,
           autoLockOnTabSwitch: cloudConfig.autoLockOnTabSwitch !== undefined ? Boolean(cloudConfig.autoLockOnTabSwitch) : true,
@@ -494,24 +557,36 @@ export const pinLockService = {
   },
 
   /**
-   * Set up a new 4-digit PIN or change existing PIN.
+   * Set up or change the In-App Lock Secret (4-digit PIN or Alphanumeric Password) with PBKDF2 (100K iterations).
    */
-  async setupPin(userId: string, pin: string): Promise<{ success: boolean; error?: string }> {
+  async setupPin(
+    userId: string,
+    secret: string,
+    lockType: "pin" | "password" = "pin"
+  ): Promise<{ success: boolean; error?: string }> {
     if (!userId) return { success: false, error: "Active user session required." };
     
-    const weakCheck = isCommonOrWeakPin(pin);
-    if (weakCheck.isWeak) {
-      return { success: false, error: weakCheck.reason || "Invalid or weak PIN." };
+    if (lockType === "password") {
+      const passCheck = isWeakPassword(secret);
+      if (passCheck.isWeak) {
+        return { success: false, error: passCheck.reason || "Invalid lock password." };
+      }
+    } else {
+      const weakCheck = isCommonOrWeakPin(secret);
+      if (weakCheck.isWeak) {
+        return { success: false, error: weakCheck.reason || "Invalid or weak PIN." };
+      }
     }
 
     try {
       const currentSettings = this.getSettings(userId);
       const salt = generateSalt();
-      const hash = await computePbkdf2Hash(pin, salt, userId, PBKDF2_ITERATIONS);
+      const hash = await computePbkdf2Hash(secret, salt, userId, PBKDF2_ITERATIONS);
 
       const config: StoredPinConfig = {
         ...currentSettings,
         enabled: true,
+        lockType,
         salt,
         hash,
         algo: "PBKDF2-100K",
@@ -530,7 +605,7 @@ export const pinLockService = {
 
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || "Failed to set up PIN." };
+      return { success: false, error: err.message || "Failed to set up screen lock." };
     }
   },
 
@@ -816,6 +891,39 @@ export const pinLockService = {
       }
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to verify PIN." };
+    }
+  },
+
+  /**
+   * Verify the current PIN or Password without modifying session lock state (used before credential change or type switch).
+   */
+  async verifyCurrentSecret(userId: string, secret: string): Promise<boolean> {
+    if (!userId || !secret) return false;
+    try {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
+      if (!raw) return false;
+      const config: StoredPinConfig = JSON.parse(raw);
+      if (!config.hash || !config.salt) return false;
+
+      // 1. Modern v4 Account-Bound hash
+      const hash = await computePbkdf2Hash(secret, config.salt, userId, config.iterations || PBKDF2_ITERATIONS);
+      if (hash === config.hash) return true;
+
+      // 2. Legacy v3 Device-Bound hash
+      const legacyV3Hash = await computePbkdf2V3DeviceBound(secret, config.salt, userId, config.iterations || PBKDF2_ITERATIONS);
+      if (legacyV3Hash === config.hash) return true;
+
+      // 3. Legacy v2 unbound hash
+      const unboundHash = await computePbkdf2V2Unbound(secret, config.salt, config.iterations || PBKDF2_ITERATIONS);
+      if (unboundHash === config.hash) return true;
+
+      // 4. Legacy v1 SHA-256 hash
+      const v1Hash = await computeLegacySha256(secret, config.salt);
+      if (v1Hash === config.hash) return true;
+
+      return false;
+    } catch {
+      return false;
     }
   },
 

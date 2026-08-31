@@ -120,17 +120,62 @@ export function isCommonOrWeakPin(pin: string): { isWeak: boolean; reason?: stri
   return { isWeak: false };
 }
 
+export interface PasswordValidationResult {
+  isValid: boolean;
+  hasMinLength: boolean;
+  hasUpper: boolean;
+  hasLower: boolean;
+  hasNumber: boolean;
+  hasSpecial: boolean;
+  score: number; // 0 to 4
+  reason?: string;
+}
+
+/**
+ * Validate that the chosen alphanumeric lock password meets security standards:
+ * - At least 8 characters
+ * - At least 1 uppercase letter (A-Z)
+ * - At least 1 numeric digit (0-9)
+ * - At least 1 special character (!@#$%^&*...)
+ */
+export function validateLockPassword(password: string): PasswordValidationResult {
+  const hasMinLength = Boolean(password && password.length >= 8);
+  const hasUpper = /[A-Z]/.test(password || "");
+  const hasLower = /[a-z]/.test(password || "");
+  const hasNumber = /[0-9]/.test(password || "");
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password || "");
+
+  let score = 0;
+  if (hasMinLength) score++;
+  if (hasUpper && hasLower) score++;
+  if (hasNumber) score++;
+  if (hasSpecial) score++;
+
+  if (!hasMinLength) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must be at least 8 characters long." };
+  }
+  if (!hasUpper) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must contain at least 1 uppercase letter (A-Z)." };
+  }
+  if (!hasNumber) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must contain at least 1 numeric digit (0-9)." };
+  }
+  if (!hasSpecial) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must contain at least 1 special character (!@#$%...)." };
+  }
+  if (password.length > 64) {
+    return { isValid: false, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: "Password must be at most 64 characters long." };
+  }
+
+  return { isValid: true, hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial, score, reason: undefined };
+}
+
 /**
  * Validate that the chosen alphanumeric password is not weak or trivial.
  */
 export function isWeakPassword(password: string): { isWeak: boolean; reason?: string } {
-  if (!password || password.trim().length < 6) {
-    return { isWeak: true, reason: "Password must be at least 6 characters long." };
-  }
-  if (password.length > 64) {
-    return { isWeak: true, reason: "Password must be at most 64 characters long." };
-  }
-  return { isWeak: false };
+  const result = validateLockPassword(password);
+  return { isWeak: !result.isValid, reason: result.reason };
 }
 
 /**

@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   Lock,
+  Shuffle,
 } from "lucide-react";
 import { AdminPinSetupModal } from "./AdminPinSetupModal";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -174,6 +175,17 @@ export const AdminLockScreen: React.FC = () => {
       document.body.classList.remove("eduspace-tamper-blackout");
     };
   }, [isLocked]);
+
+  // Interactive on-demand keypad shuffle
+  const handleShuffleKeypad = useCallback(() => {
+    numpadFeedback.playKeypress();
+    const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    for (let i = digits.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [digits[i], digits[j]] = [digits[j], digits[i]];
+    }
+    setKeypadLayout(digits);
+  }, []);
 
   // Clear PIN/Password, errors and generate randomized keypad on lock state change
   useEffect(() => {
@@ -655,18 +667,32 @@ export const AdminLockScreen: React.FC = () => {
 
         {/* Lower Section: Biometric prompt + Mobile Keypad (PIN Mode) or Quick Links (Password Mode) */}
         <div className="w-full max-w-[310px] sm:max-w-[330px] mx-auto shrink-0 flex flex-col items-center">
-          {/* Biometric Button */}
-          {settings.biometricsEnabled && isBiometricsSupported && !cooldown.isCooldown && !isSuccessUnlocked && (
-            <button
-              type="button"
-              onClick={handleBiometricUnlock}
-              disabled={isBiometricScanning || isVerifying}
-              className="mb-5 sm:mb-7 flex items-center gap-1.5 text-sm font-semibold text-emerald-500 hover:text-emerald-400 active:scale-95 transition-all cursor-pointer select-none"
-            >
-              <Fingerprint className={cn("w-4 h-4", isBiometricScanning && "animate-pulse")} />
-              <span>Use fingerprint</span>
-            </button>
-          )}
+          {/* Action Row: Biometric Button + On-Demand Randomize Keypad Button */}
+          <div className="flex items-center justify-center gap-3.5 mb-4 sm:mb-6">
+            {settings.biometricsEnabled && isBiometricsSupported && !cooldown.isCooldown && !isSuccessUnlocked && (
+              <button
+                type="button"
+                onClick={handleBiometricUnlock}
+                disabled={isBiometricScanning || isVerifying}
+                className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-emerald-500 hover:text-emerald-400 active:scale-95 transition-all cursor-pointer select-none"
+              >
+                <Fingerprint className={cn("w-4 h-4", isBiometricScanning && "animate-pulse")} />
+                <span>Use fingerprint</span>
+              </button>
+            )}
+
+            {!isPasswordLock && !cooldown.isCooldown && !isSuccessUnlocked && (
+              <button
+                type="button"
+                onClick={handleShuffleKeypad}
+                className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer select-none bg-muted/40 hover:bg-muted/70 px-2.5 py-1 rounded-full border border-border/50 shadow-2xs"
+                title="Randomize Keypad Numbers (Anti-Spy)"
+              >
+                <Shuffle className="w-3 h-3 text-primary" />
+                <span>Randomize Keypad</span>
+              </button>
+            )}
+          </div>
 
           {!isPasswordLock && (
             /* Frameless Keypad for PIN Mode */

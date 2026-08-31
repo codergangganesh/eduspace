@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { numpadFeedback } from "@/lib/numpadFeedback";
+import { validateLockPassword } from "@/services/pinLock.service";
 
 interface AdminPinSetupModalProps {
   open: boolean;
@@ -331,9 +332,10 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
     if (e) e.preventDefault();
     if (isSubmitting) return;
 
-    if (!newPassword || newPassword.length < 6) {
+    const validation = validateLockPassword(newPassword);
+    if (!validation.isValid) {
       numpadFeedback.playError();
-      setErrorMessage("Password must be at least 6 characters long.");
+      setErrorMessage(validation.reason || "Password does not meet complexity requirements.");
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
@@ -404,10 +406,12 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
 
   if (!open) return null;
 
+  const isPasswordView = (step === 0 && activeCurrentLockType === "password") || (step > 0 && targetLockType === "password");
+
   const content = (
     <div className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#08090C] text-foreground select-none flex flex-col justify-between overflow-y-auto animate-in fade-in duration-200">
       {/* Frame Container */}
-      <div className="w-full max-w-sm mx-auto min-h-full flex flex-col justify-between px-6 py-6 sm:py-8">
+      <div className={cn("w-full mx-auto min-h-full flex flex-col justify-between px-5 sm:px-6 py-6 sm:py-8 transition-all duration-300", isPasswordView ? "max-w-md" : "max-w-sm")}>
         {/* Top Header */}
         <div className="w-full flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -737,65 +741,169 @@ export const AdminPinSetupModal: React.FC<AdminPinSetupModalProps> = ({
                 </>
               ) : (
                 /* Password Mode Setup */
-                <form onSubmit={handleFinalPasswordSubmit} className="w-full max-w-[320px] flex flex-col gap-4 mt-3">
-                  <p className="text-xs sm:text-sm text-muted-foreground font-medium text-center">
-                    {isUpdating ? "Enter your new custom lock password" : "Create a custom alphanumeric lock password"}
-                  </p>
+                (() => {
+                  const passValidation = validateLockPassword(newPassword);
+                  const isMatch = Boolean(newPassword && confirmNewPassword && newPassword === confirmNewPassword);
 
-                  <div className="space-y-1.5 text-left">
-                    <Label className="text-xs font-semibold text-foreground/80">New Password</Label>
-                    <div className="relative">
-                      <Input
-                        type={showNewPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Min 6 characters (letters, numbers, symbols)"
-                        className="pr-10 text-sm h-11 rounded-xl bg-card border-border/80"
-                        autoFocus
-                        disabled={isSubmitting}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                      >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+                  return (
+                    <div className="w-full max-w-[390px] mx-auto flex flex-col items-center">
+                      <p className="text-xs sm:text-sm text-muted-foreground font-medium text-center mb-4">
+                        {isUpdating ? "Enter your new custom lock password" : "Create a high-security lock password"}
+                      </p>
+
+                      <form onSubmit={handleFinalPasswordSubmit} className="w-full bg-card/60 backdrop-blur-sm border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 text-left">
+                        {/* 1. New Password Field */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-bold text-foreground/90 flex items-center justify-between">
+                            <span>New Lock Password</span>
+                            <span className="text-[10px] text-muted-foreground font-normal font-mono">
+                              {newPassword.length}/64
+                            </span>
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="Min 8 chars (Uppercase, Number, Symbol)"
+                              className="pr-10 text-sm h-11 rounded-xl bg-background/90 border-border text-foreground transition-all focus-visible:ring-2 focus-visible:ring-primary shadow-2xs"
+                              autoFocus
+                              disabled={isSubmitting}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                              tabIndex={-1}
+                            >
+                              {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+
+                          {/* 4-Segment Strength Bar */}
+                          {newPassword.length > 0 && (
+                            <div className="space-y-1 pt-1 animate-in fade-in duration-150">
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {[1, 2, 3, 4].map((bar) => (
+                                  <div
+                                    key={bar}
+                                    className={cn(
+                                      "h-1.5 rounded-full transition-all duration-300",
+                                      passValidation.score >= bar
+                                        ? passValidation.score === 4
+                                          ? "bg-emerald-500 shadow-xs shadow-emerald-500/30"
+                                          : passValidation.score === 3
+                                          ? "bg-blue-500"
+                                          : passValidation.score === 2
+                                          ? "bg-amber-500"
+                                          : "bg-red-500"
+                                        : "bg-muted"
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                                <span>Password Strength:</span>
+                                <span
+                                  className={cn(
+                                    "font-bold uppercase tracking-wider",
+                                    passValidation.score === 4
+                                      ? "text-emerald-500"
+                                      : passValidation.score === 3
+                                      ? "text-blue-500"
+                                      : passValidation.score === 2
+                                      ? "text-amber-500"
+                                      : "text-red-500"
+                                  )}
+                                >
+                                  {passValidation.score === 4
+                                    ? "Strong (Pass)"
+                                    : passValidation.score === 3
+                                    ? "Good"
+                                    : passValidation.score === 2
+                                    ? "Fair"
+                                    : "Weak"}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Live Security Requirements Checklist */}
+                        <div className="p-3 rounded-xl border border-border/70 bg-muted/30 space-y-2 text-left">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                            <span>Security Requirements</span>
+                            <span className={cn("text-[9px] font-bold uppercase", passValidation.isValid ? "text-emerald-500" : "text-muted-foreground")}>
+                              {passValidation.isValid ? "✓ All 4 Met" : "Required"}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs">
+                            <div className={cn("flex items-center gap-1.5 transition-colors", passValidation.hasMinLength ? "text-emerald-500 font-semibold" : "text-muted-foreground")}>
+                              <CheckCircle2 className={cn("w-3.5 h-3.5 shrink-0 transition-transform", passValidation.hasMinLength ? "text-emerald-500 scale-110" : "opacity-30")} />
+                              <span>8+ characters</span>
+                            </div>
+                            <div className={cn("flex items-center gap-1.5 transition-colors", passValidation.hasUpper ? "text-emerald-500 font-semibold" : "text-muted-foreground")}>
+                              <CheckCircle2 className={cn("w-3.5 h-3.5 shrink-0 transition-transform", passValidation.hasUpper ? "text-emerald-500 scale-110" : "opacity-30")} />
+                              <span>1 Uppercase (A-Z)</span>
+                            </div>
+                            <div className={cn("flex items-center gap-1.5 transition-colors", passValidation.hasNumber ? "text-emerald-500 font-semibold" : "text-muted-foreground")}>
+                              <CheckCircle2 className={cn("w-3.5 h-3.5 shrink-0 transition-transform", passValidation.hasNumber ? "text-emerald-500 scale-110" : "opacity-30")} />
+                              <span>1 Number (0-9)</span>
+                            </div>
+                            <div className={cn("flex items-center gap-1.5 transition-colors", passValidation.hasSpecial ? "text-emerald-500 font-semibold" : "text-muted-foreground")}>
+                              <CheckCircle2 className={cn("w-3.5 h-3.5 shrink-0 transition-transform", passValidation.hasSpecial ? "text-emerald-500 scale-110" : "opacity-30")} />
+                              <span>1 Symbol (!@#$...)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Confirm Password Field */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-bold text-foreground/90 flex items-center justify-between">
+                            <span>Confirm Lock Password</span>
+                            {confirmNewPassword.length > 0 && (
+                              <span className={cn("text-[10px] font-bold uppercase", isMatch ? "text-emerald-500" : "text-destructive")}>
+                                {isMatch ? "✓ Passwords Match" : "✕ Does Not Match"}
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            type={showNewPassword ? "text" : "password"}
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            placeholder="Re-enter password"
+                            className={cn(
+                              "text-sm h-11 rounded-xl bg-background/90 border-border text-foreground transition-all shadow-2xs",
+                              confirmNewPassword.length > 0 && (isMatch ? "border-emerald-500/80 focus-visible:ring-emerald-500" : "border-destructive focus-visible:ring-destructive")
+                            )}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground pt-0.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span>Encrypted locally with PBKDF2 (100,000 iterations).</span>
+                        </div>
+
+                        {errorMessage && (
+                          <div className="flex items-center justify-center gap-1.5 text-xs text-destructive dark:text-red-400 font-medium animate-in fade-in py-0.5">
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                            <span>{errorMessage}</span>
+                          </div>
+                        )}
+
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting || !passValidation.isValid || !isMatch}
+                          className="w-full h-11 rounded-xl font-bold text-xs sm:text-sm tracking-wide gap-2 mt-2 cursor-pointer shadow-sm"
+                        >
+                          <Lock className="w-4 h-4" />
+                          <span>{isSubmitting ? "Saving Password..." : isUpdating ? "Update Lock Password" : "Save & Enable Password"}</span>
+                        </Button>
+                      </form>
                     </div>
-                  </div>
-
-                  <div className="space-y-1.5 text-left">
-                    <Label className="text-xs font-semibold text-foreground/80">Confirm Password</Label>
-                    <Input
-                      type={showNewPassword ? "text" : "password"}
-                      value={confirmNewPassword}
-                      onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      placeholder="Re-enter password"
-                      className="text-sm h-11 rounded-xl bg-card border-border/80"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Encrypted locally with PBKDF2 (100,000 iterations).</span>
-                  </div>
-
-                  {errorMessage && (
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-destructive dark:text-red-400 font-medium animate-in fade-in">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>{errorMessage}</span>
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || !newPassword || !confirmNewPassword}
-                    className="w-full h-11 rounded-xl font-semibold mt-2 cursor-pointer shadow-sm"
-                  >
-                    {isSubmitting ? "Saving Password..." : isUpdating ? "Update Lock Password" : "Save & Enable Password"}
-                  </Button>
-                </form>
+                  );
+                })()
               )}
             </>
           )}

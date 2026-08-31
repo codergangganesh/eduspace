@@ -287,6 +287,7 @@ export default function Profile() {
     { id: "personal", label: t("profile.personalInfo", "Personal Info"), icon: User },
     { id: "academic", label: t("profile.academicDetails", "Academic Details"), icon: GraduationCap },
     { id: "screen-lock", label: t("profile.screenLock", "PIN & Screen Lock"), icon: KeyRound },
+    { id: "security", label: t("profile.security", "Security"), icon: Shield },
     { id: "2fa", label: t("profile.twoFactorAuth", "Two-Factor Auth (2FA)"), icon: AndroidIcon },
     { id: "passkeys", label: t("profile.passkeys", "Passkeys & Biometrics"), icon: Fingerprint },
     { id: "password", label: t("profile.accountPassword", "Account Password"), icon: Lock },
@@ -298,7 +299,7 @@ export default function Profile() {
 
   const primaryMobileTabs = isLecturer
     ? visibleProfileTabs.filter(
-        (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "2fa" || tab.id === "passkeys"
+        (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "screen-lock" || tab.id === "security" || tab.id === "2fa"
       )
     : visibleProfileTabs.filter(
         (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "coding" || tab.id === "social"
@@ -1937,8 +1938,8 @@ export default function Profile() {
             </div>
           )}
 
-          {/* STUDENT TAB: Security Section (Screen Lock + 2FA + Passkeys + Password) */}
-          {isStudent && activeTab === "security" && (
+          {/* SECURITY SECTION (Screen Lock + 2FA + Passkeys + Password) */}
+          {activeTab === "security" && (
             <div className="space-y-6">
               {/* Card 0: 4-Digit In-App PIN & Biometric Screen Lock */}
               <PinSecurityCard />

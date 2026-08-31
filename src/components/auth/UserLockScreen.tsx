@@ -18,8 +18,11 @@ import {
   Moon,
   CheckCircle2,
   KeyRound,
+  Lock,
   Eye,
   EyeOff,
+  ArrowRight,
+  Shuffle,
 } from "lucide-react";
 import { PinSetupModal } from "./PinSetupModal";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -27,7 +30,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
-
 import { numpadFeedback } from "@/lib/numpadFeedback";
 
 // Formats countdown seconds into clean mm:ss or hh:mm:ss
@@ -58,7 +60,11 @@ export const UserLockScreen: React.FC = () => {
   const { actualTheme, setTheme } = useTheme();
   const navigate = useNavigate();
 
+  const isPasswordLock = settings.lockType === "password";
+
   const [pin, setPin] = useState<string>("");
+  const [customPassword, setCustomPassword] = useState<string>("");
+  const [showCustomPassword, setShowCustomPassword] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isBiometricScanning, setIsBiometricScanning] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -133,7 +139,6 @@ export const UserLockScreen: React.FC = () => {
       }
     };
 
-    // Lightweight 1.5s periodic watchdog (No heavy DOM subtree mutation observer loops)
     const interval = setInterval(checkTampering, 1500);
 
     return () => {
@@ -142,10 +147,23 @@ export const UserLockScreen: React.FC = () => {
     };
   }, [isLocked]);
 
-  // Clear PIN, errors and generate randomized keypad on lock state change
+  // Interactive on-demand keypad shuffle
+  const handleShuffleKeypad = useCallback(() => {
+    numpadFeedback.playKeypress();
+    const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    for (let i = digits.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [digits[i], digits[j]] = [digits[j], digits[i]];
+    }
+    setKeypadLayout(digits);
+  }, []);
+
+  // Clear PIN/Password, errors and generate randomized keypad on lock state change
   useEffect(() => {
     if (isLocked) {
       setPin("");
+      setCustomPassword("");
+      setShowCustomPassword(false);
       setErrorMessage("");
       setShake(false);
       setIsVerifying(false);
@@ -153,8 +171,8 @@ export const UserLockScreen: React.FC = () => {
       isVerifyingRef.current = false;
       setPressedKey(null);
 
-      // Randomize digits if anti-shoulder surfing is enabled
-      if (settings.randomizeKeypad) {
+      // Scramble digits if randomizeKeypad is enabled and in PIN mode
+      if (settings.randomizeKeypad && !isPasswordLock) {
         const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         for (let i = digits.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -167,7 +185,7 @@ export const UserLockScreen: React.FC = () => {
     } else {
       autoBiometricPromptedRef.current = false;
     }
-  }, [isLocked, settings.randomizeKeypad]);
+  }, [isLocked, settings.randomizeKeypad, isPasswordLock]);
 
   // Handle Biometric Unlock
   const handleBiometricUnlock = useCallback(async () => {
@@ -216,7 +234,7 @@ export const UserLockScreen: React.FC = () => {
     }
   }, [isLocked, settings.biometricsEnabled, isBiometricsSupported, cooldown.isCooldown, isSuccessUnlocked, handleBiometricUnlock]);
 
-  // Handle Number click
+  // Handle Number click (PIN Mode)
   const handleNumberClick = useCallback(
     async (num: number) => {
       if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked || pin.length >= 4) {
@@ -268,7 +286,50 @@ export const UserLockScreen: React.FC = () => {
     [isVerifying, cooldown.isCooldown, isSuccessUnlocked, pin, unlockWithPin]
   );
 
-  // Backspace key handler
+  // Handle Custom Password Submit
+  const handleCustomPasswordSubmit = useCallback(
+    async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked || !customPassword.trim()) {
+        return;
+      }
+
+      isVerifyingRef.current = true;
+      setIsVerifying(true);
+      setErrorMessage("");
+
+      try {
+        const res = await unlockWithPin(customPassword);
+        if (res.success) {
+          setIsSuccessUnlocked(true);
+          numpadFeedback.playSuccess();
+        } else {
+          numpadFeedback.playError();
+          setShake(true);
+          setErrorMessage(res.error || "Incorrect Password");
+          setTimeout(() => {
+            setShake(false);
+            setCustomPassword("");
+            isVerifyingRef.current = false;
+            setIsVerifying(false);
+          }, 500);
+        }
+      } catch (err: any) {
+        numpadFeedback.playError();
+        setShake(true);
+        setErrorMessage(err.message || "Verification failed");
+        setTimeout(() => {
+          setShake(false);
+          setCustomPassword("");
+          isVerifyingRef.current = false;
+          setIsVerifying(false);
+        }, 500);
+      }
+    },
+    [isVerifying, cooldown.isCooldown, isSuccessUnlocked, customPassword, unlockWithPin]
+  );
+
+  // Backspace key handler (PIN Mode)
   const handleBackspace = useCallback(() => {
     if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
     numpadFeedback.playDelete();
@@ -278,7 +339,7 @@ export const UserLockScreen: React.FC = () => {
     setPin((prev) => prev.slice(0, -1));
   }, [isVerifying, cooldown.isCooldown, isSuccessUnlocked]);
 
-  // Clear key handler
+  // Clear key handler (PIN Mode)
   const handleClear = useCallback(() => {
     if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
     numpadFeedback.playDelete();
@@ -317,7 +378,7 @@ export const UserLockScreen: React.FC = () => {
       const res = await unlockWithPassword(accountPassword, captchaToken);
       if (res.success) {
         numpadFeedback.playSuccess();
-        toast.success("Account verified! Please create your new 4-digit PIN.");
+        toast.success(isPasswordLock ? "Account verified! Please create your new lock password." : "Account verified! Please create your new 4-digit PIN.");
         setForgotModalOpen(false);
         setAccountPassword("");
         setCaptchaToken(undefined);
@@ -349,9 +410,9 @@ export const UserLockScreen: React.FC = () => {
     }
   };
 
-  // Physical Keyboard listener
+  // Physical Keyboard listener for PIN Mode
   useEffect(() => {
-    if (!isLocked || forgotModalOpen || setupModalOpen) return;
+    if (!isLocked || isPasswordLock || forgotModalOpen || setupModalOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
@@ -372,6 +433,7 @@ export const UserLockScreen: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     isLocked,
+    isPasswordLock,
     forgotModalOpen,
     setupModalOpen,
     isVerifying,
@@ -382,37 +444,30 @@ export const UserLockScreen: React.FC = () => {
     handleClear,
   ]);
 
-  if (!isLocked && !setupModalOpen) return null;
+  if (!isLocked) return null;
 
   const displayName =
     profile?.full_name ||
     user?.user_metadata?.full_name ||
-    (user?.email ? user.email.split("@")[0] : "EduSpace User");
+    (user?.email ? user.email.split("@")[0] : "Student");
 
-  const displayEmail = user?.email || "";
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
-  const initials =
-    displayName
-      ?.split(" ")
-      .map((n: string) => n[0])
-      .join("")
-      .toUpperCase() || "U";
+  const displayEmail = user?.email || "";
 
   const content = (
     <div
       id="eduspace-lock-screen-root"
-      className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#060709] text-foreground select-none flex flex-col justify-between overflow-hidden animate-in fade-in duration-200"
+      className="fixed inset-0 top-0 left-0 w-screen h-[100dvh] max-h-[100dvh] z-[999999] bg-background dark:bg-[#08090C] text-foreground select-none flex flex-col justify-between overflow-hidden"
     >
-      {/* Mobile Frame Container */}
-      <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-between px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:py-8">
-        {/* Top Bar: Brand Logo & User Profile with Theme Toggle */}
+      {/* Centered Lock Screen Container with Fixed Mobile Width */}
+      <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-between px-6 py-6 sm:py-8">
+        {/* Top Header: Brand Name + Theme Toggle & Profile Avatar */}
         <div className="w-full flex items-center justify-between shrink-0">
-          {/* App Logo & Role */}
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-border/80 shadow-xs bg-card p-0.5">
               <img
                 src="/favicon.png"
-                alt="EduSpace Logo"
+                alt="Eduspace Logo"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
@@ -426,8 +481,8 @@ export const UserLockScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Theme Toggle & Avatar */}
           <div className="flex items-center gap-2.5">
+            {/* Theme Toggle Button */}
             <button
               type="button"
               onClick={() => {
@@ -445,64 +500,114 @@ export const UserLockScreen: React.FC = () => {
               )}
             </button>
 
+            {/* Profile Avatar */}
             <div className="relative">
               <Avatar className="h-9 w-9 border border-border shadow-xs">
                 <AvatarImage src={avatarUrl || ""} alt={displayName} />
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                  {initials}
+                <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                  {displayName.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </div>
           </div>
         </div>
 
-        {/* Center/Top Section: Greeting & 4 Squircle Slots */}
-        <div className="w-full flex flex-col items-center pt-3 sm:pt-5">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground text-center">
+        {/* Center Section: Greeting & Dynamic PIN / Password Box */}
+        <div className="w-full flex flex-col items-center pt-2 sm:pt-4 my-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-center">
             Hi, {displayName}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground font-medium text-center mt-1">
-            Enter your Eduspace PIN
+            {isPasswordLock ? "Enter your password to unlock" : "Enter your Eduspace PIN"}
           </p>
 
-          {/* 4 Rounded Squircle Outline Boxes */}
-          <div
-            className={cn(
-              "flex items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-8 transition-transform duration-200",
-              shake && "animate-shake"
-            )}
-          >
-            {[0, 1, 2, 3].map((index) => {
-              const isFilled = pin.length > index;
-              const isCurrent = pin.length === index && !cooldown.isCooldown;
-
-              return (
-                <div
-                  key={index}
+          {isPasswordLock ? (
+            /* Custom Password Input View */
+            <form onSubmit={handleCustomPasswordSubmit} className="w-full max-w-[320px] flex flex-col gap-3 mt-6">
+              <div className={cn("relative transition-transform duration-200", shake && "animate-shake")}>
+                <Input
+                  type={showCustomPassword ? "text" : "password"}
+                  value={customPassword}
+                  onChange={(e) => {
+                    setCustomPassword(e.target.value);
+                    if (errorMessage) setErrorMessage("");
+                  }}
+                  placeholder="Enter lock password"
+                  autoFocus
+                  disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
                   className={cn(
-                    "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] sm:rounded-[22px] flex items-center justify-center transition-all duration-200 relative",
-                    "bg-transparent",
-                    isSuccessUnlocked
-                      ? "border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-500/10"
-                      : isCurrent
-                      ? "border-2 border-foreground dark:border-white shadow-xs"
-                      : isFilled
-                      ? "border-2 border-foreground/70 dark:border-white/80"
-                      : "border border-border/80 dark:border-zinc-800",
+                    "h-12 text-sm pr-11 rounded-2xl bg-card border-border/80 text-center font-medium tracking-wide shadow-xs",
                     errorMessage && "border-destructive dark:border-red-500 bg-destructive/10"
                   )}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCustomPassword(!showCustomPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  {isSuccessUnlocked ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500 animate-in zoom-in-50 duration-200" />
-                  ) : (
-                    isFilled && (
-                      <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-foreground dark:bg-white animate-in zoom-in-75 duration-150 shadow-xs" />
-                    )
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  {showCustomPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked || !customPassword.trim()}
+                className="h-11 rounded-xl font-semibold gap-1.5 cursor-pointer shadow-sm"
+              >
+                {isVerifying ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Verifying Password...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Unlock Workspace</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+          ) : (
+            /* 4-Digit Squircle Slots (Groww Inspired) */
+            <div
+              className={cn(
+                "flex items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-8 transition-transform duration-200",
+                shake && "animate-shake"
+              )}
+            >
+              {[0, 1, 2, 3].map((index) => {
+                const isFilled = pin.length > index;
+                const isCurrent = pin.length === index;
+
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] flex items-center justify-center transition-all duration-200 relative bg-transparent",
+                      isCurrent
+                        ? "border-2 border-foreground dark:border-white shadow-xs"
+                        : isFilled
+                        ? "border-2 border-foreground/70 dark:border-white/80"
+                        : "border border-border/80 dark:border-zinc-800",
+                      errorMessage && "border-destructive dark:border-red-500 bg-destructive/10",
+                      isSuccessUnlocked && "border-emerald-500 bg-emerald-500/10 scale-105"
+                    )}
+                  >
+                    {isFilled && (
+                      <div
+                        className={cn(
+                          "w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full transition-all shadow-xs",
+                          isSuccessUnlocked
+                            ? "bg-emerald-500 scale-125 animate-in zoom-in-50 duration-200"
+                            : "bg-foreground dark:bg-white animate-in zoom-in-75 duration-150"
+                        )}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Chance & Attempt Tracker */}
           {!cooldown.isCooldown && (
@@ -534,119 +639,135 @@ export const UserLockScreen: React.FC = () => {
             ) : isVerifying ? (
               <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground animate-pulse">
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                <span>Verifying PIN...</span>
+                <span>Verifying {isPasswordLock ? "Password" : "PIN"}...</span>
               </div>
             ) : null}
           </div>
         </div>
 
-        {/* Flexible spacer to push keypad down to bottom thumb zone */}
+        {/* Spacer */}
         <div className="flex-1 min-h-[16px] max-h-[80px]" />
 
-        {/* Lower Ergonomic Section: Biometric prompt + Mobile Keypad */}
+        {/* Lower Section: Keypad if PIN Mode */}
         <div className="w-full max-w-[310px] sm:max-w-[330px] mx-auto shrink-0 flex flex-col items-center">
-          {/* Biometric Button: Positioned directly above keypad in emerald green like Groww */}
-          {settings.biometricsEnabled && isBiometricsSupported && !cooldown.isCooldown && !isSuccessUnlocked && (
-            <button
-              type="button"
-              onClick={handleBiometricUnlock}
-              disabled={isBiometricScanning || isVerifying}
-              className="mb-5 sm:mb-7 flex items-center gap-1.5 text-sm font-semibold text-emerald-500 hover:text-emerald-400 active:scale-95 transition-all cursor-pointer select-none"
-            >
-              <Fingerprint className={cn("w-4 h-4", isBiometricScanning && "animate-pulse")} />
-              <span>Use fingerprint</span>
-            </button>
-          )}
+          {/* Action Row: Biometric Button + On-Demand Randomize Keypad Button */}
+          <div className="flex items-center justify-center gap-3.5 mb-4 sm:mb-6">
+            {settings.biometricsEnabled && isBiometricsSupported && !cooldown.isCooldown && !isSuccessUnlocked && (
+              <button
+                type="button"
+                onClick={handleBiometricUnlock}
+                disabled={isBiometricScanning || isVerifying}
+                className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-emerald-500 hover:text-emerald-400 active:scale-95 transition-all cursor-pointer select-none"
+              >
+                <Fingerprint className={cn("w-4 h-4", isBiometricScanning && "animate-pulse")} />
+                <span>Use fingerprint</span>
+              </button>
+            )}
 
-          {/* Clean Frameless Keypad */}
-          <div className="grid grid-cols-3 gap-y-7 sm:gap-y-8 gap-x-12 sm:gap-x-14 justify-items-center w-full">
-            {keypadLayout.slice(0, 9).map((num) => {
-              const isPressed = pressedKey === num;
-              return (
-                <button
-                  key={num}
-                  type="button"
-                  disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
-                  onClick={() => handleNumberClick(num)}
-                  className={cn(
-                    "w-16 h-12 flex items-center justify-center transition-all duration-100",
-                    "text-foreground text-[28px] sm:text-[30px] font-medium tracking-tight",
-                    "cursor-pointer select-none active:opacity-30 active:scale-90",
-                    "disabled:opacity-30 disabled:pointer-events-none",
-                    isPressed && "opacity-30 scale-90"
-                  )}
-                >
-                  <span>{num}</span>
-                </button>
-              );
-            })}
-
-            {/* Row 4: Left Slot (Dot bullet • or Clear) */}
-            <button
-              type="button"
-              disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
-              onClick={handleClear}
-              className={cn(
-                "w-16 h-12 flex items-center justify-center transition-all duration-100",
-                "text-muted-foreground/60 text-2xl font-bold",
-                "cursor-pointer select-none active:opacity-30 active:scale-90",
-                "disabled:opacity-20 disabled:pointer-events-none",
-                pressedKey === "clear" && "opacity-30 scale-90"
-              )}
-              title="Clear entered PIN"
-            >
-              <span className="leading-none select-none">.</span>
-            </button>
-
-            {/* Row 4: Center Slot (10th digit, 0) */}
-            {(() => {
-              const centerDigit = keypadLayout[9] ?? 0;
-              return (
-                <button
-                  key={centerDigit}
-                  type="button"
-                  disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
-                  onClick={() => handleNumberClick(centerDigit)}
-                  className={cn(
-                    "w-16 h-12 flex items-center justify-center transition-all duration-100",
-                    "text-foreground text-[28px] sm:text-[30px] font-medium tracking-tight",
-                    "cursor-pointer select-none active:opacity-30 active:scale-90",
-                    "disabled:opacity-30 disabled:pointer-events-none",
-                    pressedKey === centerDigit && "opacity-30 scale-90"
-                  )}
-                >
-                  <span>{centerDigit}</span>
-                </button>
-              );
-            })()}
-
-            {/* Row 4: Right Slot (Backspace Key) */}
-            <button
-              type="button"
-              disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
-              onClick={handleBackspace}
-              className={cn(
-                "w-16 h-12 flex items-center justify-center transition-all duration-100",
-                "text-foreground",
-                "cursor-pointer select-none active:opacity-30 active:scale-90",
-                "disabled:opacity-20 disabled:pointer-events-none",
-                pressedKey === "backspace" && "opacity-30 scale-90"
-              )}
-              title="Backspace"
-            >
-              <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
-            </button>
+            {!isPasswordLock && !cooldown.isCooldown && !isSuccessUnlocked && (
+              <button
+                type="button"
+                onClick={handleShuffleKeypad}
+                className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer select-none bg-muted/40 hover:bg-muted/70 px-2.5 py-1 rounded-full border border-border/50 shadow-2xs"
+                title="Randomize Keypad Numbers (Anti-Spy)"
+              >
+                <Shuffle className="w-3 h-3 text-primary" />
+                <span>Randomize Keypad</span>
+              </button>
+            )}
           </div>
 
-          {/* Bottom Actions: Forgot PIN & Sign Out */}
+          {!isPasswordLock && (
+            /* Clean Frameless Keypad */
+            <div className="grid grid-cols-3 gap-y-7 sm:gap-y-8 gap-x-12 sm:gap-x-14 justify-items-center w-full">
+              {keypadLayout.slice(0, 9).map((num) => {
+                const isPressed = pressedKey === num;
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
+                    onClick={() => handleNumberClick(num)}
+                    className={cn(
+                      "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                      "text-foreground text-[28px] sm:text-[30px] font-medium tracking-tight",
+                      "cursor-pointer select-none active:opacity-30 active:scale-90",
+                      "disabled:opacity-30 disabled:pointer-events-none",
+                      isPressed && "opacity-30 scale-90"
+                    )}
+                  >
+                    <span>{num}</span>
+                  </button>
+                );
+              })}
+
+              {/* Row 4: Left Slot (Dot bullet • or Clear) */}
+              <button
+                type="button"
+                disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
+                onClick={handleClear}
+                className={cn(
+                  "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                  "text-muted-foreground/60 text-2xl font-bold",
+                  "cursor-pointer select-none active:opacity-30 active:scale-90",
+                  "disabled:opacity-20 disabled:pointer-events-none",
+                  pressedKey === "clear" && "opacity-30 scale-90"
+                )}
+                title="Clear entered PIN"
+              >
+                <span className="leading-none select-none">.</span>
+              </button>
+
+              {/* Row 4: Center Slot (10th digit, 0) */}
+              {(() => {
+                const centerDigit = keypadLayout[9] ?? 0;
+                return (
+                  <button
+                    key={centerDigit}
+                    type="button"
+                    disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked}
+                    onClick={() => handleNumberClick(centerDigit)}
+                    className={cn(
+                      "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                      "text-foreground text-[28px] sm:text-[30px] font-medium tracking-tight",
+                      "cursor-pointer select-none active:opacity-30 active:scale-90",
+                      "disabled:opacity-30 disabled:pointer-events-none",
+                      pressedKey === centerDigit && "opacity-30 scale-90"
+                    )}
+                  >
+                    <span>{centerDigit}</span>
+                  </button>
+                );
+              })()}
+
+              {/* Row 4: Right Slot (Backspace Key) */}
+              <button
+                type="button"
+                disabled={isVerifyingRef.current || isVerifying || cooldown.isCooldown || pin.length === 0}
+                onClick={handleBackspace}
+                className={cn(
+                  "w-16 h-12 flex items-center justify-center transition-all duration-100",
+                  "text-foreground",
+                  "cursor-pointer select-none active:opacity-30 active:scale-90",
+                  "disabled:opacity-20 disabled:pointer-events-none",
+                  pressedKey === "backspace" && "opacity-30 scale-90"
+                )}
+                title="Backspace"
+              >
+                <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
+              </button>
+            </div>
+          )}
+
+          {/* Bottom Actions: Forgot Secret & Sign Out */}
           <div className="flex items-center justify-center gap-3 pt-6 sm:pt-7">
             <button
               type="button"
               onClick={handleOpenForgotPin}
               className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground transition-all cursor-pointer py-1 flex items-center gap-1 font-medium"
             >
-              <KeyRound className="h-3.5 w-3.5 text-primary" />
-              <span>Forgot PIN?</span>
+              {isPasswordLock ? <Lock className="h-3.5 w-3.5 text-primary" /> : <KeyRound className="h-3.5 w-3.5 text-primary" />}
+              <span>Forgot {isPasswordLock ? "Password" : "PIN"}?</span>
             </button>
 
             <span className="text-muted-foreground/30 select-none text-xs">•</span>
@@ -663,7 +784,7 @@ export const UserLockScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Forgot PIN: Ultra-Smooth Bottom Drawer (Mobile) & Centered Modal (Desktop) */}
+      {/* Forgot PIN / Password Recovery Drawer */}
       <AnimatePresence>
         {forgotModalOpen && (
           <div className="fixed inset-0 z-[1000000] flex items-end sm:items-center justify-center select-none">
@@ -692,9 +813,7 @@ export const UserLockScreen: React.FC = () => {
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
               className={cn(
                 "relative z-10 w-full bg-card border-border shadow-2xl overflow-hidden pointer-events-auto",
-                // Mobile: Anchored to bottom, rounded top corners, safe-area touch padding
                 "max-w-full rounded-t-[1.75rem] rounded-b-none border-t border-x-0 border-b-0 p-6 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] max-h-[88dvh] overflow-y-auto",
-                // Desktop: Centered modal card
                 "sm:max-w-sm sm:rounded-2xl sm:border sm:p-6 sm:my-auto"
               )}
             >
@@ -709,7 +828,7 @@ export const UserLockScreen: React.FC = () => {
                   Verify Account Password
                 </h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Enter your EduSpace account password to unlock your active session and set a new 4-digit PIN.
+                  Enter your EduSpace account password to unlock your active session and set a new lock.
                 </p>
               </div>
 
@@ -784,7 +903,7 @@ export const UserLockScreen: React.FC = () => {
                     ) : (
                       <>
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Verify & Set New PIN</span>
+                        <span>Verify & Set New Lock</span>
                       </>
                     )}
                   </Button>
@@ -826,12 +945,13 @@ export const UserLockScreen: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* PIN Reset / Setup Modal */}
+      {/* Lock Reset / Setup Modal */}
       <PinSetupModal
         open={setupModalOpen}
         onOpenChange={setSetupModalOpen}
         onPinConfigured={setupPin}
-        isUpdating={true}
+        isUpdating={false}
+        initialLockType={settings.lockType || "pin"}
       />
     </div>
   );
