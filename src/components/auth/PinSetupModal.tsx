@@ -16,16 +16,7 @@ interface PinSetupModalProps {
   isUpdating?: boolean;
 }
 
-// Mobile Haptic Vibration Helper
-const triggerHaptic = (pattern: number | number[] = 12) => {
-  if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      // Ignore vibration errors if unsupported
-    }
-  }
-};
+import { numpadFeedback } from "@/lib/numpadFeedback";
 
 // Detects weak/predictable 4-digit PIN combinations
 function checkWeakPin(pin: string): { isWeak: boolean; message?: string } {
@@ -102,7 +93,8 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
   const handleNumberClick = (num: number) => {
     if (isSubmitting || activePin.length >= 4) return;
-    triggerHaptic(12);
+
+    numpadFeedback.playKeypress(num);
     setErrorMessage("");
     setPressedKey(num);
     setTimeout(() => setPressedKey(null), 180);
@@ -113,7 +105,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       if (next.length === 4) {
         const weakCheck = checkWeakPin(next);
         if (weakCheck.isWeak) {
-          triggerHaptic([40, 60, 40]);
+          numpadFeedback.playError();
           setErrorMessage(weakCheck.message || "Weak PIN: Choose a stronger 4-digit code.");
           setShake(true);
           setTimeout(() => {
@@ -138,7 +130,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
   const handleBackspace = () => {
     if (isSubmitting) return;
-    triggerHaptic(10);
+    numpadFeedback.playDelete();
     setErrorMessage("");
     setPressedKey("backspace");
     setTimeout(() => setPressedKey(null), 180);
@@ -151,7 +143,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
   const handleClear = () => {
     if (isSubmitting) return;
-    triggerHaptic(15);
+    numpadFeedback.playDelete();
     setErrorMessage("");
     setPressedKey("clear");
     setTimeout(() => setPressedKey(null), 180);
@@ -164,7 +156,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
   const handleSubmit = async (p1: string, p2: string) => {
     if (p1 !== p2) {
-      triggerHaptic([40, 60, 40]);
+      numpadFeedback.playError();
       setErrorMessage("PINs do not match. Please try again.");
       setShake(true);
       setTimeout(() => {
@@ -180,16 +172,16 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
     try {
       const res = await onPinConfigured(p1);
       if (res.success) {
-        triggerHaptic([20, 30, 20]);
+        numpadFeedback.playSuccess();
         toast.success(isUpdating ? "4-Digit PIN updated successfully!" : "4-Digit PIN Lock activated!");
         onOpenChange(false);
       } else {
-        triggerHaptic([40, 60, 40]);
+        numpadFeedback.playError();
         setErrorMessage(res.error || "Failed to set up PIN.");
         setConfirmPin("");
       }
     } catch (err: any) {
-      triggerHaptic([40, 60, 40]);
+      numpadFeedback.playError();
       setErrorMessage(err.message || "An error occurred.");
       setConfirmPin("");
     } finally {

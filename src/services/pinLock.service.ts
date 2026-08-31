@@ -387,6 +387,10 @@ export const pinLockService = {
    */
   async syncConfigToCloud(userId: string, config: StoredPinConfig | null): Promise<void> {
     if (!userId) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      // Offline: Skip cloud network sync silently without blocking local storage
+      return;
+    }
     try {
       // Clean biometricCredentialId before cloud upload (biometrics are hardware-device-bound)
       const cloudPayload = config
@@ -417,6 +421,10 @@ export const pinLockService = {
    */
   async fetchConfigFromCloud(userId: string): Promise<StoredPinConfig | null> {
     if (!userId) return null;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      // Offline: Skip network fetch
+      return null;
+    }
     try {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data?.user) return null;
@@ -822,6 +830,13 @@ export const pinLockService = {
   ): Promise<{ success: boolean; error?: string }> {
     if (!password || password.trim().length === 0) {
       return { success: false, error: "Please enter your account password." };
+    }
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      return {
+        success: false,
+        error: "You are offline. Please enter your 4-digit PIN to unlock, or reconnect to the internet to verify your account password.",
+      };
     }
 
     let resolvedUserId = userId;

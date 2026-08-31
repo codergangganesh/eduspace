@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-    TelemetryService,
+    useTelemetryStats,
     DynamicHubData,
     GlobalTelemetryStats,
     BASE_GLOBAL_HUBS
@@ -42,40 +42,31 @@ export function GlobalStudentGlobe({
 
     const [isSpinning, setIsSpinning] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<GlobeCategory>("all");
-    const [hubs, setHubs] = useState<DynamicHubData[]>(BASE_GLOBAL_HUBS);
     const [selectedHub, setSelectedHub] = useState<DynamicHubData | null>(BASE_GLOBAL_HUBS[0]);
 
-    // 100% Real Database Stats - Defaults to 0
-    const [stats, setStats] = useState<GlobalTelemetryStats>({
+    // 100% Real Database Stats with React Query Caching
+    const { data: telemetryData, isLoading, isFetching, refetch } = useTelemetryStats();
+
+    const stats: GlobalTelemetryStats = useMemo(() => telemetryData?.stats || {
         totalStudents: 0,
         totalClans: 0,
         totalVoiceSessions: 0,
         totalQuizzes: 0,
         countriesCount: 0
-    });
+    }, [telemetryData]);
 
-    const [isLoading, setIsLoading] = useState(true);
+    const hubs: DynamicHubData[] = useMemo(() => telemetryData?.hubs || BASE_GLOBAL_HUBS, [telemetryData]);
 
-    // Fetch real live Supabase telemetry records
-    const loadRealtimeTelemetry = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const { stats: fetchedStats, hubs: fetchedHubs } = await TelemetryService.fetchRealtimeStats();
-            setStats(fetchedStats);
-            setHubs(fetchedHubs);
-            if (fetchedHubs.length > 0) {
-                setSelectedHub(fetchedHubs[0]);
-            }
-        } catch (err) {
-            console.error("[GlobalStudentGlobe] Real DB telemetry load error:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
+    // Ensure selected hub stays aligned when hubs update
     useEffect(() => {
-        loadRealtimeTelemetry();
-    }, [loadRealtimeTelemetry]);
+        if (hubs.length > 0 && (!selectedHub || selectedHub.id === BASE_GLOBAL_HUBS[0].id)) {
+            setSelectedHub(hubs[0]);
+        }
+    }, [hubs, selectedHub]);
+
+    const handleRefresh = useCallback(() => {
+        refetch();
+    }, [refetch]);
 
     // Filter hubs based on selected category
     const filteredHubs = useMemo(() => {
@@ -317,11 +308,11 @@ export function GlobalStudentGlobe({
                             <Button
                                 size="icon"
                                 variant="outline"
-                                onClick={loadRealtimeTelemetry}
+                                onClick={handleRefresh}
                                 title="Sync Database Data"
                                 className="size-8 rounded-xl border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10"
                             >
-                                <RefreshCw className={`size-3.5 ${isLoading ? "animate-spin text-blue-400" : ""}`} />
+                                <RefreshCw className={`size-3.5 ${isFetching ? "animate-spin text-blue-400" : ""}`} />
                             </Button>
                             <Button
                                 size="icon"

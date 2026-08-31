@@ -28,16 +28,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 
-// Mobile Haptic Vibration Helper
-const triggerHaptic = (pattern: number | number[] = 12) => {
-  if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      // Ignore vibration errors if unsupported
-    }
-  }
-};
+import { numpadFeedback } from "@/lib/numpadFeedback";
 
 // Formats countdown seconds into clean mm:ss or hh:mm:ss
 const formatCountdown = (totalSeconds: number): string => {
@@ -182,7 +173,7 @@ export const UserLockScreen: React.FC = () => {
   const handleBiometricUnlock = useCallback(async () => {
     if (isVerifyingRef.current || isVerifying || isBiometricScanning || cooldown.isCooldown) return;
 
-    triggerHaptic(15);
+    numpadFeedback.playKeypress();
     setIsBiometricScanning(true);
     setErrorMessage("");
 
@@ -190,16 +181,16 @@ export const UserLockScreen: React.FC = () => {
       const res = await unlockWithBiometrics();
       if (res.success) {
         setIsSuccessUnlocked(true);
-        triggerHaptic([20, 30, 20]);
+        numpadFeedback.playSuccess();
       } else {
         if (!res.error?.includes("cancelled")) {
-          triggerHaptic([40, 60, 40]);
+          numpadFeedback.playError();
           setErrorMessage(res.error || "Biometric unlock failed.");
         }
       }
     } catch (err: any) {
       if (!err.message?.includes("cancelled")) {
-        triggerHaptic([40, 60, 40]);
+        numpadFeedback.playError();
         setErrorMessage(err.message || "Biometric unlock failed.");
       }
     } finally {
@@ -232,7 +223,7 @@ export const UserLockScreen: React.FC = () => {
         return;
       }
 
-      triggerHaptic(12);
+      numpadFeedback.playKeypress(num);
       setErrorMessage("");
       setPressedKey(num);
       setTimeout(() => setPressedKey(null), 180);
@@ -249,9 +240,9 @@ export const UserLockScreen: React.FC = () => {
           const res = await unlockWithPin(nextPin);
           if (res.success) {
             setIsSuccessUnlocked(true);
-            triggerHaptic([20, 30, 20]);
+            numpadFeedback.playSuccess();
           } else {
-            triggerHaptic([40, 60, 40]);
+            numpadFeedback.playError();
             setShake(true);
             setErrorMessage(res.error || "Incorrect PIN");
             setTimeout(() => {
@@ -262,7 +253,7 @@ export const UserLockScreen: React.FC = () => {
             }, 500);
           }
         } catch (err: any) {
-          triggerHaptic([40, 60, 40]);
+          numpadFeedback.playError();
           setShake(true);
           setErrorMessage(err.message || "Verification failed");
           setTimeout(() => {
@@ -280,7 +271,7 @@ export const UserLockScreen: React.FC = () => {
   // Backspace key handler
   const handleBackspace = useCallback(() => {
     if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
-    triggerHaptic(10);
+    numpadFeedback.playDelete();
     setErrorMessage("");
     setPressedKey("backspace");
     setTimeout(() => setPressedKey(null), 180);
@@ -290,7 +281,7 @@ export const UserLockScreen: React.FC = () => {
   // Clear key handler
   const handleClear = useCallback(() => {
     if (isVerifyingRef.current || isVerifying || cooldown.isCooldown || isSuccessUnlocked) return;
-    triggerHaptic(15);
+    numpadFeedback.playDelete();
     setErrorMessage("");
     setPressedKey("clear");
     setTimeout(() => setPressedKey(null), 180);

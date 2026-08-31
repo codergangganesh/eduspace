@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export interface GlobalTelemetryStats {
     totalStudents: number;
@@ -45,16 +46,66 @@ export const BASE_GLOBAL_HUBS: DynamicHubData[] = [
     { id: "toronto", name: "Toronto", country: "Canada", lat: 43.6532, lng: -79.3832, activeStudents: 0, activeClans: 0, voiceSessions: 0, liveQuizzes: 0, topClan: "None", category: "all", recentActivity: "No activity recorded" }
 ];
 
+export interface TelemetryDataResponse {
+    stats: GlobalTelemetryStats;
+    hubs: DynamicHubData[];
+    recentEvents: RealtimeTelemetryEvent[];
+}
+
+export const TELEMETRY_STATS_QUERY_KEY = ["global-telemetry-stats"] as const;
+const MEMORY_CACHE_TTL_MS = 45 * 1000; // 45 seconds
+
+let memoryCache: { data: TelemetryDataResponse; timestamp: number } | null = null;
+let inFlightPromise: Promise<TelemetryDataResponse> | null = null;
+
+/**
+ * Custom React Query hook for Telemetry Data with smart background caching
+ */
+export function useTelemetryStats() {
+    return useQuery<TelemetryDataResponse>({
+        queryKey: TELEMETRY_STATS_QUERY_KEY,
+        queryFn: () => TelemetryService.fetchRealtimeStats(),
+        staleTime: 60 * 1000, // 60s fresh cache
+        gcTime: 5 * 60 * 1000, // 5m garbage collection
+        refetchOnWindowFocus: false,
+    });
+}
+
 export class TelemetryService {
     /**
      * Queries ONLY real database records from Supabase.
+     * Includes in-memory 45s TTL caching and in-flight request deduplication.
      * Returns 0 for any metric if no records exist in the database.
      */
-    static async fetchRealtimeStats(): Promise<{
-        stats: GlobalTelemetryStats;
-        hubs: DynamicHubData[];
-        recentEvents: RealtimeTelemetryEvent[];
-    }> {
+    static async fetchRealtimeStats(forceRefresh = false): Promise<TelemetryDataResponse> {
+        if (!forceRefresh && memoryCache && Date.now() - memoryCache.timestamp < MEMORY_CACHE_TTL_MS) {
+            return memoryCache.data;
+        }
+
+        if (inFlightPromise) {
+            return inFlightPromise;
+        }
+
+        inFlightPromise = (async () => {
+            try {
+                const result = await TelemetryService.executeFetchRealtimeStats();
+                memoryCache = {
+                    data: result,
+                    timestamp: Date.now(),
+                };
+                return result;
+            } finally {
+                inFlightPromise = null;
+            }
+        })();
+
+        return inFlightPromise;
+    }
+
+    /**
+     * Internal raw fetch execution from Supabase
+     */
+    private static async executeFetchRealtimeStats(): Promise<TelemetryDataResponse> {
         let totalStudents = 0;
         let totalClans = 0;
         let totalVoiceSessions = 0;
