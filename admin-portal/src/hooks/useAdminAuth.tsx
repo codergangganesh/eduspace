@@ -379,7 +379,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
   );
 }
 
-export function useAdminAuth() {
+export function useAdminAuth(): AdminAuthContextType {
   const context = useContext(AdminAuthContext);
   if (!context) {
     return {
@@ -388,8 +388,8 @@ export function useAdminAuth() {
       profile: null,
       isAdmin: false,
       isLoading: true,
-      signIn: async () => ({ success: false, error: "Authentication initializing..." }),
-      signInWithPasskey: async () => ({ success: false, error: "Authentication initializing..." }),
+      signIn: async () => ({ success: false, error: "Authentication initializing...", user: undefined }),
+      signInWithPasskey: async () => ({ success: false, error: "Authentication initializing...", user: undefined }),
       signOut: async () => {},
       refreshProfile: async () => {},
     };
