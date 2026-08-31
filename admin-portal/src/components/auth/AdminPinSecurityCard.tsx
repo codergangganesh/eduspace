@@ -60,20 +60,24 @@ export const AdminPinSecurityCard: React.FC = () => {
 
   const [setupModalOpen, setSetupModalOpen] = useState<boolean>(false);
   const [isUpdatingPin, setIsUpdatingPin] = useState<boolean>(false);
+  const [setupInitialLockType, setSetupInitialLockType] = useState<"pin" | "password">("pin");
   const [removeDialogOpen, setRemoveDialogOpen] = useState<boolean>(false);
+
+  const isPasswordLock = settings.lockType === "password";
 
   const handleToggleEnable = (checked: boolean) => {
     if (checked) {
       if (!isPinSetup) {
         setIsUpdatingPin(false);
+        setSetupInitialLockType("pin");
         setSetupModalOpen(true);
       } else {
         updateSettings({ enabled: true });
-        toast.success("4-Digit Screen Lock enabled.");
+        toast.success("In-App Screen Lock enabled.");
       }
     } else {
       updateSettings({ enabled: false });
-      toast.info("4-Digit Screen Lock disabled.");
+      toast.info("In-App Screen Lock disabled.");
     }
   };
 
@@ -96,15 +100,16 @@ export const AdminPinSecurityCard: React.FC = () => {
     }
   };
 
-  const handleOpenChangePin = () => {
+  const handleOpenChangeSecret = (targetType?: "pin" | "password") => {
     setIsUpdatingPin(true);
+    setSetupInitialLockType(targetType || settings.lockType || "pin");
     setSetupModalOpen(true);
   };
 
   const handleConfirmRemovePin = () => {
     removePin();
     setRemoveDialogOpen(false);
-    toast.success("4-Digit PIN has been removed and screen lock disabled.");
+    toast.success("Screen lock configuration removed and screen lock disabled.");
   };
 
   return (
@@ -116,7 +121,7 @@ export const AdminPinSecurityCard: React.FC = () => {
             {/* Title, Badge & Subtitle */}
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary mt-0.5 sm:mt-0 shadow-2xs">
-                <KeyRound className="h-5 w-5" />
+                {isPasswordLock ? <Lock className="h-5 w-5" /> : <KeyRound className="h-5 w-5" />}
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -126,7 +131,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   {isPinLockEnabled ? (
                     <Badge variant="outline" className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border-emerald-500/30 py-0 px-2 uppercase tracking-wider">
                       <CheckCircle2 className="h-2.5 w-2.5 mr-1 inline" />
-                      Active
+                      Active ({isPasswordLock ? "Password" : "4-Digit PIN"})
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="text-[10px] font-medium py-0 px-2">
@@ -135,7 +140,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   )}
                 </div>
                 <CardDescription className="text-xs mt-1 text-muted-foreground leading-relaxed">
-                  Protect your Admin Portal with an instant 4-digit PIN or 1-touch Biometric unlock.
+                  Protect your Admin Portal with an instant 4-digit PIN, custom alphanumeric password, or 1-touch Biometric unlock.
                 </CardDescription>
               </div>
             </div>
@@ -165,12 +170,13 @@ export const AdminPinSecurityCard: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     setIsUpdatingPin(false);
+                    setSetupInitialLockType("pin");
                     setSetupModalOpen(true);
                   }}
                   className="w-full sm:w-auto text-xs font-semibold h-9 px-4 gap-1.5 shadow-sm rounded-xl cursor-pointer"
                 >
                   <Shield className="h-3.5 w-3.5" />
-                  <span>Set Up 4-Digit PIN</span>
+                  <span>Set Up Screen Lock</span>
                 </Button>
               )}
             </div>
@@ -189,7 +195,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   Enable In-App Screen Lock
                 </Label>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  Requires entering your 4-digit PIN or fingerprint to access institutional controls.
+                  Requires entering your {isPasswordLock ? "custom password" : "4-digit PIN"} or fingerprint to access institutional controls.
                 </p>
               </div>
             </div>
@@ -201,7 +207,7 @@ export const AdminPinSecurityCard: React.FC = () => {
             />
           </div>
 
-          {/* Configuration Options (Visible if PIN is configured) */}
+          {/* Configuration Options (Visible if PIN/Password is configured) */}
           {isPinSetup && (
             <div className="space-y-3 pt-1">
               <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-0.5">
@@ -210,7 +216,41 @@ export const AdminPinSecurityCard: React.FC = () => {
 
               {/* Grouped Settings Card */}
               <div className="rounded-xl border border-border/80 bg-card divide-y divide-border/60 overflow-hidden shadow-2xs">
-                {/* 1. Biometric Unlock Row */}
+                {/* 1. Lock Type Row */}
+                <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary shadow-2xs mt-0.5">
+                      {isPasswordLock ? <Lock className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Label className="text-xs sm:text-sm font-semibold text-foreground">
+                          Lock Type
+                        </Label>
+                        <Badge variant="outline" className="text-[9px] text-primary border-primary/30 bg-primary/10 py-0 px-1.5 font-bold uppercase">
+                          {isPasswordLock ? "Custom Password" : "4-Digit PIN"}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {isPasswordLock
+                          ? "Custom alphanumeric password with letters, numbers, and symbols."
+                          : "Fast 4-digit numeric keypad with tactile haptics & audio."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenChangeSecret(isPasswordLock ? "pin" : "password")}
+                    className="h-8 text-xs font-semibold rounded-lg shrink-0 cursor-pointer"
+                  >
+                    Switch to {isPasswordLock ? "PIN" : "Password"}
+                  </Button>
+                </div>
+
+                {/* 2. Biometric Unlock Row */}
                 {isBiometricsSupported ? (
                   <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
                     <div className="flex items-start gap-3 min-w-0">
@@ -241,7 +281,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   </div>
                 ) : null}
 
-                {/* 2. Auto-Lock Inactivity Timeout */}
+                {/* 3. Auto-Lock Inactivity Timeout */}
                 <div className="p-3.5 sm:p-4 hover:bg-muted/15 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-500 shadow-2xs mt-0.5">
@@ -282,7 +322,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 3. Tab Switch Auto-Lock */}
+                {/* 4. Tab Switch Auto-Lock */}
                 <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-500 shadow-2xs mt-0.5">
@@ -306,7 +346,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   />
                 </div>
 
-                {/* 4. Instant Lock Shortcut Row */}
+                {/* 5. Instant Lock Shortcut Row */}
                 <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-500 shadow-2xs mt-0.5">
@@ -333,36 +373,38 @@ export const AdminPinSecurityCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 5. Randomize Keypad Layout Row */}
-                <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-500 shadow-2xs mt-0.5">
-                      <Shuffle className="h-4 w-4" />
-                    </div>
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="scramble-keypad-switch">
-                          Randomize Keypad Numbers
-                        </Label>
-                        <Badge variant="outline" className="text-[9px] text-indigo-600 dark:text-indigo-400 border-indigo-500/30 bg-indigo-500/10 py-0 px-1.5 font-bold uppercase">
-                          Anti-Surfing
-                        </Badge>
+                {/* 6. Randomize Keypad Layout Row (Only in PIN Mode) */}
+                {!isPasswordLock && (
+                  <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-500 shadow-2xs mt-0.5">
+                        <Shuffle className="h-4 w-4" />
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        Shuffles digits (0–9) on the lock screen to prevent pattern watching.
-                      </p>
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="scramble-keypad-switch">
+                            Randomize Keypad Numbers
+                          </Label>
+                          <Badge variant="outline" className="text-[9px] text-indigo-600 dark:text-indigo-400 border-indigo-500/30 bg-indigo-500/10 py-0 px-1.5 font-bold uppercase">
+                            Anti-Surfing
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          Shuffles digits (0–9) on the lock screen to prevent pattern watching.
+                        </p>
+                      </div>
                     </div>
+                    <Switch
+                      id="scramble-keypad-switch"
+                      checked={settings.randomizeKeypad}
+                      onCheckedChange={(checked) => updateSettings({ randomizeKeypad: checked })}
+                      disabled={!isPinLockEnabled}
+                      className="cursor-pointer shrink-0"
+                    />
                   </div>
-                  <Switch
-                    id="scramble-keypad-switch"
-                    checked={settings.randomizeKeypad}
-                    onCheckedChange={(checked) => updateSettings({ randomizeKeypad: checked })}
-                    disabled={!isPinLockEnabled}
-                    className="cursor-pointer shrink-0"
-                  />
-                </div>
+                )}
 
-                {/* 6. Multi-Device Cloud Sync Row */}
+                {/* 7. Multi-Device Cloud Sync Row */}
                 <div className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-muted/15 transition-colors gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0 text-teal-500 shadow-2xs mt-0.5">
@@ -371,14 +413,14 @@ export const AdminPinSecurityCard: React.FC = () => {
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Label className="text-xs sm:text-sm font-semibold text-foreground cursor-pointer" htmlFor="admin-cloud-sync-switch">
-                          Sync PIN Across Devices
+                          Sync Lock Across Devices
                         </Label>
                         <Badge variant="outline" className="text-[9px] text-teal-600 dark:text-teal-400 border-teal-500/30 bg-teal-500/10 py-0 px-1.5 font-bold uppercase">
                           Multi-Device
                         </Badge>
                       </div>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        Zero-knowledge sync: automatically activates your 4-digit PIN on other admin workstations.
+                        Zero-knowledge sync: automatically activates your lock credentials on other admin workstations.
                       </p>
                     </div>
                   </div>
@@ -399,7 +441,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                 </div>
               </div>
 
-              {/* 90-Day PIN Rotation & Security Compliance Banner */}
+              {/* 90-Day Rotation & Security Compliance Banner */}
               <div
                 className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all ${pinRotation?.isExpiredOrDue
                     ? "bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200"
@@ -417,8 +459,8 @@ export const AdminPinSecurityCard: React.FC = () => {
                     <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   )}
                   <div className="space-y-0.5 min-w-0">
-                    <p className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
-                      <span>PIN Security Compliance</span>
+                    <div className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+                      <span>Security Compliance</span>
                       <Badge
                         variant="outline"
                         className={`text-[9px] py-0 px-1.5 font-bold uppercase ${pinRotation?.isExpiredOrDue
@@ -434,13 +476,13 @@ export const AdminPinSecurityCard: React.FC = () => {
                             ? "Expiring Soon"
                             : "Compliant (90-Day Cycle)"}
                       </Badge>
-                    </p>
+                    </div>
                     <p className="text-[11px] leading-relaxed">
                       {pinRotation?.isExpiredOrDue
-                        ? `Your 4-digit PIN was created ${pinRotation.pinAgeDays} days ago. For optimal security, consider rotating your PIN.`
+                        ? `Your credentials were created ${pinRotation.pinAgeDays} days ago. For optimal security, consider rotating your credentials.`
                         : pinRotation?.isExpiringSoon
-                          ? `PIN rotation recommended in ${pinRotation.daysRemaining} days (Current age: ${pinRotation.pinAgeDays} days).`
-                          : `PIN updated ${pinRotation?.pinAgeDays === 0 ? "today" : `${pinRotation?.pinAgeDays} days ago`} • ${pinRotation?.daysRemaining} days remaining in compliance cycle.`}
+                          ? `Rotation recommended in ${pinRotation.daysRemaining} days (Current age: ${pinRotation.pinAgeDays} days).`
+                          : `Updated ${pinRotation?.pinAgeDays === 0 ? "today" : `${pinRotation?.pinAgeDays} days ago`} • ${pinRotation?.daysRemaining} days remaining in compliance cycle.`}
                     </p>
                   </div>
                 </div>
@@ -448,23 +490,23 @@ export const AdminPinSecurityCard: React.FC = () => {
                 {pinRotation?.isExpiredOrDue && (
                   <button
                     type="button"
-                    onClick={handleOpenChangePin}
+                    onClick={() => handleOpenChangeSecret()}
                     className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs cursor-pointer active:scale-95 transition-all self-start sm:self-auto"
                   >
-                    Rotate PIN Now
+                    Rotate Lock Now
                   </button>
                 )}
               </div>
 
-              {/* PIN Management Buttons (Clean Symmetrical Grid) */}
+              {/* Management Buttons (Clean Symmetrical Grid) */}
               <div className="pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
-                  onClick={handleOpenChangePin}
+                  onClick={() => handleOpenChangeSecret()}
                   className="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/40 text-foreground font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
                 >
-                  <KeyRound className="h-3.5 w-3.5 text-primary" />
-                  <span>Change 4-Digit PIN</span>
+                  {isPasswordLock ? <Lock className="h-3.5 w-3.5 text-primary" /> : <KeyRound className="h-3.5 w-3.5 text-primary" />}
+                  <span>Change {isPasswordLock ? "Custom Password" : "4-Digit PIN"}</span>
                 </button>
 
                 <button
@@ -473,7 +515,7 @@ export const AdminPinSecurityCard: React.FC = () => {
                   className="w-full flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span>Remove PIN & Disable</span>
+                  <span>Remove Lock & Disable</span>
                 </button>
               </div>
             </div>
@@ -481,12 +523,14 @@ export const AdminPinSecurityCard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Setup / Change PIN Modal */}
+      {/* Setup / Change Secret Modal */}
       <AdminPinSetupModal
         open={setupModalOpen}
         onOpenChange={setSetupModalOpen}
         onPinConfigured={setupPin}
         isUpdating={isUpdatingPin}
+        initialLockType={setupInitialLockType}
+        currentLockType={settings.lockType || "pin"}
       />
 
       {/* Remove PIN Confirmation Dialog */}
@@ -495,10 +539,10 @@ export const AdminPinSecurityCard: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Remove 4-Digit Screen Lock?
+              Remove Screen Lock?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              Are you sure you want to remove your 4-digit PIN? Your portal will no longer automatically lock when you leave your desk or switch tabs.
+              Are you sure you want to remove your screen lock credentials? Your portal will no longer automatically lock when you leave your desk or switch tabs.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-2 justify-end">
@@ -507,7 +551,7 @@ export const AdminPinSecurityCard: React.FC = () => {
               onClick={handleConfirmRemovePin}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs h-8.5 rounded-xl"
             >
-              Yes, Remove PIN
+              Yes, Remove Lock
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

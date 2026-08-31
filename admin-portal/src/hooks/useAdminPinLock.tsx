@@ -26,7 +26,8 @@ interface AdminPinLockContextType {
   unlockWithBiometrics: () => Promise<{ success: boolean; error?: string }>;
   unlockWithPassword: (password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
   enableBiometrics: () => Promise<{ success: boolean; error?: string }>;
-  setupPin: (pin: string) => Promise<{ success: boolean; error?: string }>;
+  setupPin: (secret: string, lockType?: "pin" | "password") => Promise<{ success: boolean; error?: string }>;
+  verifyCurrentSecret: (secret: string) => Promise<boolean>;
   removePin: () => void;
   updateSettings: (updates: Partial<PinLockSettings>) => void;
   refreshStatus: () => void;
@@ -292,11 +293,11 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
     return res;
   }, [userId, user?.email, profile?.full_name, refreshStatus]);
 
-  // Setup new PIN
+  // Setup new PIN or Password
   const setupPin = useCallback(
-    async (pin: string) => {
+    async (secret: string, lockType: "pin" | "password" = "pin") => {
       if (!userId) return { success: false, error: "No active admin user." };
-      const res = await pinLockService.setupPin(userId, pin);
+      const res = await pinLockService.setupPin(userId, secret, lockType);
       if (res.success) {
         if (isBiometricsSupported) {
           try {
@@ -313,6 +314,15 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
       return res;
     },
     [userId, user?.email, profile?.full_name, isBiometricsSupported, refreshStatus]
+  );
+
+  // Verify Current Secret
+  const verifyCurrentSecret = useCallback(
+    async (secret: string) => {
+      if (!userId) return false;
+      return pinLockService.verifyCurrentSecret(userId, secret);
+    },
+    [userId]
   );
 
   // Remove PIN
@@ -437,6 +447,7 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
         unlockWithPassword,
         enableBiometrics,
         setupPin,
+        verifyCurrentSecret,
         removePin,
         updateSettings,
         refreshStatus,

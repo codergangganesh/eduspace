@@ -91,7 +91,42 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       .join("")
       .toUpperCase() || "U";
 
-  const handleNumberClick = (num: number) => {
+  const handleSubmit = React.useCallback(async (p1: string, p2: string) => {
+    if (p1 !== p2) {
+      numpadFeedback.playError();
+      setErrorMessage("PINs do not match. Please try again.");
+      setShake(true);
+      setTimeout(() => {
+        setShake(false);
+        setConfirmPin("");
+      }, 500);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      const res = await onPinConfigured(p1);
+      if (res.success) {
+        numpadFeedback.playSuccess();
+        toast.success(isUpdating ? "4-Digit PIN updated successfully!" : "4-Digit PIN Lock activated!");
+        onOpenChange(false);
+      } else {
+        numpadFeedback.playError();
+        setErrorMessage(res.error || "Failed to set up PIN.");
+        setConfirmPin("");
+      }
+    } catch (err: any) {
+      numpadFeedback.playError();
+      setErrorMessage(err.message || "An error occurred.");
+      setConfirmPin("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [onPinConfigured, isUpdating, onOpenChange]);
+
+  const handleNumberClick = React.useCallback((num: number) => {
     if (isSubmitting || activePin.length >= 4) return;
 
     numpadFeedback.playKeypress(num);
@@ -126,9 +161,9 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
         handleSubmit(firstPin, next);
       }
     }
-  };
+  }, [isSubmitting, activePin.length, step, firstPin, confirmPin, handleSubmit]);
 
-  const handleBackspace = () => {
+  const handleBackspace = React.useCallback(() => {
     if (isSubmitting) return;
     numpadFeedback.playDelete();
     setErrorMessage("");
@@ -139,9 +174,9 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
     } else {
       setConfirmPin((prev) => prev.slice(0, -1));
     }
-  };
+  }, [isSubmitting, step]);
 
-  const handleClear = () => {
+  const handleClear = React.useCallback(() => {
     if (isSubmitting) return;
     numpadFeedback.playDelete();
     setErrorMessage("");
@@ -152,42 +187,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
     } else {
       setConfirmPin("");
     }
-  };
-
-  const handleSubmit = async (p1: string, p2: string) => {
-    if (p1 !== p2) {
-      numpadFeedback.playError();
-      setErrorMessage("PINs do not match. Please try again.");
-      setShake(true);
-      setTimeout(() => {
-        setShake(false);
-        setConfirmPin("");
-      }, 500);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage("");
-
-    try {
-      const res = await onPinConfigured(p1);
-      if (res.success) {
-        numpadFeedback.playSuccess();
-        toast.success(isUpdating ? "4-Digit PIN updated successfully!" : "4-Digit PIN Lock activated!");
-        onOpenChange(false);
-      } else {
-        numpadFeedback.playError();
-        setErrorMessage(res.error || "Failed to set up PIN.");
-        setConfirmPin("");
-      }
-    } catch (err: any) {
-      numpadFeedback.playError();
-      setErrorMessage(err.message || "An error occurred.");
-      setConfirmPin("");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  }, [isSubmitting, step]);
 
   // Physical keyboard listener
   useEffect(() => {
@@ -210,7 +210,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, [open, isSubmitting, handleNumberClick, handleBackspace, handleClear]);
 
   if (!open) return null;
 
@@ -244,7 +244,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                triggerHaptic(10);
+                numpadFeedback.playKeypress();
                 setTheme(actualTheme === "dark" ? "light" : "dark");
               }}
               className="w-9 h-9 rounded-full flex items-center justify-center border border-border/80 bg-card/80 hover:bg-accent text-foreground transition-all active:scale-90 cursor-pointer shadow-2xs"
@@ -345,7 +345,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                triggerHaptic(10);
+                numpadFeedback.playKeypress();
                 setShowPin(!showPin);
               }}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2.5 rounded-lg hover:bg-muted/40 cursor-pointer select-none"
@@ -388,7 +388,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => {
-                  triggerHaptic(10);
+                  numpadFeedback.playKeypress();
                   setStep(1);
                   setConfirmPin("");
                   setErrorMessage("");
@@ -483,7 +483,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                triggerHaptic(10);
+                numpadFeedback.playKeypress();
                 onOpenChange(false);
               }}
               className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground transition-all cursor-pointer py-1"

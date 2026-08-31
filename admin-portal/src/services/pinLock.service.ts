@@ -16,6 +16,7 @@ import { auditService } from "./audit.service";
 
 export interface PinLockSettings {
   enabled: boolean;
+  lockType?: "pin" | "password";
   biometricsEnabled: boolean;
   autoLockTimeout: number; // in minutes (1, 2, 5, 10, 15, 30, 60)
   autoLockOnTabSwitch: boolean;
@@ -115,6 +116,19 @@ export function isCommonOrWeakPin(pin: string): { isWeak: boolean; reason?: stri
   }
   if (pin[0] === pin[1] && pin[1] === pin[2] && pin[2] === pin[3]) {
     return { isWeak: true, reason: "Avoid using all repetitive digits (e.g. 1111, 2222)." };
+  }
+  return { isWeak: false };
+}
+
+/**
+ * Validate that the chosen alphanumeric password is not weak or trivial.
+ */
+export function isWeakPassword(password: string): { isWeak: boolean; reason?: string } {
+  if (!password || password.trim().length < 6) {
+    return { isWeak: true, reason: "Password must be at least 6 characters long." };
+  }
+  if (password.length > 64) {
+    return { isWeak: true, reason: "Password must be at most 64 characters long." };
   }
   return { isWeak: false };
 }
@@ -355,6 +369,7 @@ export const pinLockService = {
   getSettings(userId: string): PinLockSettings {
     const defaults: PinLockSettings = {
       enabled: false,
+      lockType: "pin",
       biometricsEnabled: false,
       autoLockTimeout: 5,
       autoLockOnTabSwitch: true,
@@ -370,6 +385,7 @@ export const pinLockService = {
       const config: StoredPinConfig = JSON.parse(raw);
       return {
         enabled: Boolean(config.enabled),
+        lockType: config.lockType === "password" ? "password" : "pin",
         biometricsEnabled: Boolean(config.biometricsEnabled),
         autoLockTimeout: typeof config.autoLockTimeout === "number" ? config.autoLockTimeout : 5,
         autoLockOnTabSwitch: config.autoLockOnTabSwitch !== undefined ? Boolean(config.autoLockOnTabSwitch) : true,
@@ -395,6 +411,7 @@ export const pinLockService = {
       const cloudPayload = config
         ? {
           enabled: config.enabled,
+          lockType: config.lockType || "pin",
           salt: config.salt,
           hash: config.hash,
           autoLockTimeout: config.autoLockTimeout,
@@ -432,6 +449,7 @@ export const pinLockService = {
       if (cloudConfig && cloudConfig.hash && cloudConfig.salt) {
         return {
           enabled: Boolean(cloudConfig.enabled),
+          lockType: cloudConfig.lockType === "password" ? "password" : "pin",
           biometricsEnabled: false,
           autoLockTimeout: typeof cloudConfig.autoLockTimeout === "number" ? cloudConfig.autoLockTimeout : 5,
           autoLockOnTabSwitch: cloudConfig.autoLockOnTabSwitch !== undefined ? Boolean(cloudConfig.autoLockOnTabSwitch) : true,
@@ -489,24 +507,36 @@ export const pinLockService = {
   },
 
   /**
-   * Set up a new 4-digit PIN or change existing PIN.
+   * Set up a new 4-digit PIN or Custom Password.
    */
-  async setupPin(userId: string, pin: string): Promise<{ success: boolean; error?: string }> {
+  async setupPin(
+    userId: string,
+    secret: string,
+    lockType: "pin" | "password" = "pin"
+  ): Promise<{ success: boolean; error?: string }> {
     if (!userId) return { success: false, error: "Active admin session required." };
     
-    const weakCheck = isCommonOrWeakPin(pin);
-    if (weakCheck.isWeak) {
-      return { success: false, error: weakCheck.reason || "Invalid or weak PIN." };
+    if (lockType === "password") {
+      const weakCheck = isWeakPassword(secret);
+      if (weakCheck.isWeak) {
+        return { success: false, error: weakCheck.reason || "Invalid password." };
+      }
+    } else {
+      const weakCheck = isCommonOrWeakPin(secret);
+      if (weakCheck.isWeak) {
+        return { success: false, error: weakCheck.reason || "Invalid or weak PIN." };
+      }
     }
 
     try {
       const currentSettings = this.getSettings(userId);
       const salt = generateSalt();
-      const hash = await computePbkdf2Hash(pin, salt, userId, PBKDF2_ITERATIONS);
+      const hash = await computePbkdf2Hash(secret, salt, userId, PBKDF2_ITERATIONS);
 
       const config: StoredPinConfig = {
         ...currentSettings,
         enabled: true,
+        lockType,
         salt,
         hash,
         algo: "PBKDF2-100K",
@@ -856,6 +886,39 @@ export const pinLockService = {
       }
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to verify PIN." };
+    }
+  },
+
+  /**
+   * Verify the current PIN or Password without changing session lock state (used before credential change or type switch).
+   */
+  async verifyCurrentSecret(userId: string, secret: string): Promise<boolean> {
+    if (!userId || !secret) return false;
+    try {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}_config_${userId}`);
+      if (!raw) return false;
+      const config: StoredPinConfig = JSON.parse(raw);
+      if (!config.hash || !config.salt) return false;
+
+      // 1. Check modern v4 Account-Bound hash
+      const hash = await computePbkdf2Hash(secret, config.salt, userId, config.iterations || PBKDF2_ITERATIONS);
+      if (hash === config.hash) return true;
+
+      // 2. Check legacy v3 Device-Bound hash
+      const legacyV3Hash = await computePbkdf2V3DeviceBound(secret, config.salt, userId, config.iterations || PBKDF2_ITERATIONS);
+      if (legacyV3Hash === config.hash) return true;
+
+      // 3. Check legacy v2 unbound hash
+      const unboundHash = await computePbkdf2V2Unbound(secret, config.salt, config.iterations || PBKDF2_ITERATIONS);
+      if (unboundHash === config.hash) return true;
+
+      // 4. Check legacy v1 SHA-256 hash
+      const v1Hash = await computeLegacySha256(secret, config.salt);
+      if (v1Hash === config.hash) return true;
+
+      return false;
+    } catch {
+      return false;
     }
   },
 

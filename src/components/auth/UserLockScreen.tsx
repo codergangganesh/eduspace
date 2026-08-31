@@ -290,7 +290,7 @@ export const UserLockScreen: React.FC = () => {
 
   // Open Forgot PIN Drawer
   const handleOpenForgotPin = () => {
-    triggerHaptic(10);
+    numpadFeedback.playKeypress();
     setPasswordError("");
     setAccountPassword("");
     setPasswordShake(false);
@@ -302,7 +302,7 @@ export const UserLockScreen: React.FC = () => {
   const handleVerifyPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountPassword || accountPassword.length === 0) {
-      triggerHaptic([40, 60, 40]);
+      numpadFeedback.playError();
       setPasswordError("Please enter your account password.");
       setPasswordShake(true);
       setTimeout(() => setPasswordShake(false), 500);
@@ -316,20 +316,20 @@ export const UserLockScreen: React.FC = () => {
     try {
       const res = await unlockWithPassword(accountPassword, captchaToken);
       if (res.success) {
-        triggerHaptic([20, 30, 20]);
+        numpadFeedback.playSuccess();
         toast.success("Account verified! Please create your new 4-digit PIN.");
         setForgotModalOpen(false);
         setAccountPassword("");
         setCaptchaToken(undefined);
         setSetupModalOpen(true);
       } else {
-        triggerHaptic([40, 60, 40]);
+        numpadFeedback.playError();
         setPasswordShake(true);
         setPasswordError(res.error || "Incorrect account password. Please try again.");
         setTimeout(() => setPasswordShake(false), 500);
       }
     } catch (err: any) {
-      triggerHaptic([40, 60, 40]);
+      numpadFeedback.playError();
       setPasswordShake(true);
       setPasswordError(err.message || "Failed to verify password.");
       setTimeout(() => setPasswordShake(false), 500);
@@ -340,7 +340,7 @@ export const UserLockScreen: React.FC = () => {
 
   // Safe Sign Out Handler
   const handleSignOut = async () => {
-    triggerHaptic(20);
+    numpadFeedback.playKeypress();
     try {
       await signOut();
       navigate("/login");
@@ -431,7 +431,7 @@ export const UserLockScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                triggerHaptic(10);
+                numpadFeedback.playKeypress();
                 setTheme(actualTheme === "dark" ? "light" : "dark");
               }}
               className="w-9 h-9 rounded-full flex items-center justify-center border border-border/80 bg-card/80 hover:bg-accent text-foreground transition-all active:scale-90 cursor-pointer shadow-2xs"
