@@ -63,8 +63,6 @@ serve(async (req: Request) => {
       roleRes.data?.role === "admin" ||
       profileRes.data?.role === "admin" ||
       callerUser.app_metadata?.role === "admin" ||
-      callerUser.user_metadata?.role === "admin" ||
-      callerUser.email?.toLowerCase().includes("admin") ||
       callerUser.email === "mannamganeshbabu8@gmail.com";
 
     if (!isAuthorizedAdmin) {
@@ -311,6 +309,29 @@ serve(async (req: Request) => {
           user_metadata: { status: newStatus },
         });
       } catch (_) {}
+
+      // Handle suspension notifications
+      if (newStatus === "active") {
+        try {
+          await adminClient
+            .from("notifications")
+            .delete()
+            .eq("recipient_id", targetUserId)
+            .eq("title", "ACCOUNT_SUSPENDED");
+        } catch (_) {}
+      } else if (newStatus === "suspended") {
+        try {
+          await adminClient.from("notifications").insert({
+            recipient_id: targetUserId,
+            user_id: targetUserId,
+            title: "ACCOUNT_SUSPENDED",
+            message: "Your account has been suspended by an administrator.",
+            type: "general",
+            action_type: "suspended",
+            created_at: new Date().toISOString(),
+          });
+        } catch (_) {}
+      }
 
       // Audit Log
       await adminClient.from("admin_audit_logs").insert({

@@ -75,7 +75,7 @@ export const studentsService = {
         if (p.role === "lecturer" || p.role === "admin") return;
 
         const email = (p.email || "").toLowerCase().trim();
-        if (email.includes("admin") || email === "mannamganeshbabu8@gmail.com") return;
+        if (email === "mannamganeshbabu8@gmail.com") return;
 
         seenIds.add(uid);
         if (p.user_id) seenIds.add(p.user_id);

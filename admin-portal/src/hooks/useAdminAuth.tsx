@@ -21,12 +21,7 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 const isKnownAdminEmail = (email?: string): boolean => {
   if (!email) return false;
   const e = email.toLowerCase().trim();
-  return (
-    e === "mannamganeshbabu8@gmail.com" ||
-    e.startsWith("admin.") ||
-    e.startsWith("admin@") ||
-    e.includes("admin")
-  );
+  return e === "mannamganeshbabu8@gmail.com";
 };
 
 /** Wrap a promise with a timeout — resolves to fallback if the promise doesn't settle in time */
@@ -62,8 +57,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
   }, []);
 
   const checkAdminRole = useCallback(async (userId: string, email?: string, userMeta?: any): Promise<boolean> => {
-    // Fast-path: known admin email or metadata — no DB query needed
-    if (userMeta?.role === "admin" || userMeta?.app_role === "admin" || isKnownAdminEmail(email)) {
+    // Fast-path: verified primary owner email
+    if (isKnownAdminEmail(email)) {
       return true;
     }
 
@@ -126,10 +121,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
         setSession(currentSession);
         setUser(authUser);
 
-        // Step 4: Determine admin status — use fast path first, DB query with timeout
-        const fastAdmin = isKnownAdminEmail(authUser.email) ||
-          authUser.user_metadata?.role === "admin" ||
-          authUser.user_metadata?.app_role === "admin";
+        // Step 4: Determine admin status — use fast path for primary owner, DB query for others
+        const fastAdmin = isKnownAdminEmail(authUser.email);
 
         if (fastAdmin) {
           // Known admin — show dashboard immediately, fetch profile in background

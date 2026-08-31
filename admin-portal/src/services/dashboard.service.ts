@@ -122,7 +122,6 @@ export const dashboardService = {
           adminIds.has(uid) ||
           adminIds.has(p.user_id) ||
           p.role === "admin" ||
-          email.toLowerCase().includes("admin") ||
           email.toLowerCase() === "mannamganeshbabu8@gmail.com";
 
         const isLecturer =

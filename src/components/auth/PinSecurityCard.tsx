@@ -119,22 +119,22 @@ export const PinSecurityCard: React.FC = () => {
         <CardHeader className="p-4 sm:p-5 border-b border-border/40 bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             {/* Title, Badge & Subtitle */}
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary mt-0.5 sm:mt-0 shadow-2xs">
                 {isPasswordLock ? <Lock className="h-5 w-5" /> : <KeyRound className="h-5 w-5" />}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <CardTitle className="text-sm sm:text-base font-bold text-foreground">
                     Screen Lock & Biometrics
                   </CardTitle>
                   {isPinLockEnabled ? (
-                    <Badge variant="outline" className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border-emerald-500/30 py-0 px-2 uppercase tracking-wider">
+                    <Badge variant="outline" className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border-emerald-500/30 py-0.5 px-2 uppercase tracking-wider">
                       <CheckCircle2 className="h-2.5 w-2.5 mr-1 inline" />
                       Active ({isPasswordLock ? "Password" : "4-Digit PIN"})
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-[10px] font-medium py-0 px-2">
+                    <Badge variant="secondary" className="text-[10px] font-medium py-0.5 px-2">
                       Disabled
                     </Badge>
                   )}
@@ -146,14 +146,14 @@ export const PinSecurityCard: React.FC = () => {
             </div>
 
             {/* Quick Actions in Header */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
               {isPinLockEnabled && (
                 <Button
                   type="button"
                   variant="default"
                   size="sm"
                   onClick={lockScreen}
-                  className="h-8.5 rounded-xl text-xs font-semibold gap-1.5 shadow-xs cursor-pointer"
+                  className="w-full sm:w-auto text-xs font-semibold h-9 px-3.5 gap-2 shadow-xs rounded-xl cursor-pointer active:scale-95 transition-all"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   <span>Lock Screen</span>
@@ -169,7 +169,7 @@ export const PinSecurityCard: React.FC = () => {
                     setSetupInitialLockType("pin");
                     setSetupModalOpen(true);
                   }}
-                  className="h-8.5 rounded-xl text-xs font-semibold gap-1.5 shadow-xs cursor-pointer"
+                  className="w-full sm:w-auto text-xs font-semibold h-9 px-4 gap-2 shadow-sm rounded-xl cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
                 >
                   <Shield className="h-3.5 w-3.5" />
                   <span>Set Up Screen Lock</span>

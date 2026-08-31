@@ -297,7 +297,7 @@ export const earlyWarningService = {
         if (p.role === "admin" || p.role === "lecturer") return;
 
         const email = (p.email || "").toLowerCase().trim();
-        if (email.includes("admin") || email === "mannamganeshbabu8@gmail.com") return;
+        if (email === "mannamganeshbabu8@gmail.com") return;
 
         const aliases = new Set<string>();
         if (p.user_id) aliases.add(p.user_id);
@@ -331,7 +331,7 @@ export const earlyWarningService = {
         if (nonStudentUserIds.has(uid) || (sp.user_id && nonStudentUserIds.has(sp.user_id))) return;
 
         const email = (sp.email || "").toLowerCase().trim();
-        if (email.includes("admin") || email === "mannamganeshbabu8@gmail.com") return;
+        if (email === "mannamganeshbabu8@gmail.com") return;
 
         // Check if student already exists via aliases
         let matchedPrimaryId =

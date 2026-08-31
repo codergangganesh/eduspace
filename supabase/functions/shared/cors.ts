@@ -31,7 +31,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || '';
   const allowedOrigin = isOriginAllowed(origin)
     ? origin
-    : (origin || ALLOWED_ORIGINS[0]);
+    : ALLOWED_ORIGINS[0];
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

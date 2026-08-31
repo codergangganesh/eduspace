@@ -12,22 +12,33 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 export const SuspensionModal: React.FC = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    const handleSupportOpened = () => setIsSupportOpen(true);
+    const handleSupportClosed = () => setIsSupportOpen(false);
 
-    // Direct Supabase Database Verification (identical to access_requests / class invitations)
+    window.addEventListener("open-contact-support", handleSupportOpened);
+    window.addEventListener("close-contact-support", handleSupportClosed);
+
+    return () => {
+      window.removeEventListener("open-contact-support", handleSupportOpened);
+      window.removeEventListener("close-contact-support", handleSupportClosed);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setIsOpen(false);
+      return;
+    }
+
+    // Direct Supabase Database Verification
     const checkSuspendedFromDatabase = async () => {
       try {
-        // 1. Direct profile status check from useAuth
-        if (profile?.status === "suspended") {
-          setIsOpen(true);
-          return;
-        }
-
-        // 2. Query Supabase profiles table by user.id
+        // 1. Query Supabase profiles table by user.id
         if (user.id) {
           const { data: p1 } = await (supabase as any)
             .from("profiles")
@@ -35,13 +46,17 @@ export const SuspensionModal: React.FC = () => {
             .eq("user_id", user.id)
             .maybeSingle();
 
-          if (p1?.status === "suspended") {
-            setIsOpen(true);
+          if (p1) {
+            const isSuspended = p1.status === "suspended";
+            setIsOpen(isSuspended);
+            if (!isSuspended && profile?.status === "suspended") {
+              void refreshProfile();
+            }
             return;
           }
         }
 
-        // 3. Query Supabase profiles table by user.email
+        // 2. Query Supabase profiles table by user.email
         if (user.email) {
           const cleanEmail = user.email.trim();
 
@@ -51,24 +66,18 @@ export const SuspensionModal: React.FC = () => {
             .ilike("email", cleanEmail)
             .maybeSingle();
 
-          if (p2?.status === "suspended") {
-            setIsOpen(true);
-            return;
-          }
-
-          // 6. Query Supabase notifications for ACCOUNT_SUSPENDED record
-          const { data: notif } = await (supabase as any)
-            .from("notifications")
-            .select("id, title")
-            .eq("recipient_id", user.id)
-            .eq("title", "ACCOUNT_SUSPENDED")
-            .maybeSingle();
-
-          if (notif) {
-            setIsOpen(true);
+          if (p2) {
+            const isSuspended = p2.status === "suspended";
+            setIsOpen(isSuspended);
+            if (!isSuspended && profile?.status === "suspended") {
+              void refreshProfile();
+            }
             return;
           }
         }
+
+        // 3. Fallback to local Auth profile
+        setIsOpen(profile?.status === "suspended");
       } catch (err) {
         console.warn("[SuspensionModal] Supabase query error:", err);
       }
@@ -91,24 +100,9 @@ export const SuspensionModal: React.FC = () => {
         (payload: any) => {
           if (payload.new?.status === "suspended") {
             setIsOpen(true);
-          } else if (payload.new?.status === "active") {
+          } else if (payload.new?.status === "active" || payload.new?.status === null) {
             setIsOpen(false);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: user.id ? `recipient_id=eq.${user.id}` : undefined,
-        },
-        (payload: any) => {
-          if (payload.new?.title === "ACCOUNT_SUSPENDED") {
-            setIsOpen(true);
-          } else if (payload.eventType === "DELETE" && payload.old?.title === "ACCOUNT_SUSPENDED") {
-            setIsOpen(false);
+            void refreshProfile();
           }
         }
       )
@@ -117,7 +111,7 @@ export const SuspensionModal: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, profile]);
+  }, [user, profile?.status]);
 
   if (!isOpen) {
     return null;
@@ -128,7 +122,7 @@ export const SuspensionModal: React.FC = () => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen && !isSupportOpen} onOpenChange={setIsOpen}>
       <DialogContent
         className="sm:max-w-md border-rose-500/30 bg-card shadow-2xl [&>button]:hidden"
         onInteractOutside={(e) => e.preventDefault()}

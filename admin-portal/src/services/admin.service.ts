@@ -27,7 +27,6 @@ export const adminService = {
           adminUserIds.has(uid) ||
           adminUserIds.has(p.user_id) ||
           p.role === "admin" ||
-          email.includes("admin") ||
           email === "mannamganeshbabu8@gmail.com";
 
         if (isAdmin && !seenIds.has(uid)) {

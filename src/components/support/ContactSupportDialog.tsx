@@ -35,6 +35,11 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
+    const handleClose = () => {
+        onOpenChange(false);
+        window.dispatchEvent(new CustomEvent("close-contact-support"));
+    };
+
     const onValidSubmit = async (data: ContactSupportFormValues) => {
         setIsSubmitting(true);
         try {
@@ -57,7 +62,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
             setTimeout(() => {
                 setIsSubmitted(false);
                 reset();
-                onOpenChange(false);
+                handleClose();
             }, 3000);
 
         } catch (error: any) {
@@ -71,14 +76,14 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
         <AnimatePresence>
             {open && (
                 <div className={cn(
-                    "fixed inset-0 z-[10005] flex justify-center pointer-events-none",
+                    "fixed inset-0 z-[10005] flex justify-center",
                     isMobile ? "items-end" : "items-center p-4 md:p-6"
                 )}>
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => onOpenChange(false)}
+                        onClick={handleClose}
                         className="absolute inset-0 bg-background/60 backdrop-blur-sm pointer-events-auto"
                     />
 
@@ -88,7 +93,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                         exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className={cn(
-                            "border pointer-events-auto overflow-hidden max-h-[85vh] overflow-y-auto",
+                            "border pointer-events-auto overflow-hidden max-h-[85vh] overflow-y-auto relative z-10",
                             "bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800",
                             "border-slate-200/50 dark:border-slate-700/50",
                             "shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.9),inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(0,0,0,0.05)]",
@@ -104,8 +109,9 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
 
                         {/* Close Button */}
                         <button
-                            onClick={() => onOpenChange(false)}
-                            className="absolute top-4 right-4 z-50 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-muted-foreground shadow-[2px_2px_4px_rgba(0,0,0,0.08),-2px_-2px_4px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[2px_2px_4px_rgba(0,0,0,0.3),-2px_-2px_4px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] active:scale-95"
+                            type="button"
+                            onClick={handleClose}
+                            className="absolute top-4 right-4 z-50 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-muted-foreground shadow-[2px_2px_4px_rgba(0,0,0,0.08),-2px_-2px_4px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[2px_2px_4px_rgba(0,0,0,0.3),-2px_-2px_4px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] active:scale-95 cursor-pointer"
                         >
                             <X className="size-5" />
                         </button>
@@ -252,7 +258,7 @@ export function ContactSupportDialog({ open, onOpenChange }: ContactSupportDialo
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                onClick={() => onOpenChange(false)}
+                                                onClick={handleClose}
                                                 disabled={isSubmitting}
                                                 className="text-muted-foreground hover:text-foreground rounded-xl shadow-[3px_3px_6px_rgba(0,0,0,0.08),-3px_-3px_6px_rgba(255,255,255,0.9),inset_1px_1px_2px_rgba(255,255,255,0.8)] dark:shadow-[3px_3px_6px_rgba(0,0,0,0.3),-3px_-3px_6px_rgba(255,255,255,0.05),inset_1px_1px_2px_rgba(255,255,255,0.1)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] active:scale-95"
                                             >

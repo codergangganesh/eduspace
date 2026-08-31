@@ -5,22 +5,19 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 export const SuspensionBanner: React.FC = () => {
-  const { profile, signOut, user } = useAuth();
+  const { profile, signOut, user, refreshProfile } = useAuth();
   const [isSuspended, setIsSuspended] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setIsSuspended(false);
+      return;
+    }
 
     // Direct Supabase Database Verification
     const verifySuspensionFromDatabase = async () => {
       try {
-        // 1. Check local Auth profile status
-        if (profile?.status === "suspended") {
-          setIsSuspended(true);
-          return;
-        }
-
-        // 2. Query Supabase profiles by user.id
+        // 1. Query Supabase profiles by user.id
         if (user.id) {
           const { data: p1 } = await (supabase as any)
             .from("profiles")
@@ -28,13 +25,17 @@ export const SuspensionBanner: React.FC = () => {
             .eq("user_id", user.id)
             .maybeSingle();
 
-          if (p1?.status === "suspended") {
-            setIsSuspended(true);
+          if (p1) {
+            const isProfileSuspended = p1.status === "suspended";
+            setIsSuspended(isProfileSuspended);
+            if (!isProfileSuspended && profile?.status === "suspended") {
+              void refreshProfile();
+            }
             return;
           }
         }
 
-        // 3. Query Supabase profiles by user.email
+        // 2. Query Supabase profiles by user.email
         if (user.email) {
           const cleanEmail = user.email.trim();
 
@@ -44,24 +45,18 @@ export const SuspensionBanner: React.FC = () => {
             .ilike("email", cleanEmail)
             .maybeSingle();
 
-          if (p2?.status === "suspended") {
-            setIsSuspended(true);
-            return;
-          }
-
-          // 6. Query Supabase notifications table
-          const { data: notif } = await (supabase as any)
-            .from("notifications")
-            .select("id, title")
-            .eq("recipient_id", user.id)
-            .eq("title", "ACCOUNT_SUSPENDED")
-            .maybeSingle();
-
-          if (notif) {
-            setIsSuspended(true);
+          if (p2) {
+            const isEmailProfileSuspended = p2.status === "suspended";
+            setIsSuspended(isEmailProfileSuspended);
+            if (!isEmailProfileSuspended && profile?.status === "suspended") {
+              void refreshProfile();
+            }
             return;
           }
         }
+
+        // 3. Fallback to local Auth profile
+        setIsSuspended(profile?.status === "suspended");
       } catch (e) {
         console.warn("[SuspensionBanner] Supabase query error:", e);
       }
@@ -84,24 +79,9 @@ export const SuspensionBanner: React.FC = () => {
         (payload: any) => {
           if (payload.new?.status === "suspended") {
             setIsSuspended(true);
-          } else if (payload.new?.status === "active") {
+          } else if (payload.new?.status === "active" || payload.new?.status === null) {
             setIsSuspended(false);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: user.id ? `recipient_id=eq.${user.id}` : undefined,
-        },
-        (payload: any) => {
-          if (payload.new?.title === "ACCOUNT_SUSPENDED") {
-            setIsSuspended(true);
-          } else if (payload.eventType === "DELETE" && payload.old?.title === "ACCOUNT_SUSPENDED") {
-            setIsSuspended(false);
+            void refreshProfile();
           }
         }
       )
@@ -110,7 +90,7 @@ export const SuspensionBanner: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, profile]);
+  }, [user, profile?.status]);
 
   if (!isSuspended) {
     return null;
