@@ -34,7 +34,16 @@ import {
   Plus,
   ShieldAlert,
   Smartphone,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import {
   Card,
   CardHeader,
@@ -1486,32 +1495,110 @@ export const AdminProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Sticky Mobile Bottom Navigation Bar (Equal Grid Spacing) ──────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2 py-2 grid grid-cols-8 gap-1 lg:hidden shadow-2xl safe-area-inset-bottom">
-        {profileTabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              title={tab.label}
-              aria-label={tab.label}
-              className={cn(
-                "flex items-center justify-center h-10 w-full rounded-xl transition-all relative cursor-pointer",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm scale-105"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              {isActive && (
-                <span className="absolute -bottom-1 h-1 w-1 bg-primary rounded-full" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {/* ── Sticky Mobile Bottom Navigation Bar (4 Primary + Dotted Separator + More Menu) ──────── */}
+      {(() => {
+        const primaryTabIds: ProfileTab[] = ["personal", "2fa", "passkeys", "pin_lock"];
+        const primaryTabs = profileTabs.filter((t) => primaryTabIds.includes(t.id));
+        const moreTabs = profileTabs.filter((t) => !primaryTabIds.includes(t.id));
+        const isMoreActive = moreTabs.some((t) => t.id === activeTab);
+        const activeMoreTab = moreTabs.find((t) => t.id === activeTab);
+
+        return (
+          <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2.5 py-1.5 flex items-center justify-between gap-1 lg:hidden shadow-2xl safe-area-inset-bottom">
+            {/* Primary Visible Tabs */}
+            {primaryTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  title={tab.label}
+                  aria-label={tab.label}
+                  className={cn(
+                    "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm scale-105"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
+                    {tab.shortLabel}
+                  </span>
+                  {isActive && (
+                    <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Dotted Vertical Divider */}
+            <div className="h-6 border-r-2 border-dotted border-border/80 mx-0.5 shrink-0" />
+
+            {/* More Options Dropdown Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  title="More options"
+                  aria-label="More options"
+                  className={cn(
+                    "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
+                    isMoreActive
+                      ? "bg-primary text-primary-foreground shadow-sm scale-105"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  {isMoreActive && activeMoreTab ? (
+                    <activeMoreTab.icon className="h-5 w-5 shrink-0 animate-in fade-in duration-200" />
+                  ) : (
+                    <MoreHorizontal className="h-5 w-5 shrink-0" />
+                  )}
+                  <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
+                    {isMoreActive && activeMoreTab ? activeMoreTab.shortLabel : "More"}
+                  </span>
+                  {isMoreActive && (
+                    <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="end"
+                side="top"
+                sideOffset={10}
+                className="w-56 p-1.5 rounded-2xl bg-card/95 backdrop-blur-xl border border-border shadow-2xl z-50 mb-1"
+              >
+                <DropdownMenuLabel className="text-[11px] font-semibold px-2 py-1 text-muted-foreground uppercase tracking-wider">
+                  More Profile Tabs
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="my-1 bg-border/60" />
+
+                {moreTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isSelected = activeTab === tab.id;
+                  return (
+                    <DropdownMenuItem
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors",
+                        isSelected
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "text-foreground hover:bg-muted/70"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 truncate">{tab.label}</span>
+                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      })()}
     </div>
   );
 };
