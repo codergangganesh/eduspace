@@ -104,6 +104,7 @@ import {
 import { MfaSecurityCard } from "@/components/auth/MfaSecurityCard";
 import { AndroidIcon } from "@/components/auth/MfaEnrollDrawer";
 import { PinSecurityCard } from "@/components/auth/PinSecurityCard";
+import { ActiveDevicesCard } from "@/components/auth/ActiveDevicesCard";
 
 const LeetCodeIcon = ({ className = "size-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -278,6 +279,7 @@ export default function Profile() {
     { id: "coding", label: t("profile.codingProfiles", "Coding Profiles"), icon: Code2 },
     { id: "social", label: t("profile.socialLinks", "Social Links"), icon: Share2 },
     { id: "screen-lock", label: t("profile.screenLock", "PIN & Screen Lock"), icon: KeyRound },
+    { id: "sessions", label: t("profile.activeSessions", "Active Sessions & Devices"), icon: Laptop },
     { id: "security", label: t("profile.security", "Security"), icon: Shield },
     { id: "notifications", label: t("common.notifications", "Notifications"), icon: Bell },
     { id: "preferences", label: t("common.settings", "Settings"), icon: Settings },
@@ -287,6 +289,7 @@ export default function Profile() {
     { id: "personal", label: t("profile.personalInfo", "Personal Info"), icon: User },
     { id: "academic", label: t("profile.academicDetails", "Academic Details"), icon: GraduationCap },
     { id: "screen-lock", label: t("profile.screenLock", "PIN & Screen Lock"), icon: KeyRound },
+    { id: "sessions", label: t("profile.activeSessions", "Active Sessions & Devices"), icon: Laptop },
     { id: "security", label: t("profile.security", "Security"), icon: Shield },
     { id: "2fa", label: t("profile.twoFactorAuth", "Two-Factor Auth (2FA)"), icon: AndroidIcon },
     { id: "passkeys", label: t("profile.passkeys", "Passkeys & Biometrics"), icon: Fingerprint },
@@ -1697,6 +1700,13 @@ export default function Profile() {
             </div>
           )}
 
+          {/* DEDICATED TAB: Active Sessions & Devices */}
+          {activeTab === "sessions" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <ActiveDevicesCard />
+            </div>
+          )}
+
           {/* LECTURER TAB: 2FA (Two-Factor Authentication) */}
           {isLecturer && activeTab === "2fa" && (
             <div className="space-y-6 animate-in fade-in duration-200">
@@ -1938,11 +1948,14 @@ export default function Profile() {
             </div>
           )}
 
-          {/* SECURITY SECTION (Screen Lock + 2FA + Passkeys + Password) */}
+          {/* SECURITY SECTION (Screen Lock + 2FA + Passkeys + Password + Active Devices) */}
           {activeTab === "security" && (
             <div className="space-y-6">
               {/* Card 0: 4-Digit In-App PIN & Biometric Screen Lock */}
               <PinSecurityCard />
+
+              {/* Card 0.5: Active Sessions & Device Manager */}
+              <ActiveDevicesCard />
 
               {/* Card 1: Two-Factor Authentication (TOTP / Google Authenticator) */}
               <MfaSecurityCard />
