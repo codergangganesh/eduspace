@@ -1571,29 +1571,28 @@ export const AdminProfile: React.FC = () => {
               </button>
             </div>
 
-            {/* Bottom Drawer Sheet */}
+            {/* Compact Bottom Drawer Sheet */}
             <Sheet open={isMoreDrawerOpen} onOpenChange={setIsMoreDrawerOpen}>
               <SheetContent
                 side="bottom"
-                className="rounded-t-[28px] max-h-[85vh] overflow-y-auto px-5 pt-3 pb-8 bg-card/95 backdrop-blur-2xl border-t border-border shadow-2xl safe-area-inset-bottom"
+                className="rounded-t-2xl p-4 pb-6 bg-card/98 backdrop-blur-xl border-t border-border shadow-2xl safe-area-inset-bottom"
               >
-                {/* Pull Handle Indicator */}
-                <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+                {/* Small Pull Handle */}
+                <div className="w-8 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-2" />
 
-                <SheetHeader className="text-left pb-4 border-b border-border/50">
-                  <SheetTitle className="text-base font-bold text-foreground">
-                    Additional Profile Settings
+                <SheetHeader className="text-left pb-1">
+                  <SheetTitle className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    More Options
                   </SheetTitle>
-                  <SheetDescription className="text-xs text-muted-foreground">
-                    Select a section to configure security, preferences, or view logs.
+                  <SheetDescription className="sr-only">
+                    Select a section
                   </SheetDescription>
                 </SheetHeader>
 
-                <div className="grid grid-cols-1 gap-2.5 pt-4">
+                <div className="space-y-1 pt-1">
                   {moreTabs.map((tab) => {
                     const Icon = tab.icon;
                     const isSelected = activeTab === tab.id;
-                    const description = moreTabDescriptions[tab.id] || tab.label;
 
                     return (
                       <button
@@ -1603,52 +1602,18 @@ export const AdminProfile: React.FC = () => {
                           setIsMoreDrawerOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left group cursor-pointer",
+                          "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer",
                           isSelected
-                            ? "bg-primary/10 border-primary/40 shadow-sm"
-                            : "bg-muted/30 border-border/70 hover:bg-muted/60"
+                            ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                            : "text-foreground hover:bg-muted/60 active:bg-muted"
                         )}
                       >
-                        <div className="flex items-center gap-3.5 min-w-0">
-                          <div
-                            className={cn(
-                              "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
-                              isSelected
-                                ? "bg-primary text-primary-foreground shadow-sm"
-                                : "bg-muted text-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                            )}
-                          >
-                            <Icon className="h-5 w-5" />
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4
-                                className={cn(
-                                  "text-sm font-semibold truncate",
-                                  isSelected ? "text-primary" : "text-foreground"
-                                )}
-                              >
-                                {tab.label}
-                              </h4>
-                              {isSelected && (
-                                <Badge className="text-[10px] py-0 px-1.5 bg-primary text-primary-foreground font-mono">
-                                  Active
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {description}
-                            </p>
-                          </div>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Icon className={cn("h-4 w-4 shrink-0", isSelected ? "text-primary-foreground" : "text-muted-foreground")} />
+                          <span className="text-xs truncate">{tab.label}</span>
                         </div>
 
-                        <ChevronRight
-                          className={cn(
-                            "h-4 w-4 shrink-0 transition-transform",
-                            isSelected ? "text-primary" : "text-muted-foreground group-hover:translate-x-0.5"
-                          )}
-                        />
+                        {isSelected && <Check className="h-4 w-4 shrink-0 text-primary-foreground" />}
                       </button>
                     );
                   })}
