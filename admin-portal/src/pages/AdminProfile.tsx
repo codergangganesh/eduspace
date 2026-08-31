@@ -1545,11 +1545,11 @@ export const AdminProfile: React.FC = () => {
               {/* Dotted Vertical Divider */}
               <div className="h-6 border-r-2 border-dotted border-border/80 mx-0.5 shrink-0" />
 
-              {/* More Drawer Trigger Button */}
+              {/* More Drawer Trigger Button (Always keeps 3-dots icon & 'More' label) */}
               <button
                 onClick={() => setIsMoreDrawerOpen(true)}
-                title="More settings"
-                aria-label="More settings"
+                title="More options"
+                aria-label="More options"
                 className={cn(
                   "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
                   isMoreActive
@@ -1557,13 +1557,9 @@ export const AdminProfile: React.FC = () => {
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                {isMoreActive && activeMoreTab ? (
-                  <activeMoreTab.icon className="h-5 w-5 shrink-0 animate-in fade-in duration-200" />
-                ) : (
-                  <MoreHorizontal className="h-5 w-5 shrink-0" />
-                )}
+                <MoreHorizontal className="h-5 w-5 shrink-0" />
                 <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
-                  {isMoreActive && activeMoreTab ? activeMoreTab.shortLabel : "More"}
+                  More
                 </span>
                 {isMoreActive && (
                   <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
