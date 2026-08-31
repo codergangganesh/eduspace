@@ -161,7 +161,7 @@ export function PWAInstallPrompt() {
                         <div className="flex-1 min-w-0 pt-0.5">
                             <div className="flex items-center gap-1.5">
                                 <h3 className="font-bold text-[15px] text-slate-900 dark:text-white leading-none">Install EduSpace</h3>
-                                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+
                             </div>
                             <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight font-medium">
                                 {isIOS
