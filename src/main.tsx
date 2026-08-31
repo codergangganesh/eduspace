@@ -4,13 +4,18 @@ import "./index.css";
 import { HelmetProvider } from 'react-helmet-async';
 import { initializeCapacitor } from "./lib/capacitor";
 import { preloadImage, readCachedProfileIdentity, warmShellImages } from "./lib/imagePerformance";
+import { initSentry } from "./lib/sentry";
+import { GlobalErrorBoundary } from "./components/common/GlobalErrorBoundary";
+
+// Initialize Sentry error and performance tracking
+initSentry();
 
 const silenceConsoleOutput = () => {
     const noop = () => undefined;
-    const methods: Array<keyof Console> = ["log", "debug", "info", "warn", "error", "trace"];
+    const methods = ["log", "debug", "info", "warn", "error", "trace"] as const;
 
     methods.forEach((method) => {
-        console[method] = noop as Console[typeof method];
+        (console as unknown as Record<string, unknown>)[method] = noop;
     });
 };
 
@@ -79,6 +84,8 @@ window.addEventListener("error", (_event) => {});
 
 createRoot(document.getElementById("root")!).render(
     <HelmetProvider>
-        <App />
+        <GlobalErrorBoundary>
+            <App />
+        </GlobalErrorBoundary>
     </HelmetProvider>
 );

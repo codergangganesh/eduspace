@@ -27,6 +27,7 @@ import { supabase } from "@/lib/supabase";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { Badge } from "@/components/ui/badge";
 import { LEGAL_VERSIONS } from "@/services/legal.service";
+import { ActiveDevicesCard } from "@/components/auth/ActiveDevicesCard";
 
 export const Settings: React.FC = () => {
   const { isMaintenanceMode, setMaintenanceMode } = useMaintenanceMode();
@@ -203,6 +204,9 @@ export const Settings: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Active Admin Sessions & Device Manager */}
+          <ActiveDevicesCard />
         </div>
 
         {/* Right Column: Platform Configuration Info */}

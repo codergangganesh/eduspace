@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, useRef, useCallback, Re
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "@/types";
+import { registerCurrentAdminSession } from "@/services/sessionManager.service";
 
 interface AdminAuthContextType {
   user: User | null;
@@ -206,6 +207,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
       subscription.unsubscribe();
     };
   }, [checkAdminRole, fetchProfile, makeSyntheticProfile]);
+
+  // Automatically register this device session in Supabase when logged in
+  useEffect(() => {
+    if (user?.id) {
+      void registerCurrentAdminSession(user.id);
+    }
+  }, [user?.id]);
 
   const signIn = async (email: string, password: string, captchaToken?: string) => {
     try {

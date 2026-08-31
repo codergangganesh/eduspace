@@ -86,6 +86,7 @@ import {
 import { AdminPinSecurityCard } from "@/components/auth/AdminPinSecurityCard";
 import { AdminMfaSecurityCard } from "@/components/auth/AdminMfaSecurityCard";
 import { AndroidIcon } from "@/components/auth/AdminMfaEnrollModal";
+import { ActiveDevicesCard } from "@/components/auth/ActiveDevicesCard";
 
 type ProfileTab =
   | "personal"
@@ -94,6 +95,7 @@ type ProfileTab =
   | "passkeys"
   | "pin_lock"
   | "password"
+  | "sessions"
   | "activity";
 
 const profileTabs = [
@@ -103,6 +105,7 @@ const profileTabs = [
   { id: "passkeys" as ProfileTab, label: "Passkeys & Biometrics", shortLabel: "Passkeys", icon: Fingerprint },
   { id: "pin_lock" as ProfileTab, label: "Profile PIN Lock", shortLabel: "PIN Lock", icon: ShieldCheck },
   { id: "password" as ProfileTab, label: "Account Password", shortLabel: "Password", icon: Lock },
+  { id: "sessions" as ProfileTab, label: "Active Sessions & Devices", shortLabel: "Devices", icon: Laptop },
   { id: "activity" as ProfileTab, label: "Activity Log", shortLabel: "Activity", icon: Activity },
 ];
 
@@ -1408,6 +1411,13 @@ export const AdminProfile: React.FC = () => {
                 </AlertDialogContent>
               </AlertDialog>
 
+          {/* TAB 6.5: Active Sessions & Devices */}
+          {activeTab === "sessions" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <ActiveDevicesCard />
+            </div>
+          )}
+
           {/* TAB 7: Admin Activity Log */}
           {activeTab === "activity" && (
             <Card className="border-border shadow-sm bg-card animate-in fade-in duration-200">
@@ -1477,7 +1487,7 @@ export const AdminProfile: React.FC = () => {
       </div>
 
       {/* ── Sticky Mobile Bottom Navigation Bar (Equal Grid Spacing) ──────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2 py-2 grid grid-cols-7 gap-1 lg:hidden shadow-2xl safe-area-inset-bottom">
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2 py-2 grid grid-cols-8 gap-1 lg:hidden shadow-2xl safe-area-inset-bottom">
         {profileTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

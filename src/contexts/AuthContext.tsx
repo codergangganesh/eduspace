@@ -8,6 +8,8 @@ import {
   writeCachedProfileIdentity,
 } from "@/lib/imagePerformance";
 import { readStoredJson } from "@/lib/storage";
+import { setSentryUser, clearSentryUser } from "@/lib/sentry";
+import { registerCurrentDeviceSession } from "@/services/sessionManager.service";
 
 export type AppRole = "student" | "lecturer" | "admin";
 type SelectableRole = Exclude<AppRole, "admin">;
@@ -377,6 +379,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Synchronize authenticated user and role tags with Sentry
+  useEffect(() => {
+    if (user) {
+      setSentryUser({
+        id: user.id,
+        email: user.email,
+        role: role || undefined,
+      });
+      // Register device session in background
+      void registerCurrentDeviceSession(user.id);
+    } else {
+      clearSentryUser();
+    }
+  }, [user, role]);
 
   const signIn = async (email: string, password: string, captchaToken?: string) => {
     try {

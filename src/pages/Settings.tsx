@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import SEO from "@/components/SEO";
 import { PinSecurityCard } from "@/components/auth/PinSecurityCard";
+import { ActiveDevicesCard } from "@/components/auth/ActiveDevicesCard";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -204,8 +205,9 @@ export default function Settings() {
               </p>
             </div>
 
-            <div className="md:col-span-2 space-y-4">
+            <div className="md:col-span-2 space-y-6">
               <PinSecurityCard />
+              <ActiveDevicesCard />
             </div>
           </section>
 
