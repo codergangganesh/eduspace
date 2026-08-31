@@ -167,15 +167,15 @@ function getDeviceSignature(): string {
 }
 
 /**
- * Computes a high-security PBKDF2 key derivation (100,000 iterations) with Device & User Hardware Salt Binding.
- * Highly resistant to offline GPU brute-forcing and prevents cross-device localStorage theft.
+ * Computes a high-security PBKDF2 key derivation (100,000 iterations) with Account-Bound Cryptographic Salt.
+ * Ensures consistent, deterministic PIN verification across all user devices (Laptop, Tablet, Mobile Phone)
+ * while maintaining maximum protection against GPU brute-forcing.
  */
 async function computePbkdf2Hash(
   pin: string,
   salt: string,
   userId?: string,
-  iterations = PBKDF2_ITERATIONS,
-  bindToDevice = true
+  iterations = PBKDF2_ITERATIONS
 ): Promise<string> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -186,7 +186,42 @@ async function computePbkdf2Hash(
     ["deriveBits"]
   );
 
-  const deviceSig = bindToDevice ? getDeviceSignature() : "unbound";
+  const boundSalt = `salt_${salt}:user_${userId || "generic"}:eduspace_security_v4`;
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: enc.encode(boundSalt),
+      iterations,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  const hashArray = Array.from(new Uint8Array(derivedBits));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Legacy v3 Device-Bound PBKDF2 hash (used for backward-compatible verification and seamless upgrade).
+ */
+async function computePbkdf2V3DeviceBound(
+  pin: string,
+  salt: string,
+  userId?: string,
+  iterations = PBKDF2_ITERATIONS
+): Promise<string> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(pin),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+
+  const deviceSig = getDeviceSignature();
   const boundSalt = `salt_${salt}:user_${userId || "generic"}:dev_${deviceSig}:eduspace_security_v3`;
 
   const derivedBits = await crypto.subtle.deriveBits(
@@ -464,7 +499,7 @@ export const pinLockService = {
     try {
       const currentSettings = this.getSettings(userId);
       const salt = generateSalt();
-      const hash = await computePbkdf2Hash(pin, salt, userId, PBKDF2_ITERATIONS, true);
+      const hash = await computePbkdf2Hash(pin, salt, userId, PBKDF2_ITERATIONS);
 
       const config: StoredPinConfig = {
         ...currentSettings,
@@ -666,18 +701,18 @@ export const pinLockService = {
 
       let isMatch = false;
 
-      // 1. Verify with Device-Bound PBKDF2 (modern standard)
-      const deviceBoundHash = await computePbkdf2Hash(enteredPin, config.salt, userId, config.iterations || PBKDF2_ITERATIONS, true);
-      if (deviceBoundHash === config.hash) {
+      // 1. Verify with modern Account-Bound PBKDF2 (Cross-Device Standard v4)
+      const modernHash = await computePbkdf2Hash(enteredPin, config.salt, userId, config.iterations || PBKDF2_ITERATIONS);
+      if (modernHash === config.hash) {
         isMatch = true;
       } else {
-        // 2. Check unbound v2 PBKDF2
-        const unboundHash = await computePbkdf2V2Unbound(enteredPin, config.salt, config.iterations || PBKDF2_ITERATIONS);
-        if (unboundHash === config.hash) {
+        // 2. Check legacy v3 Device-Bound PBKDF2 (if set up on this device prior to v4 upgrade)
+        const legacyV3Hash = await computePbkdf2V3DeviceBound(enteredPin, config.salt, userId, config.iterations || PBKDF2_ITERATIONS);
+        if (legacyV3Hash === config.hash) {
           isMatch = true;
-          // Auto-upgrade to device-bound hash
+          // Auto-upgrade to cross-device v4 hash
           try {
-            const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS, true);
+            const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS);
             const upgradedConfig: StoredPinConfig = {
               ...config,
               hash: upgradedHash,
@@ -686,14 +721,18 @@ export const pinLockService = {
               updatedAt: new Date().toISOString(),
             };
             localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(upgradedConfig));
+            if (upgradedConfig.syncToCloud !== false) {
+              this.syncConfigToCloud(userId, upgradedConfig);
+            }
           } catch {}
         } else {
-          // 3. Check legacy SHA-256
-          const legacyHash = await computeLegacySha256(enteredPin, config.salt);
-          if (legacyHash === config.hash) {
+          // 3. Check legacy v2 unbound PBKDF2
+          const unboundHash = await computePbkdf2V2Unbound(enteredPin, config.salt, config.iterations || PBKDF2_ITERATIONS);
+          if (unboundHash === config.hash) {
             isMatch = true;
+            // Auto-upgrade to cross-device v4 hash
             try {
-              const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS, true);
+              const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS);
               const upgradedConfig: StoredPinConfig = {
                 ...config,
                 hash: upgradedHash,
@@ -706,6 +745,26 @@ export const pinLockService = {
                 this.syncConfigToCloud(userId, upgradedConfig);
               }
             } catch {}
+          } else {
+            // 4. Check legacy SHA-256
+            const legacyHash = await computeLegacySha256(enteredPin, config.salt);
+            if (legacyHash === config.hash) {
+              isMatch = true;
+              try {
+                const upgradedHash = await computePbkdf2Hash(enteredPin, config.salt, userId, PBKDF2_ITERATIONS);
+                const upgradedConfig: StoredPinConfig = {
+                  ...config,
+                  hash: upgradedHash,
+                  algo: "PBKDF2-100K",
+                  iterations: PBKDF2_ITERATIONS,
+                  updatedAt: new Date().toISOString(),
+                };
+                localStorage.setItem(`${STORAGE_PREFIX}_config_${userId}`, JSON.stringify(upgradedConfig));
+                if (upgradedConfig.syncToCloud !== false) {
+                  this.syncConfigToCloud(userId, upgradedConfig);
+                }
+              } catch {}
+            }
           }
         }
       }

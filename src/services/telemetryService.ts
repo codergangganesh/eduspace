@@ -139,20 +139,20 @@ export class TelemetryService {
                     });
                 }
 
-                // 5. Fetch real quiz attempts for live activity
+                // 5. Fetch real quiz submissions for live activity
                 const { data: attemptData } = await (supabase as any)
-                    .from("quiz_attempts")
-                    .select("id, score, created_at")
-                    .order("created_at", { ascending: false })
+                    .from("quiz_submissions")
+                    .select("id, total_obtained, submitted_at")
+                    .order("submitted_at", { ascending: false })
                     .limit(5);
 
                 if (attemptData && attemptData.length > 0) {
                     attemptData.forEach((attempt: any, idx: number) => {
                         recentEvents.push({
                             id: `attempt-${attempt.id || idx}`,
-                            text: `Quiz completed with score ${attempt.score ?? 0}`,
+                            text: `Quiz completed with score ${attempt.total_obtained ?? 0}`,
                             type: "quiz",
-                            timestamp: new Date(attempt.created_at || Date.now()),
+                            timestamp: new Date(attempt.submitted_at || Date.now()),
                             locationName: "Database Hub"
                         });
                     });
@@ -206,11 +206,11 @@ export class TelemetryService {
             .channel("global-telemetry-realtime")
             .on(
                 "postgres_changes",
-                { event: "INSERT", schema: "public", table: "quiz_attempts" },
+                { event: "INSERT", schema: "public", table: "quiz_submissions" },
                 (payload: any) => {
                     onEvent({
                         id: payload.new?.id || String(Date.now()),
-                        text: `Realtime: Quiz submitted (Score: ${payload.new?.score ?? 0})`,
+                        text: `Realtime: Quiz submitted (Score: ${payload.new?.total_obtained ?? 0})`,
                         type: "quiz",
                         timestamp: new Date(),
                         locationName: "Database Hub"
