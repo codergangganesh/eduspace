@@ -154,7 +154,7 @@ export async function getActiveAdminSessions(userId: string): Promise<DeviceSess
       .order("last_active_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
-      return data.map((d: any) => ({
+      const mapped = data.map((d: any) => ({
         id: d.device_id,
         userId: d.user_id,
         deviceName: d.device_name || "Admin Device",
@@ -166,6 +166,12 @@ export async function getActiveAdminSessions(userId: string): Promise<DeviceSess
         createdAt: d.created_at || d.last_active_at,
         isCurrent: d.device_id === currentDeviceId,
       }));
+
+      const hasCurrent = mapped.some((s: any) => s.isCurrent);
+      if (!hasCurrent) {
+        mapped.unshift(currentSession);
+      }
+      return mapped;
     }
   } catch (_e) {}
 

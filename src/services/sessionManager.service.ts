@@ -190,7 +190,7 @@ export async function getActiveDeviceSessions(userId: string): Promise<DeviceSes
       .order("last_active_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
-      return data.map((d: any) => ({
+      const mapped = data.map((d: any) => ({
         id: d.device_id,
         userId: d.user_id,
         deviceName: d.device_name || "Unknown Device",
@@ -203,6 +203,13 @@ export async function getActiveDeviceSessions(userId: string): Promise<DeviceSes
         createdAt: d.created_at || d.last_active_at,
         isCurrent: d.device_id === currentDeviceId,
       }));
+
+      // Ensure current device is present in list
+      const hasCurrent = mapped.some((s: any) => s.isCurrent);
+      if (!hasCurrent) {
+        mapped.unshift(currentSession);
+      }
+      return mapped;
     }
   } catch (_e) {
     // Fallback to local store

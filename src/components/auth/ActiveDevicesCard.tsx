@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DeviceSession,
   getActiveDeviceSessions,
@@ -48,9 +49,31 @@ export function ActiveDevicesCard() {
   const [isConfirmAllOpen, setIsConfirmAllOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
-      void initAndLoad(user.id);
-    }
+    if (!user?.id) return;
+
+    void initAndLoad(user.id);
+
+    // Live real-time device sync channel
+    const channel = supabase
+      .channel(`user_active_devices_sync_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_active_devices",
+          filter: `user_id=eq.${user.id}`,
+        },
+        async () => {
+          const list = await getActiveDeviceSessions(user.id);
+          setSessions(list);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   const initAndLoad = async (userId: string) => {

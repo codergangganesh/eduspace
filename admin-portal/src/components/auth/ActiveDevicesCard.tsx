@@ -48,25 +48,51 @@ export const ActiveDevicesCard: React.FC = () => {
   const [isConfirmAllOpen, setIsConfirmAllOpen] = useState(false);
 
   useEffect(() => {
-    void loadUserAndSessions();
-  }, []);
+    let channel: any = null;
 
-  const loadUserAndSessions = async () => {
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        setUserId(user.id);
-        await registerCurrentAdminSession(user.id);
-        const list = await getActiveAdminSessions(user.id);
-        setSessions(list);
+    const init = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          setUserId(user.id);
+          await registerCurrentAdminSession(user.id);
+          const list = await getActiveAdminSessions(user.id);
+          setSessions(list);
+
+          // Subscribe to live device changes
+          channel = supabase
+            .channel(`admin_active_devices_sync_${user.id}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "user_active_devices",
+                filter: `user_id=eq.${user.id}`,
+              },
+              async () => {
+                const updated = await getActiveAdminSessions(user.id);
+                setSessions(updated);
+              }
+            )
+            .subscribe();
+        }
+      } catch (err) {
+        console.error("Failed to load admin device sessions:", err);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to load admin device sessions:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    void init();
+
+    return () => {
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
+    };
+  }, []);
 
   const handleRefresh = async () => {
     if (!userId) return;
