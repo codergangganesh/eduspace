@@ -35,15 +35,15 @@ import {
   ShieldAlert,
   Smartphone,
   MoreHorizontal,
+  ChevronRight,
 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   Card,
   CardHeader,
@@ -123,6 +123,7 @@ export const AdminProfile: React.FC = () => {
   const { theme, setTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("personal");
+  const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -1495,7 +1496,7 @@ export const AdminProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Sticky Mobile Bottom Navigation Bar (4 Primary + Dotted Separator + More Menu) ──────── */}
+      {/* ── Sticky Mobile Bottom Navigation Bar (4 Primary + Dotted Separator + More Drawer) ──────── */}
       {(() => {
         const primaryTabIds: ProfileTab[] = ["personal", "2fa", "passkeys", "pin_lock"];
         const primaryTabs = profileTabs.filter((t) => primaryTabIds.includes(t.id));
@@ -1503,100 +1504,158 @@ export const AdminProfile: React.FC = () => {
         const isMoreActive = moreTabs.some((t) => t.id === activeTab);
         const activeMoreTab = moreTabs.find((t) => t.id === activeTab);
 
+        const moreTabDescriptions: Record<string, string> = {
+          sessions: "Manage logged-in devices & remote kill sessions",
+          password: "Update account login password credentials",
+          preferences: "Toggle Dark, Light, or System theme mode",
+          activity: "Audit logs & administrative telemetry",
+        };
+
         return (
-          <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2.5 py-1.5 flex items-center justify-between gap-1 lg:hidden shadow-2xl safe-area-inset-bottom">
-            {/* Primary Visible Tabs */}
-            {primaryTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  title={tab.label}
-                  aria-label={tab.label}
-                  className={cn(
-                    "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm scale-105"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
-                    {tab.shortLabel}
-                  </span>
-                  {isActive && (
-                    <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
-                  )}
-                </button>
-              );
-            })}
+          <>
+            <div className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 px-2.5 py-1.5 flex items-center justify-between gap-1 lg:hidden shadow-2xl safe-area-inset-bottom">
+              {/* Primary Visible Tabs */}
+              {primaryTabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    title={tab.label}
+                    aria-label={tab.label}
+                    className={cn(
+                      "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm scale-105"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
+                      {tab.shortLabel}
+                    </span>
+                    {isActive && (
+                      <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
 
-            {/* Dotted Vertical Divider */}
-            <div className="h-6 border-r-2 border-dotted border-border/80 mx-0.5 shrink-0" />
+              {/* Dotted Vertical Divider */}
+              <div className="h-6 border-r-2 border-dotted border-border/80 mx-0.5 shrink-0" />
 
-            {/* More Options Dropdown Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  title="More options"
-                  aria-label="More options"
-                  className={cn(
-                    "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
-                    isMoreActive
-                      ? "bg-primary text-primary-foreground shadow-sm scale-105"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  {isMoreActive && activeMoreTab ? (
-                    <activeMoreTab.icon className="h-5 w-5 shrink-0 animate-in fade-in duration-200" />
-                  ) : (
-                    <MoreHorizontal className="h-5 w-5 shrink-0" />
-                  )}
-                  <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
-                    {isMoreActive && activeMoreTab ? activeMoreTab.shortLabel : "More"}
-                  </span>
-                  {isMoreActive && (
-                    <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent
-                align="end"
-                side="top"
-                sideOffset={10}
-                className="w-56 p-1.5 rounded-2xl bg-card/95 backdrop-blur-xl border border-border shadow-2xl z-50 mb-1"
+              {/* More Drawer Trigger Button */}
+              <button
+                onClick={() => setIsMoreDrawerOpen(true)}
+                title="More settings"
+                aria-label="More settings"
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center h-11 rounded-xl transition-all relative cursor-pointer",
+                  isMoreActive
+                    ? "bg-primary text-primary-foreground shadow-sm scale-105"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
               >
-                <DropdownMenuLabel className="text-[11px] font-semibold px-2 py-1 text-muted-foreground uppercase tracking-wider">
-                  More Profile Tabs
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="my-1 bg-border/60" />
+                {isMoreActive && activeMoreTab ? (
+                  <activeMoreTab.icon className="h-5 w-5 shrink-0 animate-in fade-in duration-200" />
+                ) : (
+                  <MoreHorizontal className="h-5 w-5 shrink-0" />
+                )}
+                <span className="text-[9px] font-medium tracking-tight mt-0.5 truncate max-w-[50px]">
+                  {isMoreActive && activeMoreTab ? activeMoreTab.shortLabel : "More"}
+                </span>
+                {isMoreActive && (
+                  <span className="absolute -bottom-0.5 h-1 w-2.5 bg-primary-foreground/90 rounded-full" />
+                )}
+              </button>
+            </div>
 
-                {moreTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isSelected = activeTab === tab.id;
-                  return (
-                    <DropdownMenuItem
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors",
-                        isSelected
-                          ? "bg-primary text-primary-foreground font-semibold"
-                          : "text-foreground hover:bg-muted/70"
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 truncate">{tab.label}</span>
-                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            {/* Bottom Drawer Sheet */}
+            <Sheet open={isMoreDrawerOpen} onOpenChange={setIsMoreDrawerOpen}>
+              <SheetContent
+                side="bottom"
+                className="rounded-t-[28px] max-h-[85vh] overflow-y-auto px-5 pt-3 pb-8 bg-card/95 backdrop-blur-2xl border-t border-border shadow-2xl safe-area-inset-bottom"
+              >
+                {/* Pull Handle Indicator */}
+                <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+
+                <SheetHeader className="text-left pb-4 border-b border-border/50">
+                  <SheetTitle className="text-base font-bold text-foreground">
+                    Additional Profile Settings
+                  </SheetTitle>
+                  <SheetDescription className="text-xs text-muted-foreground">
+                    Select a section to configure security, preferences, or view logs.
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="grid grid-cols-1 gap-2.5 pt-4">
+                  {moreTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    const isSelected = activeTab === tab.id;
+                    const description = moreTabDescriptions[tab.id] || tab.label;
+
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setIsMoreDrawerOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left group cursor-pointer",
+                          isSelected
+                            ? "bg-primary/10 border-primary/40 shadow-sm"
+                            : "bg-muted/30 border-border/70 hover:bg-muted/60"
+                        )}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div
+                            className={cn(
+                              "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                              isSelected
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "bg-muted text-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4
+                                className={cn(
+                                  "text-sm font-semibold truncate",
+                                  isSelected ? "text-primary" : "text-foreground"
+                                )}
+                              >
+                                {tab.label}
+                              </h4>
+                              {isSelected && (
+                                <Badge className="text-[10px] py-0 px-1.5 bg-primary text-primary-foreground font-mono">
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-transform",
+                            isSelected ? "text-primary" : "text-muted-foreground group-hover:translate-x-0.5"
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </>
         );
       })()}
     </div>
