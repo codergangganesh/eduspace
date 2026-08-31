@@ -44,7 +44,7 @@ export const mfaService = {
   },
 
   /**
-   * List all registered MFA factors for the currently authenticated admin.
+   * List all registered and verified MFA factors for the currently authenticated admin.
    */
   async listFactors(): Promise<{
     totpFactors: MfaFactor[];
@@ -66,12 +66,28 @@ export const mfaService = {
         updated_at: f.updated_at || new Date().toISOString(),
       }));
 
-      const totp = all.filter((f) => f.factor_type === "totp");
+      // Strictly return VERIFIED TOTP factors so uncompleted enrollments don't show as active
+      const verifiedTotp = all.filter((f) => f.factor_type === "totp" && f.status === "verified");
 
-      return { totpFactors: totp, allFactors: all, error: null };
+      return { totpFactors: verifiedTotp, allFactors: all, error: null };
     } catch (err: any) {
       return { totpFactors: [], allFactors: [], error: err.message || "Failed to list MFA factors" };
     }
+  },
+
+  /**
+   * Cleans up any unverified / abandoned factor enrollments.
+   */
+  async cleanUnverifiedFactors(): Promise<void> {
+    try {
+      const { data } = await supabase.auth.mfa.listFactors();
+      if (data?.all) {
+        const unverified = data.all.filter((f: any) => f.status === "unverified");
+        for (const item of unverified) {
+          await supabase.auth.mfa.unenroll({ factorId: item.id });
+        }
+      }
+    } catch {}
   },
 
   /**

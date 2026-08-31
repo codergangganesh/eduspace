@@ -65,8 +65,11 @@ export default function StudentRegister() {
 
         if (result.success) {
             setHasNavigated(true);
+            try {
+                sessionStorage.setItem("eduspace_new_registration", "true");
+            } catch {}
             toast.success("Account created successfully! Please sign in to continue.");
-            navigate("/student/login", { state: { registered: true } });
+            navigate("/student/login", { state: { registered: true, isNewUser: true } });
         } else {
             toast.error(result.error || "Registration failed");
         }

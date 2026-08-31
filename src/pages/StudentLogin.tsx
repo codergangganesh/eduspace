@@ -12,6 +12,7 @@ import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
 import { isPasskeySupported } from "@/services/passkey.service";
 import { mfaService } from "@/services/mfa.service";
 import { MfaChallengeView } from "@/components/auth/MfaChallengeView";
+import { TotpOnboardingModal } from "@/components/auth/TotpOnboardingModal";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function StudentLogin() {
@@ -26,8 +27,9 @@ export default function StudentLogin() {
     const [captchaToken, setCaptchaToken] = useState<string>();
     const isCaptchaVerified = Boolean(captchaToken);
 
-    // 2FA Challenge State
+    // 2FA Challenge & Onboarding State
     const [mfaChallenge, setMfaChallenge] = useState<{ factorId: string; factorName: string } | null>(null);
+    const [showTotpOnboarding, setShowTotpOnboarding] = useState(false);
 
     const { register, handleSubmit: hookFormSubmit, formState: { errors } } = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -35,35 +37,91 @@ export default function StudentLogin() {
         defaultValues: { email: "", password: "" }
     });
 
+    // Check if user came from registration (persists across reloads/redirects)
+    const isNewUser = Boolean(
+        location.state?.registered ||
+        location.state?.isNewUser ||
+        sessionStorage.getItem("eduspace_new_registration") === "true"
+    );
+
     // Show registration success message if redirected from registration
     useEffect(() => {
         if (location.state?.registered) {
             toast.success("Your account has been successfully created. Please log in to continue.");
-            window.history.replaceState({}, document.title);
         }
     }, [location]);
 
-    // Redirect if already authenticated, verifying 2FA AAL2 requirement first
+    // Handle authenticated state (MFA challenge, TOTP onboarding, or dashboard redirect)
     useEffect(() => {
-        if (isAuthenticated && role) {
-            mfaService.getAssuranceLevel().then(({ currentLevel, nextLevel }) => {
+        if (!isAuthenticated || !role) return;
+
+        // If currently in a challenge or onboarding modal, do not auto-navigate away
+        if (showTotpOnboarding || mfaChallenge) return;
+
+        let isCancelled = false;
+
+        const checkSecurityAndRedirect = async () => {
+            try {
+                const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
+                if (isCancelled) return;
+
                 if (currentLevel === "aal1" && nextLevel === "aal2") {
-                    mfaService.listFactors().then(({ totpFactors }) => {
-                        const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
-                        if (activeFactor) {
-                            setMfaChallenge({
-                                factorId: activeFactor.id,
-                                factorName: activeFactor.friendly_name || "Android Authenticator",
-                            });
-                            return;
-                        }
-                    });
-                } else {
+                    const { totpFactors } = await mfaService.listFactors();
+                    if (isCancelled) return;
+                    const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
+                    if (activeFactor) {
+                        setMfaChallenge({
+                            factorId: activeFactor.id,
+                            factorName: activeFactor.friendly_name || "Android Authenticator",
+                        });
+                        return;
+                    }
+                }
+
+                // If new registration without verified 2FA, trigger onboarding modal
+                if (isNewUser) {
+                    const { totpFactors } = await mfaService.listFactors();
+                    if (isCancelled) return;
+                    const hasVerified = totpFactors.some((f) => f.status === "verified");
+                    if (!hasVerified) {
+                        setShowTotpOnboarding(true);
+                        return;
+                    }
+                }
+
+                // Default redirect to dashboard
+                navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
+            } catch {
+                if (!isCancelled) {
                     navigate(role === "lecturer" ? "/lecturer-dashboard" : "/dashboard", { replace: true });
                 }
-            });
-        }
-    }, [isAuthenticated, role, navigate]);
+            }
+        };
+
+        checkSecurityAndRedirect();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isAuthenticated, role, isNewUser, showTotpOnboarding, mfaChallenge, navigate]);
+
+    const handleTotpOnboardingSuccess = () => {
+        try {
+            sessionStorage.removeItem("eduspace_new_registration");
+        } catch {}
+        setShowTotpOnboarding(false);
+        toast.success("Welcome to Eduspace!");
+        navigate("/dashboard", { replace: true });
+    };
+
+    const handleTotpOnboardingSkip = () => {
+        try {
+            sessionStorage.removeItem("eduspace_new_registration");
+        } catch {}
+        setShowTotpOnboarding(false);
+        toast.info("You can enable 2FA anytime in your Profile settings.");
+        navigate("/dashboard", { replace: true });
+    };
 
     const onValidSubmit = async (data: LoginFormValues) => {
         setIsLoading(true);
@@ -71,22 +129,8 @@ export default function StudentLogin() {
         const result = await signIn(data.email, data.password, captchaToken);
 
         if (result.success) {
-            const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
-            if (currentLevel === "aal1" && nextLevel === "aal2") {
-                const { totpFactors } = await mfaService.listFactors();
-                const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
-                if (activeFactor) {
-                    setMfaChallenge({
-                        factorId: activeFactor.id,
-                        factorName: activeFactor.friendly_name || "Android Authenticator",
-                    });
-                    setIsLoading(false);
-                    return;
-                }
-            }
-
-            toast.success("Welcome back!");
-            navigate("/dashboard", { replace: true });
+            // Note: The useEffect above will handle MFA challenge, TOTP onboarding, or dashboard redirect
+            setIsLoading(false);
         } else {
             toast.error(result.error || "Login failed");
             setIsLoading(false);
@@ -106,22 +150,8 @@ export default function StudentLogin() {
             setIsPasskeyLoading(true);
             const result = await signInWithPasskey(captchaToken);
             if (result.success) {
-                const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
-                if (currentLevel === "aal1" && nextLevel === "aal2") {
-                    const { totpFactors } = await mfaService.listFactors();
-                    const activeFactor = totpFactors.find((f) => f.status === "verified") || totpFactors[0];
-                    if (activeFactor) {
-                        setMfaChallenge({
-                            factorId: activeFactor.id,
-                            factorName: activeFactor.friendly_name || "Android Authenticator",
-                        });
-                        setIsPasskeyLoading(false);
-                        return;
-                    }
-                }
-
-                toast.success("Welcome back!");
-                navigate("/dashboard", { replace: true });
+                // The useEffect will handle MFA challenge, TOTP onboarding, or redirect
+                setIsPasskeyLoading(false);
             } else {
                 toast.error(result.error || "Passkey sign-in failed");
                 setIsPasskeyLoading(false);
@@ -385,6 +415,14 @@ export default function StudentLogin() {
                     </div>
                 )}
             </div>
+
+            {/* Post-Registration Optional TOTP Setup Modal */}
+            <TotpOnboardingModal
+                open={showTotpOnboarding}
+                onOpenChange={setShowTotpOnboarding}
+                onSuccess={handleTotpOnboardingSuccess}
+                onSkip={handleTotpOnboardingSkip}
+            />
         </AuthLayout>
     );
 }

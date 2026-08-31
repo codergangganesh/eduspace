@@ -63,8 +63,11 @@ export default function LecturerRegister() {
 
         if (result.success) {
             setHasNavigated(true);
+            try {
+                sessionStorage.setItem("eduspace_new_registration", "true");
+            } catch {}
             toast.success("Account created successfully! Please sign in to continue.");
-            navigate("/lecturer/login", { state: { registered: true } });
+            navigate("/lecturer/login", { state: { registered: true, isNewUser: true } });
         } else {
             toast.error(result.error || "Registration failed");
         }

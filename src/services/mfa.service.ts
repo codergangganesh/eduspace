@@ -44,7 +44,7 @@ export const mfaService = {
   },
 
   /**
-   * List all registered MFA factors for the currently authenticated user.
+   * List all registered and verified MFA factors for the currently authenticated user.
    */
   async listFactors(): Promise<{
     totpFactors: MfaFactor[];
@@ -59,19 +59,35 @@ export const mfaService = {
 
       const all: MfaFactor[] = (data?.all || []).map((f: any) => ({
         id: f.id,
-        friendly_name: f.friendly_name || "Android Authenticator",
+        friendly_name: f.friendly_name || "Authenticator App",
         factor_type: f.factor_type,
         status: f.status as "verified" | "unverified",
         created_at: f.created_at || new Date().toISOString(),
         updated_at: f.updated_at || new Date().toISOString(),
       }));
 
-      const totp = all.filter((f) => f.factor_type === "totp");
+      // Strictly return VERIFIED TOTP factors so uncompleted enrollments don't show as active
+      const verifiedTotp = all.filter((f) => f.factor_type === "totp" && f.status === "verified");
 
-      return { totpFactors: totp, allFactors: all, error: null };
+      return { totpFactors: verifiedTotp, allFactors: all, error: null };
     } catch (err: any) {
       return { totpFactors: [], allFactors: [], error: err.message || "Failed to list MFA factors" };
     }
+  },
+
+  /**
+   * Cleans up any unverified / abandoned factor enrollments.
+   */
+  async cleanUnverifiedFactors(): Promise<void> {
+    try {
+      const { data } = await supabase.auth.mfa.listFactors();
+      if (data?.all) {
+        const unverified = data.all.filter((f: any) => f.status === "unverified");
+        for (const item of unverified) {
+          await supabase.auth.mfa.unenroll({ factorId: item.id });
+        }
+      }
+    } catch {}
   },
 
   /**
