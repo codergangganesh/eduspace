@@ -461,7 +461,39 @@ export function AdminPinLockProvider({ children }: { children: ReactNode }) {
 export const useAdminPinLock = (): AdminPinLockContextType => {
   const context = useContext(AdminPinLockContext);
   if (!context) {
-    throw new Error("useAdminPinLock must be used within an AdminPinLockProvider");
+    return {
+      isLocked: false,
+      isPinSetup: false,
+      isPinLockEnabled: false,
+      isBiometricsSupported: false,
+      settings: pinLockService.getSettings(""),
+      cooldown: {
+        isCooldown: false,
+        remainingSeconds: 0,
+        currentChance: 1,
+        attemptInChance: 0,
+        remainingAttemptsInChance: 3,
+        lockDurationType: null,
+      },
+      pinRotation: {
+        pinAgeDays: 0,
+        isExpiredOrDue: false,
+        isExpiringSoon: false,
+        daysRemaining: 90,
+        lastUpdatedDate: null,
+        statusLabel: "Active",
+      },
+      lockScreen: () => {},
+      unlockWithPin: async () => ({ success: false, error: "Initializing..." }),
+      unlockWithBiometrics: async () => ({ success: false, error: "Initializing..." }),
+      unlockWithPassword: async () => ({ success: false, error: "Initializing..." }),
+      enableBiometrics: async () => ({ success: false, error: "Initializing..." }),
+      setupPin: async () => ({ success: false, error: "Initializing..." }),
+      verifyCurrentSecret: async () => false,
+      removePin: () => {},
+      updateSettings: () => {},
+      refreshStatus: () => {},
+    };
   }
   return context;
 };

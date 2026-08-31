@@ -382,7 +382,17 @@ export function AdminAuthProvider({ children }: { children: ReactNode }): ReactE
 export function useAdminAuth() {
   const context = useContext(AdminAuthContext);
   if (!context) {
-    throw new Error("useAdminAuth must be used within an AdminAuthProvider");
+    return {
+      user: null,
+      session: null,
+      profile: null,
+      isAdmin: false,
+      isLoading: true,
+      signIn: async () => ({ success: false, error: "Authentication initializing..." }),
+      signInWithPasskey: async () => ({ success: false, error: "Authentication initializing..." }),
+      signOut: async () => {},
+      refreshProfile: async () => {},
+    };
   }
   return context;
 }
