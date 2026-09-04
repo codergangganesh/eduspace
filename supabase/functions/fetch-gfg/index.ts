@@ -55,10 +55,10 @@ function buildStats(cleanHandle: string, info: any, extra: any = {}): GFGStatsPa
   const medium = parseNum(info.medium_solved || info.mediumSolved || info.medium || (extra.solvedStats?.medium?.count) || (extra.solvedStats?.medium) || 0);
   const hard = parseNum(info.hard_solved || info.hardSolved || info.hard || (extra.solvedStats?.hard?.count) || (extra.solvedStats?.hard) || 0);
   const rank = info.institute_rank || info.instituteRank || info.institutionRank || info.campusRank || info.rank || extra.instituteRank || null;
-  const streak = parseNum(info.pod_streak || info.streak || info.current_streak || info.potdStreak || extra.streak || 0);
+  const streak = parseNum(info.pod_streak || info.streak || info.current_streak || info.pod_solved_longest_streak || extra.streak || 0);
   const profileImg = info.profile_image_url || info.profile_image || info.avatarUrl || info.profileImage || extra.profile_image || null;
   const realName = info.name || info.full_name || info.userName || info.displayName || extra.name || null;
-  const institution = info.institution || info.institute || info.campus || extra.institution || null;
+  const institution = info.institution || info.institute || info.campus || info.institute_name || extra.institution || null;
   const badges = info.badges || info.badge_count || extra.badges || null;
   const computedTotal = total || (easy + medium + hard);
 
@@ -72,7 +72,7 @@ function buildStats(cleanHandle: string, info: any, extra: any = {}): GFGStatsPa
     totalSolved: computedTotal,
     easySolved: easy || Math.round(computedTotal * 0.5),
     mediumSolved: medium || Math.round(computedTotal * 0.35),
-    hardSolved: hard || Math.round(computedTotal * 0.15),
+    hardSolved: hard || Math.max(0, computedTotal - (easy || Math.round(computedTotal * 0.5)) - (medium || Math.round(computedTotal * 0.35))),
     rank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
     institutionRank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
     streak,
@@ -86,9 +86,14 @@ function parseGfgHtml(html: string, cleanHandle: string): GFGStatsPayload | null
   if (!html || html.length < 100) return null;
   if (
     html.includes("User profile not found") ||
-    html.includes("404 Page Not Found") ||
-    html.includes("Page Not Found")
+    html.includes("404 Page Not Found")
   ) return null;
+
+  // Unescape RSC chunks and HTML entities for matching
+  const unescaped = html
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\n/g, ' ');
 
   // 1. Try __NEXT_DATA__ JSON embedded script
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
@@ -113,47 +118,66 @@ function parseGfgHtml(html: string, cleanHandle: string): GFGStatsPayload | null
     } catch { /* continue */ }
   }
 
-  // 2. Regex-based HTML scraping fallback
-  const scoreMatch = html.match(/codingScore['":\s]+(\d+)/i) || html.match(/Coding Score[^>]*>(\d+)/i);
-  const totalMatch = html.match(/problemsSolved['":\s]+(\d+)/i) || html.match(/total_problems_solved['":\s]+(\d+)/i) || html.match(/>(\d+)<\/span>\s*Problems Solved/i);
-  const nameMatch = html.match(/displayName['":\s]+"([^"]+)"/i) || html.match(/full_name['":\s]+"([^"]+)"/i) || html.match(/<h1[^>]*class="[^"]*profileName[^"]*"[^>]*>([^<]+)/i);
-  const institutionMatch = html.match(/institution['":\s]+"([^"]+)"/i);
-  const streakMatch = html.match(/currentStreak['":\s]+(\d+)/i) || html.match(/pod_streak['":\s]+(\d+)/i);
-  const imgMatch = html.match(/profile_image_url['":\s]+"(https:[^"]+)"/i);
-  const easyMatch = html.match(/easySolved['":\s]+(\d+)/i) || html.match(/easy_solved['":\s]+(\d+)/i);
-  const mediumMatch = html.match(/mediumSolved['":\s]+(\d+)/i) || html.match(/medium_solved['":\s]+(\d+)/i);
-  const hardMatch = html.match(/hardSolved['":\s]+(\d+)/i) || html.match(/hard_solved['":\s]+(\d+)/i);
-  const rankMatch = html.match(/instituteRank['":\s]+(\d+)/i) || html.match(/institute_rank['":\s]+(\d+)/i);
+  // 2. Extract display name
+  let displayName = cleanHandle;
+  const mentorNameMatch = unescaped.match(new RegExp(`"handle":"${cleanHandle}"[\\s\\S]*?"name":"([^"]+)"`, "i")) ||
+    unescaped.match(/"mentor":\s*\{[^}]*?"name":"([^"]+)"/i) ||
+    unescaped.match(/"articleCount":\s*\{[^}]*?"name":"([^"]+)"/i) ||
+    unescaped.match(/"title",null,\{"children":"([^"|\-_]+)/i);
 
-  const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
-  const total = totalMatch ? parseInt(totalMatch[1]) : 0;
-  const easy = easyMatch ? parseInt(easyMatch[1]) : 0;
-  const medium = mediumMatch ? parseInt(mediumMatch[1]) : 0;
-  const hard = hardMatch ? parseInt(hardMatch[1]) : 0;
-  const computedTotal = total || (easy + medium + hard);
-
-  if (score > 0 || computedTotal > 0) {
-    return {
-      username: cleanHandle,
-      gfg_username: cleanHandle,
-      display_name: nameMatch ? nameMatch[1].trim() : cleanHandle,
-      profile_image: imgMatch ? imgMatch[1] : null,
-      institution: institutionMatch ? institutionMatch[1].trim() : null,
-      codingScore: score,
-      totalSolved: computedTotal,
-      easySolved: easy || Math.round(computedTotal * 0.5),
-      mediumSolved: medium || Math.round(computedTotal * 0.35),
-      hardSolved: hard || Math.round(computedTotal * 0.15),
-      rank: rankMatch ? rankMatch[1] : null,
-      institutionRank: rankMatch ? rankMatch[1] : null,
-      streak: streakMatch ? parseInt(streakMatch[1]) : 0,
-      badges: null,
-      profile_url: `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`,
-      last_updated: new Date().toISOString(),
-    };
+  if (mentorNameMatch && mentorNameMatch[1] && mentorNameMatch[1].trim().length < 60) {
+    const candidate = mentorNameMatch[1].trim();
+    if (!candidate.toLowerCase().includes("geeksforgeeks") && !candidate.toLowerCase().includes("page not found")) {
+      displayName = candidate;
+    }
   }
 
-  return null;
+  // 3. Extract profile image
+  const mentorImgMatch = unescaped.match(new RegExp(`"handle":"${cleanHandle}"[\\s\\S]*?"profile_image_url":"(https?:\\/\\/[^"]+)"`, "i")) ||
+    unescaped.match(/"mentor":\s*\{[^}]*?"profile_image_url":"(https?:\/\/[^"]+)"/i) ||
+    unescaped.match(/"articleCount":\s*\{[^}]*?"profile_image_url":"(https?:\/\/[^"]+)"/i) ||
+    unescaped.match(/"profile_image_url":\s*"(https?:\/\/[^"]+)"/i) ||
+    html.match(/profile_image_url['":\s]+"(https:[^"]+)"/i);
+
+  const scoreMatch = unescaped.match(/"score":\s*(\d+)/i) || unescaped.match(/codingScore['":\s]+(\d+)/i) || unescaped.match(/Coding Score[^>]*>(\d+)/i);
+  const totalMatch = unescaped.match(/"total_problems_solved":\s*(\d+)/i) || unescaped.match(/problemsSolved['":\s]+(\d+)/i) || unescaped.match(/>(\d+)<\/span>\s*Problems Solved/i);
+  const rankMatch = unescaped.match(/"institute_rank":\s*(\d+)/i) || unescaped.match(/instituteRank['":\s]+(\d+)/i);
+  const streakMatch = unescaped.match(/"pod_solved_longest_streak":\s*(\d+)/i) || unescaped.match(/"pod_solved_current_streak":\s*(\d+)/i) || unescaped.match(/currentStreak['":\s]+(\d+)/i);
+  const institutionMatch = unescaped.match(/"institution":\s*"([^"]+)"/i) || unescaped.match(/"institute_name":\s*"([^"]+)"/i);
+
+  const easyMatch = unescaped.match(/"easy(?:_solved)?":\s*(\d+)/i) || unescaped.match(/easySolved['":\s]+(\d+)/i);
+  const mediumMatch = unescaped.match(/"medium(?:_solved)?":\s*(\d+)/i) || unescaped.match(/mediumSolved['":\s]+(\d+)/i);
+  const hardMatch = unescaped.match(/"hard(?:_solved)?":\s*(\d+)/i) || unescaped.match(/hardSolved['":\s]+(\d+)/i);
+
+  const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
+  const total = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+  const easy = easyMatch ? parseInt(easyMatch[1], 10) : 0;
+  const medium = mediumMatch ? parseInt(mediumMatch[1], 10) : 0;
+  const hard = hardMatch ? parseInt(hardMatch[1], 10) : 0;
+  const computedTotal = total || (easy + medium + hard);
+
+  if (score === 0 && computedTotal === 0 && (!displayName || displayName === cleanHandle)) {
+    return null;
+  }
+
+  return {
+    username: cleanHandle,
+    gfg_username: cleanHandle,
+    display_name: displayName,
+    profile_image: mentorImgMatch ? mentorImgMatch[1] : null,
+    institution: institutionMatch ? institutionMatch[1].trim() : null,
+    codingScore: score,
+    totalSolved: computedTotal,
+    easySolved: easy || Math.round(computedTotal * 0.5),
+    mediumSolved: medium || Math.round(computedTotal * 0.35),
+    hardSolved: hard || Math.max(0, computedTotal - (easy || Math.round(computedTotal * 0.5)) - (medium || Math.round(computedTotal * 0.35))),
+    rank: rankMatch ? rankMatch[1] : null,
+    institutionRank: rankMatch ? rankMatch[1] : null,
+    streak: streakMatch ? parseInt(streakMatch[1], 10) : 0,
+    badges: null,
+    profile_url: `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`,
+    last_updated: new Date().toISOString(),
+  };
 }
 
 serve(async (req) => {
@@ -172,9 +196,40 @@ serve(async (req) => {
       );
     }
 
-    const cleanHandle = username.replace(/^https?:\/\/(?:www\.)?geeksforgeeks\.org\/user\//i, "").replace(/\/$/, "").trim();
+    const cleanHandle = username.replace(/^https?:\/\/(?:www\.)?geeksforgeeks\.org\/(?:user|profile)\//i, "").replace(/\/$/, "").trim();
 
-    // --- Tier 1: Official GFG Practice API endpoints ---
+    const defaultHeaders = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    };
+
+    // --- Tier 1: Direct Fetch from GeeksforGeeks Profile (Fastest & most accurate) ---
+    const directUrls = [
+      `https://www.geeksforgeeks.org/profile/${encodeURIComponent(cleanHandle)}`,
+      `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`,
+      `https://auth.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/profile/`,
+    ];
+
+    for (const dUrl of directUrls) {
+      try {
+        const directRes = await fetchWithTimeout(dUrl, { headers: defaultHeaders, redirect: "follow" }, 10000);
+        if (directRes && directRes.ok) {
+          const html = await directRes.text();
+          if (html && !html.includes("User profile not found") && !html.includes("404 Page Not Found")) {
+            const stats = parseGfgHtml(html, cleanHandle);
+            if (stats && (stats.codingScore > 0 || stats.totalSolved > 0 || stats.display_name !== cleanHandle)) {
+              return new Response(
+                JSON.stringify({ data: stats }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+          }
+        }
+      } catch { /* continue */ }
+    }
+
+    // --- Tier 2: Official GFG Practice API & Microservices ---
     const apiEndpoints = [
       `https://practiceapi.geeksforgeeks.org/api/vr/user/profile/${encodeURIComponent(cleanHandle)}/`,
       `https://practiceapi.geeksforgeeks.org/api/v1/user/score/userProfile/${encodeURIComponent(cleanHandle)}/`,
@@ -182,15 +237,9 @@ serve(async (req) => {
       `https://gfg-api.vercel.app/public/user/${encodeURIComponent(cleanHandle)}`,
     ];
 
-    const defaultHeaders = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "application/json, */*",
-      "Referer": "https://www.geeksforgeeks.org/",
-    };
-
     for (const ep of apiEndpoints) {
       try {
-        const res = await fetchWithTimeout(ep, { headers: defaultHeaders }, 9000);
+        const res = await fetchWithTimeout(ep, { headers: { ...defaultHeaders, "Accept": "application/json, */*" } }, 8000);
         if (!res || res.status === 404) continue;
         if (!res.ok) continue;
         const json = await res.json();
@@ -208,25 +257,26 @@ serve(async (req) => {
             );
           }
         }
-      } catch { /* continue to next tier */ }
+      } catch { /* continue */ }
     }
 
-    // --- Tier 2: HTML Scraping via AllOrigins proxy ---
+    // --- Tier 3: HTML Scraping via CORS Proxies ---
     const proxies = [
+      `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.geeksforgeeks.org/profile/${cleanHandle}`)}`,
+      `https://corsproxy.io/?url=${encodeURIComponent(`https://www.geeksforgeeks.org/profile/${cleanHandle}`)}`,
       `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
-      `https://corsproxy.io/?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
     ];
 
     for (const proxyUrl of proxies) {
       try {
-        const res = await fetchWithTimeout(proxyUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, 12000);
+        const res = await fetchWithTimeout(proxyUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, 10000);
         if (!res || !res.ok) continue;
         const proxyJson = await res.json();
         const html = proxyJson?.contents || (typeof proxyJson === "string" ? proxyJson : "");
         if (!html) continue;
 
         const stats = parseGfgHtml(html, cleanHandle);
-        if (stats) {
+        if (stats && (stats.codingScore > 0 || stats.totalSolved > 0 || stats.display_name !== cleanHandle)) {
           return new Response(
             JSON.stringify({ data: stats }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -235,36 +285,8 @@ serve(async (req) => {
       } catch { /* continue */ }
     }
 
-    // --- Tier 3: Direct HTML fetch (Deno can bypass browser CORS) ---
-    try {
-      const directRes = await fetchWithTimeout(
-        `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`,
-        {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-          },
-        },
-        12000
-      );
-
-      if (directRes && directRes.ok) {
-        const html = await directRes.text();
-        if (html && !html.includes("User profile not found")) {
-          const stats = parseGfgHtml(html, cleanHandle);
-          if (stats) {
-            return new Response(
-              JSON.stringify({ data: stats }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-        }
-      }
-    } catch { /* exhausted */ }
-
     return new Response(
-      JSON.stringify({ error: `GeeksforGeeks profile '${cleanHandle}' could not be fetched. The user may not exist or GFG may be blocking scraping requests.` }),
+      JSON.stringify({ error: `GeeksforGeeks profile '${cleanHandle}' could not be fetched. The user may not exist or GFG may be temporarily unavailable.` }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {

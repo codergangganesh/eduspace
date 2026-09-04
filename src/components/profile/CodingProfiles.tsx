@@ -1137,17 +1137,17 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     } else if (key === "geeksforgeeks" && isGfgMatch) {
       rawCard = (
         <PlatformErrorBoundary platformName="GeeksforGeeks" onRetry={() => handleSingleCardRefresh("geeksforgeeks")}>
-          <GeeksForGeeksProfileCard
-            usernameOrHandle={gfgUsername}
+          <CodingProfileCard
+            platform="geeksforgeeks"
+            username={gfgUsername}
             stats={data?.geeksforgeeks}
             error={data?.geeksforgeeksError}
-            loading={Boolean(loading || (cardRefreshing.geeksforgeeks && !data?.geeksforgeeks))}
-            onConnect={() => handleOpenEdit("geeksforgeeks")}
-            onEditHandle={() => handleOpenEdit("geeksforgeeks")}
+            onEdit={() => handleOpenEdit("geeksforgeeks")}
             onRefresh={() => handleSingleCardRefresh("geeksforgeeks")}
             isRefreshing={Boolean(cardRefreshing.geeksforgeeks || refreshing)}
             isPinned={isPinned}
             onTogglePin={onTogglePin}
+            className="col-span-1"
           />
         </PlatformErrorBoundary>
       );

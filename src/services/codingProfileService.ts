@@ -2154,167 +2154,114 @@ export async function fetchGeeksForGeeksStats(usernameInput: string): Promise<{
     }
   }
 
-  // 2. AllOrigins JSON Wrapper Scraper
-  try {
-    const aoRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`, {
-      signal: AbortSignal.timeout(9000),
-    });
-    if (aoRes.ok) {
-      const aoJson = await aoRes.json();
-      const html = aoJson?.contents || "";
-      if (html) {
-        if (html.includes("User profile not found") || html.includes("404 Page Not Found") || html.includes("Page Not Found")) {
-          isUserNotFound = true;
-        }
-
-        // A. Next.js __NEXT_DATA__ JSON script tag
-        const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
-        if (nextDataMatch) {
-          try {
-            const nextJson = JSON.parse(nextDataMatch[1]);
-            const pageProps = nextJson?.props?.pageProps || {};
-            const userInfo = pageProps.userInfo || pageProps.userData || pageProps.user || pageProps.initialState?.user || {};
-
-            const score = parseNum(userInfo.score || userInfo.codingScore || userInfo.coding_score);
-            const total = parseNum(userInfo.total_problems_solved || userInfo.totalProblemsSolved || userInfo.totalSolved);
-            const rank = userInfo.rank || userInfo.institute_rank || userInfo.instituteRank || userInfo.institutionRank || userInfo.campusRank;
-            const streak = parseNum(userInfo.pod_streak || userInfo.streak || userInfo.current_streak || userInfo.potdStreak);
-
-            const easy = parseNum(userInfo.easy_solved || userInfo.easySolved || userInfo.easy);
-            const medium = parseNum(userInfo.medium_solved || userInfo.mediumSolved || userInfo.medium);
-            const hard = parseNum(userInfo.hard_solved || userInfo.hardSolved || userInfo.hard);
-
-            const profileImg = userInfo.profile_image_url || userInfo.profile_image || userInfo.avatarUrl || null;
-            const displayName = userInfo.name || userInfo.full_name || userInfo.userName || cleanHandle;
-            const institution = userInfo.institution || userInfo.institute || userInfo.campus || null;
-            const badges = userInfo.badges || userInfo.badge_count || null;
-
-            const computedTotal = total || (easy + medium + hard);
-
-            if (score > 0 || computedTotal > 0) {
-              return {
-                data: {
-                  username: cleanHandle,
-                  gfg_username: cleanHandle,
-                  profile_image: profileImg,
-                  display_name: displayName,
-                  institution: institution && institution !== "N/A" ? String(institution) : null,
-                  codingScore: score,
-                  totalSolved: computedTotal,
-                  easySolved: easy || Math.round(computedTotal * 0.5),
-                  mediumSolved: medium || Math.round(computedTotal * 0.35),
-                  hardSolved: hard || Math.round(computedTotal * 0.15),
-                  rank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
-                  institutionRank: rank && rank !== "0" && rank !== "N/A" ? String(rank) : null,
-                  badges: badges,
-                  streak: streak,
-                  profile_url: profileUrl,
-                  last_updated: new Date().toISOString(),
-                },
-                error: null,
-              };
-            }
-          } catch (err) {
-            console.warn("AllOrigins GFG __NEXT_DATA__ parse error:", err);
-          }
-        }
-
-        // B. RegEx HTML Score Cards Extraction
-        const scoreMatch = html.match(/Coding Score[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/score_card_value[^>]*>\s*([\d,]+)/i);
-        const solvedMatch = html.match(/Total Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
-        const rankMatch = html.match(/Institute Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Campus Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
-        const streakMatch = html.match(/Streak[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/POTD[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
-        const imgMatch = html.match(/<img[^>]*class="[^"]*profile_img[^"]*"[^>]*src="([^"]+)"/i) || html.match(/<img[^>]*src="([^"]+)"[^>]*alt="[^"]*profile/i);
-        const nameMatch = html.match(/<div[^>]*class="[^"]*user_name[^"]*"[^>]*>\s*([^<]+)/i) || html.match(/<h1[^>]*>\s*([^<]+)<\/h1>/i);
-        const instMatch = html.match(/<span[^>]*class="[^"]*institute_name[^"]*"[^>]*>\s*([^<]+)/i);
-
-        const scoreNum = scoreMatch ? parseNum(scoreMatch[1]) : 0;
-        const solvedNum = solvedMatch ? parseNum(solvedMatch[1]) : 0;
-        const rankStr = rankMatch ? String(parseNum(rankMatch[1])) : null;
-        const streakNum = streakMatch ? parseNum(streakMatch[1]) : 0;
-        const avatarUrl = imgMatch ? imgMatch[1] : null;
-        const nameStr = nameMatch ? nameMatch[1].trim() : cleanHandle;
-        const instStr = instMatch ? instMatch[1].trim() : null;
-
-        if (scoreNum > 0 || solvedNum > 0) {
-          return {
-            data: {
-              username: cleanHandle,
-              gfg_username: cleanHandle,
-              profile_image: avatarUrl,
-              display_name: nameStr,
-              institution: instStr && instStr !== "N/A" ? instStr : null,
-              codingScore: scoreNum,
-              totalSolved: solvedNum,
-              easySolved: Math.round(solvedNum * 0.5),
-              mediumSolved: Math.round(solvedNum * 0.35),
-              hardSolved: Math.round(solvedNum * 0.15),
-              rank: rankStr,
-              institutionRank: rankStr,
-              streak: streakNum,
-              profile_url: profileUrl,
-              last_updated: new Date().toISOString(),
-            },
-            error: null,
-          };
-        }
-      }
-    }
-  } catch (err) {
-    isNetworkError = true;
-  }
-
-  // 3. Fallback HTML Scraping via CORS Proxies
+  // 2. AllOrigins JSON Wrapper Scraper & Proxies
   const htmlProxies = [
-    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.geeksforgeeks.org/profile/${cleanHandle}`)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.geeksforgeeks.org/profile/${cleanHandle}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.geeksforgeeks.org/user/${cleanHandle}/`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://www.geeksforgeeks.org/profile/${cleanHandle}`)}`,
   ];
 
   for (const proxyUrl of htmlProxies) {
     try {
-      const corsRes = await fetch(proxyUrl, { signal: AbortSignal.timeout(7000) });
-      if (corsRes.status === 404) {
-        isUserNotFound = true;
-        continue;
-      }
-      if (corsRes.ok) {
-        const html = await corsRes.text();
-        if (html.includes("User profile not found") || html.includes("404 Page Not Found")) {
-          isUserNotFound = true;
-          continue;
+      const aoRes = await fetch(proxyUrl, {
+        signal: AbortSignal.timeout(9000),
+      });
+      if (aoRes.ok) {
+        let html = "";
+        if (proxyUrl.includes("allorigins")) {
+          const aoJson = await aoRes.json();
+          html = aoJson?.contents || "";
+        } else {
+          html = await aoRes.text();
         }
 
-        const scoreMatch = html.match(/Coding Score[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/score_card_value[^>]*>\s*([\d,]+)/i);
-        const solvedMatch = html.match(/Total Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Problems Solved[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
-        const rankMatch = html.match(/Institute Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/Campus Rank[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
-        const streakMatch = html.match(/Streak[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i) || html.match(/POTD[\s\S]*?score_card_value[^>]*>\s*([\d,]+)/i);
+        if (html && html.length > 100) {
+          if (html.includes("User profile not found") || html.includes("404 Page Not Found")) {
+            isUserNotFound = true;
+            continue;
+          }
 
-        const scoreNum = scoreMatch ? parseNum(scoreMatch[1]) : 0;
-        const solvedNum = solvedMatch ? parseNum(solvedMatch[1]) : 0;
-        const rankStr = rankMatch ? String(parseNum(rankMatch[1])) : null;
-        const streakNum = streakMatch ? parseNum(streakMatch[1]) : 0;
+          const unescaped = html
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\n/g, " ");
 
-        if (scoreNum > 0 || solvedNum > 0) {
-          return {
-            data: {
-              username: cleanHandle,
-              gfg_username: cleanHandle,
-              profile_image: null,
-              display_name: cleanHandle,
-              institution: null,
-              codingScore: scoreNum,
-              totalSolved: solvedNum,
-              easySolved: Math.round(solvedNum * 0.5),
-              mediumSolved: Math.round(solvedNum * 0.35),
-              hardSolved: Math.round(solvedNum * 0.15),
-              rank: rankStr,
-              institutionRank: rankStr,
-              streak: streakNum,
-              profile_url: profileUrl,
-              last_updated: new Date().toISOString(),
-            },
-            error: null,
-          };
+          // A. RSC / Next.js Data Extract
+          let displayName = cleanHandle;
+          const mentorNameMatch =
+            unescaped.match(new RegExp(`"handle":"${cleanHandle}"[\\s\\S]*?"name":"([^"]+)"`, "i")) ||
+            unescaped.match(/"mentor":\s*\{[^}]*?"name":"([^"]+)"/i) ||
+            unescaped.match(/"articleCount":\s*\{[^}]*?"name":"([^"]+)"/i) ||
+            unescaped.match(/"title",null,\{"children":"([^"|\-_]+)/i);
+
+          if (mentorNameMatch && mentorNameMatch[1] && mentorNameMatch[1].trim().length < 60) {
+            const candidate = mentorNameMatch[1].trim();
+            if (!candidate.toLowerCase().includes("geeksforgeeks") && !candidate.toLowerCase().includes("page not found")) {
+              displayName = candidate;
+            }
+          }
+
+          const mentorImgMatch =
+            unescaped.match(new RegExp(`"handle":"${cleanHandle}"[\\s\\S]*?"profile_image_url":"(https?:\\/\\/[^"]+)"`, "i")) ||
+            unescaped.match(/"mentor":\s*\{[^}]*?"profile_image_url":"(https?:\/\/[^"]+)"/i) ||
+            unescaped.match(/"articleCount":\s*\{[^}]*?"profile_image_url":"(https?:\/\/[^"]+)"/i) ||
+            unescaped.match(/"profile_image_url":\s*"(https?:\/\/[^"]+)"/i) ||
+            html.match(/profile_image_url['":\s]+"(https:[^"]+)"/i);
+
+          const scoreMatch =
+            unescaped.match(/"score":\s*(\d+)/i) ||
+            unescaped.match(/codingScore['":\s]+(\d+)/i) ||
+            unescaped.match(/Coding Score[^>]*>(\d+)/i);
+          const totalMatch =
+            unescaped.match(/"total_problems_solved":\s*(\d+)/i) ||
+            unescaped.match(/problemsSolved['":\s]+(\d+)/i) ||
+            unescaped.match(/>(\d+)<\/span>\s*Problems Solved/i);
+          const rankMatch =
+            unescaped.match(/"institute_rank":\s*(\d+)/i) ||
+            unescaped.match(/instituteRank['":\s]+(\d+)/i);
+          const streakMatch =
+            unescaped.match(/"pod_solved_longest_streak":\s*(\d+)/i) ||
+            unescaped.match(/"pod_solved_current_streak":\s*(\d+)/i) ||
+            unescaped.match(/currentStreak['":\s]+(\d+)/i);
+          const institutionMatch =
+            unescaped.match(/"institution":\s*"([^"]+)"/i) ||
+            unescaped.match(/"institute_name":\s*"([^"]+)"/i);
+
+          const easyMatch = unescaped.match(/"easy(?:_solved)?":\s*(\d+)/i) || unescaped.match(/easySolved['":\s]+(\d+)/i);
+          const mediumMatch = unescaped.match(/"medium(?:_solved)?":\s*(\d+)/i) || unescaped.match(/mediumSolved['":\s]+(\d+)/i);
+          const hardMatch = unescaped.match(/"hard(?:_solved)?":\s*(\d+)/i) || unescaped.match(/hardSolved['":\s]+(\d+)/i);
+
+          const scoreNum = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
+          const totalNum = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+          const easyNum = easyMatch ? parseInt(easyMatch[1], 10) : 0;
+          const mediumNum = mediumMatch ? parseInt(mediumMatch[1], 10) : 0;
+          const hardNum = hardMatch ? parseInt(hardMatch[1], 10) : 0;
+          const computedTotal = totalNum || (easyNum + mediumNum + hardNum);
+
+          if (scoreNum > 0 || computedTotal > 0 || (displayName && displayName !== cleanHandle)) {
+            return {
+              data: {
+                username: cleanHandle,
+                gfg_username: cleanHandle,
+                profile_image: mentorImgMatch ? mentorImgMatch[1] : null,
+                display_name: displayName,
+                institution: institutionMatch ? institutionMatch[1].trim() : null,
+                codingScore: scoreNum,
+                totalSolved: computedTotal,
+                easySolved: easyNum || Math.round(computedTotal * 0.5),
+                mediumSolved: mediumNum || Math.round(computedTotal * 0.35),
+                hardSolved: hardNum || Math.max(0, computedTotal - (easyNum || Math.round(computedTotal * 0.5)) - (mediumNum || Math.round(computedTotal * 0.35))),
+                rank: rankMatch ? rankMatch[1] : null,
+                institutionRank: rankMatch ? rankMatch[1] : null,
+                streak: streakMatch ? parseInt(streakMatch[1], 10) : 0,
+                badges: null,
+                profile_url: profileUrl,
+                last_updated: new Date().toISOString(),
+              },
+              error: null,
+            };
+          }
         }
       }
     } catch {

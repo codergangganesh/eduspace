@@ -26,6 +26,8 @@ import {
   Edit3,
   MoreHorizontal,
   Pin,
+  Layers,
+  TrendingUp,
 } from "lucide-react";
 import {
   LeetCodeStats,
@@ -215,8 +217,8 @@ const CodeChefLogo = ({ className = "size-7" }: { className?: string }) => (
 );
 
 const GeeksForGeeksLogo = ({ className = "size-7" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 14a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 2.3.88l-1.3 1.32A1.66 1.66 0 1 0 10.5 14.3h2.5v1.7h-3.5zm7 0a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 2.3.88l-1.3 1.32A1.66 1.66 0 1 0 17.5 14.3h2.5v1.7h-3.5z" fill="#2F8D46"/>
   </svg>
 );
 
@@ -537,7 +539,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
     bgBlob = "bg-rose-600";
   } else if (isGeeksForGeeks) {
     profileUrl = `https://www.geeksforgeeks.org/user/${usernameOrHandle}/`;
-    platformTitle = "GeeksforGeeks";
+    platformTitle = "GFG";
     brandGlow = "group-hover:border-emerald-600/50 group-hover:shadow-[0_0_30px_rgba(16,185,129,0.18)]";
     iconBg = "bg-emerald-600/10 border-emerald-600/20";
     bgBlob = "bg-emerald-600";
@@ -2482,119 +2484,137 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             }
 
             return (
-              <div className="space-y-4 pt-1">
-                {/* User Info Header Banner (if avatar, display name, or institution exists) */}
+              <div className="space-y-3 pt-0.5">
+                {/* Profile Header Banner (Ultra Compact 1-Row) */}
                 {(avatar || displayName || institution || usernameOrHandle) && (
-                  <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                    <UserAvatarImage
-                      src={avatar}
-                      name={displayName || usernameOrHandle}
-                      fallbackText={displayName || usernameOrHandle}
-                      borderColor="border-emerald-500/20"
-                      fallbackBg="bg-emerald-500/20 border-emerald-500/30"
-                      fallbackTextColor="text-emerald-600 dark:text-emerald-400"
-                      sizeClass="size-11"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <a
-                        href={profileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-extrabold text-foreground hover:text-emerald-500 truncate flex items-center gap-1 transition-colors group/title"
-                        title={`Open ${displayName || usernameOrHandle}'s GeeksforGeeks Profile`}
-                      >
-                        <span className="truncate">{displayName || usernameOrHandle}</span>
-                        <ExternalLink className="size-3 opacity-60 group-hover/title:opacity-100 shrink-0" />
-                      </a>
-                      {institution && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 truncate mt-0.5 font-medium">
-                          <Building2 className="size-3 text-emerald-500 shrink-0" />
-                          <span className="truncate">{institution}</span>
-                        </p>
-                      )}
+                  <div className="px-2.5 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatarImage
+                        src={avatar}
+                        name={displayName || usernameOrHandle}
+                        fallbackText={displayName || usernameOrHandle}
+                        borderColor="border-emerald-500/25"
+                        fallbackBg="bg-emerald-500/20 border-emerald-500/30"
+                        fallbackTextColor="text-emerald-500"
+                        sizeClass="size-7"
+                      />
+                      <div className="min-w-0">
+                        <a
+                          href={profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-extrabold text-foreground hover:text-emerald-500 truncate leading-tight flex items-center gap-1 transition-colors group/title"
+                          title={`Open ${displayName || usernameOrHandle}'s GeeksforGeeks Profile`}
+                        >
+                          <span className="truncate">{displayName || usernameOrHandle}</span>
+                          <ExternalLink className="size-2.5 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-muted-foreground font-medium leading-none mt-0.5">
+                          {institution && (
+                            <span className="flex items-center gap-0.5 truncate max-w-[160px]" title={institution}>
+                              <Building2 className="size-2.5 text-emerald-500 shrink-0" />
+                              <span className="truncate">{institution}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge variant="outline" className="font-bold text-[9px] px-1.5 py-0.5 rounded-md border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                        Score: {score.toLocaleString()}
+                      </Badge>
                     </div>
                   </div>
                 )}
 
-                {/* Score & Streak Header Card */}
-                <div className="p-5 rounded-2xl bg-emerald-600/10 border border-emerald-600/20 flex items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
-                      Coding Score
-                    </span>
-                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 block tracking-tight">
-                      {score}
-                    </span>
-                  </div>
-                  {streak > 0 && (
-                    <div className="text-right">
-                      <div className="flex items-center gap-1 justify-end text-amber-500 font-extrabold font-mono text-xl sm:text-2xl">
-                        <Flame className="size-5 fill-amber-500" />
-                        {streak} Days
-                      </div>
-                      <span className="text-xs text-muted-foreground font-semibold">POTD Streak</span>
+                {/* 3-Column Hero Stats */}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Coding Score */}
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                    <Trophy className="size-3.5 text-emerald-500 mx-auto mb-1 opacity-80" />
+                    <div className="text-base sm:text-lg font-black font-mono text-emerald-500 leading-none">
+                      {score.toLocaleString()}
                     </div>
-                  )}
+                    <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wide">Score</div>
+                  </div>
+
+                  {/* Problems Solved */}
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-center">
+                    <Layers className="size-3.5 text-emerald-500 mx-auto mb-1 opacity-80" />
+                    <div className="text-base sm:text-lg font-black font-mono text-foreground leading-none">
+                      {totalSolved.toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wide">Solved</div>
+                  </div>
+
+                  {/* Streak */}
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-center">
+                    <Flame className={cn("size-3.5 mx-auto mb-1 opacity-80", streak > 0 ? "text-amber-500" : "text-muted-foreground/40")} />
+                    <div className={cn("text-base sm:text-lg font-black font-mono leading-none", streak > 0 ? "text-amber-500" : "text-foreground")}>
+                      {streak > 0 ? `${streak}d` : "0"}
+                    </div>
+                    <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wide">Streak</div>
+                  </div>
                 </div>
 
-                {/* Metrics Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                      Total Solved
-                    </span>
-                    <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
-                      {totalSolved}
-                    </span>
-                  </div>
-                  {rank ? (
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1 flex items-center gap-1">
-                        <Trophy className="size-3 text-amber-500 inline" /> Campus Rank
+                {/* Problem Solving & Difficulty Breakdown Bar */}
+                {totalSolved > 0 && (
+                  <div className="p-2.5 rounded-xl bg-muted/20 border border-border/50 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-extrabold text-foreground flex items-center gap-1">
+                        <CheckCircle2 className="size-3 text-emerald-500" />
+                        {totalSolved} Problems Solved
                       </span>
-                      <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        Easy: {easy} • Med: {medium} • Hard: {hard}
+                      </span>
+                    </div>
+
+                    <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden flex w-full gap-0.5 p-0.5">
+                      <div style={{ width: `${Math.max(5, (easy / Math.max(1, totalSolved)) * 100)}%` }} className="bg-emerald-500 h-full rounded-full" title={`Easy: ${easy}`} />
+                      <div style={{ width: `${Math.max(5, (medium / Math.max(1, totalSolved)) * 100)}%` }} className="bg-amber-500 h-full rounded-full" title={`Medium: ${medium}`} />
+                      <div style={{ width: `${Math.max(5, (hard / Math.max(1, totalSolved)) * 100)}%` }} className="bg-rose-500 h-full rounded-full" title={`Hard: ${hard}`} />
+                    </div>
+                  </div>
+                )}
+
+                {/* 2x2 Extra Stats Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {rank && (
+                    <div className="p-2 rounded-xl bg-card/60 border border-border/70 flex flex-col gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                        <TrendingUp className="size-2.5" /> Inst. Rank
+                      </span>
+                      <span className="text-xs font-black font-mono text-foreground">
                         #{rank}
                       </span>
                     </div>
-                  ) : badgeCount > 0 ? (
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1 flex items-center gap-1">
-                        <Award className="size-3 text-emerald-500 inline" /> Badges
-                      </span>
-                      <span className="text-xl sm:text-2xl font-extrabold font-mono text-foreground">
-                        {badgeCount} Badges
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                        Platform Status
-                      </span>
-                      <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                        Active Solver
-                      </span>
-                    </div>
                   )}
-                </div>
-
-                {/* Problem Breakdown Bar */}
-                <div className="p-4 rounded-2xl bg-emerald-600/5 border border-emerald-600/10 space-y-2">
-                  <div className="flex justify-between items-center text-xs font-semibold">
-                    <span className="text-muted-foreground">Problem Breakdown</span>
-                    <span className="font-mono text-foreground">
-                      Easy: {easy} | Med: {medium} | Hard: {hard}
-                    </span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-muted/60 overflow-hidden flex w-full">
-                    <div style={{ width: `${Math.max(10, (easy / Math.max(1, totalSolved)) * 100)}%` }} className="bg-emerald-500 h-full" title={`Easy: ${easy}`} />
-                    <div style={{ width: `${Math.max(10, (medium / Math.max(1, totalSolved)) * 100)}%` }} className="bg-amber-500 h-full" title={`Medium: ${medium}`} />
-                    <div style={{ width: `${Math.max(10, (hard / Math.max(1, totalSolved)) * 100)}%` }} className="bg-rose-500 h-full" title={`Hard: ${hard}`} />
-                  </div>
+                  {badgeCount > 0 ? (
+                    <div className="p-2 rounded-xl bg-card/60 border border-border/70 flex flex-col gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                        <Award className="size-2.5 text-emerald-500" /> Badges
+                      </span>
+                      <span className="text-xs font-black font-mono text-foreground">
+                        {badgeCount} Earned
+                      </span>
+                    </div>
+                  ) : streak > 0 ? (
+                    <div className="p-2 rounded-xl bg-card/60 border border-border/70 flex flex-col gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                        <Flame className="size-2.5 text-amber-500" /> POTD Streak
+                      </span>
+                      <span className="text-xs font-black font-mono text-amber-500">
+                        {streak} {streak === 1 ? "Day" : "Days"}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Last Updated Timestamp Footer */}
                 {lastUpdatedText && (
-                  <div className="flex items-center justify-end text-[11px] text-muted-foreground font-medium pt-1">
+                  <div className="flex items-center justify-end text-[10px] text-muted-foreground font-medium pt-0.5">
                     <Clock className="size-3 mr-1 opacity-70" />
                     <span>{lastUpdatedText}</span>
                   </div>
