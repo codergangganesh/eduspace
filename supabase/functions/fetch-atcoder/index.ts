@@ -38,6 +38,7 @@ interface AtCoderStatsPayload {
   bestRank?: number;
   lastCompeted?: string | null;
   recentContests: AtCoderContestHistoryItem[];
+  contestHistory?: AtCoderContestHistoryItem[];
 
   // Heuristic Statistics
   heuristicRating?: number | null;
@@ -358,9 +359,19 @@ serve(async (req: Request) => {
               stats.highestPerformance = Math.max(...perfValues);
             }
 
-            // Extract formatted recent contests
+            // Extract all rated algorithm contests in chronological order for graphs
+            stats.contestHistory = rated.map((h: any) => ({
+              name: h.ContestName || h.ContestNameEn || h.ContestScreenName || "AtCoder Contest",
+              code: h.ContestScreenName || undefined,
+              rating: typeof h.NewRating === "number" ? h.NewRating : (typeof h.OldRating === "number" ? h.OldRating : 0),
+              rank: typeof h.Place === "number" ? h.Place : undefined,
+              performance: typeof h.Performance === "number" ? h.Performance : undefined,
+              date: h.EndTime ? h.EndTime.split("T")[0] : undefined,
+            }));
+
+            // Extract formatted recent contests (newest first for profile card preview)
             stats.recentContests = historyData.slice(-15).reverse().map((h: any) => ({
-              name: h.ContestName || h.ContestScreenName || "AtCoder Contest",
+              name: h.ContestName || h.ContestNameEn || h.ContestScreenName || "AtCoder Contest",
               code: h.ContestScreenName || undefined,
               rating: typeof h.NewRating === "number" ? h.NewRating : (typeof h.OldRating === "number" ? h.OldRating : 0),
               rank: typeof h.Place === "number" ? h.Place : undefined,

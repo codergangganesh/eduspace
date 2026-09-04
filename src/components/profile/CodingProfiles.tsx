@@ -1494,12 +1494,12 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           cfHandle={cfHandle}
           lcUsername={lcUsername}
           ccUsername={ccUsername}
-          cwUsername={cwUsername}
-          hrUsername={hrUsername}
-          hrStats={data?.hackerrank}
+          atcoderUsername={atcoderUsername}
           lcStats={data?.leetcode}
           ccStats={data?.codechef}
           ccContests={data?.codechef?.recentContests}
+          atcoderStats={data?.atcoder}
+          atcoderContests={data?.atcoder?.recentContests}
           selectedPlatformFilter={activeTab}
         />
       </PlatformErrorBoundary>

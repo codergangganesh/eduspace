@@ -9,18 +9,21 @@ import {
   PlusCircle,
   RefreshCw,
   Edit3,
-  BarChart2,
   ChevronRight,
   Code2,
   Layers,
   Cpu,
   Sparkles,
   Pin,
+  MapPin,
+  Award,
+  Globe,
 } from "lucide-react";
 import { WakaTimeStats } from "@/types/wakatimeProfile";
 import { extractWakaTimeUsername } from "@/services/wakatimeService";
 import { UnifiedPlatformLogo } from "./PlatformLogos";
 import { WakaTimeAnalyticsModal } from "./WakaTimeAnalyticsModal";
+import { UserAvatarImage } from "./CodingProfileCard";
 import { cn } from "@/lib/utils";
 
 export interface WakaTimeProfileCardProps {
@@ -49,7 +52,7 @@ export function WakaTimeProfileCard({
   className,
 }: WakaTimeProfileCardProps) {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"editors" | "languages" | "projects">("editors");
+  const [activeTab, setActiveTab] = useState<"editors" | "languages" | "projects" | "badges">("editors");
 
   const username = extractWakaTimeUsername(usernameOrHandle);
   const hasLinked = Boolean(username && username.trim().length > 0);
@@ -59,10 +62,7 @@ export function WakaTimeProfileCard({
   const projects = stats?.projects || [];
   const editors = stats?.editors || [];
   const operatingSystems = stats?.operating_systems && stats.operating_systems.length > 0 ? stats.operating_systems : stats?.categories || [];
-  const dailyBreakdown = stats?.daily_breakdown || [];
-  const bestDay = stats?.best_day;
-
-  const maxDailySeconds = Math.max(1, ...dailyBreakdown.map((d) => d.total_seconds));
+  const badges = stats?.badges || [];
 
   return (
     <>
@@ -77,12 +77,12 @@ export function WakaTimeProfileCard({
         {/* Background Glow */}
         <div className="absolute -top-32 -right-32 size-64 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none bg-[#00E5FF]" />
 
-        <div className="space-y-6 font-sans">
+        <div className="space-y-5 font-sans">
           {/* Card Header */}
-          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-5 mb-5">
+          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-4 mb-4">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="size-13 sm:size-14 rounded-2xl flex items-center justify-center border transition-transform duration-300 group-hover:scale-105 shadow-sm p-2.5 shrink-0 bg-[#00E5FF]/10 border-[#00E5FF]/20 text-[#00E5FF]">
-                <UnifiedPlatformLogo platform="wakatime" className="size-7 sm:size-8" />
+              <div className="size-12 sm:size-13 rounded-2xl flex items-center justify-center border transition-transform duration-300 group-hover:scale-105 shadow-sm p-2 shrink-0 bg-[#00E5FF]/10 border-[#00E5FF]/20 text-[#00E5FF]">
+                <UnifiedPlatformLogo platform="wakatime" className="size-6 sm:size-7" />
               </div>
 
               <div className="min-w-0">
@@ -189,12 +189,49 @@ export function WakaTimeProfileCard({
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* Summary Cards: Displays Full Numbers Directly in Compact Font */}
+            <div className="space-y-3.5">
+              {/* User Profile Header Banner */}
+              {(stats?.avatar || stats?.displayName || stats?.bio || stats?.location || stats?.all_time_total) && (
+                <div className="flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl bg-muted/30 border border-border/60">
+                  <UserAvatarImage
+                    src={stats?.avatar}
+                    name={stats?.displayName || username}
+                    username={username}
+                    fallbackText={username}
+                    borderColor="border-[#00E5FF]/30"
+                    sizeClass="size-10 sm:size-11"
+                  />
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs sm:text-sm font-bold text-foreground truncate">
+                        {stats?.displayName || `@${username}`}
+                      </h4>
+                      {stats?.all_time_total && (
+                        <span className="text-[10px] font-extrabold font-mono text-[#00E5FF] bg-[#00E5FF]/10 px-2 py-0.5 rounded-md border border-[#00E5FF]/20 shrink-0">
+                          {stats.all_time_total}
+                        </span>
+                      )}
+                    </div>
+                    {stats?.bio && (
+                      <p className="text-[10.5px] text-muted-foreground line-clamp-1 leading-snug">
+                        {stats.bio}
+                      </p>
+                    )}
+                    {stats?.location && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+                        <MapPin className="size-2.5 text-[#00E5FF] shrink-0" />
+                        <span className="truncate">{stats.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Summary Cards */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="p-2.5 rounded-xl bg-[#00E5FF]/5 border border-[#00E5FF]/20 space-y-0.5 min-w-0">
                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block truncate">
-                    Weekly Total
+                    Total Time
                   </span>
                   <span className="text-xs sm:text-sm font-extrabold font-mono text-foreground leading-tight block truncate" title={stats?.human_readable_total}>
                     {stats?.human_readable_total || "0 hrs"}
@@ -220,13 +257,13 @@ export function WakaTimeProfileCard({
                 </div>
               </div>
 
-              {/* Interactive Card Tab Switcher (Editors & OS First!) */}
+              {/* Interactive Card Tab Switcher */}
               <div className="space-y-2.5">
-                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-xl border border-border/50 text-[11px]">
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-xl border border-border/50 text-[11px] overflow-x-auto scrollbar-none">
                   <button
                     onClick={() => setActiveTab("editors")}
                     className={cn(
-                      "flex-1 py-1 font-bold rounded-lg transition-all flex items-center justify-center gap-1 truncate",
+                      "flex-1 py-1 px-1.5 font-bold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap",
                       activeTab === "editors"
                         ? "bg-card text-[#00E5FF] shadow-sm border border-border/80"
                         : "text-muted-foreground hover:text-foreground"
@@ -238,7 +275,7 @@ export function WakaTimeProfileCard({
                   <button
                     onClick={() => setActiveTab("languages")}
                     className={cn(
-                      "flex-1 py-1 font-bold rounded-lg transition-all flex items-center justify-center gap-1 truncate",
+                      "flex-1 py-1 px-1.5 font-bold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap",
                       activeTab === "languages"
                         ? "bg-card text-[#00E5FF] shadow-sm border border-border/80"
                         : "text-muted-foreground hover:text-foreground"
@@ -250,7 +287,7 @@ export function WakaTimeProfileCard({
                   <button
                     onClick={() => setActiveTab("projects")}
                     className={cn(
-                      "flex-1 py-1 font-bold rounded-lg transition-all flex items-center justify-center gap-1 truncate",
+                      "flex-1 py-1 px-1.5 font-bold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap",
                       activeTab === "projects"
                         ? "bg-card text-[#00E5FF] shadow-sm border border-border/80"
                         : "text-muted-foreground hover:text-foreground"
@@ -258,9 +295,23 @@ export function WakaTimeProfileCard({
                   >
                     <Layers className="size-3 shrink-0" /> Projects ({projects.length})
                   </button>
+
+                  {badges.length > 0 && (
+                    <button
+                      onClick={() => setActiveTab("badges")}
+                      className={cn(
+                        "flex-1 py-1 px-1.5 font-bold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap",
+                        activeTab === "badges"
+                          ? "bg-card text-[#00E5FF] shadow-sm border border-border/80"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Award className="size-3 shrink-0" /> Badges ({badges.length})
+                    </button>
+                  )}
                 </div>
 
-                {/* Tab Content Panels with Compact Text Sizes */}
+                {/* Tab Content Panels */}
                 {activeTab === "editors" && (
                   <div className="space-y-2 text-[11px]">
                     {/* Editors List */}
@@ -367,13 +418,29 @@ export function WakaTimeProfileCard({
                     )}
                   </div>
                 )}
+
+                {activeTab === "badges" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {badges.slice(0, 4).map((badge) => (
+                      <div key={badge.name} className="p-2 rounded-xl bg-card/60 border border-border/60 flex items-center gap-2">
+                        <div className="size-7 rounded-lg bg-[#00E5FF]/10 text-[#00E5FF] flex items-center justify-center shrink-0">
+                          <Award className="size-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h5 className="text-[11px] font-bold text-foreground truncate">{badge.name}</h5>
+                          <p className="text-[9px] text-muted-foreground truncate">{badge.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Footer with Full Activity Modal Trigger */}
-        <div className="mt-5 pt-3.5 border-t border-border/40 flex items-center justify-between text-[10px]">
+        <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-[10px]">
           <span className="text-muted-foreground">WakaTime Metrics</span>
           {hasLinked && (
             <Button

@@ -1,4 +1,5 @@
-import { WakaTimeStats, WakaTimeLanguage, WakaTimeEditor, WakaTimeCategory, WakaTimeDay } from "@/types/wakatimeProfile";
+import { WakaTimeStats, WakaTimeLanguage, WakaTimeEditor, WakaTimeCategory, WakaTimeDay, WakaTimeProject, WakaTimeOS, WakaTimeMachine, WakaTimeBadge } from "@/types/wakatimeProfile";
+import { supabase } from "@/integrations/supabase/client";
 
 export function extractWakaTimeUsername(input: string | null | undefined): string {
   if (!input) return "";
@@ -47,6 +48,11 @@ const LANGUAGE_COLORS: Record<string, string> = {
   SCSS: "#c6538c",
   JSON: "#292929",
   Markdown: "#083fa1",
+  Solidity: "#aa6746",
+  SQL: "#e38c00",
+  Lua: "#000080",
+  R: "#198ce7",
+  Zig: "#ec915c",
 };
 
 export function getWakaLanguageColor(langName: string): string {
@@ -54,8 +60,11 @@ export function getWakaLanguageColor(langName: string): string {
 }
 
 /**
- * Fetches STRICT 100% REAL-TIME WakaTime statistics.
- * Multi-layer fetcher: Official API Key -> WakaTime JSON Endpoints -> Public HTML Profile Page & Badge Parser.
+ * Fetches comprehensive real-time WakaTime statistics.
+ * Tier 0: Supabase Edge Function `fetch-wakatime`
+ * Tier 1: Direct Official WakaTime API / API Key
+ * Tier 2: Public JSON Endpoints & Fallback Proxies
+ * Tier 3: Public HTML Profile & SVG Badge Parser
  */
 export async function fetchWakaTimeStats(
   usernameInput: string,
@@ -68,7 +77,22 @@ export async function fetchWakaTimeStats(
     return { data: null, error: "WakaTime username or API key is required." };
   }
 
-  // 1. If API Key is provided, fetch full 365-day stats via official authenticated WakaTime API endpoints
+  // Tier 0: Supabase Edge Function `fetch-wakatime`
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-wakatime", {
+      body: { username, apiKey },
+    });
+    if (!edgeRes.error && edgeRes.data?.data) {
+      return {
+        data: edgeRes.data.data as WakaTimeStats,
+        error: null,
+      };
+    }
+  } catch (edgeErr) {
+    console.warn("[WakaTimeService] fetch-wakatime Edge Function fallback:", edgeErr);
+  }
+
+  // Tier 1: If API Key is provided, fetch full stats via official authenticated WakaTime API endpoints
   if (apiKey) {
     const keyEndpoints = [
       "https://wakatime.com/api/v1/users/current/stats/last_year",
@@ -102,7 +126,7 @@ export async function fetchWakaTimeStats(
     }
   }
 
-  // 2. Fetch real-time public profile JSON stats via CORS proxies across endpoint variations (including 1 year & all-time)
+  // Tier 2: Fetch real-time public profile JSON stats across endpoint variations
   const target1Year = `https://wakatime.com/api/v1/users/@${encodeURIComponent(username)}/stats/last_1_year`;
   const target7Days = `https://wakatime.com/api/v1/users/@${encodeURIComponent(username)}/stats/last_7_days`;
   const targetStats = `https://wakatime.com/api/v1/users/@${encodeURIComponent(username)}/stats`;
@@ -110,17 +134,14 @@ export async function fetchWakaTimeStats(
   const targetAllTime = `https://wakatime.com/api/v1/users/@${encodeURIComponent(username)}/stats/all_time`;
 
   const endpoints = [
-    target1Year,
     target7Days,
-    targetStats,
     target30Days,
+    target1Year,
+    targetStats,
     targetAllTime,
-    `https://corsproxy.io/?url=${encodeURIComponent(target1Year)}`,
     `https://corsproxy.io/?url=${encodeURIComponent(target7Days)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(target1Year)}`,
     `https://corsproxy.io/?url=${encodeURIComponent(targetStats)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(target1Year)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(target7Days)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetStats)}`,
   ];
 
   for (const url of endpoints) {
@@ -154,7 +175,7 @@ export async function fetchWakaTimeStats(
     }
   }
 
-  // 3. Layer 3: Real-Time WakaTime Public HTML Profile Page & All-Time Badge Parser
+  // Tier 3: Real-Time WakaTime Public HTML Profile Page & All-Time Badge Parser
   const htmlResult = await fetchWakaTimePublicHtmlProfile(username);
   if (htmlResult) {
     return { data: htmlResult, error: null };
@@ -185,18 +206,18 @@ async function fetchWakaTimePublicHtmlProfile(username: string): Promise<WakaTim
       // Extract User ID from SVG badge link: /badge/user/8c233e88-7ce6-4c26-9514-50921f3ac71b.svg
       const badgeMatch = html.match(/\/badge\/user\/([a-zA-Z0-9-]+)\.svg/);
       let totalTimeText = "All-time Active";
+      let badgeUrl: string | null = null;
 
       if (badgeMatch && badgeMatch[1]) {
         const userId = badgeMatch[1];
-        const svgUrl = `https://wakatime.com/badge/user/${userId}.svg`;
+        badgeUrl = `https://wakatime.com/badge/user/${userId}.svg`;
         try {
-          const svgRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(svgUrl)}`, {
+          const svgRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(badgeUrl)}`, {
             cache: "no-store",
             signal: AbortSignal.timeout(5000),
           });
           if (svgRes.ok) {
             const svgText = await svgRes.text();
-            // Parse text content inside SVG <text>: e.g. "5,501 hrs 36 mins"
             const timeMatches = svgText.match(/<text[^>]*>([0-9,]+\s*hrs(?:\s*[0-9]+\s*mins)?)<\/text>/gi);
             if (timeMatches && timeMatches.length > 0) {
               const cleanMatch = timeMatches[timeMatches.length - 1].replace(/<[^>]+>/g, "").trim();
@@ -213,6 +234,8 @@ async function fetchWakaTimePublicHtmlProfile(username: string): Promise<WakaTim
         human_readable_total: totalTimeText,
         daily_average: "Active Coder",
         total_seconds: 0,
+        all_time_total: totalTimeText !== "All-time Active" ? totalTimeText : null,
+        badge_url: badgeUrl,
         languages: [],
         editors: [],
         categories: [{ name: "Coding Activity", percent: 100, text: totalTimeText }],
@@ -240,34 +263,41 @@ function parseWakaTimeData(username: string, dataObj: any, apiKeyUsed: boolean):
     text: l.text || `${l.hours || 0}h`,
     total_seconds: l.total_seconds || 0,
     color: getWakaLanguageColor(l.name),
-  }));
+  })).sort((a: any, b: any) => b.percent - a.percent);
 
   const editors: WakaTimeEditor[] = (dataObj.editors || []).map((e: any) => ({
     name: e.name || "Editor",
     percent: Number(e.percent || 0),
     text: e.text || `${e.hours || 0}h`,
     total_seconds: e.total_seconds || 0,
-  }));
+  })).sort((a: any, b: any) => b.percent - a.percent);
 
   const categories: WakaTimeCategory[] = (dataObj.categories || []).map((c: any) => ({
     name: c.name || "Category",
     percent: Number(c.percent || 0),
     text: c.text || `${c.hours || 0}h`,
     total_seconds: c.total_seconds || 0,
-  }));
+  })).sort((a: any, b: any) => b.percent - a.percent);
 
-  const projects = (dataObj.projects || []).map((p: any) => ({
+  const projects: WakaTimeProject[] = (dataObj.projects || []).map((p: any) => ({
     name: p.name || "Project",
     percent: Number(p.percent || 0),
     text: p.text || `${p.hours || 0}h`,
     total_seconds: p.total_seconds || 0,
-  }));
+  })).sort((a: any, b: any) => b.percent - a.percent);
 
-  const operating_systems = (dataObj.operating_systems || []).map((o: any) => ({
+  const operating_systems: WakaTimeOS[] = (dataObj.operating_systems || []).map((o: any) => ({
     name: o.name || "OS",
     percent: Number(o.percent || 0),
     text: o.text || `${o.hours || 0}h`,
     total_seconds: o.total_seconds || 0,
+  })).sort((a: any, b: any) => b.percent - a.percent);
+
+  const machines: WakaTimeMachine[] = (dataObj.machines || []).map((m: any) => ({
+    name: m.name || "Machine",
+    percent: Number(m.percent || 0),
+    text: m.text || `${m.hours || 0}h`,
+    total_seconds: m.total_seconds || 0,
   }));
 
   const daily_breakdown: WakaTimeDay[] = (dataObj.days || dataObj.daily_average_data || dataObj.data || []).map((d: any) => ({
@@ -287,17 +317,30 @@ function parseWakaTimeData(username: string, dataObj: any, apiKeyUsed: boolean):
 
   return {
     username: dataObj.username || username,
+    displayName: dataObj.display_name || dataObj.full_name || null,
+    bio: dataObj.bio || null,
+    avatar: dataObj.photo || (dataObj.id ? `https://wakatime.com/photo/${dataObj.id}` : null),
+    location: dataObj.city?.title || dataObj.city?.name || null,
+    timezone: dataObj.city?.timezone || null,
+    website: dataObj.human_readable_website || dataObj.website || null,
+    githubUsername: dataObj.github_username || null,
+    twitterUsername: dataObj.twitter_username || null,
+    linkedinUsername: dataObj.linkedin_username || null,
     human_readable_total: dataObj.human_readable_total_including_other_language || dataObj.human_readable_total || dataObj.human_readable_total_with_seconds || "0 hrs",
     daily_average: dataObj.human_readable_daily_average_including_other_language || dataObj.human_readable_daily_average || "0 mins",
     total_seconds: Number(dataObj.total_seconds_including_other_language || dataObj.total_seconds || 0),
+    all_time_total: dataObj.all_time_total || null,
+    badge_url: dataObj.id ? `https://wakatime.com/badge/user/${dataObj.id}.svg` : null,
     languages,
     editors,
     categories,
-    projects,
-    operating_systems,
+    projects: projects.length > 0 ? projects : undefined,
+    operating_systems: operating_systems.length > 0 ? operating_systems : undefined,
+    machines: machines.length > 0 ? machines : undefined,
     best_day,
     daily_breakdown,
-    range: dataObj.human_readable_range || "Last 1 Year",
+    range: dataObj.human_readable_range || "Last 7 Days",
+    created_at: dataObj.created_at || null,
     last_updated: new Date().toISOString(),
     api_key_used: apiKeyUsed,
     status: dataObj.status || "ok",

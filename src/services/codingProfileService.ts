@@ -2385,6 +2385,7 @@ function normalizeAtCoderStats(raw: any, username: string): AtCoderStats {
     bestRank: typeof raw.bestRank === "number" ? raw.bestRank : undefined,
     lastCompeted: raw.lastCompeted || null,
     recentContests: Array.isArray(raw.recentContests) ? raw.recentContests : [],
+    contestHistory: Array.isArray(raw.contestHistory) ? raw.contestHistory : (Array.isArray(raw.recentContests) ? raw.recentContests : []),
 
     // Heuristic Stats
     heuristicRating,
@@ -2601,6 +2602,7 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   let wins: number | null = null;
   let avatar: string | null = null;
   let recentContests: any[] = [];
+  let contestHistory: any[] = [];
   let userFound = false;
 
   // 1. Kenkoooo AtCoder API (v2 user_info: accepted_count, rated_point_sum, ranks)
@@ -2722,8 +2724,17 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
             bestRank = Math.min(...rankArray);
           }
 
+          contestHistory = ratedContests.map((h: any) => ({
+            name: h.ContestName || h.ContestNameEn || h.ContestScreenName || "AtCoder Contest",
+            code: h.ContestScreenName || undefined,
+            rating: typeof h.NewRating === "number" ? h.NewRating : 0,
+            rank: typeof h.Place === "number" ? h.Place : undefined,
+            performance: typeof h.Performance === "number" ? h.Performance : undefined,
+            date: h.EndTime ? h.EndTime.split("T")[0] : undefined,
+          }));
+
           recentContests = historyData.slice(-10).reverse().map((h: any) => ({
-            name: h.ContestName || h.ContestScreenName || "AtCoder Contest",
+            name: h.ContestName || h.ContestNameEn || h.ContestScreenName || "AtCoder Contest",
             code: h.ContestScreenName || undefined,
             rating: typeof h.NewRating === "number" ? h.NewRating : 0,
             rank: typeof h.Place === "number" ? h.Place : undefined,
@@ -2813,6 +2824,7 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
         wins: wins || undefined,
         avatar: avatar || undefined,
         recentContests: recentContests.length > 0 ? recentContests : undefined,
+        contestHistory: contestHistory.length > 0 ? contestHistory : undefined,
         last_updated: new Date().toISOString(),
       },
       error: null,

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mergeRatingHistories, RatingPoint } from "@/services/ratingHistoryService";
 
 describe("ratingHistoryService", () => {
-  it("should merge and sort rating points chronologically across 5 platforms", () => {
+  it("should merge and sort rating points chronologically across the Big 4 contest platforms", () => {
     const cfPoints: RatingPoint[] = [
       {
         platform: "codeforces",
@@ -33,47 +33,39 @@ describe("ratingHistoryService", () => {
       },
     ];
 
-    const cwPoints: RatingPoint[] = [
+    const atcoderPoints: RatingPoint[] = [
       {
-        platform: "codewars",
-        contestName: "Kata Challenge",
-        rating: 1200,
-        date: "2024-01-18",
-        timestamp: 1705536000,
+        platform: "atcoder",
+        contestName: "ABC 335",
+        rating: 1100,
+        date: "2024-01-08",
+        timestamp: 1704672000,
       },
     ];
 
-    const hrPoints: RatingPoint[] = [
-      {
-        platform: "hackerrank",
-        contestName: "HackerRank Contest",
-        rating: 1350,
-        date: "2024-01-12",
-        timestamp: 1705017600,
-      },
-    ];
+    const merged = mergeRatingHistories(
+      cfPoints,
+      lcPoints,
+      ccPoints,
+      atcoderPoints
+    );
 
-    const merged = mergeRatingHistories(cfPoints, lcPoints, ccPoints, cwPoints, hrPoints);
-
-    expect(merged.length).toBe(5);
+    expect(merged.length).toBe(4);
     expect(merged[0].date).toBe("2024-01-05");
     expect(merged[0].codechef).toBe(1400);
 
-    expect(merged[1].date).toBe("2024-01-10");
-    expect(merged[1].codeforces).toBe(1500);
+    expect(merged[1].date).toBe("2024-01-08");
+    expect(merged[1].atcoder).toBe(1100);
 
-    expect(merged[2].date).toBe("2024-01-12");
-    expect(merged[2].hackerrank).toBe(1350);
+    expect(merged[2].date).toBe("2024-01-10");
+    expect(merged[2].codeforces).toBe(1500);
 
     expect(merged[3].date).toBe("2024-01-15");
     expect(merged[3].leetcode).toBe(1650);
-
-    expect(merged[4].date).toBe("2024-01-18");
-    expect(merged[4].codewars).toBe(1200);
   });
 
   it("should return an empty array if all platform histories are empty", () => {
-    const merged = mergeRatingHistories([], [], [], [], []);
+    const merged = mergeRatingHistories([], [], [], []);
     expect(merged).toEqual([]);
   });
 });

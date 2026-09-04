@@ -86,20 +86,24 @@ export function UserAvatarImage({
   src,
   fallbackSrc,
   name,
+  username,
   fallbackText,
   borderColor = "border-primary/25",
   fallbackBg = "bg-primary/20 border-primary/30",
   fallbackTextColor = "text-primary",
   sizeClass = "size-7",
+  className,
 }: {
   src?: string | null;
   fallbackSrc?: string | null;
   name?: string | null;
+  username?: string | null;
   fallbackText?: string | null;
   borderColor?: string;
   fallbackBg?: string;
   fallbackTextColor?: string;
   sizeClass?: string;
+  className?: string;
 }) {
   const normalizeUrl = (url?: string | null) => {
     if (!url) return null;
@@ -141,16 +145,16 @@ export function UserAvatarImage({
   }, [src, fallbackSrc]);
 
   const activeSrc = candidateUrls[candidateIndex] || null;
-  const initials = (fallbackText || name || "CP").trim().substring(0, 2).toUpperCase();
+  const initials = (fallbackText || name || username || "CP").trim().substring(0, 2).toUpperCase();
 
   if (activeSrc) {
     return (
       <img
         src={activeSrc}
-        alt={name || "User Avatar"}
+        alt={name || username || "User Avatar"}
         referrerPolicy="no-referrer"
         loading="lazy"
-        className={cn(sizeClass, "rounded-lg object-cover border shrink-0 shadow-xs", borderColor)}
+        className={cn(sizeClass, "rounded-lg object-cover border shrink-0 shadow-xs", borderColor, className)}
         onError={() => {
           setCandidateIndex((prev) => prev + 1);
         }}
@@ -162,10 +166,12 @@ export function UserAvatarImage({
     <div
       className={cn(
         sizeClass,
-        "rounded-lg border flex items-center justify-center font-extrabold text-[11px] shrink-0 shadow-xs select-none",
+        "rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0 border select-none shadow-xs font-mono",
         fallbackBg,
-        fallbackTextColor
+        fallbackTextColor,
+        className
       )}
+      title={name || username || undefined}
     >
       {initials}
     </div>

@@ -393,6 +393,7 @@ export interface AtCoderStats {
   bestRank?: number;
   lastCompeted?: string | null;
   recentContests?: AtCoderContestHistory[];
+  contestHistory?: AtCoderContestHistory[];
 
   // Heuristic Statistics
   heuristicRating?: number | null;

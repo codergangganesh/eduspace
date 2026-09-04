@@ -12,20 +12,24 @@ import { Badge } from "@/components/ui/badge";
 import { WakaTimeStats } from "@/types/wakatimeProfile";
 import { fetchWakaTimeStats, extractWakaTimeUsername } from "@/services/wakatimeService";
 import { UnifiedPlatformLogo } from "./PlatformLogos";
+import { UserAvatarImage } from "./CodingProfileCard";
 import {
   Clock,
   Code2,
   Cpu,
   Layers,
   ExternalLink,
-  BarChart3,
   TrendingUp,
   Sparkles,
-  Calendar,
   Search,
   Loader2,
   X,
   RotateCcw,
+  MapPin,
+  Globe,
+  Award,
+  HardDrive,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,13 +39,6 @@ interface WakaTimeAnalyticsModalProps {
   stats?: WakaTimeStats | null;
   username: string;
   apiKey?: string | null;
-}
-
-interface HeatmapDay {
-  date: string;
-  count: number;
-  text: string;
-  intensity: number; // 0 to 4
 }
 
 const POPULAR_WAKATIME_SEARCHES = ["alan", "dev_okore", "sindresorhus", "codergangganesh"];
@@ -59,13 +56,6 @@ export function WakaTimeAnalyticsModal({
   const [searchedUsername, setSearchedUsername] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const currentYearNum = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<number>(currentYearNum);
-
-  const availableYears = useMemo(() => {
-    return [currentYearNum, currentYearNum - 1, currentYearNum - 2];
-  }, [currentYearNum]);
-
   // Sync active stats & username
   const currentUsername = searchedUsername || username;
   const currentStats = searchedUsername ? searchedStats : stats;
@@ -78,7 +68,6 @@ export function WakaTimeAnalyticsModal({
       setSearchedStats(null);
       setSearchedUsername(null);
       setSearchError(null);
-      setSelectedYear(new Date().getFullYear());
     }
   }, [open]);
 
@@ -112,86 +101,8 @@ export function WakaTimeAnalyticsModal({
   const categories = currentStats?.categories || [];
   const projects = currentStats?.projects || [];
   const operatingSystems = currentStats?.operating_systems && currentStats.operating_systems.length > 0 ? currentStats.operating_systems : categories;
-  const dailyBreakdown = currentStats?.daily_breakdown || [];
-
-  const maxDailySeconds = Math.max(1, ...dailyBreakdown.map((d) => d.total_seconds));
-
-  // Generate 365-day (52 weeks) contribution heatmap data strictly from API lookup for selectedYear
-  const heatmapData = useMemo(() => {
-    const days: HeatmapDay[] = [];
-    const now = new Date();
-
-    const lookup: Record<string, { total_seconds: number; text: string }> = {};
-    dailyBreakdown.forEach((d) => {
-      if (d.date) {
-        lookup[d.date] = { total_seconds: d.total_seconds, text: d.text };
-      }
-    });
-
-    if (selectedYear === currentYearNum) {
-      // 364 days ending today
-      for (let i = 363; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const isoDate = d.toISOString().split("T")[0];
-
-        const match = lookup[isoDate];
-        const total_seconds = match?.total_seconds || 0;
-        const text = match?.text || (total_seconds > 0 ? `${Math.round(total_seconds / 60)} mins` : "No activity");
-
-        let intensity = 0;
-        if (total_seconds > 0) {
-          if (total_seconds < 1800) intensity = 1;      // < 30 mins
-          else if (total_seconds < 7200) intensity = 2; // 30m - 2h
-          else if (total_seconds < 14400) intensity = 3; // 2h - 4h
-          else intensity = 4;                           // > 4h
-        }
-
-        days.push({ date: isoDate, count: total_seconds, text, intensity });
-      }
-    } else {
-      // Full calendar year for historical selectedYear
-      const startDate = new Date(selectedYear, 0, 1);
-      const endDate = new Date(selectedYear, 11, 31);
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const isoDate = d.toISOString().split("T")[0];
-
-        const match = lookup[isoDate];
-        const total_seconds = match?.total_seconds || 0;
-        const text = match?.text || (total_seconds > 0 ? `${Math.round(total_seconds / 60)} mins` : "No activity");
-
-        let intensity = 0;
-        if (total_seconds > 0) {
-          if (total_seconds < 1800) intensity = 1;      // < 30 mins
-          else if (total_seconds < 7200) intensity = 2; // 30m - 2h
-          else if (total_seconds < 14400) intensity = 3; // 2h - 4h
-          else intensity = 4;                           // > 4h
-        }
-
-        days.push({ date: isoDate, count: total_seconds, text, intensity });
-      }
-    }
-
-    return days;
-  }, [dailyBreakdown, selectedYear, currentYearNum]);
-
-  // Group days into 52 weeks (7 days per week: Sun-Sat)
-  const weeks = useMemo(() => {
-    const result: HeatmapDay[][] = [];
-    let currentWeek: HeatmapDay[] = [];
-
-    heatmapData.forEach((day, index) => {
-      currentWeek.push(day);
-      if (currentWeek.length === 7 || index === heatmapData.length - 1) {
-        result.push(currentWeek);
-        currentWeek = [];
-      }
-    });
-
-    return result;
-  }, [heatmapData]);
-
-  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const machines = currentStats?.machines || [];
+  const badges = currentStats?.badges || [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -210,15 +121,13 @@ export function WakaTimeAnalyticsModal({
                   </Badge>
                 </SheetTitle>
                 <SheetDescription className="text-[11px] text-muted-foreground truncate mt-0.5">
-                  Search & view public developer coding stats and 365-day heatmaps.
+                  Live developer programming metrics, IDEs, and language activity.
                 </SheetDescription>
               </div>
             </div>
-
-
           </div>
 
-          {/* GitHub-Style Live Profile Search Bar */}
+          {/* Live Profile Search Bar */}
           <div className="space-y-2 pt-1 pr-8">
             <form
               onSubmit={(e) => {
@@ -312,11 +221,70 @@ export function WakaTimeAnalyticsModal({
           </div>
         ) : (
           <div className="p-4 sm:p-5 space-y-4">
+            {/* User Profile Overview Header */}
+            {(currentStats.avatar || currentStats.displayName || currentStats.bio || currentStats.location || currentStats.all_time_total) && (
+              <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-muted/30 border border-border/60">
+                <UserAvatarImage
+                  src={currentStats.avatar}
+                  name={currentStats.displayName || currentUsername}
+                  username={currentUsername}
+                  fallbackText={currentUsername}
+                  borderColor="border-[#00E5FF]/30"
+                  sizeClass="size-13 sm:size-14"
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-black text-foreground truncate">
+                      {currentStats.displayName || `@${currentUsername}`}
+                    </h3>
+                    {currentStats.all_time_total && (
+                      <span className="text-[11px] font-black font-mono text-[#00E5FF] bg-[#00E5FF]/10 px-2.5 py-0.5 rounded-lg border border-[#00E5FF]/20 shrink-0">
+                        {currentStats.all_time_total}
+                      </span>
+                    )}
+                  </div>
+                  {currentStats.bio && (
+                    <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
+                      {currentStats.bio}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 pt-0.5 text-[11px] text-muted-foreground flex-wrap font-medium">
+                    {currentStats.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="size-3 text-[#00E5FF] shrink-0" />
+                        {currentStats.location}
+                      </span>
+                    )}
+                    {currentStats.website && (
+                      <a
+                        href={currentStats.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[#00E5FF] hover:underline"
+                      >
+                        <Globe className="size-3 shrink-0" />
+                        Website
+                      </a>
+                    )}
+                    <a
+                      href={profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <ExternalLink className="size-3 shrink-0" />
+                      WakaTime Profile
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Top Overview Banners */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="p-3.5 rounded-2xl bg-[#00E5FF]/5 border border-[#00E5FF]/20 space-y-0.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  <Clock className="size-3.5 text-[#00E5FF]" /> Weekly Total
+                  <Clock className="size-3.5 text-[#00E5FF]" /> Total Time
                 </div>
                 <div className="text-lg sm:text-xl font-black font-mono text-foreground truncate">
                   {currentStats.human_readable_total || "0 hrs"}
@@ -346,6 +314,31 @@ export function WakaTimeAnalyticsModal({
                 </p>
               </div>
             </div>
+
+            {/* Badges & Achievements */}
+            {badges.length > 0 && (
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <Award className="size-3.5 text-[#00E5FF]" /> Badges & Milestones
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {badges.map((b) => (
+                    <div key={b.name} className="p-2.5 rounded-xl bg-card/60 border border-border/60 flex items-center gap-2.5">
+                      <div className="size-8 rounded-lg bg-[#00E5FF]/10 text-[#00E5FF] flex items-center justify-center shrink-0">
+                        <Award className="size-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <h5 className="text-xs font-bold text-foreground truncate">{b.name}</h5>
+                          <span className="text-[9px] font-mono text-muted-foreground uppercase">{b.category}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground truncate">{b.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Editors & Operating Systems Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -395,7 +388,7 @@ export function WakaTimeAnalyticsModal({
             {/* Languages Breakdown Grid */}
             <div className="space-y-2.5">
               <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
-                <Code2 className="size-3.5 text-[#00E5FF]" /> Languages Breakdown
+                <Code2 className="size-3.5 text-[#00E5FF]" /> Languages Breakdown ({languages.length})
               </h4>
 
               <div className="space-y-2">
@@ -432,7 +425,7 @@ export function WakaTimeAnalyticsModal({
             {projects.length > 0 && (
               <div className="space-y-2.5">
                 <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
-                  <Layers className="size-3.5 text-[#00E5FF]" /> Public Projects Worked On
+                  <Layers className="size-3.5 text-[#00E5FF]" /> Public Projects Worked On ({projects.length})
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -448,6 +441,34 @@ export function WakaTimeAnalyticsModal({
                         <div
                           className="h-full bg-[#00E5FF] rounded-full transition-all duration-500"
                           style={{ width: `${Math.max(3, proj.percent)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Machines Breakdown Grid */}
+            {machines.length > 0 && (
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-extrabold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <HardDrive className="size-3.5 text-[#00E5FF]" /> Development Machines
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {machines.map((m) => (
+                    <div key={m.name} className="p-2.5 rounded-xl bg-card/60 border border-border/60 space-y-1">
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="text-foreground truncate max-w-[140px]">{m.name}</span>
+                        <span className="font-mono text-muted-foreground text-[10px] shrink-0 ml-2">
+                          {m.text} ({m.percent}%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.max(3, m.percent)}%` }}
                         />
                       </div>
                     </div>

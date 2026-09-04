@@ -1,13 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
-import { CodeChefContestHistory, CodeChefStats, HackerRankStats, LeetCodeStats } from "@/types/codingProfile";
+import {
+  AtCoderContestHistory,
+  AtCoderStats,
+  CodeChefContestHistory,
+  CodeChefStats,
+  LeetCodeStats,
+} from "@/types/codingProfile";
 
 export interface RatingPoint {
-  platform: "codeforces" | "leetcode" | "codechef" | "codewars" | "hackerrank";
+  platform: "codeforces" | "leetcode" | "codechef" | "atcoder";
   contestName: string;
   rating: number;
   date: string; // "YYYY-MM-DD"
   timestamp: number; // in seconds
   delta?: number; // rating change + / -
+  rank?: number; // contest place / rank
+  performance?: number;
+  oldRating?: number;
 }
 
 export interface MergedRatingPoint {
@@ -23,16 +32,13 @@ export interface MergedRatingPoint {
   codechef?: number | null;
   codechefContest?: string;
   codechefDelta?: number | null;
-  codewars?: number | null;
-  codewarsContest?: string;
-  codewarsDelta?: number | null;
-  hackerrank?: number | null;
-  hackerrankContest?: string;
-  hackerrankDelta?: number | null;
+  atcoder?: number | null;
+  atcoderContest?: string;
+  atcoderDelta?: number | null;
 }
 
 export interface PlatformRatingPeak {
-  platform: "codeforces" | "leetcode" | "codechef" | "codewars" | "hackerrank";
+  platform: "codeforces" | "leetcode" | "codechef" | "atcoder";
   label: string;
   current: number | null;
   max: number | null;
@@ -45,7 +51,7 @@ export interface PlatformRatingPeak {
  * if API returns only 1 current rating point.
  */
 export function generateTrajectoryPoints(
-  platform: "codeforces" | "leetcode" | "codechef" | "codewars" | "hackerrank",
+  platform: "codeforces" | "leetcode" | "codechef" | "atcoder",
   currentRating: number,
   maxRating: number | null,
   contestsCount: number = 8
@@ -54,7 +60,7 @@ export function generateTrajectoryPoints(
   const now = Math.floor(Date.now() / 1000);
   const total = Math.max(6, Math.min(12, contestsCount || 8));
 
-  const startRating = Math.max(400, currentRating - 220);
+  const startRating = Math.max(150, currentRating - 220);
   const peakRating = maxRating && maxRating > currentRating ? maxRating : currentRating + 50;
 
   for (let i = total; i >= 0; i--) {
@@ -82,13 +88,12 @@ export function generateTrajectoryPoints(
     if (platform === "codeforces") contestName = `Codeforces Round #${850 + (total - i)}`;
     if (platform === "leetcode") contestName = `Weekly Contest ${370 + (total - i)}`;
     if (platform === "codechef") contestName = `Starters ${120 + (total - i)}`;
-    if (platform === "codewars") contestName = `Kata Challenge #${total - i + 1}`;
-    if (platform === "hackerrank") contestName = `HackerRank Contest #${total - i + 1}`;
+    if (platform === "atcoder") contestName = `AtCoder Beginner Contest ${340 + (total - i)}`;
 
     points.push({
       platform,
       contestName,
-      rating: Math.max(300, currentPointRating),
+      rating: Math.max(100, currentPointRating),
       date: dateStr,
       timestamp: ts,
       delta,
@@ -500,54 +505,211 @@ export async function fetchCodeChefRatingHistory(
 }
 
 /**
- * Fetch Codewars User Honor Progression
+ * Fetch AtCoder Contest Rating History
  */
-export async function fetchCodewarsRatingHistory(username: string): Promise<RatingPoint[]> {
-  if (!username || !username.trim()) return [];
-  const cleanUsername = username.trim();
+/**
+ * Fetch AtCoder Official Algorithm Contest Rating History in Real-Time
+ */
+export async function fetchAtCoderRatingHistory(
+  username: string,
+  existingContests?: AtCoderContestHistory[],
+  stats?: AtCoderStats | null
+): Promise<RatingPoint[]> {
+  const cleanUser = (username || stats?.username || "").trim();
 
-  try {
-    const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(cleanUsername)}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && typeof data.honor === "number") {
-        return generateTrajectoryPoints("codewars", data.honor, data.honor + 80, 7);
+  // Tier 0: If stats already has full contestHistory loaded
+  if (stats?.contestHistory && stats.contestHistory.length > 0) {
+    const sorted = [...stats.contestHistory].sort((a, b) => {
+      const tA = a.date ? new Date(a.date).getTime() : 0;
+      const tB = b.date ? new Date(b.date).getTime() : 0;
+      return tA - tB;
+    });
+    let prev = sorted[0]?.rating || 800;
+    return sorted.map((item, idx) => {
+      const timestamp = item.date ? new Date(item.date).getTime() / 1000 : Math.floor(Date.now() / 1000) - (sorted.length - idx) * 86400 * 14;
+      const dateStr = item.date || new Date(timestamp * 1000).toISOString().split("T")[0];
+      const delta = item.rating - prev;
+      prev = item.rating;
+      return {
+        platform: "atcoder",
+        contestName: item.name || item.code || "AtCoder Contest",
+        rating: item.rating,
+        date: dateStr,
+        timestamp: Math.floor(timestamp),
+        delta,
+        rank: item.rank,
+        performance: item.performance,
+      };
+    });
+  }
+
+  if (cleanUser) {
+    const timestamp = Date.now();
+    const historyUrl = `https://atcoder.jp/users/${encodeURIComponent(cleanUser)}/history/json`;
+
+    // Tier 1: Real-Time Official AtCoder Algorithm History API (Direct & High-Speed CORS Proxies)
+    const proxies = [
+      historyUrl,
+      `https://corsproxy.io/?url=${encodeURIComponent(historyUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(historyUrl)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(historyUrl)}`,
+      `https://proxy.cors.sh/${historyUrl}`,
+    ];
+
+    for (const proxy of proxies) {
+      try {
+        const res = await fetch(proxy, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+          signal: AbortSignal.timeout(6000),
+        });
+
+        if (res.ok) {
+          let json: any = null;
+          try {
+            json = await res.json();
+          } catch {
+            const text = await res.text();
+            json = JSON.parse(text);
+          }
+
+          if (Array.isArray(json) && json.length > 0) {
+            const rated = json.filter((h: any) => h.IsRated !== false && typeof h.NewRating === "number");
+            if (rated.length > 0) {
+              const sorted = [...rated].sort((a: any, b: any) => {
+                const tA = a.EndTime ? new Date(a.EndTime).getTime() : 0;
+                const tB = b.EndTime ? new Date(b.EndTime).getTime() : 0;
+                return tA - tB;
+              });
+
+              let prev = sorted[0].OldRating || sorted[0].NewRating || 800;
+              return sorted.map((item: any) => {
+                const endTime = item.EndTime || "";
+                const dateObj = endTime ? new Date(endTime) : new Date();
+                const dateStr = !isNaN(dateObj.getTime())
+                  ? dateObj.toISOString().split("T")[0]
+                  : new Date().toISOString().split("T")[0];
+                const itemTimestamp = !isNaN(dateObj.getTime())
+                  ? Math.floor(dateObj.getTime() / 1000)
+                  : Math.floor(Date.now() / 1000);
+                const ratingNum = typeof item.NewRating === "number" ? item.NewRating : Number(item.NewRating || 0);
+                const oldRatingNum = typeof item.OldRating === "number" ? item.OldRating : prev;
+                const delta = ratingNum - oldRatingNum;
+                prev = ratingNum;
+
+                const contestTitle = item.ContestName || item.ContestNameEn || item.ContestScreenName || "AtCoder Contest";
+
+                return {
+                  platform: "atcoder",
+                  contestName: contestTitle,
+                  rating: ratingNum,
+                  date: dateStr,
+                  timestamp: itemTimestamp,
+                  delta,
+                  rank: typeof item.Place === "number" ? item.Place : (typeof item.rank === "number" ? item.rank : undefined),
+                  performance: typeof item.Performance === "number" ? item.Performance : undefined,
+                  oldRating: oldRatingNum,
+                };
+              });
+            }
+          }
+        }
+      } catch {
+        // Continue to next endpoint
       }
     }
-  } catch (err) {
-    console.warn("Failed to fetch Codewars rating/honor history:", err);
+
+    // Tier 2: Supabase Edge Function Fallback
+    try {
+      const edgeRes = await supabase.functions.invoke("fetch-atcoder", {
+        body: { username: cleanUser },
+      });
+      if (!edgeRes.error && edgeRes.data && edgeRes.data.success && edgeRes.data.data) {
+        const edgeContests = edgeRes.data.data.contestHistory || edgeRes.data.data.recentContests;
+        if (Array.isArray(edgeContests) && edgeContests.length > 0) {
+          const sorted = [...edgeContests].sort((a: any, b: any) => {
+            const tA = a.date ? new Date(a.date).getTime() : (a.EndTime ? new Date(a.EndTime).getTime() : 0);
+            const tB = b.date ? new Date(b.date).getTime() : (b.EndTime ? new Date(b.EndTime).getTime() : 0);
+            return tA - tB;
+          });
+          let prev = Number(sorted[0]?.OldRating || sorted[0]?.rating || 800);
+          return sorted.map((item: any) => {
+            const dateStr = item.date || (item.EndTime ? item.EndTime.split("T")[0] : new Date().toISOString().split("T")[0]);
+            const dateObj = new Date(dateStr);
+            const ratingNum = Number(item.rating || item.NewRating || 0);
+            const delta = ratingNum - prev;
+            prev = ratingNum;
+            return {
+              platform: "atcoder",
+              contestName: item.name || item.ContestName || item.ContestScreenName || "AtCoder Contest",
+              rating: ratingNum,
+              date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
+              timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
+              delta,
+              rank: item.rank || item.Place,
+              performance: item.performance || item.Performance,
+            };
+          });
+        }
+      }
+    } catch { }
+  }
+
+  // Tier 3: Existing Contests from profile state (sorted chronologically)
+  const contestsSource = (existingContests && existingContests.length > 0)
+    ? existingContests
+    : (stats?.recentContests && stats.recentContests.length > 0)
+      ? stats.recentContests
+      : null;
+
+  if (contestsSource && contestsSource.length > 0) {
+    const sorted = [...contestsSource].sort((a, b) => {
+      const tA = a.date ? new Date(a.date).getTime() : 0;
+      const tB = b.date ? new Date(b.date).getTime() : 0;
+      return tA - tB;
+    });
+    let prev = sorted[0]?.rating || 800;
+    return sorted.map((item, idx) => {
+      const timestamp = item.date ? new Date(item.date).getTime() / 1000 : Math.floor(Date.now() / 1000) - (sorted.length - idx) * 86400 * 14;
+      const dateStr = item.date || new Date(timestamp * 1000).toISOString().split("T")[0];
+      const delta = item.rating - prev;
+      prev = item.rating;
+      return {
+        platform: "atcoder",
+        contestName: item.name || item.code || "AtCoder Contest",
+        rating: item.rating,
+        date: dateStr,
+        timestamp: Math.floor(timestamp),
+        delta,
+      };
+    });
+  }
+
+  // Tier 4: Fallback based on verified live rating
+  if (stats && (stats.rating > 0 || stats.maxRating > 0)) {
+    const currentRating = stats.rating || 800;
+    const maxRating = stats.maxRating || currentRating;
+    const count = Math.min(20, Math.max(5, stats.competitionsCount || 8));
+    return generateTrajectoryPoints("atcoder", currentRating, maxRating, count);
   }
 
   return [];
 }
 
 /**
- * Fetch HackerRank Performance History
- */
-export async function fetchHackerRankRatingHistory(
-  username: string,
-  stats?: HackerRankStats | null
-): Promise<RatingPoint[]> {
-  const cleanUser = username?.trim();
-  const score = stats?.score || (stats?.totalSolved ? stats.totalSolved * 15 : null);
-  const ratingVal = score || 1250;
-
-  if (!cleanUser && !stats) return [];
-
-  return generateTrajectoryPoints("hackerrank", ratingVal, ratingVal + 90, 8);
-}
-
-/**
  * Merge individual platform histories into a single chronologically sorted timeline
  */
 export function mergeRatingHistories(
-  cfPoints: RatingPoint[],
-  lcPoints: RatingPoint[],
-  ccPoints: RatingPoint[],
-  cwPoints: RatingPoint[] = [],
-  hrPoints: RatingPoint[] = []
+  cfPoints: RatingPoint[] = [],
+  lcPoints: RatingPoint[] = [],
+  ccPoints: RatingPoint[] = [],
+  atcoderPoints: RatingPoint[] = []
 ): MergedRatingPoint[] {
-  const allPoints = [...cfPoints, ...lcPoints, ...ccPoints, ...cwPoints, ...hrPoints];
+  const allPoints = [
+    ...cfPoints,
+    ...lcPoints,
+    ...ccPoints,
+    ...atcoderPoints,
+  ];
   if (allPoints.length === 0) return [];
 
   // Sort chronologically by timestamp
@@ -566,13 +728,9 @@ export function mergeRatingHistories(
   let lastCCContest: string | undefined;
   let lastCCDelta: number | null = null;
 
-  let lastCW: number | null = null;
-  let lastCWContest: string | undefined;
-  let lastCWDelta: number | null = null;
-
-  let lastHR: number | null = null;
-  let lastHRContest: string | undefined;
-  let lastHRDelta: number | null = null;
+  let lastAtCoder: number | null = null;
+  let lastAtCoderContest: string | undefined;
+  let lastAtCoderDelta: number | null = null;
 
   allPoints.forEach((pt) => {
     const dateKey = pt.date;
@@ -591,14 +749,10 @@ export function mergeRatingHistories(
       lastCC = pt.rating;
       lastCCContest = pt.contestName;
       lastCCDelta = pt.delta ?? null;
-    } else if (pt.platform === "codewars") {
-      lastCW = pt.rating;
-      lastCWContest = pt.contestName;
-      lastCWDelta = pt.delta ?? null;
-    } else if (pt.platform === "hackerrank") {
-      lastHR = pt.rating;
-      lastHRContest = pt.contestName;
-      lastHRDelta = pt.delta ?? null;
+    } else if (pt.platform === "atcoder") {
+      lastAtCoder = pt.rating;
+      lastAtCoderContest = pt.contestName;
+      lastAtCoderDelta = pt.delta ?? null;
     }
 
     mergedMap.set(dateKey, {
@@ -614,12 +768,9 @@ export function mergeRatingHistories(
       codechef: lastCC,
       codechefContest: pt.platform === "codechef" ? pt.contestName : lastCCContest,
       codechefDelta: pt.platform === "codechef" ? pt.delta ?? null : lastCCDelta,
-      codewars: lastCW,
-      codewarsContest: pt.platform === "codewars" ? pt.contestName : lastCWContest,
-      codewarsDelta: pt.platform === "codewars" ? pt.delta ?? null : lastCWDelta,
-      hackerrank: lastHR,
-      hackerrankContest: pt.platform === "hackerrank" ? pt.contestName : lastHRContest,
-      hackerrankDelta: pt.platform === "hackerrank" ? pt.delta ?? null : lastHRDelta,
+      atcoder: lastAtCoder,
+      atcoderContest: pt.platform === "atcoder" ? pt.contestName : lastAtCoderContest,
+      atcoderDelta: pt.platform === "atcoder" ? pt.delta ?? null : lastAtCoderDelta,
     });
   });
 
