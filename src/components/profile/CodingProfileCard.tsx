@@ -1188,10 +1188,14 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const globalRank = ccStats?.globalRank;
             const countryRank = ccStats?.countryRank;
             const totalSolved = ccStats?.totalSolved ?? 0;
-            const dsaRating = (ccStats?.dsaRating && ccStats.dsaRating > 0) ? ccStats.dsaRating : (rating > 0 ? rating : null);
-            const fullySolved = ccStats?.fullySolved ?? Math.round(totalSolved * 0.85);
-            const partiallySolved = ccStats?.partiallySolved ?? Math.max(0, totalSolved - fullySolved);
-            const contestsParticipated = ccStats?.contestsParticipated ?? (rating > 0 ? Math.max(4, Math.floor(rating / 110) + 2) : 0);
+            const dsaRating = (typeof ccStats?.dsaRating === "number" && ccStats.dsaRating > 0) ? ccStats.dsaRating : (rating > 0 ? rating : null);
+            const fullySolved = typeof ccStats?.fullySolved === "number" ? ccStats.fullySolved : totalSolved;
+            const partiallySolved = typeof ccStats?.partiallySolved === "number" ? ccStats.partiallySolved : Math.max(0, totalSolved - fullySolved);
+            const contestsParticipated = typeof ccStats?.contestsParticipated === "number"
+              ? ccStats.contestsParticipated
+              : (Array.isArray(ccStats?.recentContests) && ccStats.recentContests.length > 0
+                ? ccStats.recentContests.length
+                : 0);
             const badges = ccStats?.badges || [];
             const difficulty = ccStats?.problemDifficultyBreakdown || {
               school: Math.round(totalSolved * 0.20),
@@ -1325,10 +1329,10 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 tracking-tight">
-                        {dsaRating ?? (rating > 0 ? rating : "Unrated")}
+                        {dsaRating !== null ? dsaRating.toLocaleString() : (rating > 0 ? rating.toLocaleString() : "Unrated")}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Skill Proficiency
+                        {dsaRating !== null && dsaRating !== rating ? "DSA Track Rating" : (rating > 0 ? "DSA Contest Rating" : "Not Participated")}
                       </div>
                     </div>
                   </div>
@@ -1345,10 +1349,10 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {globalRank && globalRank > 0 ? `#${globalRank.toLocaleString()}` : (rating > 0 ? "Active" : "Unrated")}
+                        {globalRank && globalRank > 0 ? `#${globalRank.toLocaleString()}` : (rating > 0 ? "Inactive" : "Unrated")}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Worldwide Standing
+                        {globalRank && globalRank > 0 ? "Worldwide Standing" : (rating > 0 ? "Leaderboard Inactive" : "Unrated")}
                       </div>
                     </div>
                   </div>
@@ -1365,10 +1369,10 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {countryRank && countryRank > 0 ? `#${countryRank.toLocaleString()}` : (rating > 0 ? "Active" : "Unrated")}
+                        {countryRank && countryRank > 0 ? `#${countryRank.toLocaleString()}` : (rating > 0 && ccStats?.countryName ? ccStats.countryName : (rating > 0 ? "Inactive" : "Unrated"))}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        National Standing
+                        {countryRank && countryRank > 0 ? "National Standing" : (rating > 0 && ccStats?.countryName ? "Country Profile" : "Unrated")}
                       </div>
                     </div>
                   </div>
@@ -1385,10 +1389,10 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                     </div>
                     <div>
                       <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {contestsParticipated}
+                        {contestsParticipated > 0 ? contestsParticipated.toLocaleString() : "0"}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Attended & Rated
+                        {contestsParticipated > 0 ? "Attended & Rated" : "No Contests"}
                       </div>
                     </div>
                   </div>

@@ -1268,6 +1268,7 @@ function normalizeCodeChefStats(raw: any, username: string): CodeChefStats {
     else if (rating >= 1800) stars = "4★";
     else if (rating >= 1600) stars = "3★";
     else if (rating >= 1400) stars = "2★";
+    else if (rating > 0) stars = "1★";
     else stars = "1★";
   } else if (!stars.includes("★")) {
     stars = `${stars.replace(/&#9733;|\*/g, "")}★`;
@@ -1295,23 +1296,39 @@ function normalizeCodeChefStats(raw: any, username: string): CodeChefStats {
 
   // Total Solved, Fully Solved, Partially Solved
   let totalSolved = parseInt(String(raw.numberOfProblemsSolved || raw.totalSolved || raw.solvedCount || raw.problemsSolved || 0)) || 0;
-  if (totalSolved === 0 && rating > 0) {
-    totalSolved = Math.max(50, Math.round(rating * 0.3));
-  }
-  const fullySolved = typeof raw.fullySolved === "number" ? raw.fullySolved : Math.round(totalSolved * 0.85);
+  const fullySolved = typeof raw.fullySolved === "number" ? raw.fullySolved : (typeof raw.numberOfProblemsSolved === "number" ? raw.numberOfProblemsSolved : totalSolved);
   const partiallySolved = typeof raw.partiallySolved === "number" ? raw.partiallySolved : Math.max(0, totalSolved - fullySolved);
 
-  // Real DSA Rating
-  const dsaRatingNum = parseInt(String(raw.dsaRating || raw.dsa_rating || 0)) || 0;
+  // Real DSA Rating (Accurately retrieved from DSA tracks or active CP rating)
+  const dsaRatingNum = parseInt(String(raw.dsaRating || raw.dsa_rating || raw.dsaRatingNum || raw.dsa_monday_rating || 0)) || 0;
   const dsaRating = dsaRatingNum > 0 ? dsaRatingNum : (rating > 0 ? rating : null);
 
-  // Real Contests Participated
-  let contestsParticipated = parseInt(String(raw.contestsParticipated || raw.contestsAttended || raw.contestCount || raw.participation || (raw.recentContests ? raw.recentContests.length : (raw.ratingData ? raw.ratingData.length : 0)))) || 0;
-  if (contestsParticipated === 0 && rating > 0) {
-    contestsParticipated = Math.max(5, Math.floor(rating / 29));
+  // Real Contests Participated (Exact count only, directly from APIs or HTML scraper)
+  let contestsParticipated = typeof raw.contestsParticipated === "number"
+    ? raw.contestsParticipated
+    : typeof raw.participation === "number"
+      ? raw.participation
+      : typeof raw.contestsAttended === "number"
+        ? raw.contestsAttended
+        : typeof raw.contestCount === "number"
+          ? raw.contestCount
+          : (Array.isArray(raw.recentContests) && raw.recentContests.length > 0
+            ? raw.recentContests.length
+            : (Array.isArray(raw.all_rating) && raw.all_rating.length > 0
+              ? raw.all_rating.length
+              : (Array.isArray(raw.contests) && raw.contests.length > 0
+                ? raw.contests.length
+                : (raw.contestsParticipated !== undefined && raw.contestsParticipated !== null && String(raw.contestsParticipated).trim() !== ""
+                  ? parseInt(String(raw.contestsParticipated), 10) || 0
+                  : (raw.participation !== undefined && raw.participation !== null && String(raw.participation).trim() !== ""
+                    ? parseInt(String(raw.participation), 10) || 0
+                    : 0)))));
+
+  if (isNaN(contestsParticipated) || contestsParticipated < 0) {
+    contestsParticipated = 0;
   }
 
-  // Real Badges
+  // Real Badges - only actual badges earned
   let badges: CodeChefBadge[] = [];
   if (Array.isArray(raw.badges) && raw.badges.length > 0) {
     badges = raw.badges.map((b: any) =>
@@ -1324,18 +1341,6 @@ function normalizeCodeChefStats(raw: any, username: string): CodeChefStats {
           icon: b.icon || b.imageUrl || undefined,
         }
     );
-  } else if (rating >= 2000) {
-    badges = [
-      { name: "Daily Streak - Diamond Badge", description: "Received for maintaining a streak of 100 days", category: "Achievement Badge" },
-      { name: "Contest Contender - Gold Badge", description: "Received for participating in 50 Contests", category: "Achievement Badge" },
-      { name: "Problem Solver - Gold Badge", description: "Received for solving 500 Problems", category: "Achievement Badge" },
-    ];
-  } else if (rating >= 1600) {
-    badges = [
-      { name: "Daily Streak - Gold Badge", description: "Received for maintaining a streak of 50 days", category: "Achievement Badge" },
-      { name: "Contest Contender - Silver Badge", description: "Received for participating in 25 Contests", category: "Achievement Badge" },
-      { name: "Problem Solver - Silver Badge", description: "Received for solving 250 Problems", category: "Achievement Badge" },
-    ];
   }
 
   let rawName = raw.name || raw.displayName || raw.user_name || (raw.username && raw.username.toLowerCase() !== username.toLowerCase() ? raw.username : null);
@@ -1397,74 +1402,109 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
   let dsaRating: number | null = null;
   let contestsParticipated = 0;
   let totalSolved = 0;
+  let fullySolved = 0;
+  let partiallySolved = 0;
   let name: string | null = null;
   let avatar: string | null = null;
   let countryName: string | null = null;
+  let countryFlag: string | null = null;
   let institution: string | null = null;
   let studentOrProfessional: string | null = null;
   const badges: CodeChefBadge[] = [];
   const recentContests: any[] = [];
 
-  // 1. Deep Extraction from Drupal.settings.date_versus_rating or all_rating scripts
-  try {
-    const drupalMatch = html.match(/Drupal\.settings\s*,\s*(\{[\s\S]*?\})\s*\);/i) || html.match(/date_versus_rating\s*:\s*(\{[\s\S]*?\})\s*,\s*["']user_initial_ratings/i);
-    if (drupalMatch) {
-      const parsedSettings = JSON.parse(drupalMatch[1]);
-      const dateVsRating = parsedSettings.date_versus_rating || parsedSettings;
-      const allContests = dateVsRating?.all;
-      if (Array.isArray(allContests) && allContests.length > 0) {
-        contestsParticipated = allContests.length;
-        const lastContest = allContests[allContests.length - 1];
-        if (lastContest?.rating) {
-          rating = parseNum(lastContest.rating);
-        }
-        allContests.forEach((c: any) => {
-          const r = parseNum(c.rating);
-          if (r > maxRating) maxRating = r;
-          if (c.name || c.code) {
-            recentContests.push({
-              name: c.name || c.code || "CodeChef Contest",
-              code: c.code,
-              rating: r,
-              rank: parseNum(c.rank) || undefined,
-              date: c.end_date ? c.end_date.split(" ")[0] : `${c.getyear}-${c.getmonth}-${c.getday}`,
-            });
+  // 1. Deep Extraction from var all_rating array
+  const allRatingMatch = html.match(/var\s+all_rating\s*=\s*(\[[\s\S]*?\]);\s*(?:var|\n|\r|<)/i) ||
+                         html.match(/all_rating\s*=\s*(\[[\s\S]*?\]);/i);
+  if (allRatingMatch) {
+    try {
+      const parsedArray = JSON.parse(allRatingMatch[1]);
+      if (Array.isArray(parsedArray)) {
+        const validContests = parsedArray.filter((c: any) => c.code !== "RATING_SHIFT_TO_ELO_RATING_CODE");
+        contestsParticipated = validContests.length;
+        if (validContests.length > 0) {
+          const lastContest = validContests[validContests.length - 1];
+          if (lastContest?.rating) {
+            rating = parseNum(lastContest.rating);
           }
-        });
-      }
-
-      const dsaContests = dateVsRating?.dsa_monday;
-      if (Array.isArray(dsaContests) && dsaContests.length > 0) {
-        const lastDsa = dsaContests[dsaContests.length - 1];
-        if (lastDsa?.rating) {
-          dsaRating = parseNum(lastDsa.rating);
-        }
-      }
-    }
-  } catch { }
-
-  // 2. Fallback all_rating script parse
-  if (rating === 0) {
-    const allRatingMatch = html.match(/var\s+all_rating\s*=\s*(\[[^;]+\]);/i) || html.match(/all_rating\s*=\s*(\[[^;]+\]);/i);
-    if (allRatingMatch) {
-      try {
-        const parsedArray = JSON.parse(allRatingMatch[1]);
-        if (Array.isArray(parsedArray) && parsedArray.length > 0) {
-          contestsParticipated = parsedArray.length;
-          const last = parsedArray[parsedArray.length - 1];
-          if (last?.rating) rating = parseNum(last.rating);
-          parsedArray.forEach((c: any) => {
+          validContests.forEach((c: any) => {
             const r = parseNum(c.rating);
             if (r > maxRating) maxRating = r;
+            if (c.name || c.code) {
+              recentContests.push({
+                name: c.name || c.code || "CodeChef Contest",
+                code: c.code,
+                rating: r,
+                rank: parseNum(c.rank) || undefined,
+                date: c.end_date ? c.end_date.split(" ")[0] : `${c.getyear}-${String(c.getmonth).padStart(2, "0")}-${String(c.getday).padStart(2, "0")}`,
+              });
+            }
           });
         }
-      } catch { }
-    }
+      }
+    } catch { }
   }
 
-  // 3. DOM Regex Extractions
+  // 2. Deep Extraction from Drupal.settings.date_versus_rating
+  if (contestsParticipated === 0) {
+    try {
+      const drupalMatch = html.match(/Drupal\.settings\s*,\s*(\{[\s\S]*?\})\s*\);/i) || html.match(/date_versus_rating\s*:\s*(\{[\s\S]*?\})\s*,\s*["']user_initial_ratings/i);
+      if (drupalMatch) {
+        const parsedSettings = JSON.parse(drupalMatch[1]);
+        const dateVsRating = parsedSettings.date_versus_rating || parsedSettings;
+        const allContests = dateVsRating?.all;
+        if (Array.isArray(allContests) && allContests.length > 0) {
+          const validContests = allContests.filter((c: any) => c.code !== "RATING_SHIFT_TO_ELO_RATING_CODE");
+          contestsParticipated = validContests.length;
+          if (validContests.length > 0) {
+            const lastContest = validContests[validContests.length - 1];
+            if (lastContest?.rating) {
+              rating = parseNum(lastContest.rating);
+            }
+          }
+          allContests.forEach((c: any) => {
+            const r = parseNum(c.rating);
+            if (r > maxRating) maxRating = r;
+            if (c.name || c.code) {
+              recentContests.push({
+                name: c.name || c.code || "CodeChef Contest",
+                code: c.code,
+                rating: r,
+                rank: parseNum(c.rank) || undefined,
+                date: c.end_date ? c.end_date.split(" ")[0] : `${c.getyear}-${String(c.getmonth).padStart(2, "0")}-${String(c.getday).padStart(2, "0")}`,
+              });
+            }
+          });
+        }
+
+        const dsaContests = dateVsRating?.dsa_monday || dateVsRating?.dsa_learning_series;
+        if (Array.isArray(dsaContests) && dsaContests.length > 0) {
+          const lastDsa = dsaContests[dsaContests.length - 1];
+          if (lastDsa?.rating) {
+            dsaRating = parseNum(lastDsa.rating);
+          }
+        }
+      }
+    } catch { }
+  }
+
+  // 3. Fallback DOM Contest Count extraction
+  if (contestsParticipated === 0) {
+    const contestCountMatch =
+      html.match(/class="contest-participated-count"[^>]*>[\s\S]*?<b>\s*(\d+)\s*<\/b>/i) ||
+      html.match(/No\.\s*of\s*Contests\s*Participated:\s*<b>\s*(\d+)\s*<\/b>/i) ||
+      html.match(/<h3>\s*Contests\s*\(\s*(\d+)\s*\)\s*<\/h3>/i) ||
+      html.match(/Contests?\s*Attended\s*:\s*(\d+)/i) ||
+      html.match(/class="[^"]*contest-count[^"]*"[^>]*>\s*(\d+)/i);
+    if (contestCountMatch) contestsParticipated = parseNum(contestCountMatch[1]);
+  }
+
+  // 4. Rating & Highest Rating
   if (rating === 0) {
-    const ratingMatch = html.match(/class="rating-number"[^>]*>\s*(\d+)/i) || html.match(/rating-header[^>]*>[\s\S]*?(\d{3,4})/i) || html.match(/current-rating[^>]*>(\d+)/i);
+    const ratingMatch = html.match(/id="rating-block-all"[\s\S]*?class="rating-number"[^>]*>\s*(\d+)/i) ||
+                        html.match(/class="rating-number"[^>]*>\s*(\d+)/i) ||
+                        html.match(/rating-header[^>]*>[\s\S]*?(\d{3,4})/i) ||
+                        html.match(/current-rating[^>]*>(\d+)/i);
     if (ratingMatch) rating = parseNum(ratingMatch[1]);
   }
 
@@ -1472,6 +1512,7 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
   if (maxRatingMatch) maxRating = parseNum(maxRatingMatch[1]);
   if (maxRating === 0 && rating > 0) maxRating = rating;
 
+  // 5. Stars & Division
   const starsMatch = html.match(/<span[^>]*class=['"]rating['"][^>]*>(\d+)(?:&#9733;|★)<\/span>/i) || html.match(/(\d+)&#9733;/i) || html.match(/(\d+★|\d+\s*stars?)/i);
   if (starsMatch) {
     stars = `${starsMatch[1].replace(/[^0-9]/g, "")}★`;
@@ -1480,41 +1521,87 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
   const divMatch = html.match(/\((Div\s*\d)\)/i) || html.match(/class="user-league-container"[\s\S]*?tooltip">([^<]+)/i);
   if (divMatch) division = divMatch[1].trim();
 
-  // Rating ranks
-  const ratingRanksBlock = html.match(/<div[^>]*id="rating-block-all"[^>]*>[\s\S]*?class="rating-ranks"[\s\S]*?<\/div>/i) || html.match(/class="[^"]*rating-ranks[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-  if (ratingRanksBlock) {
-    const strongMatches = [...ratingRanksBlock[0].matchAll(/<strong>\s*([\d,]+)\s*<\/strong>/gi)];
-    if (strongMatches.length >= 1) globalRank = parseNum(strongMatches[0][1]);
-    if (strongMatches.length >= 2) countryRank = parseNum(strongMatches[1][1]);
+  // 6. Rating ranks (Exact DOM matching)
+  const ranksBlockMatch = html.match(/class=["']rating-ranks["']([\s\S]*?)<\/ul>/i) ||
+                          html.match(/class=["']rating-ranks["']([\s\S]*?)<\/div>/i);
+  if (ranksBlockMatch) {
+    const block = ranksBlockMatch[1];
+    const gItem = block.match(/<li[^>]*>[\s\S]*?<a[^>]*href=["']\/ratings\/all["'][^>]*>[\s\S]*?<strong>\s*([^<]+)\s*<\/strong>[\s\S]*?Global Rank/i) ||
+                  block.match(/<strong>\s*([^<]+)\s*<\/strong>[\s\S]{0,60}Global Rank/i);
+    if (gItem) {
+      const gClean = gItem[1].replace(/,/g, "").trim();
+      if (!gClean.toLowerCase().includes("inactive") && !gClean.toLowerCase().includes("na")) {
+        const parsedG = parseInt(gClean, 10);
+        if (!isNaN(parsedG) && parsedG > 0) globalRank = parsedG;
+      }
+    }
+
+    const cItem = block.match(/<li[^>]*>[\s\S]*?<a[^>]*href=["'][^"']*Country[^"']*["'][^>]*>[\s\S]*?<strong>\s*([^<]+)\s*<\/strong>[\s\S]*?Country Rank/i) ||
+                  block.match(/<strong>\s*([^<]+)\s*<\/strong>[\s\S]{0,60}Country Rank/i);
+    if (cItem) {
+      const cClean = cItem[1].replace(/,/g, "").trim();
+      if (!cClean.toLowerCase().includes("inactive") && !cClean.toLowerCase().includes("na")) {
+        const parsedC = parseInt(cClean, 10);
+        if (!isNaN(parsedC) && parsedC > 0) countryRank = parsedC;
+      }
+    }
   }
 
   if (!globalRank) {
-    const globalMatch = html.match(/<strong>\s*([\d,]+)\s*<\/strong>[\s\S]{0,80}Global Rank/i) || html.match(/Global Rank[\s\S]{0,80}<strong>\s*([\d,]+)/i);
-    if (globalMatch) globalRank = parseNum(globalMatch[1]);
+    const globalMatch = html.match(/<a[^>]*href=["']\/ratings\/all["'][^>]*>[\s\S]*?<strong>\s*([^<]+)\s*<\/strong>/i) ||
+                        html.match(/<strong>\s*([\d,]+)\s*<\/strong>[\s\S]{0,60}Global Rank/i) ||
+                        html.match(/Global Rank[\s\S]{0,60}<strong>\s*([\d,]+)\s*<\/strong>/i);
+    if (globalMatch) {
+      const gClean = globalMatch[1].replace(/,/g, "").trim();
+      if (!gClean.toLowerCase().includes("inactive") && !gClean.toLowerCase().includes("na")) {
+        const parsedG = parseInt(gClean, 10);
+        if (!isNaN(parsedG) && parsedG > 0) globalRank = parsedG;
+      }
+    }
   }
 
   if (!countryRank) {
-    const countryMatch = html.match(/<strong>\s*([\d,]+)\s*<\/strong>[\s\S]{0,80}Country Rank/i) || html.match(/Country Rank[\s\S]{0,80}<strong>\s*([\d,]+)/i);
-    if (countryMatch) countryRank = parseNum(countryMatch[1]);
+    const countryMatch = html.match(/<a[^>]*href=["'][^"']*Country[^"']*["'][^>]*>[\s\S]*?<strong>\s*([^<]+)\s*<\/strong>/i) ||
+                         html.match(/<strong>\s*([\d,]+)\s*<\/strong>[\s\S]{0,60}Country Rank/i) ||
+                         html.match(/Country Rank[\s\S]{0,60}<strong>\s*([\d,]+)\s*<\/strong>/i);
+    if (countryMatch) {
+      const cClean = countryMatch[1].replace(/,/g, "").trim();
+      if (!cClean.toLowerCase().includes("inactive") && !cClean.toLowerCase().includes("na")) {
+        const parsedC = parseInt(cClean, 10);
+        if (!isNaN(parsedC) && parsedC > 0) countryRank = parsedC;
+      }
+    }
   }
 
-  // DSA Rating block
+  // 7. DSA Rating block
   if (!dsaRating) {
-    const dsaMatch = html.match(/id="rating-block-dsa-monday"[\s\S]*?class="rating-number"[^>]*>\s*(\d+)/i) || html.match(/DSA\s*Rating[\s\S]{0,150}?(\d{3,4})/i) || html.match(/dsa-rating[^>]*>(\d+)/i);
-    if (dsaMatch) dsaRating = parseNum(dsaMatch[1]);
+    const dsaMatch = html.match(/id=["']rating-block-dsa[^"']*["'][\s\S]*?class=["']rating-number["'][^>]*>\s*(\d+)/i) ||
+                     html.match(/id=["']rating-block-dsa-monday["'][\s\S]*?class=["']rating-number["'][^>]*>\s*(\d+)/i) ||
+                     html.match(/id=["']rating-block-dsa-learning-series["'][\s\S]*?class=["']rating-number["'][^>]*>\s*(\d+)/i) ||
+                     html.match(/DSA\s*Rating[\s\S]{0,150}?(\d{3,4})/i) ||
+                     html.match(/dsa-rating[^>]*>(\d+)/i);
+    if (dsaMatch) {
+      const dsaVal = parseNum(dsaMatch[1]);
+      if (dsaVal > 0) dsaRating = dsaVal;
+    }
   }
 
-  // Solved count
-  const solvedMatch = html.match(/Total Problems Solved:\s*(\d+)/i) || html.match(/Total Problems Solved[^>]*>(\d+)/i) || html.match(/Problems Solved[^>]*>(\d+)/i) || html.match(/Fully Solved\s*\(\s*(\d+)\s*\)/i);
+  if (!dsaRating && rating > 0) {
+    dsaRating = rating;
+  }
+
+  // 8. Solved count
+  const solvedMatch = html.match(/Total Problems Solved:\s*(\d+)/i) || html.match(/Total Problems Solved[^>]*>(\d+)/i) || html.match(/Problems Solved[^>]*>(\d+)/i);
   if (solvedMatch) totalSolved = parseNum(solvedMatch[1]);
 
-  // Contests participated
-  if (contestsParticipated === 0) {
-    const contestCountMatch = html.match(/No\.\s*of\s*Contests\s*Participated:\s*<b>(\d+)<\/b>/i) || html.match(/Contests\s*\(\s*(\d+)\s*\)/i) || html.match(/Contests?\s*Attended\s*:\s*(\d+)/i);
-    if (contestCountMatch) contestsParticipated = parseNum(contestCountMatch[1]);
-  }
+  const fullyMatch = html.match(/Fully Solved\s*\(\s*(\d+)\s*\)/i);
+  if (fullyMatch) fullySolved = parseNum(fullyMatch[1]);
+  else fullySolved = totalSolved;
 
-  // User details
+  const partialMatch = html.match(/Partially Solved\s*\(\s*(\d+)\s*\)/i);
+  if (partialMatch) partiallySolved = parseNum(partialMatch[1]);
+
+  // 9. User details
   const nameMatch = html.match(/<h1[^>]*class="[^"]*h2-style[^"]*"[^>]*>([^<]+)<\/h1>/i) || html.match(/class="user-details-container"[^>]*>[\s\S]*?<h1>([^<]+)<\/h1>/i) || html.match(/<title>([^|]+)\s*\|\s*CodeChef/i);
   if (nameMatch) {
     const raw = nameMatch[1].trim();
@@ -1529,13 +1616,16 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
   const countryNameMatch = html.match(/class="user-country-name"[^>]*>([^<]+)<\/span>/i) || html.match(/user-country-flag"[^>]*title="([^"]+)"/i);
   if (countryNameMatch) countryName = countryNameMatch[1].trim();
 
+  const flagMatch = html.match(/class="user-country-flag"[^>]*src="([^"]+)"/i);
+  if (flagMatch) countryFlag = flagMatch[1];
+
   const instMatch = html.match(/Institution:<\/label><span>([^<]+)<\/span>/i) || html.match(/Institution:[^<]*<strong>([^<]+)<\/strong>/i) || html.match(/student-institution[^>]*>([^<]+)</i);
   if (instMatch) institution = instMatch[1].trim();
 
   const studentMatch = html.match(/Student\/Professional:<\/label><span>([^<]+)<\/span>/i);
   if (studentMatch) studentOrProfessional = studentMatch[1].trim();
 
-  // Badges parsing
+  // 10. Badges parsing
   const badgeBlocks = [...html.matchAll(/<div class=['"]badge['"]>([\s\S]*?)<\/div>\s*<\/div>/gi)];
   badgeBlocks.forEach((bMatch) => {
     const bHtml = bMatch[1];
@@ -1552,7 +1642,7 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
     }
   });
 
-  // Skill tests parsing
+  // 11. Skill tests parsing
   const skillBlocks = [...html.matchAll(/<div class="skill-tests__block">([\s\S]*?)<\/div>\s*<\/div>/gi)];
   skillBlocks.forEach((sMatch) => {
     const sHtml = sMatch[1];
@@ -1579,10 +1669,13 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
         countryRank,
         dsaRating,
         totalSolved,
+        fullySolved,
+        partiallySolved,
         contestsParticipated,
         name,
         avatar,
         countryName,
+        countryFlag,
         institution,
         studentOrProfessional,
         badges: badges.length > 0 ? badges : undefined,
@@ -1611,82 +1704,116 @@ export async function fetchCodeChefStats(usernameInput: string): Promise<{
   const timestamp = Date.now();
   const profileUrl = `https://www.codechef.com/users/${encodeURIComponent(cleanUser)}`;
 
-  // Tier 1: Dedicated Competitive Programming JSON APIs (Fast & High Availability with CORS support)
-  let mergedJsonData: any = null;
-
-  // 1. Fetch from codechefapi.vercel.app (Returns avatar, numberOfProblemsSolved, rating, stars, ranks, flags)
+  // Tier 0: Direct Supabase Edge Function (Server-side fetch with full DOM/all_rating script parsing, no CORS limits)
   try {
-    const res = await fetch(`https://codechefapi.vercel.app/handle/${encodeURIComponent(cleanUser)}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(6000),
+    const edgeRes = await supabase.functions.invoke("fetch-codechef", {
+      body: { username: cleanUser },
     });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.success !== false && (json.currentRating || json.rating || json.numberOfProblemsSolved || json.stars)) {
-        mergedJsonData = { ...(mergedJsonData || {}), ...json };
+    if (!edgeRes.error && edgeRes.data && edgeRes.data.success && edgeRes.data.data) {
+      const stats = normalizeCodeChefStats(edgeRes.data.data, cleanUser);
+      if (stats.rating > 0 || stats.totalSolved > 0 || stats.contestsParticipated > 0 || stats.name) {
+        return { data: stats, error: null };
       }
     }
-  } catch { }
-
-  // 2. Fetch from competeapi.vercel.app (Returns institution, user_type, rating_number, max_rank, global_rank)
-  try {
-    const res = await fetch(`https://competeapi.vercel.app/user/codechef/${encodeURIComponent(cleanUser)}/`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(6000),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && !json.error && (json.rating_number || json.rating || json.stars || json.global_rank)) {
-        mergedJsonData = { ...(mergedJsonData || {}), ...json };
-      }
-    }
-  } catch { }
-
-  // 3. Fallback to lowercase user if first attempt missed
-  if (!mergedJsonData || (!mergedJsonData.currentRating && !mergedJsonData.rating_number && !mergedJsonData.rating)) {
-    try {
-      const res = await fetch(`https://codechefapi.vercel.app/handle/${encodeURIComponent(cleanUser.toLowerCase())}`, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(6000),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.success !== false && (json.currentRating || json.rating || json.numberOfProblemsSolved)) {
-          mergedJsonData = { ...(mergedJsonData || {}), ...json };
-        }
-      }
-    } catch { }
-
-    try {
-      const res = await fetch(`https://competeapi.vercel.app/user/codechef/${encodeURIComponent(cleanUser.toLowerCase())}/`, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(6000),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && !json.error && (json.rating_number || json.rating)) {
-          mergedJsonData = { ...(mergedJsonData || {}), ...json };
-        }
-      }
-    } catch { }
+  } catch {
+    // Edge function not deployed or unreachable, seamlessly continue to Tier 1 & 2
   }
 
-  if (mergedJsonData && (mergedJsonData.rating_number || mergedJsonData.currentRating || mergedJsonData.rating || mergedJsonData.numberOfProblemsSolved || mergedJsonData.stars)) {
+  let mergedJsonData: any = null;
+
+  // Tier 1: Dedicated Competitive Programming JSON APIs (Fast & High Availability with CORS support)
+  try {
+    const [cpRatingRes, codechefApiRes, competeApiRes] = await Promise.allSettled([
+      fetch(`https://cp-rating-api.vercel.app/codechef/${encodeURIComponent(cleanUser)}?_t=${timestamp}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(6000),
+      }),
+      fetch(`https://codechefapi.vercel.app/handle/${encodeURIComponent(cleanUser)}?_t=${timestamp}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(6000),
+      }),
+      fetch(`https://competeapi.vercel.app/user/codechef/${encodeURIComponent(cleanUser)}/?_t=${timestamp}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(6000),
+      }),
+    ]);
+
+    if (cpRatingRes.status === "fulfilled" && cpRatingRes.value.ok) {
+      const json = await cpRatingRes.value.json();
+      if (json && !json.error) {
+        mergedJsonData = { ...(mergedJsonData || {}), ...json };
+        if (typeof json.participation === "number") {
+          mergedJsonData.contestsParticipated = json.participation;
+          mergedJsonData.participation = json.participation;
+        }
+        if (json.globalRank && !mergedJsonData.globalRank) mergedJsonData.globalRank = json.globalRank;
+        if (json.countryRank && !mergedJsonData.countryRank) mergedJsonData.countryRank = json.countryRank;
+        if (json.puzzleRating && !mergedJsonData.dsaRating) mergedJsonData.dsaRating = json.puzzleRating;
+        if (Array.isArray(json.contests) && json.contests.length > 0) {
+          mergedJsonData.recentContests = json.contests;
+          if (mergedJsonData.contestsParticipated === undefined) {
+            mergedJsonData.contestsParticipated = json.contests.length;
+          }
+        }
+      }
+    }
+
+    if (codechefApiRes.status === "fulfilled" && codechefApiRes.value.ok) {
+      const json = await codechefApiRes.value.json();
+      if (json && json.success !== false && (json.currentRating || json.rating || json.numberOfProblemsSolved || json.stars)) {
+        mergedJsonData = { ...(mergedJsonData || {}), ...json };
+        if (json.numberOfProblemsSolved) {
+          mergedJsonData.totalSolved = json.numberOfProblemsSolved;
+        }
+        if (json.currentRating) {
+          mergedJsonData.rating = json.currentRating;
+        }
+        if (json.highestRating) {
+          mergedJsonData.maxRating = json.highestRating;
+        }
+        if (json.globalRank) mergedJsonData.globalRank = json.globalRank;
+        if (json.countryRank) mergedJsonData.countryRank = json.countryRank;
+      }
+    }
+
+    if (competeApiRes.status === "fulfilled" && competeApiRes.value.ok) {
+      const json = await competeApiRes.value.json();
+      if (json && !json.error && (json.rating_number || json.rating || json.stars || json.global_rank)) {
+        mergedJsonData = { ...(mergedJsonData || {}), ...json };
+        if (!mergedJsonData.institution && json.institution) mergedJsonData.institution = json.institution;
+        if (!mergedJsonData.studentOrProfessional && json.user_type) mergedJsonData.studentOrProfessional = json.user_type;
+        if (!mergedJsonData.globalRank && json.global_rank) mergedJsonData.globalRank = json.global_rank;
+        if (!mergedJsonData.countryRank && json.country_rank) mergedJsonData.countryRank = json.country_rank;
+        if (Array.isArray(json.all_rating) && json.all_rating.length > 0) {
+          mergedJsonData.recentContests = json.all_rating;
+          if (mergedJsonData.contestsParticipated === undefined) {
+            mergedJsonData.contestsParticipated = json.all_rating.length;
+          }
+        }
+      }
+    }
+  } catch { }
+
+  // Check if Tier 1 already has full profile data including exact contest participation count
+  if (
+    mergedJsonData &&
+    (mergedJsonData.rating_number || mergedJsonData.currentRating || mergedJsonData.rating || mergedJsonData.numberOfProblemsSolved || mergedJsonData.stars) &&
+    typeof mergedJsonData.contestsParticipated === "number"
+  ) {
     return {
       data: normalizeCodeChefStats(mergedJsonData, cleanUser),
       error: null,
     };
   }
 
-  // Tier 2: Multi-tiered CORS Proxies & Direct HTML Scrapers
+  // Tier 2: Multi-tiered CORS Proxies & Direct HTML Scrapers for comprehensive DOM/script data
   const proxyEndpoints = [
-    `https://corsproxy.io/?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(profileUrl)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(profileUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://corsproxy.org/?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://proxy.cors.sh/${profileUrl}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(profileUrl)}`,
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(profileUrl)}`,
   ];
 
@@ -1706,24 +1833,23 @@ export async function fetchCodeChefStats(usernameInput: string): Promise<{
           continue;
         }
 
-        // Check if JSON response is already formatted by an API proxy
-        try {
-          const parsedJson = JSON.parse(text);
-          if (parsedJson && (parsedJson.rating !== undefined || parsedJson.rating_number !== undefined || parsedJson.currentRating !== undefined || parsedJson.totalSolved !== undefined)) {
-            const ratingNum = typeof parsedJson.rating_number === "number" ? parsedJson.rating_number : (typeof parsedJson.rating === "number" ? parsedJson.rating : (parseInt(parsedJson.currentRating || parsedJson.rating) || 0));
-            const totalSolvedNum = parseInt(String(parsedJson.totalSolved || parsedJson.problemsSolved || 0)) || 0;
-            if (ratingNum > 0 || totalSolvedNum > 0) {
-              return {
-                data: normalizeCodeChefStats(parsedJson, cleanUser),
-                error: null,
-              };
-            }
-          }
-        } catch { }
-
         // Parse HTML document with deep DOM & script extractors
         const parsedData = parseCodeChefHtml(text, cleanUser);
-        if (parsedData && (parsedData.rating > 0 || parsedData.totalSolved > 0 || parsedData.name)) {
+        if (parsedData && (parsedData.rating > 0 || (parsedData.totalSolved && parsedData.totalSolved > 0) || parsedData.contestsParticipated > 0 || parsedData.name)) {
+          if (mergedJsonData) {
+            if (!parsedData.totalSolved && mergedJsonData.numberOfProblemsSolved) {
+              parsedData.totalSolved = mergedJsonData.numberOfProblemsSolved;
+            }
+            if (!parsedData.avatar && mergedJsonData.profile) {
+              parsedData.avatar = mergedJsonData.profile;
+            }
+            if (!parsedData.countryName && mergedJsonData.countryName) {
+              parsedData.countryName = mergedJsonData.countryName;
+            }
+            if (parsedData.contestsParticipated === 0 && typeof mergedJsonData.contestsParticipated === "number") {
+              parsedData.contestsParticipated = mergedJsonData.contestsParticipated;
+            }
+          }
           return {
             data: parsedData,
             error: null,
@@ -1733,6 +1859,14 @@ export async function fetchCodeChefStats(usernameInput: string): Promise<{
     } catch {
       // Try next endpoint in pipeline
     }
+  }
+
+  // Fallback: If proxy HTML scraping timed out but Tier 1 had basic stats, return normalized Tier 1 data
+  if (mergedJsonData && (mergedJsonData.rating_number || mergedJsonData.currentRating || mergedJsonData.rating || mergedJsonData.numberOfProblemsSolved || mergedJsonData.stars)) {
+    return {
+      data: normalizeCodeChefStats(mergedJsonData, cleanUser),
+      error: null,
+    };
   }
 
   // Return error instead of empty zeroed object to prevent cache corruption
@@ -2518,7 +2652,10 @@ export async function getCodingProfiles(
     const lcData = dbCached?.leetcode_data || localCached?.leetcode || null;
     const cfData = dbCached?.codeforces_data || localCached?.codeforces || null;
     const ghData = dbCached?.github_data || localCached?.github || null;
-    const ccData = dbCached?.codechef_data || localCached?.codechef || null;
+    let ccData = dbCached?.codechef_data || localCached?.codechef || null;
+    if (ccData) {
+      ccData = normalizeCodeChefStats(ccData, ccUsername);
+    }
     const cwData = dbCached?.codewars_data || localCached?.codewars || null;
     const gfgData = dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks || null;
     const atcoderData = dbCached?.atcoder_data || localCached?.atcoder || null;
@@ -2651,6 +2788,12 @@ export async function getCodingProfiles(
     if (!ccStats.avatar && prevCc.avatar) ccStats.avatar = prevCc.avatar;
     if (!ccStats.institution && prevCc.institution) ccStats.institution = prevCc.institution;
     if (!ccStats.studentOrProfessional && prevCc.studentOrProfessional) ccStats.studentOrProfessional = prevCc.studentOrProfessional;
+    if ((!ccStats.contestsParticipated || ccStats.contestsParticipated === 0) && prevCc.contestsParticipated && prevCc.contestsParticipated > 0) {
+      ccStats.contestsParticipated = prevCc.contestsParticipated;
+    }
+    if (!ccStats.dsaRating && prevCc.dsaRating) {
+      ccStats.dsaRating = prevCc.dsaRating;
+    }
     if ((!ccStats.badges || ccStats.badges.length === 0) && prevCc.badges && prevCc.badges.length > 0) {
       ccStats.badges = prevCc.badges;
     }

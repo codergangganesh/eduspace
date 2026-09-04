@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { CodeChefContestHistory, CodeChefStats, HackerRankStats, LeetCodeStats } from "@/types/codingProfile";
 
 export interface RatingPoint {
@@ -297,24 +298,31 @@ export async function fetchCodeChefRatingHistory(
   existingContests?: CodeChefContestHistory[],
   stats?: CodeChefStats | null
 ): Promise<RatingPoint[]> {
+  const contestsSource = (existingContests && existingContests.length > 0)
+    ? existingContests
+    : (stats?.recentContests && stats.recentContests.length > 0)
+      ? stats.recentContests
+      : null;
+
+  if (contestsSource && contestsSource.length > 0) {
+    let prev = contestsSource[0]?.rating || 1400;
+    return contestsSource.map((item, idx) => {
+      const timestamp = item.date ? new Date(item.date).getTime() / 1000 : Math.floor(Date.now() / 1000) - (contestsSource.length - idx) * 86400 * 14;
+      const dateStr = item.date || new Date(timestamp * 1000).toISOString().split("T")[0];
+      const delta = item.rating - prev;
+      prev = item.rating;
+      return {
+        platform: "codechef",
+        contestName: item.name || item.code || "CodeChef Contest",
+        rating: item.rating,
+        date: dateStr,
+        timestamp: Math.floor(timestamp),
+        delta,
+      };
+    });
+  }
+
   if (!username || !username.trim()) {
-    if (existingContests && existingContests.length > 0) {
-      let prev = existingContests[0]?.rating || 1400;
-      return existingContests.map((item, idx) => {
-        const timestamp = item.date ? new Date(item.date).getTime() / 1000 : Math.floor(Date.now() / 1000) - (existingContests.length - idx) * 86400 * 14;
-        const dateStr = item.date || new Date(timestamp * 1000).toISOString().split("T")[0];
-        const delta = item.rating - prev;
-        prev = item.rating;
-        return {
-          platform: "codechef",
-          contestName: item.name || item.code || "CodeChef Contest",
-          rating: item.rating,
-          date: dateStr,
-          timestamp: Math.floor(timestamp),
-          delta,
-        };
-      });
-    }
     return [];
   }
 
@@ -322,13 +330,40 @@ export async function fetchCodeChefRatingHistory(
   const timestamp = Date.now();
   const profileUrl = `https://www.codechef.com/users/${encodeURIComponent(cleanUser)}`;
 
+  // 1. Try Supabase Edge Function
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-codechef", {
+      body: { username: cleanUser },
+    });
+    if (!edgeRes.error && edgeRes.data && edgeRes.data.success && edgeRes.data.data) {
+      const edgeContests = edgeRes.data.data.recentContests;
+      if (Array.isArray(edgeContests) && edgeContests.length > 0) {
+        let prev = Number(edgeContests[0]?.rating || 1400);
+        return edgeContests.map((item: any) => {
+          const dateStr = item.date || (item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`);
+          const dateObj = new Date(dateStr);
+          const ratingNum = Number(item.rating);
+          const delta = ratingNum - prev;
+          prev = ratingNum;
+          return {
+            platform: "codechef",
+            contestName: item.name || item.code || "CodeChef Contest",
+            rating: ratingNum,
+            date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
+            timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
+            delta,
+          };
+        });
+      }
+    }
+  } catch { }
+
   const endpoints = [
-    `https://corsproxy.io/?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(profileUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://corsproxy.org/?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://proxy.cors.sh/${profileUrl}`,
   ];
 
   for (const url of endpoints) {
@@ -345,81 +380,68 @@ export async function fetchCodeChefRatingHistory(
 
         if (!text || text.includes("Access Denied") || text.includes("403 Forbidden")) continue;
 
-        // 1. Try extracting from Drupal.settings.date_versus_rating
+        // Extract from var all_rating array
+        const allRatingMatch = text.match(/var\s+all_rating\s*=\s*(\[[\s\S]*?\]);\s*(?:var|\n|\r|<)/i) || text.match(/all_rating\s*=\s*(\[[\s\S]*?\]);/i);
+        if (allRatingMatch) {
+          try {
+            const parsed = JSON.parse(allRatingMatch[1]);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const valid = parsed.filter((c: any) => c.code !== "RATING_SHIFT_TO_ELO_RATING_CODE");
+              if (valid.length > 0) {
+                let prev = Number(valid[0]?.rating || 1400);
+                return valid.map((item: any) => {
+                  const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
+                  const dateObj = new Date(dateStr);
+                  const ratingNum = Number(item.rating);
+                  const delta = ratingNum - prev;
+                  prev = ratingNum;
+                  return {
+                    platform: "codechef",
+                    contestName: item.name || item.code || "CodeChef Contest",
+                    rating: ratingNum,
+                    date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
+                    timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
+                    delta,
+                  };
+                });
+              }
+            }
+          } catch { }
+        }
+
+        // Extract from Drupal.settings.date_versus_rating
         try {
           const drupalMatch = text.match(/Drupal\.settings\s*,\s*(\{[\s\S]*?\})\s*\);/i) || text.match(/date_versus_rating\s*:\s*(\{[\s\S]*?\})\s*,\s*["']user_initial_ratings/i);
           if (drupalMatch) {
             const parsedSettings = JSON.parse(drupalMatch[1]);
             const allContests = parsedSettings.date_versus_rating?.all || parsedSettings.all;
             if (Array.isArray(allContests) && allContests.length > 0) {
-              let prev = Number(allContests[0]?.rating || 1400);
-              return allContests.map((item: any) => {
-                const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
-                const dateObj = new Date(dateStr);
-                const ratingNum = Number(item.rating);
-                const delta = ratingNum - prev;
-                prev = ratingNum;
-                return {
-                  platform: "codechef",
-                  contestName: item.name || item.code || "CodeChef Contest",
-                  rating: ratingNum,
-                  date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
-                  timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
-                  delta,
-                };
-              });
+              const valid = allContests.filter((c: any) => c.code !== "RATING_SHIFT_TO_ELO_RATING_CODE");
+              if (valid.length > 0) {
+                let prev = Number(valid[0]?.rating || 1400);
+                return valid.map((item: any) => {
+                  const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
+                  const dateObj = new Date(dateStr);
+                  const ratingNum = Number(item.rating);
+                  const delta = ratingNum - prev;
+                  prev = ratingNum;
+                  return {
+                    platform: "codechef",
+                    contestName: item.name || item.code || "CodeChef Contest",
+                    rating: ratingNum,
+                    date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
+                    timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
+                    delta,
+                  };
+                });
+              }
             }
           }
         } catch { }
-
-        // 2. Try extracting from var all_rating
-        const allRatingMatch = text.match(/var\s+all_rating\s*=\s*(\[[^;]+\]);/i) || text.match(/all_rating\s*=\s*(\[[^;]+\]);/i);
-        if (allRatingMatch) {
-          try {
-            const parsed = JSON.parse(allRatingMatch[1]);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              let prev = Number(parsed[0]?.rating || 1400);
-              return parsed.map((item: any) => {
-                const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
-                const dateObj = new Date(dateStr);
-                const ratingNum = Number(item.rating);
-                const delta = ratingNum - prev;
-                prev = ratingNum;
-                return {
-                  platform: "codechef",
-                  contestName: item.name || item.code || "CodeChef Contest",
-                  rating: ratingNum,
-                  date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
-                  timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
-                  delta,
-                };
-              });
-            }
-          } catch { }
-        }
       }
     } catch {
       // Continue next proxy
     }
-  }
-
-  // Fallback to existingContests prop if provided
-  if (existingContests && existingContests.length > 0) {
-    let prev = existingContests[0]?.rating || 1400;
-    return existingContests.map((item, idx) => {
-      const timestamp = item.date ? new Date(item.date).getTime() / 1000 : Math.floor(Date.now() / 1000) - (existingContests.length - idx) * 86400 * 14;
-      const dateStr = item.date || new Date(timestamp * 1000).toISOString().split("T")[0];
-      const delta = item.rating - prev;
-      prev = item.rating;
-      return {
-        platform: "codechef",
-        contestName: item.name || item.code || "CodeChef Contest",
-        rating: item.rating,
-        date: dateStr,
-        timestamp: Math.floor(timestamp),
-        delta,
-      };
-    });
   }
 
   // Fallback to stats rating trajectory if proxies were blocked
