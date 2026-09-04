@@ -10,6 +10,7 @@ import {
   fetchGeeksForGeeksStats,
   fetchAtCoderStats,
   fetchGitHubStats,
+  saveCodingProfilesCache,
 } from "@/services/codingProfileService";
 import { fetchHackerRankStats, fetchHackerEarthStats } from "@/services/additionalPlatformsService";
 import { fetchHuggingFaceStats } from "@/services/huggingFaceService";
@@ -408,43 +409,43 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
       if (platformKey === "leetcode") {
         const res = await fetchLeetCodeStats(lcUsername);
-        updatePatch = { leetcode: res.data, leetcodeError: res.error };
+        updatePatch = { leetcode: res.data, leetcodeUsername: lcUsername || null, leetcodeError: res.error };
       } else if (platformKey === "codeforces") {
         const res = await fetchCodeforcesStats(cfHandle);
-        updatePatch = { codeforces: res.data, codeforcesError: res.error };
+        updatePatch = { codeforces: res.data, codeforcesHandle: cfHandle || null, codeforcesError: res.error };
       } else if (platformKey === "codechef") {
         const res = await fetchCodeChefStats(ccUsername);
-        updatePatch = { codechef: res.data, codechefError: res.error };
+        updatePatch = { codechef: res.data, codechefUsername: ccUsername || null, codechefError: res.error };
       } else if (platformKey === "codewars") {
         const res = await fetchCodewarsStats(cwUsername);
-        updatePatch = { codewars: res.data, codewarsError: res.error };
+        updatePatch = { codewars: res.data, codewarsUsername: cwUsername || null, codewarsError: res.error };
       } else if (platformKey === "geeksforgeeks") {
         const res = await fetchGeeksForGeeksStats(gfgUsername);
-        updatePatch = { geeksforgeeks: res.data, geeksforgeeksError: res.error };
+        updatePatch = { geeksforgeeks: res.data, geeksforgeeksUsername: gfgUsername || null, geeksforgeeksError: res.error };
       } else if (platformKey === "atcoder") {
         const res = await fetchAtCoderStats(atcoderUsername);
-        updatePatch = { atcoder: res.data, atcoderError: res.error };
+        updatePatch = { atcoder: res.data, atcoderUsername: atcoderUsername || null, atcoderError: res.error };
       } else if (platformKey === "github") {
         const res = await fetchGitHubStats(ghUsername, ghToken);
-        updatePatch = { github: res.data, githubError: res.error };
+        updatePatch = { github: res.data, githubUsername: ghUsername || null, githubToken: ghToken || null, githubError: res.error };
       } else if (platformKey === "hackerrank") {
         const res = await fetchHackerRankStats(hrUsername);
-        updatePatch = { hackerrank: res.data, hackerrankError: res.error };
+        updatePatch = { hackerrank: res.data, hackerrankUsername: hrUsername || null, hackerrankError: res.error };
       } else if (platformKey === "hackerearth") {
         const res = await fetchHackerEarthStats(heUsername);
-        updatePatch = { hackerearth: res.data, hackerearthError: res.error };
+        updatePatch = { hackerearth: res.data, hackerearthUsername: heUsername || null, hackerearthError: res.error };
       } else if (platformKey === "huggingface") {
         const res = await fetchHuggingFaceStats(hfUsername);
-        updatePatch = { huggingface: res.data, huggingfaceError: res.error };
+        updatePatch = { huggingface: res.data, huggingfaceUsername: hfUsername || null, huggingfaceError: res.error };
       } else if (platformKey === "chess") {
         const res = await fetchChessStats(chessUsername);
-        updatePatch = { chess: res.data, chessError: res.error };
+        updatePatch = { chess: res.data, chessUsername: chessUsername || null, chessError: res.error };
       } else if (platformKey === "credly") {
         const res = await fetchCredlyStats(credlyUsername);
-        updatePatch = { credly: res.data, credlyError: res.error };
+        updatePatch = { credly: res.data, credlyUsername: credlyUsername || null, credlyError: res.error };
       } else if (platformKey === "wakatime") {
         const res = await fetchWakaTimeStats(wakatimeUsername, wakatimeApiKey);
-        updatePatch = { wakatime: res.data, wakatimeError: res.error };
+        updatePatch = { wakatime: res.data, wakatimeUsername: wakatimeUsername || null, wakatimeApiKey: wakatimeApiKey || null, wakatimeError: res.error };
       } else if (platformKey === "vercel") {
         const res = await syncVercelProfile();
         if (res.success && res.data) {
@@ -454,7 +455,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
 
       setData((prev) => {
         if (!prev) return prev;
-        const updated = { ...prev, ...updatePatch };
+        const updated: CodingProfilesResponse = { ...prev, ...updatePatch };
         const totalSolved = (
           (updated.leetcode?.totalSolved || 0) +
           (updated.codeforces?.totalSolved || 0) +
@@ -467,11 +468,11 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         );
         if (updated.overall) {
           updated.overall.totalSolved = totalSolved;
+        } else {
+          updated.overall = { totalSolved };
         }
         if (user?.id) {
-          try {
-            localStorage.setItem(`eduspace_coding_profile_cache_${user.id}`, JSON.stringify(updated));
-          } catch { }
+          saveCodingProfilesCache(user.id, updated);
         }
         return updated;
       });
@@ -510,7 +511,8 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     const cleanCredly = credlyInput.trim();
     const cleanWaka = wakatimeInput.trim();
     const cleanWakaKey = wakatimeApiKeyInput.trim();
-    const cleanGhToken = githubTokenInput.trim() ? githubTokenInput.trim() : ghToken;
+    const cleanGhToken = githubTokenInput.trim() ? githubTokenInput.trim() : (ghToken || "");
+    const cleanVercelToken = vercelTokenInput.trim();
 
     if (leetcodeInput.length > 0 && !cleanLc) {
       toast.error("LeetCode Username cannot be empty spaces.");
@@ -529,10 +531,47 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       return;
     }
 
+    // Identify which platform handles have actually changed compared to current values
+    const lcChanged = cleanLc !== (lcUsername || "");
+    const cfChanged = cleanCf !== (cfHandle || "");
+    const ghChanged = cleanGh !== (ghUsername || "") || (githubTokenInput.trim() !== "" && githubTokenInput.trim() !== (ghToken || ""));
+    const ccChanged = cleanCc !== (ccUsername || "");
+    const cwChanged = cleanCw !== (cwUsername || "");
+    const gfgChanged = cleanGfg !== (gfgUsername || "");
+    const atcoderChanged = cleanAtcoder !== (atcoderUsername || "");
+    const hrChanged = cleanHr !== (hrUsername || "");
+    const heChanged = cleanHe !== (heUsername || "");
+    const hfChanged = cleanHf !== (hfUsername || "");
+    const chessChanged = cleanChess !== (chessUsername || "");
+    const credlyChanged = cleanCredly !== (credlyUsername || "");
+    const wakaChanged = cleanWaka !== (wakatimeUsername || "") || (cleanWakaKey !== "" && cleanWakaKey !== (wakatimeApiKey || ""));
+    const vercelChanged = Boolean(cleanVercelToken);
+
+    if (
+      !lcChanged &&
+      !cfChanged &&
+      !ghChanged &&
+      !ccChanged &&
+      !cwChanged &&
+      !gfgChanged &&
+      !atcoderChanged &&
+      !hrChanged &&
+      !heChanged &&
+      !hfChanged &&
+      !chessChanged &&
+      !credlyChanged &&
+      !wakaChanged &&
+      !vercelChanged
+    ) {
+      toast.info("No username changes detected.");
+      setIsDialogOpen(false);
+      return;
+    }
+
     setSavingUsernames(true);
     try {
       if (user?.id) {
-        // Clean up any token keys from localStorage so secrets are never stored in browser storage
+        // Clean up any secret tokens from localStorage
         localStorage.removeItem(`eduspace_github_token_${user.id}`);
         localStorage.removeItem(`eduspace_wakatime_apikey_${user.id}`);
         localStorage.removeItem(`eduspace_vercel_token_${user.id}`);
@@ -549,6 +588,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         }
       }
 
+      // Persist handles to Supabase profile
       await updateProfile({
         leetcode_username: cleanLc || null,
         codeforces_handle: cleanCf || null,
@@ -567,9 +607,9 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         github_token: cleanGhToken || null,
       } as any);
 
-      if (vercelTokenInput.trim()) {
+      if (cleanVercelToken) {
         try {
-          const vRes = await connectVercelWithToken(vercelTokenInput.trim());
+          const vRes = await connectVercelWithToken(cleanVercelToken);
           if (vRes.success && vRes.data) {
             setVercelData(vRes.data);
             setVercelTokenInput("");
@@ -577,25 +617,247 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         } catch { }
       }
 
-      toast.success("Usernames updated successfully!");
+      // Close the dialog immediately
       setIsDialogOpen(false);
-      fetchProfiles(true, {
-        lc: cleanLc,
-        cf: cleanCf,
-        gh: cleanGh,
-        token: cleanGhToken,
-        cc: cleanCc,
-        cw: cleanCw,
-        gfg: cleanGfg,
-        atcoder: cleanAtcoder,
-        hr: cleanHr,
-        he: cleanHe,
-        hf: cleanHf,
-        chess: cleanChess,
-        credly: cleanCredly,
-        wakatime: cleanWaka,
-        wakatimeApiKey: cleanWakaKey,
-      });
+
+      // Build individual fetch tasks strictly for the changed platforms
+      interface ChangedPlatformTask {
+        key: string;
+        name: string;
+        isRemoval: boolean;
+        fetcher: () => Promise<Partial<CodingProfilesResponse>>;
+      }
+
+      const changedTasks: ChangedPlatformTask[] = [];
+
+      if (lcChanged) {
+        changedTasks.push({
+          key: "leetcode",
+          name: "LeetCode",
+          isRemoval: !cleanLc,
+          fetcher: async () => {
+            if (!cleanLc) return { leetcode: null, leetcodeUsername: null, leetcodeError: undefined };
+            const res = await fetchLeetCodeStats(cleanLc);
+            return { leetcode: res.data, leetcodeUsername: cleanLc, leetcodeError: res.error };
+          },
+        });
+      }
+
+      if (cfChanged) {
+        changedTasks.push({
+          key: "codeforces",
+          name: "Codeforces",
+          isRemoval: !cleanCf,
+          fetcher: async () => {
+            if (!cleanCf) return { codeforces: null, codeforcesHandle: null, codeforcesError: undefined };
+            const res = await fetchCodeforcesStats(cleanCf);
+            return { codeforces: res.data, codeforcesHandle: cleanCf, codeforcesError: res.error };
+          },
+        });
+      }
+
+      if (ccChanged) {
+        changedTasks.push({
+          key: "codechef",
+          name: "CodeChef",
+          isRemoval: !cleanCc,
+          fetcher: async () => {
+            if (!cleanCc) return { codechef: null, codechefUsername: null, codechefError: undefined };
+            const res = await fetchCodeChefStats(cleanCc);
+            return { codechef: res.data, codechefUsername: cleanCc, codechefError: res.error };
+          },
+        });
+      }
+
+      if (cwChanged) {
+        changedTasks.push({
+          key: "codewars",
+          name: "Codewars",
+          isRemoval: !cleanCw,
+          fetcher: async () => {
+            if (!cleanCw) return { codewars: null, codewarsUsername: null, codewarsError: undefined };
+            const res = await fetchCodewarsStats(cleanCw);
+            return { codewars: res.data, codewarsUsername: cleanCw, codewarsError: res.error };
+          },
+        });
+      }
+
+      if (gfgChanged) {
+        changedTasks.push({
+          key: "geeksforgeeks",
+          name: "GeeksforGeeks",
+          isRemoval: !cleanGfg,
+          fetcher: async () => {
+            if (!cleanGfg) return { geeksforgeeks: null, geeksforgeeksUsername: null, geeksforgeeksError: undefined };
+            const res = await fetchGeeksForGeeksStats(cleanGfg);
+            return { geeksforgeeks: res.data, geeksforgeeksUsername: cleanGfg, geeksforgeeksError: res.error };
+          },
+        });
+      }
+
+      if (atcoderChanged) {
+        changedTasks.push({
+          key: "atcoder",
+          name: "AtCoder",
+          isRemoval: !cleanAtcoder,
+          fetcher: async () => {
+            if (!cleanAtcoder) return { atcoder: null, atcoderUsername: null, atcoderError: undefined };
+            const res = await fetchAtCoderStats(cleanAtcoder);
+            return { atcoder: res.data, atcoderUsername: cleanAtcoder, atcoderError: res.error };
+          },
+        });
+      }
+
+      if (hrChanged) {
+        changedTasks.push({
+          key: "hackerrank",
+          name: "HackerRank",
+          isRemoval: !cleanHr,
+          fetcher: async () => {
+            if (!cleanHr) return { hackerrank: null, hackerrankUsername: null, hackerrankError: undefined };
+            const res = await fetchHackerRankStats(cleanHr);
+            return { hackerrank: res.data, hackerrankUsername: cleanHr, hackerrankError: res.error };
+          },
+        });
+      }
+
+      if (heChanged) {
+        changedTasks.push({
+          key: "hackerearth",
+          name: "HackerEarth",
+          isRemoval: !cleanHe,
+          fetcher: async () => {
+            if (!cleanHe) return { hackerearth: null, hackerearthUsername: null, hackerearthError: undefined };
+            const res = await fetchHackerEarthStats(cleanHe);
+            return { hackerearth: res.data, hackerearthUsername: cleanHe, hackerearthError: res.error };
+          },
+        });
+      }
+
+      if (hfChanged) {
+        changedTasks.push({
+          key: "huggingface",
+          name: "Hugging Face",
+          isRemoval: !cleanHf,
+          fetcher: async () => {
+            if (!cleanHf) return { huggingface: null, huggingfaceUsername: null, huggingfaceError: undefined };
+            const res = await fetchHuggingFaceStats(cleanHf);
+            return { huggingface: res.data, huggingfaceUsername: cleanHf, huggingfaceError: res.error };
+          },
+        });
+      }
+
+      if (chessChanged) {
+        changedTasks.push({
+          key: "chess",
+          name: "Chess.com",
+          isRemoval: !cleanChess,
+          fetcher: async () => {
+            if (!cleanChess) return { chess: null, chessUsername: null, chessError: undefined };
+            const res = await fetchChessStats(cleanChess);
+            return { chess: res.data, chessUsername: cleanChess, chessError: res.error };
+          },
+        });
+      }
+
+      if (credlyChanged) {
+        changedTasks.push({
+          key: "credly",
+          name: "Credly",
+          isRemoval: !cleanCredly,
+          fetcher: async () => {
+            if (!cleanCredly) return { credly: null, credlyUsername: null, credlyError: undefined };
+            const res = await fetchCredlyStats(cleanCredly);
+            return { credly: res.data, credlyUsername: cleanCredly, credlyError: res.error };
+          },
+        });
+      }
+
+      if (wakaChanged) {
+        changedTasks.push({
+          key: "wakatime",
+          name: "WakaTime",
+          isRemoval: !cleanWaka,
+          fetcher: async () => {
+            if (!cleanWaka) return { wakatime: null, wakatimeUsername: null, wakatimeApiKey: null, wakatimeError: undefined };
+            const apiKey = cleanWakaKey || wakatimeApiKey || "";
+            const res = await fetchWakaTimeStats(cleanWaka, apiKey);
+            return { wakatime: res.data, wakatimeUsername: cleanWaka, wakatimeApiKey: apiKey || null, wakatimeError: res.error };
+          },
+        });
+      }
+
+      if (ghChanged) {
+        changedTasks.push({
+          key: "github",
+          name: "GitHub",
+          isRemoval: !cleanGh,
+          fetcher: async () => {
+            if (!cleanGh) return { github: null, githubUsername: null, githubToken: null, githubError: undefined };
+            const res = await fetchGitHubStats(cleanGh, cleanGhToken);
+            return { github: res.data, githubUsername: cleanGh, githubToken: cleanGhToken || null, githubError: res.error };
+          },
+        });
+      }
+
+      // Mark ONLY the changed platform cards as refreshing
+      if (changedTasks.length > 0) {
+        setCardRefreshing((prev) => {
+          const next = { ...prev };
+          for (const task of changedTasks) {
+            next[task.key] = true;
+          }
+          return next;
+        });
+
+        if (changedTasks.length === 1) {
+          toast.info(`Updating ${changedTasks[0].name} statistics...`);
+        } else {
+          toast.info(`Updating statistics for ${changedTasks.map((t) => t.name).join(", ")}...`);
+        }
+
+        // Execute granular fetches concurrently
+        await Promise.allSettled(
+          changedTasks.map(async (task) => {
+            try {
+              const patch = await task.fetcher();
+              setData((prev) => {
+                if (!prev) return prev;
+                const updated: CodingProfilesResponse = { ...prev, ...patch };
+                const totalSolved = (
+                  (updated.leetcode?.totalSolved || 0) +
+                  (updated.codeforces?.totalSolved || 0) +
+                  (updated.codechef?.totalSolved || 0) +
+                  (updated.codewars?.totalSolved || 0) +
+                  (updated.geeksforgeeks?.totalSolved || 0) +
+                  (updated.atcoder?.totalSolved || 0) +
+                  (updated.hackerrank?.totalSolved || 0) +
+                  (updated.hackerearth?.totalSolved || 0)
+                );
+                if (updated.overall) {
+                  updated.overall.totalSolved = totalSolved;
+                } else {
+                  updated.overall = { totalSolved };
+                }
+                if (user?.id) {
+                  saveCodingProfilesCache(user.id, updated);
+                }
+                return updated;
+              });
+
+              if (task.isRemoval) {
+                toast.info(`${task.name} handle removed`);
+              } else {
+                toast.success(`${task.name} updated!`);
+              }
+            } catch (err: any) {
+              toast.error(`Failed to update ${task.name}: ${err?.message || "Error"}`);
+            } finally {
+              setCardRefreshing((prev) => ({ ...prev, [task.key]: false }));
+            }
+          })
+        );
+      }
     } catch (error: any) {
       toast.error("Failed to update usernames: " + (error?.message || "Unknown error"));
     } finally {
@@ -624,7 +886,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         } as any);
         toast.success("GitHub token verified and saved successfully!");
         setGithubTokenInput("");
-        fetchProfiles(true, { token });
+        handleSingleCardRefresh("github");
       } else if (res.status === 401) {
         toast.error("Invalid token. Check your token and try again.");
       } else {
@@ -647,7 +909,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
       } as any);
       setGithubTokenInput("");
       toast.success("GitHub token removed.");
-      fetchProfiles(true, { token: "" });
+      handleSingleCardRefresh("github");
     } catch (err: any) {
       toast.error("Failed to remove token: " + (err?.message || "Unknown error"));
     }

@@ -459,7 +459,14 @@ function normalizeCodeforcesStats(raw: any, statusResult: any[] = [], ratingResu
   const formattedMaxRank = maxRankRaw.charAt(0).toUpperCase() + maxRankRaw.slice(1);
 
   const fullName = [userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ");
-  const avatar = userInfo.avatar || userInfo.titlePhoto || null;
+  let avatar = userInfo.avatar || userInfo.titlePhoto || null;
+  if (avatar && typeof avatar === "string" && avatar.startsWith("//")) {
+    avatar = `https:${avatar}`;
+  }
+  let titlePhoto = userInfo.titlePhoto || null;
+  if (titlePhoto && typeof titlePhoto === "string" && titlePhoto.startsWith("//")) {
+    titlePhoto = `https:${titlePhoto}`;
+  }
   const country = userInfo.country || null;
   const city = userInfo.city || null;
   const organization = userInfo.organization || null;
@@ -2822,12 +2829,17 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
  * Helper to normalize Codewars stats.
  */
 function normalizeCodewarsStats(json: any, username: string): CodewarsStats {
+  let rawAvatar = json?.avatar || (json?.id ? `https://www.codewars.com/avatars/${json.id}` : null);
+  if (rawAvatar && typeof rawAvatar === "string" && rawAvatar.startsWith("//")) {
+    rawAvatar = `https:${rawAvatar}`;
+  }
+
   if (json && typeof json === "object" && "honor" in json && "totalSolved" in json && "rank" in json) {
     return {
       username: json.username || username,
       name: json.name || null,
       clan: json.clan || null,
-      avatar: json.avatar || null,
+      avatar: rawAvatar || json.avatar || null,
       honor: typeof json.honor === "number" ? json.honor : 0,
       rank: json.rank || "Unranked",
       rankColor: json.rankColor || null,
@@ -2881,7 +2893,7 @@ function normalizeCodewarsStats(json: any, username: string): CodewarsStats {
     username,
     name,
     clan,
-    avatar: null,
+    avatar: rawAvatar,
     honor,
     rank,
     rankColor,
@@ -3097,13 +3109,19 @@ export async function getCodingProfiles(
   // If cache is valid, usernames match, and no connected platform is stuck on zeroed cache, return cached stats
   if (isCacheValid && usernameMatches && !gfgNeedsFetch && !ccNeedsFetch && !atcoderNeedsFetch && !hrNeedsFetch && !heNeedsFetch) {
     const lcData = dbCached?.leetcode_data || localCached?.leetcode || null;
-    const cfData = dbCached?.codeforces_data || localCached?.codeforces || null;
+    let cfData = dbCached?.codeforces_data || localCached?.codeforces || null;
+    if (cfData) {
+      cfData = normalizeCodeforcesStats(cfData);
+    }
     const ghData = dbCached?.github_data || localCached?.github || null;
     let ccData = dbCached?.codechef_data || localCached?.codechef || null;
     if (ccData) {
       ccData = normalizeCodeChefStats(ccData, ccUsername);
     }
-    const cwData = dbCached?.codewars_data || localCached?.codewars || null;
+    let cwData = dbCached?.codewars_data || localCached?.codewars || null;
+    if (cwData) {
+      cwData = normalizeCodewarsStats(cwData, cwUsername);
+    }
     const gfgData = dbCached?.geeksforgeeks_data || localCached?.geeksforgeeks || null;
     const atcoderData = dbCached?.atcoder_data || localCached?.atcoder || null;
     const hrData = dbCached?.hackerrank_data || localCached?.hackerrank || null;
@@ -3385,70 +3403,83 @@ export async function getCodingProfiles(
     wakatimeApiKey: wakatimeApiKeyInput || null,
   };
 
+  if (userId) {
+    await saveCodingProfilesCache(userId, response);
+  }
+
+  return response;
+}
+
+/**
+ * Persists coding profiles data to localStorage and the Supabase database cache.
+ */
+export async function saveCodingProfilesCache(
+  userId: string,
+  profiles: CodingProfilesResponse
+): Promise<void> {
+  if (!userId || !profiles) return;
+
+  const localCacheKey = `eduspace_coding_profile_cache_${userId}`;
+
   // Save to localStorage fallback
   try {
-    localStorage.setItem(localCacheKey, JSON.stringify(response));
-    if (userId) {
-      localStorage.removeItem(`eduspace_github_token_${userId}`);
-    }
+    localStorage.setItem(localCacheKey, JSON.stringify(profiles));
+    localStorage.removeItem(`eduspace_github_token_${userId}`);
   } catch {
     // Ignore storage quota error
   }
 
   // Save/Upsert to Supabase database table
-  if (userId) {
-    try {
-      await (supabase as any).from("user_coding_profiles").upsert(
-        {
-          user_id: userId,
-          leetcode_username: lcUsername,
-          codeforces_handle: cfHandle,
-          github_username: resolvedGhUsername,
-          codechef_username: ccUsername,
-          codewars_username: cwUsername,
-          geeksforgeeks_username: gfgUsername,
-          atcoder_username: atcoderUsername,
-          hackerrank_username: hrUsername,
-          hackerearth_username: heUsername,
-          huggingface_username: hfUsername,
-          chess_username: chessUsername,
-          credly_username: credlyUsername,
-          wakatime_username: wakatimeUsername,
-          leetcode_data: lcStats as any,
-          codeforces_data: cfStats as any,
-          github_data: ghStats as any,
-          codechef_data: ccStats as any,
-          codewars_data: cwStats as any,
-          geeksforgeeks_data: gfgStats as any,
-          atcoder_data: atcoderStats as any,
-          hackerrank_data: hrStats as any,
-          hackerearth_data: heStats as any,
-          huggingface_data: hfStats as any,
-          chess_data: chessStats as any,
-          credly_data: credlyStats as any,
-          wakatime_data: wakatimeStats as any,
-          overall_data: { totalSolved: overallTotal, githubToken: ghToken } as any,
-          leetcode_error: lcErr,
-          codeforces_error: cfErr,
-          codechef_error: ccErr,
-          codewars_error: cwErr,
-          geeksforgeeks_error: gfgErr,
-          atcoder_error: atcoderErr,
-          hackerrank_error: hrErr,
-          hackerearth_error: heErr,
-          huggingface_error: hfErr,
-          chess_error: chessErr,
-          credly_error: credlyErr,
-          wakatime_error: wakatimeErr,
-          last_fetched_at: fetchedAtIso,
-          updated_at: fetchedAtIso,
-        },
-        { onConflict: "user_id" }
-      );
-    } catch (upsertErr) {
-      console.warn("Could not save coding profiles to database:", upsertErr);
-    }
+  const fetchedAtIso = new Date().toISOString();
+  try {
+    await (supabase as any).from("user_coding_profiles").upsert(
+      {
+        user_id: userId,
+        leetcode_username: profiles.leetcodeUsername || null,
+        codeforces_handle: profiles.codeforcesHandle || null,
+        github_username: profiles.githubUsername || null,
+        codechef_username: profiles.codechefUsername || null,
+        codewars_username: profiles.codewarsUsername || null,
+        geeksforgeeks_username: profiles.geeksforgeeksUsername || null,
+        atcoder_username: profiles.atcoderUsername || null,
+        hackerrank_username: profiles.hackerrankUsername || null,
+        hackerearth_username: profiles.hackerearthUsername || null,
+        huggingface_username: profiles.huggingfaceUsername || null,
+        chess_username: profiles.chessUsername || null,
+        credly_username: profiles.credlyUsername || null,
+        wakatime_username: profiles.wakatimeUsername || null,
+        leetcode_data: profiles.leetcode as any,
+        codeforces_data: profiles.codeforces as any,
+        github_data: profiles.github as any,
+        codechef_data: profiles.codechef as any,
+        codewars_data: profiles.codewars as any,
+        geeksforgeeks_data: profiles.geeksforgeeks as any,
+        atcoder_data: profiles.atcoder as any,
+        hackerrank_data: profiles.hackerrank as any,
+        hackerearth_data: profiles.hackerearth as any,
+        huggingface_data: profiles.huggingface as any,
+        chess_data: profiles.chess as any,
+        credly_data: profiles.credly as any,
+        wakatime_data: profiles.wakatime as any,
+        overall_data: profiles.overall as any,
+        leetcode_error: profiles.leetcodeError || null,
+        codeforces_error: profiles.codeforcesError || null,
+        codechef_error: profiles.codechefError || null,
+        codewars_error: profiles.codewarsError || null,
+        geeksforgeeks_error: profiles.geeksforgeeksError || null,
+        atcoder_error: profiles.atcoderError || null,
+        hackerrank_error: profiles.hackerrankError || null,
+        hackerearth_error: profiles.hackerearthError || null,
+        huggingface_error: profiles.huggingfaceError || null,
+        chess_error: profiles.chessError || null,
+        credly_error: profiles.credlyError || null,
+        wakatime_error: profiles.wakatimeError || null,
+        last_fetched_at: fetchedAtIso,
+        updated_at: fetchedAtIso,
+      },
+      { onConflict: "user_id" }
+    );
+  } catch (upsertErr) {
+    console.warn("Could not save coding profiles to database:", upsertErr);
   }
-
-  return response;
 }
