@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -39,6 +39,13 @@ import {
   List,
   Layers,
   ArrowUpRight,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  MoveHorizontal,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +108,17 @@ export function RatingTrajectoryGraph({
   const [timeframe, setTimeframe] = useState<Timeframe>("ALL");
   const [viewMode, setViewMode] = useState<GraphViewMode>("all");
 
+  // Interactive Internal Zoom & Pan State (1.0x to 5.0x)
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [panOffset, setPanOffset] = useState<number>(1); // 0 (oldest/left) to 1 (newest/right)
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStartX, setDragStartX] = useState<number>(0);
+  const [dragStartPan, setDragStartPan] = useState<number>(0);
+
+  // Chart Container References for Native Wheel Listener
+  const atcoderContainerRef = useRef<HTMLDivElement>(null);
+  const multiContainerRef = useRef<HTMLDivElement>(null);
+
   // AtCoder specific view state
   const [atcoderContestType, setAtcoderContestType] = useState<"algorithm" | "heuristic">("algorithm");
   const [atcoderSubView, setAtcoderSubView] = useState<"rating" | "rank" | "list">("rating");
@@ -112,6 +130,12 @@ export function RatingTrajectoryGraph({
     codechef: true,
     atcoder: true,
   });
+
+  // Reset zoom on timeframe or mode switch
+  useEffect(() => {
+    setZoomLevel(1);
+    setPanOffset(1);
+  }, [timeframe, viewMode, atcoderContestType]);
 
   // Sync active platform filter
   useEffect(() => {
@@ -247,7 +271,26 @@ export function RatingTrajectoryGraph({
     return rawAtCoder.filter((item) => item.timestamp >= cutoff);
   }, [rawAtCoder, atcoderContestType, atcoderStats, timeframe]);
 
-  // Peak AtCoder Point
+  // Zoom Sliced Data Calculations (Internal zoom window)
+  const zoomedAtCoderPoints = useMemo(() => {
+    if (filteredAtCoderPoints.length <= 3 || zoomLevel <= 1) return filteredAtCoderPoints;
+    const total = filteredAtCoderPoints.length;
+    const windowSize = Math.max(2, Math.round(total / zoomLevel));
+    const maxStart = total - windowSize;
+    const startIndex = Math.max(0, Math.min(maxStart, Math.round(panOffset * maxStart)));
+    return filteredAtCoderPoints.slice(startIndex, startIndex + windowSize);
+  }, [filteredAtCoderPoints, zoomLevel, panOffset]);
+
+  const zoomedMergedData = useMemo(() => {
+    if (filteredData.length <= 3 || zoomLevel <= 1) return filteredData;
+    const total = filteredData.length;
+    const windowSize = Math.max(2, Math.round(total / zoomLevel));
+    const maxStart = total - windowSize;
+    const startIndex = Math.max(0, Math.min(maxStart, Math.round(panOffset * maxStart)));
+    return filteredData.slice(startIndex, startIndex + windowSize);
+  }, [filteredData, zoomLevel, panOffset]);
+
+  // Peak AtCoder Point (from all filtered points)
   const peakAtCoderPoint = useMemo(() => {
     if (!filteredAtCoderPoints.length) return null;
     let maxPt = filteredAtCoderPoints[0];
@@ -282,27 +325,59 @@ export function RatingTrajectoryGraph({
   const atcoderCurrentRating = stats.atcoder.current || atcoderStats?.rating || 0;
   const atcoderTierInfo = getAtCoderTierInfo(atcoderCurrentRating);
 
-  // Formatted AtCoder Chart Data
+  // Formatted AtCoder Chart Data with Granular Dates
   const atcoderChartData = useMemo(() => {
-    return filteredAtCoderPoints.map((pt) => {
+    return zoomedAtCoderPoints.map((pt) => {
       const dateObj = new Date(pt.timestamp * 1000);
-      const displayDate = dateObj.toLocaleDateString("en-US", {
-        month: "short",
-        year: filteredAtCoderPoints.length > 25 ? "2-digit" : "numeric",
-      });
+      const displayDate = zoomLevel > 2
+        ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
+        : zoomLevel > 1.3
+          ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          : dateObj.toLocaleDateString("en-US", { month: "short", year: zoomedAtCoderPoints.length > 25 ? "2-digit" : "numeric" });
+
       return {
         ...pt,
         displayDate,
         isPeak: peakAtCoderPoint && pt.timestamp === peakAtCoderPoint.timestamp,
       };
     });
-  }, [filteredAtCoderPoints, peakAtCoderPoint]);
+  }, [zoomedAtCoderPoints, peakAtCoderPoint, zoomLevel]);
 
-  // Min and Max Y-axis bounds for smooth visualization
+  // Formatted Multi-Platform Chart Data with Granular Dates
+  const formattedMergedChartData = useMemo(() => {
+    return zoomedMergedData.map((pt) => {
+      const dateObj = new Date(pt.timestamp * 1000);
+      const displayDate = zoomLevel > 2
+        ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
+        : zoomLevel > 1.3
+          ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          : dateObj.toLocaleDateString("en-US", { month: "short", year: zoomedMergedData.length > 25 ? "2-digit" : "numeric" });
+
+      return {
+        ...pt,
+        displayDate,
+      };
+    });
+  }, [zoomedMergedData, zoomLevel]);
+
+  // Dynamic Point Scaling with Zoom (Points physically zoom and enlarge)
+  const dynamicDotRadius = useMemo(() => {
+    return Math.min(9.5, 3.5 + (zoomLevel - 1) * 1.5);
+  }, [zoomLevel]);
+
+  const dynamicActiveDotRadius = useMemo(() => {
+    return Math.min(14, 6.5 + (zoomLevel - 1) * 1.9);
+  }, [zoomLevel]);
+
+  const dynamicStrokeWidth = useMemo(() => {
+    return Math.min(4.5, 2.5 + (zoomLevel - 1) * 0.5);
+  }, [zoomLevel]);
+
+  // Min and Max Y-axis bounds
   const yDomain = useMemo(() => {
     if (viewMode === "atcoder") {
-      if (!filteredAtCoderPoints.length) return [0, 4400];
-      const ratings = filteredAtCoderPoints.map((p) => p.rating);
+      if (!zoomedAtCoderPoints.length) return [0, 4400];
+      const ratings = zoomedAtCoderPoints.map((p) => p.rating);
       const minR = Math.max(0, Math.min(...ratings) - 200);
       const maxR = Math.max(...ratings) + 300;
       const roundedMin = Math.floor(minR / 400) * 400;
@@ -311,7 +386,7 @@ export function RatingTrajectoryGraph({
     }
 
     const visibleRatings: number[] = [];
-    filteredData.forEach((item) => {
+    zoomedMergedData.forEach((item) => {
       if (activePlatforms.codeforces && typeof item.codeforces === "number") visibleRatings.push(item.codeforces);
       if (activePlatforms.leetcode && typeof item.leetcode === "number") visibleRatings.push(item.leetcode);
       if (activePlatforms.codechef && typeof item.codechef === "number") visibleRatings.push(item.codechef);
@@ -322,7 +397,7 @@ export function RatingTrajectoryGraph({
     const min = Math.max(0, Math.min(...visibleRatings) - 80);
     const max = Math.max(...visibleRatings) + 80;
     return [Math.floor(min / 50) * 50, Math.ceil(max / 50) * 50];
-  }, [filteredData, activePlatforms, viewMode, filteredAtCoderPoints]);
+  }, [zoomedMergedData, activePlatforms, viewMode, zoomedAtCoderPoints]);
 
   const togglePlatform = (key: keyof typeof activePlatforms) => {
     setActivePlatforms((prev) => {
@@ -331,6 +406,95 @@ export function RatingTrajectoryGraph({
       if (!hasAnyActive) return prev;
       return updated;
     });
+  };
+
+  // Zoom Button Handlers
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel((prev) => Math.min(5, Number((prev + 0.5).toFixed(1))));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel((prev) => Math.max(1, Number((prev - 0.5).toFixed(1))));
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    setZoomLevel(1);
+    setPanOffset(1);
+  }, []);
+
+  const handlePanLeft = useCallback(() => {
+    setPanOffset((prev) => Math.max(0, Number((prev - 0.2).toFixed(2))));
+  }, []);
+
+  const handlePanRight = useCallback(() => {
+    setPanOffset((prev) => Math.min(1, Number((prev + 0.2).toFixed(2))));
+  }, []);
+
+  // Internal Chart Mouse Wheel Zoom & Drag Pan
+  useEffect(() => {
+    const atcoderEl = atcoderContainerRef.current;
+    const multiEl = multiContainerRef.current;
+
+    const handleContainerWheel = (e: WheelEvent, el: HTMLElement | null) => {
+      e.preventDefault();
+      const rect = el?.getBoundingClientRect();
+      const cursorRatio = rect && rect.width > 0 ? Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) : 0.5;
+
+      if (e.deltaY < 0) {
+        // Zoom IN
+        setZoomLevel((prev) => {
+          const next = Math.min(5, Number((prev + 0.4).toFixed(1)));
+          setPanOffset((prevPan) => Math.max(0, Math.min(1, Number((prevPan * 0.65 + cursorRatio * 0.35).toFixed(2)))));
+          return next;
+        });
+      } else if (e.deltaY > 0) {
+        // Zoom OUT
+        setZoomLevel((prev) => {
+          const next = Math.max(1, Number((prev - 0.4).toFixed(1)));
+          if (next === 1) setPanOffset(1);
+          return next;
+        });
+      }
+    };
+
+    const onWheelAtcoder = (e: WheelEvent) => handleContainerWheel(e, atcoderEl);
+    const onWheelMulti = (e: WheelEvent) => handleContainerWheel(e, multiEl);
+
+    if (atcoderEl) atcoderEl.addEventListener("wheel", onWheelAtcoder, { passive: false });
+    if (multiEl) multiEl.addEventListener("wheel", onWheelMulti, { passive: false });
+
+    return () => {
+      if (atcoderEl) atcoderEl.removeEventListener("wheel", onWheelAtcoder);
+      if (multiEl) multiEl.removeEventListener("wheel", onWheelMulti);
+    };
+  }, [viewMode, atcoderSubView]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel <= 1) return;
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragStartPan(panOffset);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent, containerRef: React.RefObject<HTMLDivElement | null>) => {
+    if (!isDragging || zoomLevel <= 1) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return;
+    const dx = e.clientX - dragStartX;
+    const panDelta = -dx / (rect.width * 0.75);
+    setPanOffset(Math.max(0, Math.min(1, Number((dragStartPan + panDelta).toFixed(3)))));
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleDoubleClick = () => {
+    if (zoomLevel > 1) {
+      handleResetZoom();
+    } else {
+      setZoomLevel(2.5);
+    }
   };
 
   const renderDeltaBadge = (delta?: number | null) => {
@@ -460,7 +624,7 @@ export function RatingTrajectoryGraph({
 
   const hasData = filteredData.length > 0 || rawAtCoder.length > 0;
 
-  // Platform Cards for UI
+  // Platform Cards for Multi-Platform Metric Display
   const platformCards = [
     {
       key: "codeforces" as const,
@@ -512,7 +676,7 @@ export function RatingTrajectoryGraph({
 
   return (
     <div className={cn("rounded-2xl border border-border/70 p-4 sm:p-5 bg-card/90 shadow-sm backdrop-blur-xl space-y-5", className)}>
-      {/* Top Header & Controls */}
+      {/* Top Header & Single-Line Unified Toolbar (Fits on screen without scroll) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2 flex-wrap">
@@ -530,14 +694,14 @@ export function RatingTrajectoryGraph({
           </div>
           <p className="text-[11px] text-muted-foreground line-clamp-1">
             {viewMode === "atcoder"
-              ? "Official AtCoder Contest Status with real-time algorithm rating trajectory and color tiers."
+              ? "Official AtCoder Contest Status with real-time algorithm rating trajectory, zoomable points & color tiers."
               : selectedPlatformFilter === "all"
-                ? "Real-time contest rating & performance overlay across official competitive coding platforms."
+                ? "Real-time contest rating & performance overlay with zoomable points across competitive platforms."
                 : `Viewing ${selectedPlatformFilter} performance trajectory overlay.`}
           </p>
         </div>
 
-        {/* Unified Single-Line Controls Toolbar (Fits on Screen with Zero Scroll) */}
+        {/* Unified Single-Line Controls Toolbar */}
         <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 sm:p-1 rounded-xl border border-border/40 text-xs self-start md:self-auto shrink-0 flex-wrap sm:flex-nowrap">
           <button
             onClick={() => setViewMode("all")}
@@ -623,7 +787,7 @@ export function RatingTrajectoryGraph({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Sparkles className="size-3 text-cyan-400" />
+
                 Algorithm
               </button>
               <button
@@ -638,13 +802,13 @@ export function RatingTrajectoryGraph({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Trophy className="size-3 text-amber-400" />
+
                 Heuristic
               </button>
             </div>
           </div>
 
-          {/* AtCoder Key Metrics Summary (Rank, Rating, Highest Rating, Rated Matches, Last Competed) */}
+          {/* AtCoder Key Metrics Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3 rounded-2xl bg-muted/30 border border-border/50 text-xs">
             <div>
               <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Rank</span>
@@ -678,7 +842,7 @@ export function RatingTrajectoryGraph({
             </div>
           </div>
 
-          {/* Dynamic Contest Highlight Banner (Framed in Active Tier Color) */}
+          {/* Dynamic Contest Highlight Banner */}
           {activeAtCoderContest && (
             <div
               className={cn(
@@ -686,12 +850,10 @@ export function RatingTrajectoryGraph({
                 atcoderTierInfo.border
               )}
             >
-              {/* Left: Big Rating */}
               <div className="flex items-center gap-3">
                 <div className={cn("text-3xl sm:text-4xl font-black font-mono tracking-tighter leading-none", atcoderTierInfo.text)}>
                   {activeAtCoderContest.rating}
                 </div>
-                {/* Middle: Rank & Delta */}
                 {activeAtCoderContest.rank !== undefined && (
                   <div className="border-l border-border/60 pl-3">
                     <div className="text-xs sm:text-sm font-extrabold text-foreground">
@@ -712,7 +874,6 @@ export function RatingTrajectoryGraph({
                 )}
               </div>
 
-              {/* Right: Date & Contest Title */}
               <div className="text-left sm:text-right space-y-0.5 min-w-0">
                 <div className="text-[11px] text-muted-foreground font-semibold flex items-center sm:justify-end gap-1">
                   <Calendar className="size-3 text-cyan-500" />
@@ -725,7 +886,7 @@ export function RatingTrajectoryGraph({
             </div>
           )}
 
-          {/* Sub-View Mode Toggles (Rating, Rank, Contests List) */}
+          {/* Sub-View Mode Toggles (Rating, Rank, Contests List) & Interactive Zoom Toolbar */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/40 text-xs font-bold">
               <button
@@ -763,6 +924,61 @@ export function RatingTrajectoryGraph({
                 Contests ({filteredAtCoderPoints.length})
               </button>
             </div>
+
+            {/* Interactive Zoom & Pan Controls Toolbar */}
+            {atcoderSubView !== "list" && (
+              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/40 text-xs font-bold">
+                {zoomLevel > 1 && (
+                  <>
+                    <button
+                      onClick={handlePanLeft}
+                      disabled={panOffset <= 0}
+                      title="Pan Left (Earlier Contests)"
+                      className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                    >
+                      <ChevronLeft className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={handlePanRight}
+                      disabled={panOffset >= 1}
+                      title="Pan Right (Recent Contests)"
+                      className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </button>
+                    <div className="w-px h-3 bg-border/60 mx-0.5" />
+                  </>
+                )}
+                <button
+                  onClick={handleZoomOut}
+                  disabled={zoomLevel <= 1}
+                  title="Zoom Out (Scroll Down on Graph)"
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                >
+                  <ZoomOut className="size-3.5" />
+                </button>
+                <span className="text-[10px] font-mono px-1.5 text-cyan-400 font-extrabold min-w-[36px] text-center">
+                  {zoomLevel.toFixed(1)}x
+                </span>
+                <button
+                  onClick={handleZoomIn}
+                  disabled={zoomLevel >= 5}
+                  title="Zoom In (Scroll Up on Graph to enlarge points)"
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                >
+                  <ZoomIn className="size-3.5" />
+                </button>
+                {zoomLevel > 1 && (
+                  <button
+                    onClick={handleResetZoom}
+                    title="Reset Zoom (or Double-Click on Graph)"
+                    className="p-1 rounded-lg text-muted-foreground hover:text-foreground transition-all hover:bg-card/60"
+                  >
+                    <RotateCcw className="size-3" />
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-2 text-[11px] text-cyan-500 font-bold">
               <a
@@ -809,128 +1025,146 @@ export function RatingTrajectoryGraph({
               </div>
             </div>
           ) : (
-            <div className="h-[280px] sm:h-[340px] w-full rounded-2xl border border-border/80 p-2 sm:p-3 bg-card/40 backdrop-blur-md relative overflow-hidden">
+            <div
+              ref={atcoderContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={(e) => handleMouseMove(e, atcoderContainerRef)}
+              onMouseUp={handleMouseUp}
+              onDoubleClick={handleDoubleClick}
+              className={cn(
+                "h-[280px] sm:h-[340px] w-full rounded-2xl border border-border/80 p-2 sm:p-3 bg-card/40 backdrop-blur-md relative overflow-hidden select-none transition-shadow",
+                isDragging ? "cursor-grabbing" : zoomLevel > 1 ? "cursor-grab" : "cursor-crosshair"
+              )}
+            >
               {atcoderChartData.length === 0 ? (
                 <div className="h-full w-full flex flex-col items-center justify-center text-center p-4 space-y-1">
                   <Trophy className="size-8 text-muted-foreground/40" />
                   <p className="text-xs text-muted-foreground">No rated contest matches found.</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={atcoderChartData}
-                    margin={{ top: 20, right: 20, left: -20, bottom: 5 }}
-                    onMouseMove={(state: any) => {
-                      if (state && state.activePayload && state.activePayload.length) {
-                        setHoveredAtCoderPoint(state.activePayload[0].payload);
-                      }
-                    }}
-                    onMouseLeave={() => setHoveredAtCoderPoint(null)}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.4)" />
-
-                    {/* Official AtCoder Colored Rating Tier Bands */}
-                    {atcoderSubView === "rating" &&
-                      ATCODER_TIERS.map((tier) => {
-                        if (tier.min > yDomain[1] || tier.max < yDomain[0]) return null;
-                        return (
-                          <ReferenceArea
-                            key={tier.name}
-                            y1={Math.max(tier.min, yDomain[0])}
-                            y2={Math.min(tier.max, yDomain[1])}
-                            fill={tier.color}
-                            fillOpacity={0.14}
-                            strokeOpacity={0}
-                          />
-                        );
-                      })}
-
-                    <XAxis
-                      dataKey="displayDate"
-                      tick={{ fontSize: 10, fill: "#94a3b8" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "hsl(var(--border))" }}
-                      dy={5}
-                    />
-
-                    <YAxis
-                      domain={atcoderSubView === "rating" ? yDomain : ["dataMin - 10", "dataMax + 10"]}
-                      reversed={atcoderSubView === "rank"}
-                      tick={{ fontSize: 10, fill: "#94a3b8" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload || !payload.length) return null;
-                        const pt = payload[0].payload as RatingPoint;
-                        return (
-                          <div className="bg-card/95 text-card-foreground border border-border p-3 rounded-xl shadow-xl text-xs space-y-1.5 backdrop-blur-md">
-                            <div className="font-extrabold text-foreground border-b border-border/50 pb-1 flex items-center justify-between gap-2">
-                              <span>{pt.date}</span>
-                              <span className={cn("font-mono font-black", getAtCoderTierInfo(pt.rating).text)}>
-                                {pt.rating}
-                              </span>
-                            </div>
-                            <p className="font-bold text-foreground text-[11px]">{pt.contestName}</p>
-                            <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
-                              {pt.rank && <span>Rank: #{pt.rank}</span>}
-                              {pt.delta !== undefined && (
-                                <span className={cn("font-bold", pt.delta >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                                  {pt.delta >= 0 ? `+${pt.delta}` : `${pt.delta}`}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={atcoderChartData}
+                      margin={{ top: 20, right: 20, left: -20, bottom: 5 }}
+                      onMouseMove={(state: any) => {
+                        if (state && state.activePayload && state.activePayload.length) {
+                          setHoveredAtCoderPoint(state.activePayload[0].payload);
+                        }
                       }}
-                    />
+                      onMouseLeave={() => setHoveredAtCoderPoint(null)}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.4)" />
 
-                    {/* Peak Rating Marker */}
-                    {peakAtCoderPoint && atcoderSubView === "rating" && (
-                      <ReferenceDot
-                        x={new Date(peakAtCoderPoint.timestamp * 1000).toLocaleDateString("en-US", {
-                          month: "short",
-                          year: filteredAtCoderPoints.length > 25 ? "2-digit" : "numeric",
+                      {/* Official AtCoder Colored Rating Tier Bands */}
+                      {atcoderSubView === "rating" &&
+                        ATCODER_TIERS.map((tier) => {
+                          if (tier.min > yDomain[1] || tier.max < yDomain[0]) return null;
+                          return (
+                            <ReferenceArea
+                              key={tier.name}
+                              y1={Math.max(tier.min, yDomain[0])}
+                              y2={Math.min(tier.max, yDomain[1])}
+                              fill={tier.color}
+                              fillOpacity={0.14}
+                              strokeOpacity={0}
+                            />
+                          );
                         })}
-                        y={peakAtCoderPoint.rating}
-                        r={6}
-                        fill="#EF4444"
-                        stroke="#FFFFFF"
-                        strokeWidth={2}
-                        label={{
-                          value: `Highest: ${peakAtCoderPoint.rating}`,
-                          position: "top",
-                          fill: "#EF4444",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          offset: 10,
+
+                      <XAxis
+                        dataKey="displayDate"
+                        tick={{ fontSize: 10, fill: "#94a3b8" }}
+                        tickLine={false}
+                        axisLine={{ stroke: "hsl(var(--border))" }}
+                        dy={5}
+                      />
+
+                      <YAxis
+                        domain={atcoderSubView === "rating" ? yDomain : ["dataMin - 10", "dataMax + 10"]}
+                        reversed={atcoderSubView === "rank"}
+                        tick={{ fontSize: 10, fill: "#94a3b8" }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload || !payload.length) return null;
+                          const pt = payload[0].payload as RatingPoint;
+                          return (
+                            <div className="bg-card/95 text-card-foreground border border-border p-3 rounded-xl shadow-xl text-xs space-y-1.5 backdrop-blur-md">
+                              <div className="font-extrabold text-foreground border-b border-border/50 pb-1 flex items-center justify-between gap-2">
+                                <span>{pt.date}</span>
+                                <span className={cn("font-mono font-black", getAtCoderTierInfo(pt.rating).text)}>
+                                  {pt.rating}
+                                </span>
+                              </div>
+                              <p className="font-bold text-foreground text-[11px]">{pt.contestName}</p>
+                              <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
+                                {pt.rank && <span>Rank: #{pt.rank}</span>}
+                                {pt.delta !== undefined && (
+                                  <span className={cn("font-bold", pt.delta >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                    {pt.delta >= 0 ? `+${pt.delta}` : `${pt.delta}`}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
                         }}
                       />
-                    )}
 
-                    <Line
-                      type="monotone"
-                      dataKey={atcoderSubView === "rating" ? "rating" : "rank"}
-                      name={atcoderSubView === "rating" ? "Rating" : "Rank"}
-                      stroke={atcoderSubView === "rating" ? "#EF4444" : "#06B6D4"}
-                      strokeWidth={2.5}
-                      dot={{
-                        r: 3.5,
-                        fill: atcoderSubView === "rating" ? "#EF4444" : "#06B6D4",
-                        stroke: "#ffffff",
-                        strokeWidth: 1,
-                      }}
-                      activeDot={{
-                        r: 6,
-                        stroke: atcoderSubView === "rating" ? "#EF4444" : "#06B6D4",
-                        strokeWidth: 2,
-                        fill: "#ffffff",
-                      }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                      {/* Peak Rating Marker */}
+                      {peakAtCoderPoint && atcoderSubView === "rating" && (
+                        <ReferenceDot
+                          x={new Date(peakAtCoderPoint.timestamp * 1000).toLocaleDateString("en-US", {
+                            month: "short",
+                            year: zoomedAtCoderPoints.length > 25 ? "2-digit" : "numeric",
+                          })}
+                          y={peakAtCoderPoint.rating}
+                          r={Math.min(11, 6 + (zoomLevel - 1) * 1.3)}
+                          fill="#EF4444"
+                          stroke="#FFFFFF"
+                          strokeWidth={2}
+                          label={{
+                            value: `Highest: ${peakAtCoderPoint.rating}`,
+                            position: "top",
+                            fill: "#EF4444",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            offset: 10,
+                          }}
+                        />
+                      )}
+
+                      <Line
+                        type="monotone"
+                        dataKey={atcoderSubView === "rating" ? "rating" : "rank"}
+                        name={atcoderSubView === "rating" ? "Rating" : "Rank"}
+                        stroke={atcoderSubView === "rating" ? "#EF4444" : "#06B6D4"}
+                        strokeWidth={dynamicStrokeWidth}
+                        dot={{
+                          r: dynamicDotRadius,
+                          fill: atcoderSubView === "rating" ? "#EF4444" : "#06B6D4",
+                          stroke: "#ffffff",
+                          strokeWidth: Math.min(2.5, 1.5 + (zoomLevel - 1) * 0.25),
+                        }}
+                        activeDot={{
+                          r: dynamicActiveDotRadius,
+                          stroke: atcoderSubView === "rating" ? "#EF4444" : "#06B6D4",
+                          strokeWidth: 3,
+                          fill: "#ffffff",
+                        }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+
+                  {/* Sleek Floating Zoom Interaction Hint */}
+                  <div className="absolute bottom-2 right-3 pointer-events-none opacity-60 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-border/40 text-[9px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Info className="size-2.5 text-cyan-400" />
+                    <span>Scroll wheel to zoom points • Drag to pan</span>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -938,7 +1172,7 @@ export function RatingTrajectoryGraph({
       ) : (
         /* VIEW 2: MULTI-PLATFORM OVERLAY GRAPH WITH 4 PLATFORMS */
         <>
-          {/* Platform Metric Badges / Toggles (Dynamic Responsive Grid - 4 Official Platforms) */}
+          {/* Platform Metric Badges / Toggles */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {displayedCards.map((card) => {
               const isActive = activePlatforms[card.key];
@@ -975,7 +1209,75 @@ export function RatingTrajectoryGraph({
             })}
           </div>
 
-          {/* Main Chart Area */}
+          {/* Floating Zoom Controls for Multi-Platform View */}
+          {hasData && (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                {zoomLevel > 1 ? (
+                  <>
+                    <MoveHorizontal className="size-3 text-primary" />
+                    <span>Zoomed in: Viewing {zoomedMergedData.length} of {filteredData.length} points ({zoomLevel.toFixed(1)}x)</span>
+                  </>
+                ) : (
+                  <span>Scroll wheel or click zoom to expand individual rating points</span>
+                )}
+              </span>
+
+              <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/40 text-xs font-bold">
+                {zoomLevel > 1 && (
+                  <>
+                    <button
+                      onClick={handlePanLeft}
+                      disabled={panOffset <= 0}
+                      title="Pan Left (Earlier Contests)"
+                      className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                    >
+                      <ChevronLeft className="size-3" />
+                    </button>
+                    <button
+                      onClick={handlePanRight}
+                      disabled={panOffset >= 1}
+                      title="Pan Right (Recent Contests)"
+                      className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                    >
+                      <ChevronRight className="size-3" />
+                    </button>
+                    <div className="w-px h-3 bg-border/60 mx-0.5" />
+                  </>
+                )}
+                <button
+                  onClick={handleZoomOut}
+                  disabled={zoomLevel <= 1}
+                  title="Zoom Out (Scroll Down on Graph)"
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                >
+                  <ZoomOut className="size-3" />
+                </button>
+                <span className="text-[10px] font-mono px-1.5 text-primary font-bold min-w-[32px] text-center">
+                  {zoomLevel.toFixed(1)}x
+                </span>
+                <button
+                  onClick={handleZoomIn}
+                  disabled={zoomLevel >= 5}
+                  title="Zoom In (Scroll Up on Graph to enlarge points)"
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30 transition-all hover:bg-card/60"
+                >
+                  <ZoomIn className="size-3" />
+                </button>
+                {zoomLevel > 1 && (
+                  <button
+                    onClick={handleResetZoom}
+                    title="Reset Zoom (or Double-Click on Graph)"
+                    className="p-1 rounded-lg text-muted-foreground hover:text-foreground transition-all hover:bg-card/60"
+                  >
+                    <RotateCcw className="size-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Main Chart Area with Internal Wheel Zoom & Drag Pan */}
           {!hasData ? (
             <div className="h-[260px] w-full rounded-xl border border-dashed border-border/60 bg-muted/20 flex flex-col items-center justify-center p-6 text-center space-y-2">
               <Code2 className="size-8 text-muted-foreground/50" />
@@ -985,9 +1287,19 @@ export function RatingTrajectoryGraph({
               </p>
             </div>
           ) : (
-            <div className="h-[280px] sm:h-[320px] w-full pt-2">
+            <div
+              ref={multiContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={(e) => handleMouseMove(e, multiContainerRef)}
+              onMouseUp={handleMouseUp}
+              onDoubleClick={handleDoubleClick}
+              className={cn(
+                "h-[280px] sm:h-[320px] w-full pt-2 rounded-2xl relative select-none",
+                isDragging ? "cursor-grabbing" : zoomLevel > 1 ? "cursor-grab" : "cursor-crosshair"
+              )}
+            >
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={filteredData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                <LineChart data={formattedMergedChartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
 
                   <XAxis
@@ -1013,9 +1325,19 @@ export function RatingTrajectoryGraph({
                       dataKey="codeforces"
                       name="Codeforces"
                       stroke="#3B82F6"
-                      strokeWidth={2.5}
-                      dot={{ r: 3.5, fill: "#3B82F6", strokeWidth: 1, stroke: "#ffffff" }}
-                      activeDot={{ r: 6.5, stroke: "#3B82F6", strokeWidth: 2.5, fill: "#ffffff" }}
+                      strokeWidth={dynamicStrokeWidth}
+                      dot={{
+                        r: dynamicDotRadius,
+                        fill: "#3B82F6",
+                        strokeWidth: Math.min(2.5, 1.5 + (zoomLevel - 1) * 0.25),
+                        stroke: "#ffffff",
+                      }}
+                      activeDot={{
+                        r: dynamicActiveDotRadius,
+                        stroke: "#3B82F6",
+                        strokeWidth: 3,
+                        fill: "#ffffff",
+                      }}
                       connectNulls
                     />
                   )}
@@ -1026,9 +1348,19 @@ export function RatingTrajectoryGraph({
                       dataKey="leetcode"
                       name="LeetCode"
                       stroke="#F59E0B"
-                      strokeWidth={2.5}
-                      dot={{ r: 3.5, fill: "#F59E0B", strokeWidth: 1, stroke: "#ffffff" }}
-                      activeDot={{ r: 6.5, stroke: "#F59E0B", strokeWidth: 2.5, fill: "#ffffff" }}
+                      strokeWidth={dynamicStrokeWidth}
+                      dot={{
+                        r: dynamicDotRadius,
+                        fill: "#F59E0B",
+                        strokeWidth: Math.min(2.5, 1.5 + (zoomLevel - 1) * 0.25),
+                        stroke: "#ffffff",
+                      }}
+                      activeDot={{
+                        r: dynamicActiveDotRadius,
+                        stroke: "#F59E0B",
+                        strokeWidth: 3,
+                        fill: "#ffffff",
+                      }}
                       connectNulls
                     />
                   )}
@@ -1039,9 +1371,19 @@ export function RatingTrajectoryGraph({
                       dataKey="codechef"
                       name="CodeChef"
                       stroke="#A855F7"
-                      strokeWidth={2.5}
-                      dot={{ r: 3.5, fill: "#A855F7", strokeWidth: 1, stroke: "#ffffff" }}
-                      activeDot={{ r: 6.5, stroke: "#A855F7", strokeWidth: 2.5, fill: "#ffffff" }}
+                      strokeWidth={dynamicStrokeWidth}
+                      dot={{
+                        r: dynamicDotRadius,
+                        fill: "#A855F7",
+                        strokeWidth: Math.min(2.5, 1.5 + (zoomLevel - 1) * 0.25),
+                        stroke: "#ffffff",
+                      }}
+                      activeDot={{
+                        r: dynamicActiveDotRadius,
+                        stroke: "#A855F7",
+                        strokeWidth: 3,
+                        fill: "#ffffff",
+                      }}
                       connectNulls
                     />
                   )}
@@ -1052,14 +1394,30 @@ export function RatingTrajectoryGraph({
                       dataKey="atcoder"
                       name="AtCoder"
                       stroke="#06B6D4"
-                      strokeWidth={2.5}
-                      dot={{ r: 3.5, fill: "#06B6D4", strokeWidth: 1, stroke: "#ffffff" }}
-                      activeDot={{ r: 6.5, stroke: "#06B6D4", strokeWidth: 2.5, fill: "#ffffff" }}
+                      strokeWidth={dynamicStrokeWidth}
+                      dot={{
+                        r: dynamicDotRadius,
+                        fill: "#06B6D4",
+                        strokeWidth: Math.min(2.5, 1.5 + (zoomLevel - 1) * 0.25),
+                        stroke: "#ffffff",
+                      }}
+                      activeDot={{
+                        r: dynamicActiveDotRadius,
+                        stroke: "#06B6D4",
+                        strokeWidth: 3,
+                        fill: "#ffffff",
+                      }}
                       connectNulls
                     />
                   )}
                 </LineChart>
               </ResponsiveContainer>
+
+              {/* Floating Zoom Hint Pill */}
+              <div className="absolute bottom-2 right-3 pointer-events-none opacity-60 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-border/40 text-[9px] font-medium text-muted-foreground flex items-center gap-1">
+                <Info className="size-2.5 text-primary" />
+                <span>Scroll wheel to zoom points • Drag to pan</span>
+              </div>
             </div>
           )}
         </>
