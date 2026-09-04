@@ -140,6 +140,50 @@ export async function fetchLeetCodeRatingHistory(
   if (!username || !username.trim()) return [];
   const cleanUsername = username.trim();
 
+  // Fast-path: If stats already include recentContests history from Edge Function
+  if (lcStats?.recentContests && lcStats.recentContests.length > 0) {
+    let prev = 1500;
+    return lcStats.recentContests.map((item) => {
+      const delta = item.rating - prev;
+      prev = item.rating;
+      const dateStr = item.date || new Date().toISOString().split("T")[0];
+      return {
+        platform: "leetcode",
+        contestName: item.name || "LeetCode Contest",
+        rating: item.rating,
+        date: dateStr,
+        timestamp: Math.floor(new Date(dateStr).getTime() / 1000),
+        delta,
+      };
+    });
+  }
+
+  // Tier 0: Direct Supabase Edge Function (Zero CORS limitations, fast full history)
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-leetcode", {
+      body: { username: cleanUsername },
+    });
+    if (!edgeRes.error && edgeRes.data && edgeRes.data.success && edgeRes.data.data?.recentContests?.length > 0) {
+      const historyList = edgeRes.data.data.recentContests;
+      let prev = 1500;
+      return historyList.map((item: any) => {
+        const delta = item.rating - prev;
+        prev = item.rating;
+        const dateStr = item.date || new Date().toISOString().split("T")[0];
+        return {
+          platform: "leetcode",
+          contestName: item.name || "LeetCode Contest",
+          rating: item.rating,
+          date: dateStr,
+          timestamp: Math.floor(new Date(dateStr).getTime() / 1000),
+          delta,
+        };
+      });
+    }
+  } catch {
+    // Edge function not available, fallback to Tier 1 & 2
+  }
+
   // Tier 1: Live Official LeetCode GraphQL query via CORS proxies
   const graphqlQuery = {
     query: `

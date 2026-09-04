@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -80,6 +80,78 @@ const LANGUAGE_COLORS: Record<string, string> = {
 function getLanguageColor(lang: string | null | undefined): string {
   if (!lang) return "#94a3b8";
   return LANGUAGE_COLORS[lang] || "#8b5cf6";
+}
+
+export function UserAvatarImage({
+  src,
+  fallbackSrc,
+  name,
+  fallbackText,
+  borderColor = "border-primary/25",
+  fallbackBg = "bg-primary/20 border-primary/30",
+  fallbackTextColor = "text-primary",
+  sizeClass = "size-7",
+}: {
+  src?: string | null;
+  fallbackSrc?: string | null;
+  name?: string | null;
+  fallbackText?: string | null;
+  borderColor?: string;
+  fallbackBg?: string;
+  fallbackTextColor?: string;
+  sizeClass?: string;
+}) {
+  const normalizeUrl = (url?: string | null) => {
+    if (!url) return null;
+    let clean = url.trim();
+    if (clean.startsWith("//")) clean = `https:${clean}`;
+    return clean;
+  };
+
+  const primary = normalizeUrl(src);
+  const secondary = normalizeUrl(fallbackSrc);
+
+  const [activeSrc, setActiveSrc] = useState<string | null>(primary || secondary || null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setActiveSrc(primary || secondary || null);
+    setFailed(false);
+  }, [src, fallbackSrc]);
+
+  const initials = (fallbackText || name || "CP").trim().substring(0, 2).toUpperCase();
+
+  if (activeSrc && !failed) {
+    return (
+      <img
+        src={activeSrc}
+        alt={name || "User Avatar"}
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
+        className={cn(sizeClass, "rounded-lg object-cover border shrink-0 shadow-xs", borderColor)}
+        onError={() => {
+          if (secondary && activeSrc !== secondary) {
+            setActiveSrc(secondary);
+          } else {
+            setFailed(true);
+          }
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        sizeClass,
+        "rounded-lg border flex items-center justify-center font-extrabold text-[11px] shrink-0 shadow-xs",
+        fallbackBg,
+        fallbackTextColor
+      )}
+    >
+      {initials}
+    </div>
+  );
 }
 
 const LeetCodeLogo = ({ className = "size-7" }: { className?: string }) => (
@@ -177,9 +249,23 @@ function getCodeforcesRankConfig(rating: number): CFRankConfig {
 }
 
 // SVG Donut Chart Component for LeetCode
-function LeetCodeDonutChart({ easy, medium, hard, total }: { easy: number; medium: number; hard: number; total: number }) {
-  const size = 150;
-  const strokeWidth = 14;
+function LeetCodeDonutChart({
+  easy,
+  medium,
+  hard,
+  total,
+  totalQuestions,
+  size = 110,
+  strokeWidth = 10,
+}: {
+  easy: number;
+  medium: number;
+  hard: number;
+  total: number;
+  totalQuestions?: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -197,7 +283,7 @@ function LeetCodeDonutChart({ easy, medium, hard, total }: { easy: number; mediu
   const hardOffset = -(easyDash + mediumDash);
 
   return (
-    <div className="relative flex items-center justify-center shrink-0 my-2">
+    <div className="relative flex items-center justify-center shrink-0 my-1">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90">
         <circle
           cx={size / 2}
@@ -256,8 +342,8 @@ function LeetCodeDonutChart({ easy, medium, hard, total }: { easy: number; mediu
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-3xl font-extrabold text-foreground font-mono tracking-tight">{total}</span>
-        <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mt-1">Solved</span>
+        <span className="text-xl sm:text-2xl font-black text-foreground font-mono tracking-tight">{total}</span>
+        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Solved</span>
       </div>
     </div>
   );
@@ -364,6 +450,12 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
   const isGeeksForGeeks = props.platform === "geeksforgeeks";
   const isAtCoder = props.platform === "atcoder";
 
+  const [atcoderTab, setAtcoderTab] = useState<"algo" | "heuristic" | "contests">("algo");
+  const [codechefTab, setCodechefTab] = useState<"overview" | "badges" | "contests">("overview");
+  const [leetcodeTab, setLeetcodeTab] = useState<"overview" | "badges" | "contests">("overview");
+  const [codeforcesTab, setCodeforcesTab] = useState<"overview" | "topics" | "contests">("overview");
+  const [codewarsTab, setCodewarsTab] = useState<"overview" | "languages" | "badges">("overview");
+
   if (isGitHub) {
     return (
       <GitHubPortfolioDashboard
@@ -378,12 +470,12 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
   }
 
   let rawInput = "";
-  if (isLeetCode) rawInput = (props as LeetCodeCardProps).username || "";
-  else if (isCodeforces) rawInput = (props as CodeforcesCardProps).handle || "";
-  else if (isCodeChef) rawInput = (props as CodeChefCardProps).username || "";
-  else if (isCodewars) rawInput = (props as CodewarsCardProps).username || "";
-  else if (isGeeksForGeeks) rawInput = (props as GeeksForGeeksCardProps).username || "";
-  else if (isAtCoder) rawInput = (props as AtCoderCardProps).username || "";
+  if (isLeetCode) rawInput = (props as LeetCodeCardProps).username || (props as any).stats?.username || "";
+  else if (isCodeforces) rawInput = (props as CodeforcesCardProps).handle || (props as any).username || (props as CodeforcesCardProps).stats?.handle || "";
+  else if (isCodeChef) rawInput = (props as CodeChefCardProps).username || (props as any).stats?.username || "";
+  else if (isCodewars) rawInput = (props as CodewarsCardProps).username || (props as any).stats?.username || "";
+  else if (isGeeksForGeeks) rawInput = (props as GeeksForGeeksCardProps).username || (props as any).stats?.username || "";
+  else if (isAtCoder) rawInput = (props as AtCoderCardProps).username || (props as any).stats?.username || "";
   else rawInput = (props as GitHubCardProps).username || "";
 
   const usernameOrHandle = extractUsername(rawInput);
@@ -396,19 +488,19 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
   let bgBlob = "bg-primary";
 
   if (isLeetCode) {
-    profileUrl = `https://leetcode.com/u/${usernameOrHandle}/`;
+    profileUrl = (props as LeetCodeCardProps).stats?.profile_url || `https://leetcode.com/u/${usernameOrHandle}/`;
     platformTitle = "LeetCode";
     brandGlow = "group-hover:border-[#FFA116]/50 group-hover:shadow-[0_0_30px_rgba(255,161,22,0.18)]";
     iconBg = "bg-[#FFA116]/10 border-[#FFA116]/20";
     bgBlob = "bg-[#FFA116]";
   } else if (isCodeforces) {
-    profileUrl = `https://codeforces.com/profile/${usernameOrHandle}`;
+    profileUrl = (props as CodeforcesCardProps).stats?.profile_url || `https://codeforces.com/profile/${usernameOrHandle}`;
     platformTitle = "Codeforces";
     brandGlow = "group-hover:border-[#1F8ACB]/50 group-hover:shadow-[0_0_30px_rgba(31,138,203,0.18)]";
     iconBg = "bg-[#1F8ACB]/10 border-[#1F8ACB]/20";
     bgBlob = "bg-[#1F8ACB]";
   } else if (isCodeChef) {
-    profileUrl = `https://www.codechef.com/users/${usernameOrHandle}`;
+    profileUrl = (props as CodeChefCardProps).stats?.profile_url || `https://www.codechef.com/users/${usernameOrHandle}`;
     platformTitle = "CodeChef";
     brandGlow = "group-hover:border-amber-600/50 group-hover:shadow-[0_0_30px_rgba(217,119,6,0.18)]";
     iconBg = "bg-amber-600/10 border-amber-600/20";
@@ -426,7 +518,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
     iconBg = "bg-emerald-600/10 border-emerald-600/20";
     bgBlob = "bg-emerald-600";
   } else if (isAtCoder) {
-    profileUrl = `https://atcoder.jp/users/${usernameOrHandle}`;
+    profileUrl = (props as AtCoderCardProps).stats?.profile_url || `https://atcoder.jp/users/${usernameOrHandle}`;
     platformTitle = "AtCoder";
     brandGlow = "group-hover:border-cyan-500/50 group-hover:shadow-[0_0_30px_rgba(6,182,212,0.18)]";
     iconBg = "bg-cyan-500/10 border-cyan-500/20";
@@ -580,6 +672,7 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const reputation = lcStats?.reputation;
             const contestBadge = lcStats?.contestBadge;
             const badges = lcStats?.badges || [];
+            const recentContests = lcStats?.recentContests || [];
 
             const totalCalc = Math.max(1, total);
             const easyPct = Math.round((easy / totalCalc) * 100);
@@ -587,306 +680,363 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const hardPct = Math.round((hard / totalCalc) * 100);
 
             return (
-              <div className="space-y-5 pt-2">
-                {/* Profile Header Banner (If name, country, company, school, or avatar present) */}
-                {(lcStats?.name || lcStats?.countryName || lcStats?.company || lcStats?.school || lcStats?.avatar) && (
-                  <div className="p-3.5 rounded-2xl bg-[#FFA116]/5 border border-[#FFA116]/15 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {lcStats?.avatar ? (
-                        <img
-                          src={lcStats.avatar}
-                          alt={lcStats.name || usernameOrHandle}
-                          className="size-10 rounded-xl object-cover border border-[#FFA116]/20 shrink-0"
-                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                        />
-                      ) : (
-                        <div className="size-10 rounded-xl bg-[#FFA116]/20 border border-[#FFA116]/30 flex items-center justify-center font-extrabold text-[#FFA116] text-sm shrink-0">
-                          {(lcStats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
+              <div className="space-y-2.5 pt-0.5">
+                {/* Profile Header Banner (Ultra Compact 1-Row) */}
+                {(lcStats?.name || lcStats?.countryName || lcStats?.company || lcStats?.school || lcStats?.avatar || lcStats?.streak || lcStats?.totalActiveDays || usernameOrHandle) && (
+                  <div className="px-2.5 py-1.5 rounded-xl bg-[#FFA116]/5 border border-[#FFA116]/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatarImage
+                        src={lcStats?.avatar}
+                        name={lcStats?.name || usernameOrHandle}
+                        fallbackText={lcStats?.name || usernameOrHandle}
+                        borderColor="border-[#FFA116]/25"
+                        fallbackBg="bg-[#FFA116]/20 border-[#FFA116]/30"
+                        fallbackTextColor="text-[#FFA116]"
+                        sizeClass="size-7"
+                      />
                       <div className="min-w-0">
-                        <h4 className="text-sm font-extrabold text-foreground truncate">
-                          {lcStats?.name || usernameOrHandle}
-                        </h4>
-                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                        <a
+                          href={lcStats?.profile_url || profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-extrabold text-foreground hover:text-[#FFA116] truncate leading-tight flex items-center gap-1 transition-colors group/title"
+                          title={`Open ${lcStats?.name || usernameOrHandle}'s LeetCode Profile`}
+                        >
+                          <span className="truncate">{lcStats?.name || usernameOrHandle}</span>
+                          <ExternalLink className="size-2.5 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-muted-foreground font-medium leading-none mt-0.5">
                           {lcStats?.countryName && (
-                            <span className="flex items-center gap-1">
-                              <Globe className="size-3 text-[#FFA116] shrink-0" />
-                              {lcStats.countryName}
+                            <span className="flex items-center gap-0.5">
+                              <Globe className="size-2.5 text-[#FFA116] shrink-0" />
+                              <span className="truncate max-w-[80px]">{lcStats.countryName}</span>
                             </span>
                           )}
                           {lcStats?.company && (
-                            <span className="flex items-center gap-1 truncate">
-                              <Building2 className="size-3 text-[#FFA116] shrink-0" />
-                              {lcStats.company}
+                            <span className="flex items-center gap-0.5 truncate max-w-[90px]">
+                              <Building2 className="size-2.5 text-[#FFA116] shrink-0" />
+                              <span className="truncate">{lcStats.company}</span>
                             </span>
                           )}
                           {lcStats?.school && (
-                            <span className="flex items-center gap-1 truncate">
-                              <BookOpen className="size-3 text-[#FFA116] shrink-0" />
-                              {lcStats.school}
+                            <span className="flex items-center gap-0.5 truncate max-w-[90px]">
+                              <BookOpen className="size-2.5 text-[#FFA116] shrink-0" />
+                              <span className="truncate">{lcStats.school}</span>
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
+
+                    {/* Streak / Active Days Chip in Header */}
+                    {((typeof lcStats?.streak === "number" && lcStats.streak > 0) || (typeof lcStats?.totalActiveDays === "number" && lcStats.totalActiveDays > 0)) && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        {typeof lcStats?.streak === "number" && lcStats.streak > 0 && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 rounded-md font-bold border-amber-500/40 text-amber-500 bg-amber-500/10 flex items-center gap-0.5">
+                            <Flame className="size-2.5 fill-current" /> {lcStats.streak}d
+                          </Badge>
+                        )}
+                        {typeof lcStats?.totalActiveDays === "number" && lcStats.totalActiveDays > 0 && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 rounded-md font-medium border-border/80 text-muted-foreground bg-muted/30">
+                            {lcStats.totalActiveDays}d
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Hero Rating / Contest Rank Banner */}
-                {(contestRating || contestBadge || topPercentage || globalRanking || badges.length > 0) && (
-                  <div className="p-5 sm:p-6 rounded-2xl border border-[#FFA116]/30 bg-gradient-to-br from-[#FFA116]/20 to-[#FFA116]/5 flex items-center justify-between gap-4 shadow-sm">
-                    <div className="space-y-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                        LeetCode Competitive Standings & Badges
-                      </span>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {contestBadge ? (
-                          <Badge className="bg-[#FFA116] text-slate-950 font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5">
-                            <Trophy className="size-4 fill-current" /> {contestBadge}
-                          </Badge>
-                        ) : contestRating ? (
-                          <Badge className="bg-[#FFA116] text-slate-950 font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5">
-                            <Trophy className="size-4 fill-current" /> Rated Contestant
-                          </Badge>
-                        ) : null}
-                        {topPercentage && (
-                          <Badge variant="outline" className="font-extrabold text-xs px-2.5 py-1 rounded-xl border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10">
-                            Top {topPercentage}%
-                          </Badge>
-                        )}
-                        {/* Mini Badge Images Strip */}
-                        {badges.length > 0 && (
-                          <div className="flex items-center gap-1.5 pl-1 border-l border-[#FFA116]/30">
-                            {badges.slice(0, 5).map((b, i) =>
+                {/* Sub-Tab Navigation Bar (Overview, Badges, Contests) */}
+                <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted/40 rounded-xl border border-border/50 text-xs font-extrabold">
+                  <button
+                    type="button"
+                    onClick={() => setLeetcodeTab("overview")}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      leetcodeTab === "overview"
+                        ? "bg-[#FFA116] text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold"
+                    )}
+                  >
+                    <Code2 className="size-3 shrink-0" />
+                    <span className="truncate">Overview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLeetcodeTab("badges")}
+                    disabled={badges.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      leetcodeTab === "badges"
+                        ? "bg-[#FFA116] text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      badges.length === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Award className="size-3 shrink-0" />
+                    <span className="truncate">Badges ({badges.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLeetcodeTab("contests")}
+                    disabled={recentContests.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      leetcodeTab === "contests"
+                        ? "bg-[#FFA116] text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      recentContests.length === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Trophy className="size-3 shrink-0" />
+                    <span className="truncate">Contests ({recentContests.length})</span>
+                  </button>
+                </div>
+
+                {/* Tab 1: Overview */}
+                {leetcodeTab === "overview" && (
+                  <div className="space-y-2.5">
+                    {/* 4 Compact Key Metrics Tiles (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Contest Rating */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="size-5 rounded-md bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                              <Trophy className="size-2.5" />
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                              Rating
+                            </span>
+                          </div>
+                          {contestBadge ? (
+                            <Badge className="bg-[#FFA116] text-slate-950 font-black text-[9px] px-1.5 py-0 rounded-md border-0 shrink-0">
+                              {contestBadge}
+                            </Badge>
+                          ) : topPercentage ? (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 rounded-md border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10 font-extrabold shrink-0">
+                              Top {topPercentage}%
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-[#FFA116] tracking-tight leading-tight">
+                            {contestRating ? contestRating : (total > 0 ? "Rated" : "Unrated")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {contestRanking ? `Rank #${contestRanking.toLocaleString()}` : (contestRating ? "Contest Rating" : "Competitive Score")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Global Solver Rank */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                            <Globe className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Global Rank
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {globalRanking ? `#${globalRanking.toLocaleString()}` : (total > 0 ? "Top Solver" : "Unranked")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Worldwide Standing
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contests Attended */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                            <Flame className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Contests
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : (contestRating ? "Active" : 0)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Attended & Rated
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Acceptance Rate */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
+                            <CheckCircle2 className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Accuracy
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {acceptanceRate !== null && acceptanceRate !== undefined ? `${acceptanceRate}%` : (total > 0 ? "High AC" : "N/A")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {reputation ? `${reputation.toLocaleString()} Rep` : "Submission AC"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Compact Problem Solving Breakdown with Mini Donut Chart */}
+                    <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/50">
+                      <LeetCodeDonutChart
+                        easy={easy}
+                        medium={medium}
+                        hard={hard}
+                        total={total}
+                        totalQuestions={totalQuestions}
+                        size={84}
+                        strokeWidth={8}
+                      />
+
+                      <div className="flex-1 w-full space-y-1.5">
+                        {/* Easy Row */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between items-center text-xs font-semibold">
+                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">
+                              <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              Easy
+                            </span>
+                            <div className="flex items-center gap-1 font-mono text-[10px]">
+                              <span className="font-extrabold text-foreground">{easy}</span>
+                              <span className="text-muted-foreground/60 text-[9px]">/{easyTotal}</span>
+                              <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1 py-0 rounded border border-emerald-500/20">
+                                {easyPct}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-emerald-500/15 overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all duration-700 shadow-xs"
+                              style={{ width: `${easyPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Medium Row */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between items-center text-xs font-semibold">
+                            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold text-[11px]">
+                              <span className="size-1.5 rounded-full bg-amber-500 shrink-0" />
+                              Med
+                            </span>
+                            <div className="flex items-center gap-1 font-mono text-[10px]">
+                              <span className="font-extrabold text-foreground">{medium}</span>
+                              <span className="text-muted-foreground/60 text-[9px]">/{mediumTotal}</span>
+                              <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1 py-0 rounded border border-amber-500/20">
+                                {mediumPct}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-amber-500/15 overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 rounded-full transition-all duration-700 shadow-xs"
+                              style={{ width: `${mediumPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Hard Row */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between items-center text-xs font-semibold">
+                            <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold text-[11px]">
+                              <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
+                              Hard
+                            </span>
+                            <div className="flex items-center gap-1 font-mono text-[10px]">
+                              <span className="font-extrabold text-foreground">{hard}</span>
+                              <span className="text-muted-foreground/60 text-[9px]">/{hardTotal}</span>
+                              <span className="text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1 py-0 rounded border border-rose-500/20">
+                                {hardPct}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-rose-500/15 overflow-hidden">
+                            <div
+                              className="h-full bg-rose-500 rounded-full transition-all duration-700 shadow-xs"
+                              style={{ width: `${hardPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Badges Preview Footer in Overview Tab */}
+                    {badges.length > 0 && (
+                      <div className="px-2.5 py-1.5 rounded-xl bg-card/40 border border-[#FFA116]/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                            Badges:
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {badges.slice(0, 4).map((b, i) =>
                               b.icon ? (
                                 <img
                                   key={i}
                                   src={b.icon}
                                   alt={b.name}
-                                  title={`${b.name}${b.creationDate ? ` (Earned: ${b.creationDate})` : ''}`}
-                                  referrerPolicy="no-referrer"
-                                  className="size-7 object-contain drop-shadow-md hover:scale-125 transition-transform"
-                                  onError={(e) => {
-                                    const target = e.currentTarget;
-                                    if (target.src.includes("leetcode.com")) {
-                                      target.src = target.src.replace("leetcode.com", "assets.leetcode.com");
-                                    } else {
-                                      target.style.display = "none";
-                                    }
-                                  }}
+                                  title={b.name}
+                                  className="size-5 object-contain drop-shadow-xs shrink-0"
+                                  onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
                                 />
                               ) : null
                             )}
                           </div>
-                        )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setLeetcodeTab("badges")}
+                          className="text-[10px] font-extrabold text-[#FFA116] hover:underline shrink-0 flex items-center gap-0.5"
+                        >
+                          <span>{badges.length} Earned</span>
+                          <ArrowUpRight className="size-3" />
+                        </button>
                       </div>
-                    </div>
-                    {contestRating ? (
-                      <div className="text-right shrink-0">
-                        <span className="text-3xl sm:text-4xl font-extrabold font-mono text-[#FFA116] tracking-tight block">
-                          {contestRating}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-semibold">Contest Rating</span>
-                      </div>
-                    ) : globalRanking ? (
-                      <div className="text-right shrink-0">
-                        <span className="text-2xl sm:text-3xl font-extrabold font-mono text-foreground tracking-tight block">
-                          #{globalRanking.toLocaleString()}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-semibold">Global Rank</span>
-                      </div>
-                    ) : null}
+                    )}
                   </div>
                 )}
 
-                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
-                <div className="grid grid-cols-2 gap-3.5">
-                  {/* Contest Rating / Solved Rank */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
-                        <Trophy className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Contest Rating
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-[#FFA116] tracking-tight">
-                        {contestRating ? contestRating : (total > 0 ? "Rated" : "Unrated")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {contestRanking ? `Rank #${contestRanking.toLocaleString()}` : "Competitive Score"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Global Problem Solving Rank */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
-                        <Globe className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Global Rank
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {globalRanking ? `#${globalRanking.toLocaleString()}` : (total > 0 ? "Top Solver" : "Unranked")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Worldwide Standing
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contests Attended */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
-                        <Flame className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Contests
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : (contestRating ? "Active" : 0)}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Attended & Rated
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Acceptance Rate / Reputation */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-[#FFA116]/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-[#FFA116]/10 border border-[#FFA116]/20 flex items-center justify-center text-[#FFA116] shrink-0">
-                        <CheckCircle2 className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Acceptance Rate
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {acceptanceRate !== null && acceptanceRate !== undefined ? `${acceptanceRate}%` : (total > 0 ? "High AC" : "N/A")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {reputation ? `${reputation.toLocaleString()} Reputation` : "Submission Accuracy"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Problem Solving Breakdown with Donut Chart */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 p-4 rounded-2xl bg-muted/20 border border-border/50">
-                  <LeetCodeDonutChart
-                    easy={easy}
-                    medium={medium}
-                    hard={hard}
-                    total={total}
-                  />
-
-                  <div className="flex-1 w-full space-y-3 sm:space-y-3.5">
-                    {/* Easy Row */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center text-xs sm:text-sm font-semibold">
-                        <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                          <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
-                          Easy
-                        </span>
-                        <div className="flex items-center gap-2 font-mono">
-                          <span className="font-extrabold text-foreground text-xs sm:text-sm">{easy}</span>
-                          <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
-                            {easyPct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2 rounded-full bg-emerald-500/15 overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500 rounded-full transition-all duration-700 shadow-sm"
-                          style={{ width: `${easyPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Medium Row */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center text-xs sm:text-sm font-semibold">
-                        <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
-                          <span className="size-2.5 rounded-full bg-amber-500 shrink-0" />
-                          Medium
-                        </span>
-                        <div className="flex items-center gap-2 font-mono">
-                          <span className="font-extrabold text-foreground text-xs sm:text-sm">{medium}</span>
-                          <span className="text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20">
-                            {mediumPct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2 rounded-full bg-amber-500/15 overflow-hidden">
-                        <div
-                          className="h-full bg-amber-500 rounded-full transition-all duration-700 shadow-sm"
-                          style={{ width: `${mediumPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Hard Row */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center text-xs sm:text-sm font-semibold">
-                        <span className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
-                          <span className="size-2.5 rounded-full bg-rose-500 shrink-0" />
-                          Hard
-                        </span>
-                        <div className="flex items-center gap-2 font-mono">
-                          <span className="font-extrabold text-foreground text-xs sm:text-sm">{hard}</span>
-                          <span className="text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded-md border border-rose-500/20">
-                            {hardPct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-2 rounded-full bg-rose-500/15 overflow-hidden">
-                        <div
-                          className="h-full bg-rose-500 rounded-full transition-all duration-700 shadow-sm"
-                          style={{ width: `${hardPct}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Real Badges & Achievements Showcase */}
-                {badges.length > 0 && (
-                  <div className="p-4 rounded-2xl bg-card/40 border border-[#FFA116]/20 backdrop-blur-md space-y-3.5">
+                {/* Tab 2: Badges */}
+                {leetcodeTab === "badges" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-[#FFA116]/20 backdrop-blur-md space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                        <Award className="size-4 text-[#FFA116] shrink-0" />
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-3.5 text-[#FFA116] shrink-0" />
                         <span className="truncate">LeetCode Badges</span>
                       </span>
-                      <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10 font-extrabold whitespace-nowrap shrink-0">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10 font-extrabold whitespace-nowrap shrink-0">
                         {badges.length} Earned
                       </Badge>
                     </div>
 
-                    {/* Scrollable Container for All Earned Badges */}
-                    <div className="max-h-[280px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                    {/* Scrollable Badges List (Compact height) */}
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
                       {badges.map((b, idx) => (
                         <div
                           key={idx}
-                          className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-[#FFA116]/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
+                          className="group/badge p-2 rounded-xl bg-card border border-border/70 hover:border-[#FFA116]/40 hover:shadow-xs transition-all duration-200 flex items-center gap-2"
                         >
                           {b.icon ? (
                             <img
                               src={b.icon}
                               alt={b.name}
                               referrerPolicy="no-referrer"
-                              className="size-11 sm:size-12 object-contain shrink-0 transition-transform duration-300 group-hover/badge:scale-110 drop-shadow-md"
+                              className="size-8 object-contain shrink-0 transition-transform duration-200 group-hover/badge:scale-110 drop-shadow-xs"
                               onError={(e) => {
                                 const target = e.currentTarget;
                                 if (target.src.includes("leetcode.com")) {
@@ -900,33 +1050,74 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
                               }}
                             />
                           ) : (
-                            <div className="size-11 sm:size-12 rounded-xl border border-[#FFA116]/30 bg-[#FFA116]/15 flex items-center justify-center text-[#FFA116] shrink-0 shadow-sm">
-                              <Award className="size-5" />
+                            <div className="size-8 rounded-lg border border-[#FFA116]/30 bg-[#FFA116]/15 flex items-center justify-center text-[#FFA116] shrink-0 shadow-xs">
+                              <Award className="size-3.5" />
                             </div>
                           )}
 
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                              <h5 className="text-xs sm:text-sm font-extrabold text-foreground truncate">
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between gap-1 flex-wrap sm:flex-nowrap">
+                              <h5 className="text-[11px] font-extrabold text-foreground truncate">
                                 {b.name}
                               </h5>
-                              <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-[#FFA116]/30 text-[#FFA116] bg-[#FFA116]/10 shrink-0 whitespace-nowrap">
-                                {b.category || "LeetCode Badge"}
+                              <Badge variant="outline" className="text-[8px] px-1 py-0 rounded-md font-extrabold border-[#FFA116]/30 text-[#FFA116] bg-[#FFA116]/10 shrink-0 whitespace-nowrap">
+                                {b.category || "Badge"}
                               </Badge>
                             </div>
 
                             {(b.description || b.hoverText || b.shortName) && (
-                              <p className="text-[11px] text-muted-foreground/90 leading-tight line-clamp-2">
+                              <p className="text-[9px] text-muted-foreground/90 leading-tight line-clamp-1">
                                 {b.description || b.hoverText || b.shortName}
                               </p>
                             )}
 
                             {b.creationDate && (
-                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium pt-0.5">
-                                <Clock className="size-3 text-[#FFA116] shrink-0" />
+                              <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-medium">
+                                <Clock className="size-2 text-[#FFA116] shrink-0" />
                                 <span>Earned on {b.creationDate}</span>
                               </div>
                             )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 3: Contests */}
+                {leetcodeTab === "contests" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-[#FFA116]/20 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Trophy className="size-3.5 text-[#FFA116] shrink-0" />
+                        <span className="truncate">Recent Contests</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md font-extrabold border-[#FFA116]/40 text-[#FFA116] bg-[#FFA116]/10">
+                        {recentContests.length} Rated
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                      {recentContests.slice(-8).reverse().map((c, idx) => (
+                        <div
+                          key={idx}
+                          className="p-1.5 rounded-lg bg-card/80 border border-border/60 flex items-center justify-between gap-2 text-xs hover:border-[#FFA116]/30 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <h5 className="font-extrabold text-foreground truncate text-[11px] leading-tight">
+                              {c.name}
+                            </h5>
+                            <span className="text-[9px] text-muted-foreground font-medium">
+                              {c.date || "Completed"} {c.rank ? `• Rank #${c.rank.toLocaleString()}` : ""} {typeof c.problemsSolved === "number" ? `• Solved ${c.problemsSolved}/${c.totalProblems || 4}` : ""}
+                            </span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-mono font-black text-xs text-[#FFA116] block leading-tight">
+                              {c.rating}
+                            </span>
+                            <span className="text-[8px] text-muted-foreground font-medium">
+                              Rating
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -943,238 +1134,394 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const maxRating = cfStats?.maxRating ?? rating;
             const rankConfig = getCodeforcesRankConfig(rating);
 
-            const range = Math.max(1, rankConfig.maxRating - rankConfig.minRating);
-            const progress = Math.min(100, Math.max(0, ((rating - rankConfig.minRating) / range) * 100));
-
             const totalSolved = cfStats?.totalSolved ?? 0;
-            const contestsAttended = cfStats?.contestsAttended;
+            const totalSubmissions = cfStats?.totalSubmissions ?? 0;
+            const acceptanceRate = cfStats?.acceptanceRate ?? (totalSubmissions > 0 ? Math.round((totalSolved / totalSubmissions) * 100) : null);
+            const contestsAttended = cfStats?.contestsAttended ?? (cfStats?.recentContests?.length || (rating > 0 ? 1 : 0));
             const bestRank = cfStats?.bestRank;
             const maxRatingGain = cfStats?.maxRatingGain;
-            const contribution = cfStats?.contribution;
+            const contribution = cfStats?.contribution ?? 0;
             const topTags = cfStats?.topTags || [];
             const difficultyMap = cfStats?.problemDifficultyBreakdown || {};
+            const recentContests = cfStats?.recentContests || [];
             const badges = cfStats?.badges || [];
+            const languages = cfStats?.languages || [];
 
             return (
-              <div className="space-y-5 pt-2">
-                {/* Profile Header Banner (If name, country, city, organization, or avatar present) */}
-                {(cfStats?.name || cfStats?.country || cfStats?.city || cfStats?.organization || cfStats?.avatar) && (
-                  <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/15 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {cfStats?.avatar ? (
-                        <img
-                          src={cfStats.avatar}
-                          alt={cfStats.name || usernameOrHandle}
-                          className="size-10 rounded-xl object-cover border border-cyan-500/20 shrink-0"
-                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                        />
-                      ) : (
-                        <div className="size-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center font-extrabold text-cyan-400 text-sm shrink-0">
-                          {(cfStats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
+              <div className="space-y-2.5 pt-0.5">
+                {/* Profile Header Banner (Ultra Compact 1-Row) */}
+                {(cfStats?.name || cfStats?.country || cfStats?.city || cfStats?.organization || cfStats?.avatar || cfStats?.titlePhoto || usernameOrHandle) && (
+                  <div className="px-2.5 py-1.5 rounded-xl bg-cyan-500/5 border border-cyan-500/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatarImage
+                        src={cfStats?.avatar}
+                        fallbackSrc={cfStats?.titlePhoto}
+                        name={cfStats?.name || usernameOrHandle}
+                        fallbackText={cfStats?.name || usernameOrHandle}
+                        borderColor="border-cyan-500/25"
+                        fallbackBg="bg-cyan-500/20 border-cyan-500/30"
+                        fallbackTextColor="text-cyan-400"
+                        sizeClass="size-7"
+                      />
                       <div className="min-w-0">
-                        <h4 className="text-sm font-extrabold text-foreground truncate">
-                          {cfStats?.name || usernameOrHandle}
-                        </h4>
-                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                        <a
+                          href={cfStats?.profile_url || profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-extrabold text-foreground hover:text-cyan-400 truncate leading-tight flex items-center gap-1 transition-colors group/title"
+                          title={`Open ${cfStats?.name || usernameOrHandle}'s Codeforces Profile`}
+                        >
+                          <span className="truncate">{cfStats?.name || usernameOrHandle}</span>
+                          <ExternalLink className="size-2.5 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-muted-foreground font-medium leading-none mt-0.5">
                           {cfStats?.country && (
-                            <span className="flex items-center gap-1">
-                              <Globe className="size-3 text-cyan-400 shrink-0" />
-                              {cfStats.country}{cfStats.city ? `, ${cfStats.city}` : ""}
+                            <span className="flex items-center gap-0.5">
+                              <Globe className="size-2.5 text-cyan-400 shrink-0" />
+                              <span className="truncate max-w-[85px]">{cfStats.country}{cfStats.city ? `, ${cfStats.city}` : ""}</span>
                             </span>
                           )}
                           {cfStats?.organization && (
-                            <span className="flex items-center gap-1 truncate">
-                              <Building2 className="size-3 text-cyan-400 shrink-0" />
-                              {cfStats.organization}
+                            <span className="flex items-center gap-0.5 truncate max-w-[95px]">
+                              <Building2 className="size-2.5 text-cyan-400 shrink-0" />
+                              <span className="truncate">{cfStats.organization}</span>
                             </span>
                           )}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Rank & Peak Tier Chips */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={cn("text-[9px] px-1.5 py-0.5 rounded-md font-extrabold border-0 shadow-xs", rankConfig.bgColor, rankConfig.textColor)}>
+                        {rankConfig.name}
+                      </Badge>
+                      {maxRating > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 rounded-md font-bold border-cyan-500/40 text-cyan-400 bg-cyan-500/10">
+                          Peak {maxRating}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Hero Rating / Competitive Rank Banner */}
-                <div className={cn("p-5 sm:p-6 rounded-2xl border flex items-center justify-between gap-4 shadow-sm", rankConfig.bgColor, rankConfig.borderColor)}>
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-                      Codeforces Rank
-                    </span>
-                    <span className={cn("text-xl sm:text-2xl font-black", rankConfig.textColor)}>
-                      {rankConfig.name}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-foreground tracking-tight block">
-                      {rating}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-semibold">
-                      Highest Rating: <span className="font-mono text-foreground">{maxRating}</span>
-                    </span>
-                  </div>
+                {/* Sub-Tab Navigation Bar (Overview, Topics, Contests) */}
+                <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted/40 rounded-xl border border-border/50 text-xs font-extrabold">
+                  <button
+                    type="button"
+                    onClick={() => setCodeforcesTab("overview")}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codeforcesTab === "overview"
+                        ? "bg-cyan-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold"
+                    )}
+                  >
+                    <Code2 className="size-3 shrink-0" />
+                    <span className="truncate">Overview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodeforcesTab("topics")}
+                    disabled={topTags.length === 0 && badges.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codeforcesTab === "topics"
+                        ? "bg-cyan-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      topTags.length === 0 && badges.length === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Award className="size-3 shrink-0" />
+                    <span className="truncate">Topics & Badges ({topTags.length || badges.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodeforcesTab("contests")}
+                    disabled={recentContests.length === 0 && !contestsAttended}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codeforcesTab === "contests"
+                        ? "bg-cyan-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      recentContests.length === 0 && !contestsAttended && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Trophy className="size-3 shrink-0" />
+                    <span className="truncate">Contests ({recentContests.length || contestsAttended || 0})</span>
+                  </button>
                 </div>
 
-                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
-                <div className="grid grid-cols-2 gap-3.5">
-                  {/* Contests Attended */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <Flame className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Contests
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {contestsAttended !== null && contestsAttended !== undefined ? contestsAttended : (rating > 0 ? "Active" : 0)}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Rounds Attended
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Best Contest Rank */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <Trophy className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Best Rank
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {bestRank ? `#${bestRank.toLocaleString()}` : (rating > 0 ? "Top Solver" : "Unranked")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Best Contest Standing
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Max Rating Gain */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <ArrowUpRight className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Max Gain
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-emerald-500 tracking-tight">
-                        {maxRatingGain ? `+${maxRatingGain}` : (rating > 0 ? "Rated" : "0")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Single Round Increase
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contribution */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <CheckCircle2 className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Contribution
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {contribution !== null && contribution !== undefined ? (contribution >= 0 ? `+${contribution}` : contribution) : "0"}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Community Score
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Solved Problems Summary */}
-                <div className="p-4 rounded-2xl bg-card/60 border border-border/70 flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Unique Problems Solved
-                  </span>
-                  <span className="text-2xl font-extrabold font-mono text-cyan-400">
-                    {totalSolved.toLocaleString()}
-                  </span>
-                </div>
-
-                {/* Badges & Achievements Showcase */}
-                {badges.length > 0 && (() => {
-                  const [visibleBadgesCount, setVisibleBadgesCount] = useState(3);
-                  const visibleBadges = badges.slice(0, visibleBadgesCount);
-                  const hasMore = visibleBadgesCount < badges.length;
-
-                  return (
-                    <div className="p-4 rounded-2xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                          <Award className="size-4 text-cyan-400 shrink-0" />
-                          <span className="truncate">Codeforces Badges</span>
-                        </span>
-                        <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-cyan-500/40 text-cyan-400 bg-cyan-500/10 font-extrabold whitespace-nowrap shrink-0">
-                          {badges.length} Earned
-                        </Badge>
-                      </div>
-
-                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                        <div className="grid grid-cols-1 gap-2.5">
-                          {visibleBadges.map((b, idx) => (
-                            <div
-                              key={idx}
-                              className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-cyan-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
-                            >
-                              <div className="size-9 rounded-xl border border-cyan-500/30 bg-cyan-500/15 flex items-center justify-center text-cyan-400 shrink-0 transition-transform duration-300 group-hover/badge:scale-110">
-                                <Trophy className="size-4 fill-current/20" />
-                              </div>
-
-                              <div className="min-w-0 flex-1 space-y-0.5">
-                                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                                  <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
-                                    {b.name}
-                                  </h5>
-                                  {b.category && (
-                                    <Badge variant="outline" className="text-[9px] px-2 py-0.5 rounded-md font-extrabold border-cyan-500/30 text-cyan-400 bg-cyan-500/10 shrink-0">
-                                      {b.category}
-                                    </Badge>
-                                  )}
-                                </div>
-                                {b.description && (
-                                  <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-                                    {b.description}
-                                  </p>
-                                )}
-                              </div>
+                {/* Tab 1: Overview */}
+                {codeforcesTab === "overview" && (
+                  <div className="space-y-2.5">
+                    {/* 4 Compact Key Metrics Tiles (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Rating */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                              <Trophy className="size-2.5" />
                             </div>
-                          ))}
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                              Rating
+                            </span>
+                          </div>
+                          {maxRating && maxRating > 0 && (
+                            <span className="text-[9px] font-mono text-muted-foreground font-semibold shrink-0">
+                              Peak {maxRating}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className={cn("text-base sm:text-lg font-black font-mono tracking-tight leading-tight", rankConfig.textColor)}>
+                            {rating > 0 ? rating : "Unrated"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {cfStats?.maxRank ? `Max: ${cfStats.maxRank}` : `${rankConfig.name} Standing`}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Load More Button */}
-                      {hasMore && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setVisibleBadgesCount((prev) => Math.min(prev + 5, badges.length))}
-                          className="w-full rounded-xl text-xs font-bold border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all"
+                      {/* Best Rank */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                            <Flame className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Best Rank
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {bestRank ? `#${bestRank.toLocaleString()}` : (rating > 0 ? "Top Solver" : "Unranked")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {maxRatingGain ? `Max Gain: +${maxRatingGain}` : "Contest Placement"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contests Attended */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                            <Trophy className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Contests
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {contestsAttended > 0 ? contestsAttended.toLocaleString() : "0"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Rated Rounds
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Solved Problems */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                            <CheckCircle2 className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Solved
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-cyan-400 tracking-tight leading-tight">
+                            {totalSolved.toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {acceptanceRate !== null ? `${acceptanceRate}% Accuracy` : "Unique Problems"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Problem Solving & Difficulty Breakdown Bar */}
+                    {totalSolved > 0 && (
+                      <div className="p-2.5 rounded-xl bg-muted/20 border border-border/50 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[11px] font-extrabold text-foreground flex items-center gap-1">
+                            <CheckCircle2 className="size-3 text-emerald-500" />
+                            {totalSolved} Problems Solved
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {languages.length > 0 ? `Primary: ${languages[0].language}` : "Algorithmic Challenges"}
+                          </span>
+                        </div>
+                        {/* Rating distribution pill summary */}
+                        <div className="flex items-center gap-1 flex-wrap text-[9px] font-mono font-bold text-muted-foreground">
+                          {Object.entries(difficultyMap).slice(0, 5).map(([tier, count], i) => (
+                            <span key={i} className="px-1.5 py-0.2 rounded bg-muted/50 border border-border/60">
+                              {tier}: <strong className="text-foreground">{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Topics Preview Footer */}
+                    {topTags.length > 0 && (
+                      <div className="px-2.5 py-1.5 rounded-xl bg-card/40 border border-cyan-500/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                            Topics:
+                          </span>
+                          <div className="flex items-center gap-1 truncate text-[11px] font-bold text-foreground">
+                            {topTags.slice(0, 3).map((t, i) => (
+                              <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 rounded border-cyan-500/30 text-cyan-400 bg-cyan-500/10 capitalize truncate max-w-[90px]">
+                                {t.name}: {t.count}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCodeforcesTab("topics")}
+                          className="text-[10px] font-extrabold text-cyan-400 hover:underline shrink-0 flex items-center gap-0.5"
                         >
-                          <MoreHorizontal className="size-3.5 mr-1.5" />
-                          Load More ({badges.length - visibleBadgesCount} more)
-                        </Button>
+                          <span>{topTags.length} Tags</span>
+                          <ArrowUpRight className="size-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: Topics & Badges */}
+                {codeforcesTab === "topics" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-3.5 text-cyan-400 shrink-0" />
+                        <span className="truncate">Algorithm Topics & Badges</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md border-cyan-500/40 text-cyan-400 bg-cyan-500/10 font-extrabold whitespace-nowrap shrink-0">
+                        {topTags.length} Topics • {badges.length} Badges
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                      {/* Top Tags List */}
+                      {topTags.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                            Algorithm Categories
+                          </span>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {topTags.map((tag, idx) => (
+                              <div
+                                key={idx}
+                                className="p-1.5 rounded-lg bg-card/80 border border-border/60 flex items-center justify-between gap-1 text-xs"
+                              >
+                                <span className="text-[11px] font-bold text-foreground truncate capitalize">
+                                  {tag.name}
+                                </span>
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 rounded font-mono font-black border-cyan-500/30 text-cyan-400 bg-cyan-500/10 shrink-0">
+                                  {tag.count}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Badges List */}
+                      {badges.length > 0 && (
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                            Achievements & Milestones
+                          </span>
+                          <div className="space-y-1">
+                            {badges.map((b, idx) => (
+                              <div
+                                key={idx}
+                                className="p-1.5 rounded-lg bg-card/80 border border-border/60 flex items-center justify-between gap-2 text-xs"
+                              >
+                                <div className="min-w-0">
+                                  <h5 className="font-extrabold text-foreground text-[11px] leading-tight truncate">
+                                    {b.name}
+                                  </h5>
+                                  {b.description && (
+                                    <p className="text-[9px] text-muted-foreground truncate">
+                                      {b.description}
+                                    </p>
+                                  )}
+                                </div>
+                                {b.category && (
+                                  <Badge variant="outline" className="text-[8px] px-1 py-0 rounded font-extrabold border-cyan-500/30 text-cyan-400 bg-cyan-500/10 shrink-0">
+                                    {b.category}
+                                  </Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
+
+                {/* Tab 3: Contests */}
+                {codeforcesTab === "contests" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Trophy className="size-3.5 text-cyan-400 shrink-0" />
+                        <span className="truncate">Recent Codeforces Contests</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md font-extrabold border-cyan-500/40 text-cyan-400 bg-cyan-500/10">
+                        {recentContests.length || contestsAttended || 0} Rated
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                      {recentContests.length > 0 ? (
+                        recentContests.slice(-8).reverse().map((c, idx) => {
+                          const delta = c.ratingChange;
+                          const isPos = delta > 0;
+                          return (
+                            <div
+                              key={idx}
+                              className="p-1.5 rounded-lg bg-card/80 border border-border/60 flex items-center justify-between gap-2 text-xs hover:border-cyan-500/30 transition-colors"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <h5 className="font-extrabold text-foreground truncate text-[11px] leading-tight">
+                                  {c.contestName}
+                                </h5>
+                                <span className="text-[9px] text-muted-foreground font-medium">
+                                  {c.date || "Completed"} {c.rank ? `• Rank #${c.rank.toLocaleString()}` : ""}
+                                </span>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="font-mono font-black text-xs text-cyan-400 block leading-tight">
+                                  {c.newRating}
+                                </span>
+                                <span className={cn("text-[8px] font-extrabold font-mono", isPos ? "text-emerald-500" : delta < 0 ? "text-rose-500" : "text-muted-foreground")}>
+                                  {isPos ? `+${delta}` : delta !== 0 ? delta : "0"}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="p-3 text-center text-xs text-muted-foreground">
+                          No rated contest history recorded yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()
@@ -1250,251 +1597,379 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const fullyPercentage = totalSolved > 0 ? Math.round((fullySolved / totalSolved) * 100) : 0;
 
             return (
-              <div className="space-y-5 pt-2">
-                {/* Profile Header Banner (If name, country, or institution present) */}
-                {(ccStats?.name || ccStats?.countryName || ccStats?.institution || ccStats?.avatar) && (
-                  <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {ccStats?.avatar ? (
-                        <img
-                          src={ccStats.avatar}
-                          alt={ccStats.name || usernameOrHandle}
-                          className="size-10 rounded-xl object-cover border border-amber-500/20 shrink-0"
-                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                        />
-                      ) : (
-                        <div className="size-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center font-extrabold text-amber-600 dark:text-amber-400 text-sm shrink-0">
-                          {(ccStats?.name || usernameOrHandle).substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
+              <div className="space-y-2.5 pt-0.5">
+                {/* Profile Header Banner (Ultra Compact 1-Row) */}
+                {(ccStats?.name || ccStats?.countryName || ccStats?.institution || ccStats?.avatar || usernameOrHandle) && (
+                  <div className="px-2.5 py-1.5 rounded-xl bg-amber-500/5 border border-amber-500/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatarImage
+                        src={ccStats?.avatar}
+                        name={ccStats?.name || usernameOrHandle}
+                        fallbackText={ccStats?.name || usernameOrHandle}
+                        borderColor="border-amber-500/25"
+                        fallbackBg="bg-amber-500/20 border-amber-500/30"
+                        fallbackTextColor="text-amber-500"
+                        sizeClass="size-7"
+                      />
                       <div className="min-w-0">
-                        <h4 className="text-sm font-extrabold text-foreground truncate">
-                          {ccStats?.name || usernameOrHandle}
-                        </h4>
-                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-medium">
+                        <a
+                          href={ccStats?.profile_url || profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-extrabold text-foreground hover:text-amber-500 truncate leading-tight flex items-center gap-1 transition-colors group/title"
+                          title={`Open ${ccStats?.name || usernameOrHandle}'s CodeChef Profile`}
+                        >
+                          <span className="truncate">{ccStats?.name || usernameOrHandle}</span>
+                          <ExternalLink className="size-2.5 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-muted-foreground font-medium leading-none mt-0.5">
                           {ccStats?.countryName && (
-                            <span className="flex items-center gap-1">
-                              <Globe className="size-3 text-amber-500 shrink-0" />
-                              {ccStats.countryName}
+                            <span className="flex items-center gap-0.5">
+                              <Globe className="size-2.5 text-amber-500 shrink-0" />
+                              <span className="truncate max-w-[80px]">{ccStats.countryName}</span>
                             </span>
                           )}
                           {ccStats?.institution && (
-                            <span className="flex items-center gap-1 truncate">
-                              <Building2 className="size-3 text-amber-500 shrink-0" />
-                              {ccStats.institution}
+                            <span className="flex items-center gap-0.5 truncate max-w-[90px]">
+                              <Building2 className="size-2.5 text-amber-500 shrink-0" />
+                              <span className="truncate">{ccStats.institution}</span>
                             </span>
                           )}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Star & Division Tier Chips */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={cn("text-[9px] px-1.5 py-0.5 rounded-md font-extrabold flex items-center gap-0.5 border-0 shadow-xs", starBadgeBg)}>
+                        <Star className="size-2.5 fill-current" /> {stars}
+                      </Badge>
+                      {division && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 rounded-md font-bold border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10">
+                          {division}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Division & Rating Hero Banner */}
-                <div className={cn("p-5 sm:p-6 rounded-2xl border bg-gradient-to-br flex items-center justify-between gap-4 shadow-sm", starGlow)}>
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                      CodeChef Competitive Rank
-                    </span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge className={cn("font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5", starBadgeBg)}>
-                        <Star className="size-4 fill-current" /> {stars} Tier
-                      </Badge>
-                      <Badge variant="outline" className="font-extrabold text-xs px-2.5 py-1 rounded-xl border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10">
-                        {division}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={cn("text-3xl sm:text-4xl font-extrabold font-mono tracking-tight block", starTextColor)}>
-                      {rating}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-semibold">
-                      Peak Rating: <span className="font-mono text-foreground font-bold">{maxRating}</span>
-                    </span>
-                  </div>
+                {/* Sub-Tab Navigation Bar (Overview, Badges, Contests) */}
+                <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted/40 rounded-xl border border-border/50 text-xs font-extrabold">
+                  <button
+                    type="button"
+                    onClick={() => setCodechefTab("overview")}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codechefTab === "overview"
+                        ? "bg-amber-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold"
+                    )}
+                  >
+                    <Code2 className="size-3 shrink-0" />
+                    <span className="truncate">Overview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodechefTab("badges")}
+                    disabled={badges.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codechefTab === "badges"
+                        ? "bg-amber-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      badges.length === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Award className="size-3 shrink-0" />
+                    <span className="truncate">Badges ({badges.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodechefTab("contests")}
+                    disabled={!ccStats?.recentContests || ccStats.recentContests.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codechefTab === "contests"
+                        ? "bg-amber-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      (!ccStats?.recentContests || ccStats.recentContests.length === 0) && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Trophy className="size-3 shrink-0" />
+                    <span className="truncate">Contests ({ccStats?.recentContests?.length || 0})</span>
+                  </button>
                 </div>
 
-                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
-                <div className="grid grid-cols-2 gap-3.5">
-                  {/* DSA Rating */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                        <Code2 className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        DSA Rating
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 tracking-tight">
-                        {dsaRating !== null ? dsaRating.toLocaleString() : (rating > 0 ? rating.toLocaleString() : "Unrated")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {dsaRating !== null && dsaRating !== rating ? "DSA Track Rating" : (rating > 0 ? "DSA Contest Rating" : "Not Participated")}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Global Rank */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                        <Globe className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Global Rank
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {globalRank && globalRank > 0 ? `#${globalRank.toLocaleString()}` : (rating > 0 ? "Inactive" : "Unrated")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {globalRank && globalRank > 0 ? "Worldwide Standing" : (rating > 0 ? "Leaderboard Inactive" : "Unrated")}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Country Rank */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                        <MapPin className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Country Rank
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {countryRank && countryRank > 0 ? `#${countryRank.toLocaleString()}` : (rating > 0 && ccStats?.countryName ? ccStats.countryName : (rating > 0 ? "Inactive" : "Unrated"))}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {countryRank && countryRank > 0 ? "National Standing" : (rating > 0 && ccStats?.countryName ? "Country Profile" : "Unrated")}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contests Attended */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                        <Flame className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Contests
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {contestsParticipated > 0 ? contestsParticipated.toLocaleString() : "0"}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {contestsParticipated > 0 ? "Attended & Rated" : "No Contests"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Badges & Accomplishments Showcase (Real-time badges only) */}
-                {badges.length > 0 && (() => {
-                  const [visibleBadgesCount, setVisibleBadgesCount] = useState(3);
-                  const visibleBadges = badges.slice(0, visibleBadgesCount);
-                  const hasMore = visibleBadgesCount < badges.length;
-
-                  return (
-                    <div className="p-4 rounded-2xl bg-card/40 border border-amber-500/20 backdrop-blur-md space-y-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
-                          <Award className="size-4 text-amber-500 shrink-0" />
-                          <span className="truncate">CodeChef Badges</span>
-                        </span>
-                        <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-lg border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-extrabold whitespace-nowrap shrink-0">
-                          {badges.length} Earned
-                        </Badge>
-                      </div>
-
-                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                        <div className="grid grid-cols-1 gap-2.5">
-                          {visibleBadges.map((b, idx) => {
-                            const catLower = (b.category || "").toLowerCase();
-                            const nameLower = (b.name || "").toLowerCase();
-
-                            let IconComponent = Star;
-                            let iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
-                            let categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
-
-                            if (catLower.includes("tier") || nameLower.includes("star") || nameLower.includes("coder")) {
-                              IconComponent = Star;
-                              iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
-                              categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
-                            } else if (catLower.includes("division") || nameLower.includes("div")) {
-                              IconComponent = Trophy;
-                              iconBg = "bg-purple-500/15 border-purple-500/30 text-purple-400";
-                              categoryBg = "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10";
-                            } else if (catLower.includes("milestone") || nameLower.includes("master") || nameLower.includes("contender")) {
-                              IconComponent = Award;
-                              iconBg = "bg-indigo-500/15 border-indigo-500/30 text-indigo-400";
-                              categoryBg = "border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10";
-                            } else if (catLower.includes("contest") || nameLower.includes("regular")) {
-                              IconComponent = Flame;
-                              iconBg = "bg-rose-500/15 border-rose-500/30 text-rose-400";
-                              categoryBg = "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10";
-                            } else {
-                              IconComponent = CheckCircle2;
-                              iconBg = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
-                              categoryBg = "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
-                            }
-
-                            return (
-                              <div
-                                key={idx}
-                                className="group/badge p-3 rounded-2xl bg-card border border-border/70 hover:border-amber-500/40 hover:shadow-md transition-all duration-300 flex items-center gap-3"
-                              >
-                                <div className={cn("size-9 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover/badge:scale-110", iconBg)}>
-                                  <IconComponent className="size-4 fill-current/20" />
-                                </div>
-
-                                <div className="min-w-0 flex-1 space-y-0.5">
-                                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                                    <h5 className="text-xs sm:text-sm font-extrabold text-foreground">
-                                      {b.name}
-                                    </h5>
-                                    {b.category && (
-                                      <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-md font-extrabold shrink-0", categoryBg)}>
-                                        {b.category}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {b.description && (
-                                    <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-                                      {b.description}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
+                {/* Tab 1: Overview */}
+                {codechefTab === "overview" && (
+                  <div className="space-y-2.5">
+                    {/* 4 Compact Key Metrics Tiles (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Rating */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                              <Trophy className="size-2.5" />
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                              Rating
+                            </span>
+                          </div>
+                          {maxRating && maxRating > 0 && (
+                            <span className="text-[9px] font-mono text-muted-foreground font-semibold shrink-0">
+                              Peak {maxRating}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className={cn("text-base sm:text-lg font-black font-mono tracking-tight leading-tight", starTextColor)}>
+                            {rating > 0 ? rating : "Unrated"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {dsaRating !== null && dsaRating !== rating ? `DSA: ${dsaRating}` : `${division} Standing`}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Load More Button */}
-                      {hasMore && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setVisibleBadgesCount((prev) => Math.min(prev + 5, badges.length))}
-                          className="w-full rounded-xl text-xs font-bold border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-600 transition-all"
-                        >
-                          <MoreHorizontal className="size-3.5 mr-1.5" />
-                          Load More ({badges.length - visibleBadgesCount} more)
-                        </Button>
-                      )}
+                      {/* Global Rank */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <Globe className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Global Rank
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {globalRank && globalRank > 0 ? `#${globalRank.toLocaleString()}` : (rating > 0 ? "Active" : "Unrated")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Worldwide Standing
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Country Rank */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <MapPin className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Country Rank
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {countryRank && countryRank > 0 ? `#${countryRank.toLocaleString()}` : (rating > 0 && ccStats?.countryName ? ccStats.countryName : "Unrated")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {ccStats?.countryName ? "National Standing" : "Country Profile"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contests Attended */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <Flame className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Contests
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {contestsParticipated > 0 ? contestsParticipated.toLocaleString() : "0"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Attended & Rated
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  );
-                })()}
+
+                    {/* Problem Solving Breakdown */}
+                    {totalSolved > 0 && (
+                      <div className="p-2.5 rounded-xl bg-muted/20 border border-border/50 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[11px] font-extrabold text-foreground flex items-center gap-1">
+                            <CheckCircle2 className="size-3 text-emerald-500" />
+                            {totalSolved} Solved
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            Fully: {fullySolved} ({fullyPercentage}%) {partiallySolved > 0 ? `• Part: ${partiallySolved}` : ""}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden flex w-full">
+                          <div
+                            style={{ width: `${Math.max(10, (fullySolved / Math.max(1, totalSolved)) * 100)}%` }}
+                            className="bg-emerald-500 h-full rounded-l-full"
+                            title={`Fully Solved: ${fullySolved}`}
+                          />
+                          {partiallySolved > 0 && (
+                            <div
+                              style={{ width: `${Math.max(5, (partiallySolved / Math.max(1, totalSolved)) * 100)}%` }}
+                              className="bg-amber-500 h-full rounded-r-full"
+                              title={`Partially Solved: ${partiallySolved}`}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Badges Preview Footer in Overview Tab */}
+                    {badges.length > 0 && (
+                      <div className="px-2.5 py-1.5 rounded-xl bg-card/40 border border-amber-500/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                            Badges:
+                          </span>
+                          <div className="flex items-center gap-1 truncate text-[11px] font-bold text-foreground">
+                            {badges.slice(0, 3).map((b, i) => (
+                              <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 rounded border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 truncate max-w-[100px]">
+                                {b.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCodechefTab("badges")}
+                          className="text-[10px] font-extrabold text-amber-500 hover:underline shrink-0 flex items-center gap-0.5"
+                        >
+                          <span>{badges.length} Earned</span>
+                          <ArrowUpRight className="size-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: Badges */}
+                {codechefTab === "badges" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-amber-500/20 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Award className="size-3.5 text-amber-500 shrink-0" />
+                        <span className="truncate">CodeChef Badges</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-extrabold whitespace-nowrap shrink-0">
+                        {badges.length} Earned
+                      </Badge>
+                    </div>
+
+                    {/* Scrollable Badges List */}
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                      {badges.map((b, idx) => {
+                        const catLower = (b.category || "").toLowerCase();
+                        const nameLower = (b.name || "").toLowerCase();
+
+                        let IconComponent = Star;
+                        let iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
+                        let categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
+
+                        if (catLower.includes("tier") || nameLower.includes("star") || nameLower.includes("coder")) {
+                          IconComponent = Star;
+                          iconBg = "bg-amber-500/15 border-amber-500/30 text-amber-500";
+                          categoryBg = "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
+                        } else if (catLower.includes("division") || nameLower.includes("div")) {
+                          IconComponent = Trophy;
+                          iconBg = "bg-purple-500/15 border-purple-500/30 text-purple-400";
+                          categoryBg = "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10";
+                        } else if (catLower.includes("milestone") || nameLower.includes("master") || nameLower.includes("contender")) {
+                          IconComponent = Award;
+                          iconBg = "bg-indigo-500/15 border-indigo-500/30 text-indigo-400";
+                          categoryBg = "border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10";
+                        } else if (catLower.includes("contest") || nameLower.includes("regular")) {
+                          IconComponent = Flame;
+                          iconBg = "bg-rose-500/15 border-rose-500/30 text-rose-400";
+                          categoryBg = "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10";
+                        } else {
+                          IconComponent = CheckCircle2;
+                          iconBg = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+                          categoryBg = "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className="group/badge p-2 rounded-xl bg-card border border-border/70 hover:border-amber-500/40 hover:shadow-xs transition-all duration-200 flex items-center gap-2"
+                          >
+                            <div className={cn("size-8 rounded-lg border flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/badge:scale-110", iconBg)}>
+                              <IconComponent className="size-3.5 fill-current/20" />
+                            </div>
+
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                              <div className="flex items-center justify-between gap-1 flex-wrap sm:flex-nowrap">
+                                <h5 className="text-[11px] font-extrabold text-foreground truncate">
+                                  {b.name}
+                                </h5>
+                                {b.category && (
+                                  <Badge variant="outline" className={cn("text-[8px] px-1 py-0 rounded-md font-extrabold shrink-0", categoryBg)}>
+                                    {b.category}
+                                  </Badge>
+                                )}
+                              </div>
+                              {b.description && (
+                                <p className="text-[9px] text-muted-foreground/90 leading-tight line-clamp-1">
+                                  {b.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 3: Contests */}
+                {codechefTab === "contests" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-amber-500/20 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Trophy className="size-3.5 text-amber-500 shrink-0" />
+                        <span className="truncate">Recent Contests</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md font-extrabold border-amber-500/40 text-amber-500 bg-amber-500/10">
+                        {ccStats?.recentContests?.length || 0} Rated
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                      {(ccStats?.recentContests || []).slice(0, 8).map((c, idx) => (
+                        <div
+                          key={idx}
+                          className="p-1.5 rounded-lg bg-card/80 border border-border/60 flex items-center justify-between gap-2 text-xs hover:border-amber-500/30 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <h5 className="font-extrabold text-foreground truncate text-[11px] leading-tight">
+                              {c.name || c.code}
+                            </h5>
+                            <span className="text-[9px] text-muted-foreground font-medium">
+                              {c.date || "Completed"} {c.rank ? `• Rank #${c.rank.toLocaleString()}` : ""}
+                            </span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-mono font-black text-xs text-amber-500 block leading-tight">
+                              {c.rating}
+                            </span>
+                            <span className="text-[8px] text-muted-foreground font-medium">
+                              Rating
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()
@@ -1506,207 +1981,444 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             const honor = cwStats?.honor ?? 0;
             const leaderboardPos = cwStats?.leaderboardPosition;
             const totalSolved = cwStats?.totalSolved ?? 0;
-            const totalAuthored = cwStats?.totalAuthored;
-            const score = cwStats?.score;
+            const totalAuthored = cwStats?.totalAuthored ?? 0;
+            const score = cwStats?.score ?? honor;
             const clan = cwStats?.clan;
             const name = cwStats?.name;
+            const avatar = cwStats?.avatar;
             const topLangs = cwStats?.languages || [];
             const badges = cwStats?.badges || [];
+            const recentChallenges = cwStats?.recentChallenges || [];
 
             // Rank color mapping
             let rankBg = "bg-rose-600 text-white";
-            let rankGlow = "from-rose-500/20 to-rose-600/5 border-rose-500/30";
             let accentColor = "text-rose-500 dark:text-rose-400";
             let accentBorder = "border-rose-500/40";
             let accentBg = "bg-rose-500/10";
             if (rankColor === "purple") {
               rankBg = "bg-purple-600 text-white";
-              rankGlow = "from-purple-500/20 to-purple-600/5 border-purple-500/30";
               accentColor = "text-purple-400";
               accentBorder = "border-purple-500/40";
               accentBg = "bg-purple-500/10";
             } else if (rankColor === "blue") {
               rankBg = "bg-blue-600 text-white";
-              rankGlow = "from-blue-500/20 to-blue-600/5 border-blue-500/30";
               accentColor = "text-blue-400";
               accentBorder = "border-blue-500/40";
               accentBg = "bg-blue-500/10";
             } else if (rankColor === "yellow") {
               rankBg = "bg-amber-500 text-slate-950";
-              rankGlow = "from-amber-400/20 to-amber-500/5 border-amber-400/30";
               accentColor = "text-amber-400";
               accentBorder = "border-amber-400/40";
               accentBg = "bg-amber-400/10";
             } else if (rankColor === "white") {
               rankBg = "bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-white";
-              rankGlow = "from-slate-300/20 to-slate-400/5 border-slate-300/30 dark:from-slate-600/20 dark:to-slate-700/5 dark:border-slate-600/30";
               accentColor = "text-slate-400";
               accentBorder = "border-slate-400/40";
               accentBg = "bg-slate-400/10";
             }
 
+            const totalLangScore = topLangs.reduce((acc, l) => acc + (l.score || 1), 0) || 1;
+
             return (
-              <div className="space-y-5 pt-2">
-                {/* Profile Header Banner */}
-                {(name || clan) && (
-                  <div className={cn("p-3.5 rounded-2xl border flex items-center gap-3", accentBg, accentBorder)}>
-                    <div className={cn("size-10 rounded-xl border flex items-center justify-center font-extrabold text-sm shrink-0", accentBg, accentBorder, accentColor)}>
-                      {(name || usernameOrHandle).substring(0, 2).toUpperCase()}
+              <div className="space-y-2.5 pt-0.5">
+                {/* Profile Header Banner (Ultra Compact 1-Row) */}
+                {(name || clan || avatar || usernameOrHandle) && (
+                  <div className={cn("px-2.5 py-1.5 rounded-xl border flex items-center justify-between gap-2", accentBg, accentBorder)}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatarImage
+                        src={avatar}
+                        name={name || usernameOrHandle}
+                        fallbackText={name || usernameOrHandle}
+                        borderColor={accentBorder}
+                        fallbackBg={accentBg}
+                        fallbackTextColor={accentColor}
+                        sizeClass="size-7"
+                      />
+                      <div className="min-w-0">
+                        <a
+                          href={profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-extrabold text-foreground hover:text-rose-400 truncate leading-tight flex items-center gap-1 transition-colors group/title"
+                          title={`Open ${name || usernameOrHandle}'s Codewars Profile`}
+                        >
+                          <span className="truncate">{name || usernameOrHandle}</span>
+                          <ExternalLink className="size-2.5 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-muted-foreground font-medium leading-none mt-0.5">
+                          {clan ? (
+                            <span className="flex items-center gap-0.5 truncate max-w-[120px]">
+                              <Users className="size-2.5 text-rose-500 shrink-0" />
+                              <span className="truncate">{clan}</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-0.5">
+                              <Flame className="size-2.5 text-rose-500 shrink-0" />
+                              <span>Warrior</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-extrabold text-foreground truncate">
-                        {name || usernameOrHandle}
-                      </h4>
-                      {clan && (
-                        <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 truncate">
-                          <Users className="size-3 shrink-0" />
-                          {clan}
-                        </span>
-                      )}
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={cn("font-black text-[9px] px-1.5 py-0 rounded-md border-0 shadow-xs flex items-center gap-0.5", rankBg)}>
+                        {rankName}
+                      </Badge>
+                      <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5 rounded-md font-bold flex items-center gap-0.5", accentBorder, accentColor, accentBg)}>
+                        <Flame className="size-2.5 fill-current" /> {honor.toLocaleString()}
+                      </Badge>
                     </div>
                   </div>
                 )}
 
-                {/* Hero Rank / Honor Banner */}
-                <div className={cn("p-5 sm:p-6 rounded-2xl border bg-gradient-to-br flex items-center justify-between gap-4 shadow-sm", rankGlow)}>
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                      Codewars Honor Rank
-                    </span>
-                    <Badge className={cn("font-extrabold text-sm px-3 py-1 rounded-xl shadow-sm border-0 flex items-center gap-1.5", rankBg)}>
-                      <Flame className="size-4 fill-current" /> {rankName}
-                    </Badge>
-                  </div>
-                  <div className="text-right">
-                    <span className={cn("text-3xl sm:text-4xl font-extrabold font-mono tracking-tight block", accentColor)}>
-                      {honor.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-semibold">Honor Points</span>
-                  </div>
+                {/* Sub-Tab Navigation Bar (Overview, Languages, Badges) */}
+                <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted/40 rounded-xl border border-border/50 text-xs font-extrabold">
+                  <button
+                    type="button"
+                    onClick={() => setCodewarsTab("overview")}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codewarsTab === "overview"
+                        ? "bg-rose-600 text-white shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold"
+                    )}
+                  >
+                    <Code2 className="size-3 shrink-0" />
+                    <span className="truncate">Overview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodewarsTab("languages")}
+                    disabled={topLangs.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codewarsTab === "languages"
+                        ? "bg-rose-600 text-white shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      topLangs.length === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <FileCode className="size-3 shrink-0" />
+                    <span className="truncate">Languages ({topLangs.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCodewarsTab("badges")}
+                    disabled={badges.length === 0 && recentChallenges.length === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      codewarsTab === "badges"
+                        ? "bg-rose-600 text-white shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      badges.length === 0 && recentChallenges.length === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Award className="size-3 shrink-0" />
+                    <span className="truncate">Badges ({badges.length})</span>
+                  </button>
                 </div>
 
-                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
-                <div className="grid grid-cols-2 gap-3.5">
-                  {/* Katas Completed */}
-                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
-                        <CheckCircle2 className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Katas Solved
-                      </span>
-                    </div>
-                    <div>
-                      <div className={cn("text-xl sm:text-2xl font-black font-mono tracking-tight", accentColor)}>
-                        {totalSolved.toLocaleString()}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Challenges Completed
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Leaderboard Position */}
-                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
-                        <Globe className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Leaderboard
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {leaderboardPos ? `#${leaderboardPos.toLocaleString()}` : "Unranked"}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Global Position
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Overall Score */}
-                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
-                        <Trophy className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Score
-                      </span>
-                    </div>
-                    <div>
-                      <div className={cn("text-xl sm:text-2xl font-black font-mono tracking-tight", accentColor)}>
-                        {score ? score.toLocaleString() : honor.toLocaleString()}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Overall Rank Score
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Authored Katas */}
-                  <div className={cn("p-4 rounded-2xl bg-card/60 border border-border/70 hover:shadow-sm transition-all duration-300 space-y-2", `hover:${accentBorder}`)}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={cn("size-7 rounded-lg border flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
-                        <Code2 className="size-3.5" />
-                      </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Authored
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {totalAuthored !== null && totalAuthored !== undefined ? totalAuthored : 0}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Katas Created
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Language Breakdown */}
-                {topLangs.length > 0 && (
-                  <div className={cn("p-4 rounded-2xl bg-card/40 border backdrop-blur-md space-y-3", accentBorder)}>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
-                      <Code2 className={cn("size-4", accentColor)} />
-                      Language Proficiency
-                    </span>
-                    <div className="space-y-2.5">
-                      {topLangs.slice(0, 6).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: getLanguageColor(item.language) }} />
-                            <span className="text-xs font-bold text-foreground truncate capitalize">
-                              {item.language}
+                {/* Tab 1: Overview */}
+                {codewarsTab === "overview" && (
+                  <div className="space-y-2.5">
+                    {/* 4 Compact Key Metrics Tiles (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Honor & Rank */}
+                      <div className={cn("p-2.5 rounded-xl bg-card/60 border border-border/70 transition-all duration-200 shadow-xs space-y-1 hover:border-rose-500/40")}>
+                        <div className="flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className={cn("size-5 rounded-md flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                              <Flame className="size-2.5" />
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                              Honor
                             </span>
-                            {item.rankName && (
-                              <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-md font-extrabold shrink-0", accentBorder, accentColor, accentBg)}>
-                                {item.rankName}
-                              </Badge>
-                            )}
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {item.totalCompleted !== undefined && (
-                              <span className="text-[10px] text-muted-foreground font-semibold">
-                                {item.totalCompleted} solved
-                              </span>
-                            )}
-                            {item.score !== undefined && (
-                              <span className={cn("text-xs font-extrabold font-mono", accentColor)}>
-                                {item.score}
+                          <Badge className={cn("font-black text-[9px] px-1 py-0 rounded-md border-0 shrink-0", rankBg)}>
+                            {rankName}
+                          </Badge>
+                        </div>
+                        <div>
+                          <div className={cn("text-base sm:text-lg font-black font-mono tracking-tight leading-tight", accentColor)}>
+                            {honor.toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Rank Score: {score.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Global Leaderboard */}
+                      <div className={cn("p-2.5 rounded-xl bg-card/60 border border-border/70 transition-all duration-200 shadow-xs space-y-1 hover:border-rose-500/40")}>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className={cn("size-5 rounded-md flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                            <Globe className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Leaderboard
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {leaderboardPos ? `#${leaderboardPos.toLocaleString()}` : (honor > 0 ? "Top Warrior" : "Unranked")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Global Standing
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Katas Completed */}
+                      <div className={cn("p-2.5 rounded-xl bg-card/60 border border-border/70 transition-all duration-200 shadow-xs space-y-1 hover:border-rose-500/40")}>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className={cn("size-5 rounded-md flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                            <CheckCircle2 className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Katas Solved
+                          </span>
+                        </div>
+                        <div>
+                          <div className={cn("text-base sm:text-lg font-black font-mono tracking-tight leading-tight", accentColor)}>
+                            {totalSolved.toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Completed Challenges
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Authored Katas */}
+                      <div className={cn("p-2.5 rounded-xl bg-card/60 border border-border/70 transition-all duration-200 shadow-xs space-y-1 hover:border-rose-500/40")}>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className={cn("size-5 rounded-md flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                            <Code2 className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Authored
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {totalAuthored}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Created Challenges
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Compact Language Mastery Strip */}
+                    {topLangs.length > 0 && (
+                      <div className="p-2.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            <FileCode className={cn("size-3", accentColor)} />
+                            Language Distribution
+                          </span>
+                          <span className="text-[10px] font-bold text-muted-foreground">
+                            {topLangs.length} Active Languages
+                          </span>
+                        </div>
+
+                        {/* Multi-segment Progress Bar */}
+                        <div className="h-2 rounded-full bg-muted/50 overflow-hidden flex gap-0.5 p-0.5">
+                          {topLangs.slice(0, 5).map((l, idx) => {
+                            const pct = Math.max(8, Math.round((l.score / totalLangScore) * 100));
+                            return (
+                              <div
+                                key={idx}
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${pct}%`,
+                                  backgroundColor: getLanguageColor(l.language),
+                                }}
+                                title={`${l.language}: ${l.score} pts (${l.rankName || ""})`}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {/* Top Language Chips */}
+                        <div className="flex items-center justify-between gap-1 flex-wrap pt-0.5">
+                          {topLangs.slice(0, 3).map((l, idx) => (
+                            <div key={idx} className="flex items-center gap-1 text-[10px] font-bold">
+                              <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: getLanguageColor(l.language) }} />
+                              <span className="text-foreground capitalize">{l.language}</span>
+                              {l.rankName && (
+                                <span className={cn("text-[9px] px-1 py-0 rounded font-black", accentBg, accentColor)}>
+                                  {l.rankName}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                          {topLangs.length > 3 && (
+                            <button
+                              type="button"
+                              onClick={() => setCodewarsTab("languages")}
+                              className={cn("text-[10px] font-extrabold hover:underline ml-auto", accentColor)}
+                            >
+                              +{topLangs.length - 3} more →
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Inline Badges Preview Footer */}
+                    {badges.length > 0 && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-card/40 border border-border/40">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <Award className={cn("size-3.5 shrink-0", accentColor)} />
+                          <div className="flex items-center gap-1 overflow-hidden">
+                            {badges.slice(0, 2).map((b, idx) => {
+                              const badgeName = typeof b === "string" ? b : (b as any)?.name || "Badge";
+                              return (
+                                <Badge
+                                  key={idx}
+                                  variant="outline"
+                                  className={cn("text-[9px] px-1.5 py-0 rounded-md font-bold truncate max-w-[120px]", accentBorder, accentColor, accentBg)}
+                                >
+                                  {badgeName}
+                                </Badge>
+                              );
+                            })}
+                            {badges.length > 2 && (
+                              <span className="text-[10px] text-muted-foreground font-bold shrink-0">
+                                +{badges.length - 2}
                               </span>
                             )}
                           </div>
                         </div>
-                      ))}
+
+                        <button
+                          type="button"
+                          onClick={() => setCodewarsTab("badges")}
+                          className={cn("text-[10px] font-extrabold hover:underline shrink-0 flex items-center gap-0.5", accentColor)}
+                        >
+                          View all ({badges.length}) →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: Languages */}
+                {codewarsTab === "languages" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs px-0.5">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                        Proficiency by Language
+                      </span>
+                      <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 rounded-md font-extrabold", accentBorder, accentColor, accentBg)}>
+                        {topLangs.length} Mastered
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar pr-1 space-y-1.5">
+                      {topLangs.map((item, idx) => {
+                        const pct = Math.min(100, Math.max(10, Math.round((item.score / totalLangScore) * 100)));
+                        const langColor = getLanguageColor(item.language);
+
+                        return (
+                          <div
+                            key={idx}
+                            className="p-2 rounded-xl bg-card/60 border border-border/60 hover:border-rose-500/40 transition-all duration-200 shadow-2xs space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: langColor }} />
+                                <span className="text-xs font-black text-foreground truncate capitalize">
+                                  {item.language}
+                                </span>
+                                {item.rankName && (
+                                  <Badge variant="outline" className={cn("text-[9px] px-1 py-0 rounded font-black shrink-0", accentBorder, accentColor, accentBg)}>
+                                    {item.rankName}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
+                                {item.totalCompleted !== undefined && (
+                                  <span className="text-muted-foreground font-semibold">
+                                    {item.totalCompleted} solved
+                                  </span>
+                                )}
+                                <span className={cn("font-black", accentColor)}>
+                                  {item.score.toLocaleString()} pts
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%`, backgroundColor: langColor }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
+                {/* Tab 3: Badges */}
+                {codewarsTab === "badges" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs px-0.5">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                        Milestones & Badges
+                      </span>
+                      <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 rounded-md font-extrabold", accentBorder, accentColor, accentBg)}>
+                        {badges.length} Earned
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar pr-1 space-y-1.5">
+                      {badges.map((b, idx) => {
+                        const badgeName = typeof b === "string" ? b : (b as any)?.name || "Achievement";
+                        const badgeDesc = typeof b === "string" ? "Codewars Achievement" : (b as any)?.description || (b as any)?.category || "Codewars Achievement";
+                        return (
+                          <div
+                            key={idx}
+                            className="p-2 rounded-xl bg-card/60 border border-border/60 hover:border-rose-500/40 transition-all duration-200 flex items-center gap-2.5 shadow-2xs"
+                          >
+                            <div className={cn("size-6 rounded-lg flex items-center justify-center shrink-0", accentBg, accentBorder, accentColor)}>
+                              <Award className="size-3" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-black text-foreground block truncate">{badgeName}</span>
+                              <span className="text-[10px] text-muted-foreground font-medium block truncate">
+                                {badgeDesc}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {recentChallenges.length > 0 && (
+                        <div className="pt-2 space-y-1">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground block px-1">
+                            Recent Katas Solved
+                          </span>
+                          {recentChallenges.slice(0, 3).map((rc, idx) => (
+                            <div key={idx} className="p-2 rounded-lg bg-muted/30 border border-border/50 text-[10px] flex items-center justify-between gap-2">
+                              <span className="font-bold text-foreground truncate">{rc.name}</span>
+                              <span className="text-muted-foreground shrink-0 font-mono">
+                                {rc.completedAt ? new Date(rc.completedAt).toLocaleDateString() : "Solved"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()
@@ -1748,28 +2460,28 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
             return (
               <div className="space-y-4 pt-1">
                 {/* User Info Header Banner (if avatar, display name, or institution exists) */}
-                {(avatar || (displayName && displayName !== usernameOrHandle) || institution) && (
+                {(avatar || displayName || institution || usernameOrHandle) && (
                   <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                    {avatar ? (
-                      <img
-                        src={avatar}
-                        alt={displayName || usernameOrHandle}
-                        className="size-11 rounded-xl object-cover border border-emerald-500/20 shadow-sm shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className="size-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 text-sm shrink-0">
-                        {(displayName || usernameOrHandle).substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatarImage
+                      src={avatar}
+                      name={displayName || usernameOrHandle}
+                      fallbackText={displayName || usernameOrHandle}
+                      borderColor="border-emerald-500/20"
+                      fallbackBg="bg-emerald-500/20 border-emerald-500/30"
+                      fallbackTextColor="text-emerald-600 dark:text-emerald-400"
+                      sizeClass="size-11"
+                    />
                     <div className="min-w-0 flex-1">
-                      {displayName && (
-                        <h4 className="text-sm font-extrabold text-foreground truncate">
-                          {displayName}
-                        </h4>
-                      )}
+                      <a
+                        href={profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-extrabold text-foreground hover:text-emerald-500 truncate flex items-center gap-1 transition-colors group/title"
+                        title={`Open ${displayName || usernameOrHandle}'s GeeksforGeeks Profile`}
+                      >
+                        <span className="truncate">{displayName || usernameOrHandle}</span>
+                        <ExternalLink className="size-3 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                      </a>
                       {institution && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 truncate mt-0.5 font-medium">
                           <Building2 className="size-3 text-emerald-500 shrink-0" />
@@ -1869,135 +2581,526 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
         ) : isAtCoder ? (
           (() => {
             const atcoderStats = (props as AtCoderCardProps).stats;
+
+            // Algorithm Stats
             const rating = atcoderStats?.rating ?? 0;
             const maxRating = atcoderStats?.maxRating ?? rating;
             const totalSolved = atcoderStats?.totalSolved ?? 0;
             const competitionsCount = atcoderStats?.competitionsCount ?? 0;
             const rankName = atcoderStats?.rank || "Unrated";
+            const globalRank = atcoderStats?.globalRank;
             const highestPerformance = atcoderStats?.highestPerformance;
             const bestRank = atcoderStats?.bestRank;
             const acceptedCountRank = atcoderStats?.acceptedCountRank;
             const ratedPointSum = atcoderStats?.ratedPointSum;
             const ratedPointSumRank = atcoderStats?.ratedPointSumRank;
+            const avatar = atcoderStats?.avatar;
+            const country = atcoderStats?.country;
+            const countryFlag = atcoderStats?.countryFlag;
+            const affiliation = atcoderStats?.affiliation;
+            const birthYear = atcoderStats?.birthYear;
+            const wins = atcoderStats?.wins;
+            const lastCompeted = atcoderStats?.lastCompeted;
+            const recentContests = atcoderStats?.recentContests || [];
+
+            // Heuristic Stats
+            const heuristicRating = atcoderStats?.heuristicRating ?? 0;
+            const heuristicMaxRating = atcoderStats?.heuristicMaxRating ?? heuristicRating;
+            const heuristicRank = atcoderStats?.heuristicRank || (heuristicRating > 0 ? "Rated" : "Unrated");
+            const heuristicCompetitionsCount = atcoderStats?.heuristicCompetitionsCount ?? 0;
+            const heuristicTotalCompetitions = atcoderStats?.heuristicTotalCompetitions ?? heuristicCompetitionsCount;
+            const heuristicHighestPerformance = atcoderStats?.heuristicHighestPerformance;
+            const heuristicBestRank = atcoderStats?.heuristicBestRank;
+            const heuristicRecentContests = atcoderStats?.heuristicRecentContests || [];
 
             const getRankBadgeProps = (rk: string, r: number) => {
-              if (r >= 2800 || rk === "Red") return { bg: "bg-red-500/10 border-red-500/30 text-red-500", text: "Red" };
-              if (r >= 2400 || rk === "Orange") return { bg: "bg-orange-500/10 border-orange-500/30 text-orange-500", text: "Orange" };
-              if (r >= 2000 || rk === "Yellow") return { bg: "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 dark:text-yellow-400", text: "Yellow" };
-              if (r >= 1600 || rk === "Blue") return { bg: "bg-blue-500/10 border-blue-500/30 text-blue-500", text: "Blue" };
-              if (r >= 1200 || rk === "Cyan") return { bg: "bg-cyan-500/10 border-cyan-500/30 text-cyan-500 dark:text-cyan-400", text: "Cyan" };
-              if (r >= 800 || rk === "Green") return { bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-500", text: "Green" };
-              if (r >= 400 || rk === "Brown") return { bg: "bg-amber-700/10 border-amber-700/30 text-amber-700 dark:text-amber-500", text: "Brown" };
-              if (r > 0 || rk === "Gray") return { bg: "bg-slate-500/10 border-slate-500/30 text-slate-400", text: "Gray" };
-              return { bg: "bg-muted/40 border-border text-muted-foreground", text: "Unrated" };
+              const lower = (rk || "").toLowerCase();
+              if (r >= 2800 || lower.includes("red") || lower.includes("king") || lower.includes("dan")) {
+                return {
+                  bg: "bg-red-500/10 border-red-500/30 text-red-500 dark:text-red-400",
+                  glow: "from-red-500/20 to-red-600/5 border-red-500/30",
+                  text: rk || "Red",
+                  textColor: "text-red-500 dark:text-red-400",
+                  badgeBg: "bg-red-600 text-white font-extrabold",
+                };
+              }
+              if (r >= 2400 || lower.includes("orange")) {
+                return {
+                  bg: "bg-orange-500/10 border-orange-500/30 text-orange-500 dark:text-orange-400",
+                  glow: "from-orange-500/20 to-orange-600/5 border-orange-500/30",
+                  text: rk || "Orange",
+                  textColor: "text-orange-500 dark:text-orange-400",
+                  badgeBg: "bg-orange-500 text-white font-extrabold",
+                };
+              }
+              if (r >= 2000 || lower.includes("yellow")) {
+                return {
+                  bg: "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 dark:text-yellow-400",
+                  glow: "from-yellow-500/20 to-amber-600/5 border-yellow-500/30",
+                  text: rk || "Yellow",
+                  textColor: "text-yellow-500 dark:text-yellow-400",
+                  badgeBg: "bg-yellow-500 text-slate-950 font-extrabold",
+                };
+              }
+              if (r >= 1600 || lower.includes("blue")) {
+                return {
+                  bg: "bg-blue-500/10 border-blue-500/30 text-blue-500 dark:text-blue-400",
+                  glow: "from-blue-500/20 to-blue-600/5 border-blue-500/30",
+                  text: rk || "Blue",
+                  textColor: "text-blue-500 dark:text-blue-400",
+                  badgeBg: "bg-blue-600 text-white font-extrabold",
+                };
+              }
+              if (r >= 1200 || lower.includes("cyan")) {
+                return {
+                  bg: "bg-cyan-500/10 border-cyan-500/30 text-cyan-500 dark:text-cyan-400",
+                  glow: "from-cyan-500/20 to-cyan-600/5 border-cyan-500/30",
+                  text: rk || "Cyan",
+                  textColor: "text-cyan-500 dark:text-cyan-400",
+                  badgeBg: "bg-cyan-600 text-white font-extrabold",
+                };
+              }
+              if (r >= 800 || lower.includes("green")) {
+                return {
+                  bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 dark:text-emerald-400",
+                  glow: "from-emerald-500/20 to-teal-600/5 border-emerald-500/30",
+                  text: rk || "Green",
+                  textColor: "text-emerald-500 dark:text-emerald-400",
+                  badgeBg: "bg-emerald-600 text-white font-extrabold",
+                };
+              }
+              if (r >= 400 || lower.includes("brown")) {
+                return {
+                  bg: "bg-amber-700/10 border-amber-700/30 text-amber-700 dark:text-amber-500",
+                  glow: "from-amber-700/20 to-amber-800/5 border-amber-700/30",
+                  text: rk || "Brown",
+                  textColor: "text-amber-700 dark:text-amber-500",
+                  badgeBg: "bg-amber-700 text-white font-extrabold",
+                };
+              }
+              if (r > 0 || lower.includes("gray")) {
+                return {
+                  bg: "bg-slate-500/10 border-slate-500/30 text-slate-400",
+                  glow: "from-slate-500/20 to-slate-600/5 border-slate-500/30",
+                  text: rk || "Gray",
+                  textColor: "text-slate-400",
+                  badgeBg: "bg-slate-600 text-white font-extrabold",
+                };
+              }
+              return {
+                bg: "bg-muted/40 border-border text-muted-foreground",
+                glow: "from-muted/20 to-muted/5 border-border",
+                text: "Unrated",
+                textColor: "text-muted-foreground",
+                badgeBg: "bg-muted text-muted-foreground font-bold",
+              };
             };
 
-            const badgeProps = getRankBadgeProps(rankName, rating);
+            const activeProps = atcoderTab === "heuristic"
+              ? getRankBadgeProps(heuristicRank, heuristicRating)
+              : getRankBadgeProps(rankName, rating);
+
+            const totalContestsCount = recentContests.length + heuristicRecentContests.length;
 
             return (
-              <div className="space-y-5 pt-2">
-                {/* Hero Rating / AtCoder Competitive Standings Banner */}
-                <div className="p-5 sm:p-6 rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-between gap-4 shadow-sm">
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                      AtCoder Competitive Standings
-                    </span>
-                    <Badge variant="outline" className={cn("px-3 py-1 text-xs font-extrabold capitalize shadow-sm border-0 flex items-center gap-1.5", badgeProps.bg)}>
-                      <Trophy className="size-4 fill-current" /> {badgeProps.text} Tier
-                    </Badge>
+              <div className="space-y-2.5 pt-0.5">
+                {/* Profile Header Banner (Ultra Compact 1-Row) */}
+                {(avatar || country || affiliation || wins !== null || usernameOrHandle) && (
+                  <div className="px-2.5 py-1.5 rounded-xl bg-cyan-500/5 border border-cyan-500/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserAvatarImage
+                        src={avatar}
+                        name={usernameOrHandle}
+                        fallbackText={usernameOrHandle}
+                        borderColor="border-cyan-500/25"
+                        fallbackBg="bg-cyan-500/20 border-cyan-500/30"
+                        fallbackTextColor="text-cyan-500"
+                        sizeClass="size-7"
+                      />
+                      <div className="min-w-0">
+                        <a
+                          href={profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-extrabold text-foreground hover:text-cyan-400 truncate leading-tight flex items-center gap-1 transition-colors group/title"
+                          title={`Open ${usernameOrHandle}'s AtCoder Profile`}
+                        >
+                          <span className="truncate">{usernameOrHandle}</span>
+                          {countryFlag && (
+                            <img src={countryFlag} alt={country || ""} className="h-3 w-auto inline rounded-xs shrink-0" />
+                          )}
+                          <ExternalLink className="size-2.5 opacity-60 group-hover/title:opacity-100 shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-muted-foreground font-medium leading-none mt-0.5">
+                          {country && <span>{country}</span>}
+                          {affiliation && (
+                            <span className="flex items-center gap-0.5 truncate max-w-[90px]">
+                              <Building2 className="size-2.5 text-cyan-500 shrink-0" />
+                              <span className="truncate">{affiliation}</span>
+                            </span>
+                          )}
+                          {birthYear && <span>Born: {birthYear}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {typeof wins === "number" && wins > 0 && (
+                      <Badge className="bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shrink-0 flex items-center gap-0.5">
+                        <Trophy className="size-2.5 fill-amber-500" />
+                        {wins} {wins === 1 ? "Win" : "Wins"}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <span className="text-3xl sm:text-4xl font-extrabold font-mono text-cyan-400 tracking-tight block">
-                      {rating}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-semibold">
-                      Highest Rating: <span className="font-mono text-foreground">{maxRating > 0 ? maxRating : rating}</span>
-                    </span>
-                  </div>
+                )}
+
+                {/* Sub-Tab Navigation Bar (Algo, Heuristic, Contests) */}
+                <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted/40 rounded-xl border border-border/50 text-xs font-extrabold">
+                  <button
+                    type="button"
+                    onClick={() => setAtcoderTab("algo")}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      atcoderTab === "algo"
+                        ? "bg-cyan-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold"
+                    )}
+                  >
+                    <Code2 className="size-3 shrink-0" />
+                    <span className="truncate">Algo ({rating})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAtcoderTab("heuristic")}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      atcoderTab === "heuristic"
+                        ? "bg-amber-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold"
+                    )}
+                  >
+                    <Trophy className="size-3 shrink-0" />
+                    <span className="truncate">AHC ({heuristicRating > 0 ? heuristicRating : "Unrated"})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAtcoderTab("contests")}
+                    disabled={totalContestsCount === 0}
+                    className={cn(
+                      "py-1 px-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-[11px]",
+                      atcoderTab === "contests"
+                        ? "bg-cyan-500 text-slate-950 shadow-xs font-black"
+                        : "text-muted-foreground hover:text-foreground font-semibold",
+                      totalContestsCount === 0 && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Flame className="size-3 shrink-0" />
+                    <span className="truncate">Contests ({totalContestsCount})</span>
+                  </button>
                 </div>
 
-                {/* 4 Premium Key Metrics Tiles (2x2 Grid) */}
-                <div className="grid grid-cols-2 gap-3.5">
-                  {/* Problems Solved */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <CheckCircle2 className="size-3.5" />
+                {/* Tab 1: Algorithm Mode */}
+                {atcoderTab === "algo" && (
+                  <div className="space-y-2.5">
+                    {/* 4 Compact Key Metrics Tiles (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Rating */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                              <Trophy className="size-2.5" />
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                              Rating
+                            </span>
+                          </div>
+                          <Badge className={cn("text-[9px] px-1 py-0 rounded-md font-extrabold border-0 shrink-0", activeProps.badgeBg)}>
+                            {activeProps.text}
+                          </Badge>
+                        </div>
+                        <div>
+                          <div className={cn("text-base sm:text-lg font-black font-mono tracking-tight leading-tight", activeProps.textColor)}>
+                            {rating}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Highest: {maxRating > 0 ? maxRating : rating}
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Problems Solved
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-cyan-400 tracking-tight">
-                        {totalSolved.toLocaleString()}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {acceptedCountRank ? `Rank #${acceptedCountRank.toLocaleString()}` : "Accepted Tasks (AC)"}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Rated Contests */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <Flame className="size-3.5" />
+                      {/* Global Rank */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                            <Globe className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Global Rank
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {globalRank && globalRank > 0 ? `#${globalRank.toLocaleString()}` : (rating > 0 ? "Top Tier" : "Unranked")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Worldwide Standing
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Contests
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {competitionsCount}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        Attended & Rated
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Best Performance */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <Trophy className="size-3.5" />
+                      {/* Tasks Solved */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                            <CheckCircle2 className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Tasks Solved
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-cyan-400 tracking-tight leading-tight">
+                            {totalSolved.toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {acceptedCountRank ? `Rank #${acceptedCountRank.toLocaleString()}` : "Accepted Tasks (AC)"}
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Best Performance
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {highestPerformance ? highestPerformance : (rating > 0 ? rating : "N/A")}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {bestRank ? `Best Rank #${bestRank.toLocaleString()}` : "Peak Contest Performance"}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Rated Point Sum */}
-                  <div className="p-4 rounded-2xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                        <Globe className="size-3.5" />
+                      {/* Rated Matches & Performance */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-cyan-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                            <Flame className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Matches
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {competitionsCount > 0 ? competitionsCount.toLocaleString() : "0"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {highestPerformance ? `Perf: ${highestPerformance}` : (lastCompeted ? `Last: ${lastCompeted}` : "Attended & Rated")}
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
-                        Point Sum
-                      </span>
                     </div>
-                    <div>
-                      <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight">
-                        {ratedPointSum ? ratedPointSum.toLocaleString() : "Active"}
+
+                    {/* Rated Point Sum Summary */}
+                    {typeof ratedPointSum === "number" && ratedPointSum > 0 && (
+                      <div className="px-2.5 py-1.5 rounded-xl bg-card/60 border border-border/70 flex items-center justify-between gap-2 text-xs">
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block leading-none">
+                            Rated Point Sum
+                          </span>
+                          <span className="text-[9px] text-muted-foreground font-medium truncate">
+                            {ratedPointSumRank ? `Rank #${ratedPointSumRank.toLocaleString()}` : "Contest Points"}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-black font-mono text-cyan-400 block leading-tight">
+                            {ratedPointSum.toLocaleString()} pts
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-muted-foreground font-medium truncate mt-0.5">
-                        {ratedPointSumRank ? `Rank #${ratedPointSumRank.toLocaleString()}` : "Total Rated Points"}
+                    )}
+
+                    {/* Quick Contests Preview Footer */}
+                    {recentContests.length > 0 && (
+                      <div className="px-2.5 py-1.5 rounded-xl bg-card/40 border border-cyan-500/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 overflow-hidden text-xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                            Latest:
+                          </span>
+                          <span className="text-[11px] font-bold text-foreground truncate">
+                            {recentContests[0]?.name || "Contest"} {recentContests[0]?.rank ? `(#${recentContests[0].rank})` : ""}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAtcoderTab("contests")}
+                          className="text-[10px] font-extrabold text-cyan-400 hover:underline shrink-0 flex items-center gap-0.5"
+                        >
+                          <span>{recentContests.length} Contests</span>
+                          <ArrowUpRight className="size-3" />
+                        </button>
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: Heuristic Mode */}
+                {atcoderTab === "heuristic" && (
+                  <div className="space-y-2.5">
+                    {/* 4 Compact Key Metrics Tiles (2x2 Grid) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Heuristic Rating */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                              <Trophy className="size-2.5" />
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                              AHC Rating
+                            </span>
+                          </div>
+                          <Badge className={cn("text-[9px] px-1 py-0 rounded-md font-extrabold border-0 shrink-0", activeProps.badgeBg)}>
+                            {activeProps.text}
+                          </Badge>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-amber-500 tracking-tight leading-tight">
+                            {heuristicRating > 0 ? heuristicRating : "Unrated"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Highest: {heuristicMaxRating > 0 ? heuristicMaxRating : (heuristicRating > 0 ? heuristicRating : "Unrated")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Best AHC Standing */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <Globe className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Best Rank
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {heuristicBestRank ? `#${heuristicBestRank.toLocaleString()}` : (heuristicRating > 0 ? "Top Solver" : "Unranked")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Best AHC Finish
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Peak Heuristic Performance */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <Award className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Peak Perf
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-amber-500 tracking-tight leading-tight">
+                            {heuristicHighestPerformance ? heuristicHighestPerformance.toLocaleString() : (heuristicRating > 0 ? heuristicRating : "N/A")}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            Highest AHC Performance
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rated AHCs */}
+                      <div className="p-2.5 rounded-xl bg-card/60 border border-border/70 hover:border-amber-500/40 transition-all duration-200 shadow-xs space-y-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <div className="size-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <Flame className="size-2.5" />
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground truncate">
+                            Rated AHCs
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-base sm:text-lg font-black font-mono text-foreground tracking-tight leading-tight">
+                            {heuristicCompetitionsCount}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+                            {heuristicTotalCompetitions > heuristicCompetitionsCount ? `${heuristicTotalCompetitions} Total Events` : "Rated Contests"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick AHC Contests Preview Footer */}
+                    {heuristicRecentContests.length > 0 && (
+                      <div className="px-2.5 py-1.5 rounded-xl bg-card/40 border border-amber-500/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 overflow-hidden text-xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                            Latest AHC:
+                          </span>
+                          <span className="text-[11px] font-bold text-foreground truncate">
+                            {heuristicRecentContests[0]?.name || "AHC Contest"} {heuristicRecentContests[0]?.rank ? `(#${heuristicRecentContests[0].rank})` : ""}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAtcoderTab("contests")}
+                          className="text-[10px] font-extrabold text-amber-500 hover:underline shrink-0 flex items-center gap-0.5"
+                        >
+                          <span>{heuristicRecentContests.length} AHCs</span>
+                          <ArrowUpRight className="size-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 3: Combined Contests Timeline */}
+                {atcoderTab === "contests" && (
+                  <div className="p-2.5 rounded-xl bg-card/40 border border-cyan-500/20 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-foreground min-w-0 truncate">
+                        <Trophy className="size-3.5 text-cyan-400 shrink-0" />
+                        <span className="truncate">Recent AtCoder Contests</span>
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.2 rounded-md font-extrabold border-cyan-500/40 text-cyan-400 bg-cyan-500/10">
+                        {totalContestsCount} Rated
+                      </Badge>
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                      {[...recentContests, ...heuristicRecentContests].slice(0, 8).map((c, idx) => {
+                        const isAhc = heuristicRecentContests.includes(c) || (c.name || "").includes("AHC");
+                        const accentColor = isAhc ? "text-amber-500" : "text-cyan-400";
+
+                        return (
+                          <div
+                            key={idx}
+                            className="p-1.5 rounded-lg bg-card/80 border border-border/60 flex items-center justify-between gap-2 text-xs hover:border-cyan-500/30 transition-colors"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1 min-w-0">
+                                <h5 className="font-extrabold text-foreground truncate text-[11px] leading-tight">
+                                  {c.name || c.code}
+                                </h5>
+                                {isAhc && (
+                                  <Badge variant="outline" className="text-[8px] px-1 py-0 rounded font-black border-amber-500/40 text-amber-500 bg-amber-500/10 shrink-0">
+                                    AHC
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[9px] text-muted-foreground font-medium">
+                                {c.date || "Completed"} {c.rank ? `• Rank #${c.rank.toLocaleString()}` : ""} {c.performance ? `• Perf: ${c.performance}` : ""}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className={cn("font-mono font-black text-xs block leading-tight", accentColor)}>
+                                {c.rating}
+                              </span>
+                              <span className="text-[8px] text-muted-foreground font-medium">
+                                Rating
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })()
@@ -2006,4 +3109,3 @@ export function CodingProfileCard(props: CodingProfileCardProps) {
     </div>
   );
 }
-

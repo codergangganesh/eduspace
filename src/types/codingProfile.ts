@@ -17,6 +17,7 @@ export interface LeetCodeBadge {
   id?: string;
   name: string;
   shortName?: string;
+  displayName?: string;
   icon?: string;
   category?: string;
   creationDate?: string;
@@ -24,13 +25,27 @@ export interface LeetCodeBadge {
   hoverText?: string;
 }
 
+export interface LeetCodeContestHistoryItem {
+  name: string;
+  rating: number;
+  rank?: number;
+  problemsSolved?: number;
+  totalProblems?: number;
+  date?: string;
+  trend?: string;
+}
+
 export interface LeetCodeStats {
   username?: string;
   name?: string | null;
   avatar?: string | null;
+  aboutMe?: string | null;
   countryName?: string | null;
   company?: string | null;
   school?: string | null;
+  githubUrl?: string | null;
+  twitterUrl?: string | null;
+  linkedinUrl?: string | null;
 
   // Problem Solving Stats
   totalSolved: number;
@@ -45,6 +60,7 @@ export interface LeetCodeStats {
   ranking?: number | null; // Global Problem Solving Rank
   reputation?: number | null;
   contributionPoints?: number | null;
+  starRating?: number | null;
 
   // Contest Stats
   contestRating?: number | null;
@@ -52,10 +68,21 @@ export interface LeetCodeStats {
   contestTopPercentage?: number | null;
   contestsAttended?: number | null;
   contestBadge?: string | null;
+  recentContests?: LeetCodeContestHistoryItem[];
 
-  // Badges
+  // Activity & Badges
+  streak?: number | null;
+  totalActiveDays?: number | null;
+  submissionCalendar?: string | null;
   badges?: LeetCodeBadge[];
+  languageStats?: Array<{ languageName: string; problemsSolved: number }>;
+  skillStats?: {
+    fundamental?: Array<{ tagName: string; tagSlug: string; problemsSolved: number }>;
+    intermediate?: Array<{ tagName: string; tagSlug: string; problemsSolved: number }>;
+    advanced?: Array<{ tagName: string; tagSlug: string; problemsSolved: number }>;
+  };
 
+  profile_url?: string;
   last_updated?: string;
 }
 
@@ -63,12 +90,27 @@ export interface CodeforcesBadge {
   name: string;
   category?: string;
   description?: string;
+  icon?: string;
+}
+
+export interface CodeforcesContestHistoryItem {
+  contestId: number;
+  contestName: string;
+  rank: number;
+  oldRating: number;
+  newRating: number;
+  ratingChange: number;
+  date?: string;
+  ratingUpdateTimeSeconds?: number;
 }
 
 export interface CodeforcesStats {
   handle: string;
   name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   avatar?: string | null;
+  titlePhoto?: string | null;
   country?: string | null;
   city?: string | null;
   organization?: string | null;
@@ -81,10 +123,12 @@ export interface CodeforcesStats {
   contribution?: number | null;
   friendOfCount?: number | null;
   registrationDate?: string | null;
+  lastOnlineTime?: string | null;
 
   // Problem Solving Stats
   totalSolved: number;
   totalSubmissions?: number | null;
+  acceptanceRate?: number | null;
   problemDifficultyBreakdown?: Record<string, number> | null;
   verdictBreakdown?: {
     ok: number;
@@ -93,13 +137,16 @@ export interface CodeforcesStats {
     other: number;
   } | null;
   topTags?: Array<{ name: string; count: number }> | null;
+  languages?: Array<{ language: string; count: number }> | null;
 
   // Contest Stats
   contestsAttended?: number | null;
   bestRank?: number | null;
   maxRatingGain?: number | null;
+  recentContests?: CodeforcesContestHistoryItem[];
   badges?: CodeforcesBadge[];
 
+  profile_url?: string;
   last_updated?: string;
 }
 
@@ -252,6 +299,7 @@ export interface CodeChefStats {
   badges?: CodeChefBadge[];
   recentContests?: CodeChefContestHistory[];
   
+  profile_url?: string;
   last_updated?: string;
 }
 
@@ -272,6 +320,7 @@ export interface CodewarsStats {
   username: string;
   name?: string | null;
   clan?: string | null;
+  avatar?: string | null;
   honor: number;
   rank: string;
   rankColor?: string | null;
@@ -281,6 +330,14 @@ export interface CodewarsStats {
   totalAuthored?: number | null;
   languages?: CodewarsLanguageStat[] | null;
   badges?: CodewarsBadge[] | null;
+  recentChallenges?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    completedAt: string;
+    completedLanguages: string[];
+  }>;
+  profile_url?: string;
   last_updated?: string;
 }
 
@@ -304,18 +361,50 @@ export interface GeeksForGeeksStats {
   last_updated?: string;
 }
 
+export interface AtCoderContestHistory {
+  name?: string;
+  code?: string;
+  rating: number;
+  rank?: number;
+  performance?: number;
+  date?: string;
+}
+
 export interface AtCoderStats {
   username?: string;
+  name?: string | null;
+  avatar?: string | null;
+  country?: string | null;
+  countryFlag?: string | null;
+  affiliation?: string | null;
+  birthYear?: number | string | null;
+  wins?: number | null;
   rating: number;
   maxRating: number;
   rank: string;
+  globalRank?: number | null;
   totalSolved: number;
   competitionsCount?: number;
+  totalCompetitions?: number;
   acceptedCountRank?: number | null;
   ratedPointSum?: number;
   ratedPointSumRank?: number | null;
   highestPerformance?: number;
   bestRank?: number;
+  lastCompeted?: string | null;
+  recentContests?: AtCoderContestHistory[];
+
+  // Heuristic Statistics
+  heuristicRating?: number | null;
+  heuristicMaxRating?: number | null;
+  heuristicRank?: string | null;
+  heuristicCompetitionsCount?: number;
+  heuristicTotalCompetitions?: number;
+  heuristicHighestPerformance?: number | null;
+  heuristicBestRank?: number | null;
+  heuristicRecentContests?: AtCoderContestHistory[];
+
+  profile_url?: string;
   last_updated?: string;
 }
 
@@ -324,6 +413,7 @@ export interface HackerRankBadge {
   stars: number;
   icon?: string;
   category?: string;
+  solved?: number;
 }
 
 export interface HackerRankCertificate {
@@ -348,6 +438,7 @@ export interface HackerRankStats {
   certificates?: HackerRankCertificate[];
   globalRank?: number | null;
   score?: number | null;
+  profile_url?: string;
   last_updated?: string;
 }
 

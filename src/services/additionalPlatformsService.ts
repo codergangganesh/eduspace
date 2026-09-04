@@ -1,4 +1,5 @@
 import { HackerRankStats, HackerRankBadge, HackerRankCertificate, HackerEarthStats } from "@/types/codingProfile";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Extracts clean handle from URL or raw input string
@@ -22,6 +23,18 @@ export async function fetchHackerRankStats(usernameInput: string): Promise<{
   const username = extractUsername(usernameInput);
   if (!username) {
     return { data: null, error: "HackerRank username is required" };
+  }
+
+  // Tier 0: Direct Supabase Edge Function `fetch-hackerrank`
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-hackerrank", {
+      body: { username },
+    });
+    if (!edgeRes.error && edgeRes.data?.data) {
+      return { data: edgeRes.data.data as HackerRankStats, error: null };
+    }
+  } catch (edgeErr) {
+    console.warn("[AdditionalPlatformsService] fetch-hackerrank Edge Function fallback:", edgeErr);
   }
 
   let profileData: any = null;

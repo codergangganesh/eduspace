@@ -9,6 +9,7 @@ import {
   LeetCodeBadge,
   CodeforcesStats,
   CodeforcesBadge,
+  CodeforcesContestHistoryItem,
   CodeChefStats,
   CodeChefBadge,
   CodewarsStats,
@@ -87,6 +88,7 @@ function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
   const ranking = parseInt(String(raw.ranking || raw.globalRanking || 0)) || null;
   const reputation = parseInt(String(raw.reputation || 0)) || null;
   const contributionPoints = parseInt(String(raw.contributionPoints || raw.contributionPoint || 0)) || null;
+  const starRating = typeof raw.starRating === "number" ? raw.starRating : null;
 
   const rawRating = raw.contestRating || raw.rating || raw.userContestRanking?.rating;
   const contestRating = typeof rawRating === "number" ? Math.round(rawRating) : (parseInt(rawRating) || null);
@@ -115,6 +117,7 @@ function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
         id: b.id || b.badge?.id,
         name: b.displayName || b.name || b.badge?.displayName || "LeetCode Badge",
         shortName: b.shortName || b.badge?.shortName,
+        displayName: b.displayName || b.name,
         icon: typeof iconUrl === "string" ? iconUrl : undefined,
         category: b.category || b.badge?.category || "LeetCode Badge",
         creationDate: b.creationDate || b.earnedDate || undefined,
@@ -128,9 +131,14 @@ function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
     username,
     name: raw.name || raw.realName || raw.displayName || null,
     avatar: raw.avatar || raw.userAvatar || raw.profile_image || null,
-    countryName: raw.countryName || raw.location || null,
+    aboutMe: raw.aboutMe || null,
+    countryName: raw.countryName || raw.country || raw.location || null,
     company: raw.company || null,
     school: raw.school || null,
+    githubUrl: raw.githubUrl || null,
+    twitterUrl: raw.twitterUrl || null,
+    linkedinUrl: raw.linkedinUrl || null,
+
     totalSolved,
     easy,
     medium,
@@ -143,18 +151,29 @@ function normalizeLeetCodeStats(raw: any, username: string): LeetCodeStats {
     ranking,
     reputation,
     contributionPoints,
+    starRating,
+
     contestRating,
     contestGlobalRanking,
     contestTopPercentage,
     contestsAttended,
     contestBadge,
+    recentContests: Array.isArray(raw.recentContests) ? raw.recentContests : undefined,
+
+    streak: typeof raw.streak === "number" ? raw.streak : null,
+    totalActiveDays: typeof raw.totalActiveDays === "number" ? raw.totalActiveDays : null,
+    submissionCalendar: raw.submissionCalendar || null,
     badges,
-    last_updated: new Date().toISOString(),
+    languageStats: Array.isArray(raw.languageStats) ? raw.languageStats : undefined,
+    skillStats: raw.skillStats || undefined,
+
+    profile_url: raw.profile_url || `https://leetcode.com/u/${encodeURIComponent(username)}/`,
+    last_updated: raw.last_updated || new Date().toISOString(),
   };
 }
 
 /**
- * Fetches LeetCode statistics using Vercel & Render microservice APIs with multi-endpoint fallbacks.
+ * Fetches LeetCode statistics using Supabase Edge Function with multi-tier fallbacks.
  */
 export async function fetchLeetCodeStats(usernameInput: string): Promise<{
   data: LeetCodeStats | null;
@@ -163,6 +182,23 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
   const username = extractUsername(usernameInput);
   if (!username) {
     return { data: null, error: "LeetCode username is required" };
+  }
+
+  // Tier 0: Direct Supabase Edge Function (Serverless direct GraphQL query, no CORS limits, complete badges & contest timeline)
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-leetcode", {
+      body: { username },
+    });
+    if (!edgeRes.error && edgeRes.data && edgeRes.data.success && edgeRes.data.data) {
+      const stats = normalizeLeetCodeStats(edgeRes.data.data, username);
+      if (stats.totalSolved > 0 || stats.easy > 0 || stats.contestRating || stats.ranking || stats.name) {
+        return { data: stats, error: null };
+      }
+    } else if (edgeRes.data && edgeRes.data.success === false && edgeRes.data.error?.includes("not found")) {
+      return { data: null, error: edgeRes.data.error };
+    }
+  } catch {
+    // Edge function not deployed or unreachable, seamlessly continue to Tier 1
   }
 
   let mergedData: any = {};
@@ -373,9 +409,47 @@ export async function fetchLeetCodeStats(usernameInput: string): Promise<{
 }
 
 /**
- * Helper to normalize Codeforces stats.
+ * Helper to normalize Codeforces stats from Edge Function or direct API payload.
  */
-function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratingResult: any[] = []): CodeforcesStats {
+function normalizeCodeforcesStats(raw: any, statusResult: any[] = [], ratingResult: any[] = []): CodeforcesStats {
+  // If already processed by Edge Function
+  if (raw && typeof raw === "object" && "recentContests" in raw && "totalSolved" in raw && "rating" in raw) {
+    return {
+      handle: raw.handle || "",
+      name: raw.name || [raw.firstName, raw.lastName].filter(Boolean).join(" ") || null,
+      firstName: raw.firstName || null,
+      lastName: raw.lastName || null,
+      avatar: raw.avatar || raw.titlePhoto || null,
+      titlePhoto: raw.titlePhoto || null,
+      country: raw.country || null,
+      city: raw.city || null,
+      organization: raw.organization || null,
+      rating: typeof raw.rating === "number" ? raw.rating : 0,
+      maxRating: typeof raw.maxRating === "number" ? raw.maxRating : (raw.rating || 0),
+      rank: raw.rank ? (raw.rank.charAt(0).toUpperCase() + raw.rank.slice(1)) : "Unrated",
+      maxRank: raw.maxRank ? (raw.maxRank.charAt(0).toUpperCase() + raw.maxRank.slice(1)) : (raw.rank || "Unrated"),
+      contribution: typeof raw.contribution === "number" ? raw.contribution : 0,
+      friendOfCount: typeof raw.friendOfCount === "number" ? raw.friendOfCount : 0,
+      registrationDate: raw.registrationDate || null,
+      lastOnlineTime: raw.lastOnlineTime || null,
+      totalSolved: typeof raw.totalSolved === "number" ? raw.totalSolved : 0,
+      totalSubmissions: raw.totalSubmissions || 0,
+      acceptanceRate: typeof raw.acceptanceRate === "number" ? raw.acceptanceRate : null,
+      problemDifficultyBreakdown: raw.problemDifficultyBreakdown || null,
+      verdictBreakdown: raw.verdictBreakdown || null,
+      topTags: raw.topTags || [],
+      languages: raw.languages || [],
+      contestsAttended: typeof raw.contestsAttended === "number" ? raw.contestsAttended : (raw.recentContests?.length || 0),
+      bestRank: raw.bestRank || null,
+      maxRatingGain: raw.maxRatingGain || null,
+      recentContests: raw.recentContests || [],
+      badges: raw.badges || [],
+      profile_url: raw.profile_url || `https://codeforces.com/profile/${encodeURIComponent(raw.handle || "")}`,
+      last_updated: raw.last_updated || new Date().toISOString(),
+    };
+  }
+
+  const userInfo = raw || {};
   const handle = userInfo.handle || "";
   const rating = userInfo.rating || 0;
   const maxRating = userInfo.maxRating || rating;
@@ -410,6 +484,7 @@ function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratin
   };
   const verdictMap = { ok: 0, wrongAnswer: 0, timeLimitExceeded: 0, other: 0 };
   const tagCountMap: Record<string, number> = {};
+  const languagesMap: Record<string, number> = {};
 
   if (Array.isArray(statusResult)) {
     statusResult.forEach((sub: any) => {
@@ -443,19 +518,34 @@ function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratin
           }
         }
       }
+
+      if (sub.programmingLanguage) {
+        const l = sub.programmingLanguage.trim();
+        languagesMap[l] = (languagesMap[l] || 0) + 1;
+      }
     });
   }
 
   const totalSolved = solvedSet.size;
   const topTags = Object.entries(tagCountMap)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
+    .slice(0, 10)
     .map(([name, count]) => ({ name, count }));
+
+  const languages = Object.entries(languagesMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([language, count]) => ({ language, count }));
+
+  const acceptanceRate = statusResult.length > 0
+    ? Math.round((verdictMap.ok / statusResult.length) * 100)
+    : null;
 
   // Parse Contest Rating History
   let contestsAttended = 0;
   let bestRank: number | null = null;
   let maxRatingGain: number | null = null;
+  const recentContests: CodeforcesContestHistoryItem[] = [];
 
   if (Array.isArray(ratingResult) && ratingResult.length > 0) {
     contestsAttended = ratingResult.length;
@@ -470,6 +560,24 @@ function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratin
         const gain = c.newRating - c.oldRating;
         if (gain > maxGain) maxGain = gain;
       }
+
+      let dateStr = "";
+      if (c.ratingUpdateTimeSeconds) {
+        try {
+          dateStr = new Date(c.ratingUpdateTimeSeconds * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+        } catch { }
+      }
+
+      recentContests.push({
+        contestId: c.contestId,
+        contestName: c.contestName || `Codeforces Round #${c.contestId}`,
+        rank: c.rank,
+        oldRating: c.oldRating,
+        newRating: c.newRating,
+        ratingChange: (c.newRating || 0) - (c.oldRating || 0),
+        date: dateStr,
+        ratingUpdateTimeSeconds: c.ratingUpdateTimeSeconds,
+      });
     });
 
     if (minRank !== Infinity) bestRank = minRank;
@@ -480,22 +588,44 @@ function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratin
   const badges: CodeforcesBadge[] = [
     { name: `${formattedRank} Division`, category: "Rank Title", description: `Achieved ${formattedRank} competitive status` },
   ];
-  if (maxRating >= 1900) {
-    badges.push({ name: "Candidate Master", category: "Milestone", description: "Reached Codeforces Candidate Master rating" });
+  if (maxRating >= 2400) {
+    badges.push({ name: "Grandmaster", category: "Tier", description: "Reached 2400+ Grandmaster rating on Codeforces" });
+  } else if (maxRating >= 2100) {
+    badges.push({ name: "Master", category: "Tier", description: "Reached 2100+ Master rating on Codeforces" });
+  } else if (maxRating >= 1900) {
+    badges.push({ name: "Candidate Master", category: "Tier", description: "Reached 1900+ Candidate Master rating" });
   } else if (maxRating >= 1600) {
-    badges.push({ name: "Expert Contestant", category: "Milestone", description: "Reached Codeforces Expert rating" });
+    badges.push({ name: "Expert Peak", category: "Tier", description: "Reached 1600+ Expert division rating" });
+  } else if (maxRating >= 1400) {
+    badges.push({ name: "Specialist", category: "Tier", description: "Reached 1400+ Specialist rating" });
+  } else if (maxRating >= 1200) {
+    badges.push({ name: "Pupil Solver", category: "Tier", description: "Active rated Pupil solver" });
+  }
+
+  if (bestRank && bestRank <= 1000) {
+    badges.push({ name: "Top 1000 Standing", category: "Standing", description: `Achieved global Rank #${bestRank} in a rated contest` });
+  }
+  if (maxRatingGain && maxRatingGain >= 150) {
+    badges.push({ name: "Rating Surge", category: "Growth", description: `Single round increase of +${maxRatingGain} rating points` });
   }
   if (totalSolved >= 100) {
     badges.push({ name: "Problem Master", category: "Problem Solving", description: "Solved 100+ unique competitive programming problems" });
+  } else if (totalSolved >= 20) {
+    badges.push({ name: "Algorithm Solver", category: "Problem Solving", description: `Solved ${totalSolved} unique problems on Codeforces` });
   }
   if (contestsAttended >= 10) {
     badges.push({ name: "Contest Veteran", category: "Contests", description: "Participated in 10+ rated Codeforces rounds" });
+  } else if (contestsAttended >= 5) {
+    badges.push({ name: "Rated Competitor", category: "Contests", description: `Participated in ${contestsAttended} rated Codeforces rounds` });
   }
 
   return {
     handle,
     name: fullName || null,
+    firstName: userInfo.firstName || null,
+    lastName: userInfo.lastName || null,
     avatar,
+    titlePhoto: userInfo.titlePhoto || null,
     country,
     city,
     organization,
@@ -508,19 +638,23 @@ function normalizeCodeforcesStats(userInfo: any, statusResult: any[] = [], ratin
     registrationDate,
     totalSolved,
     totalSubmissions: statusResult.length,
+    acceptanceRate,
     problemDifficultyBreakdown: difficultyBreakdown,
     verdictBreakdown: verdictMap,
     topTags,
+    languages,
     contestsAttended,
     bestRank,
     maxRatingGain,
+    recentContests,
     badges,
+    profile_url: `https://codeforces.com/profile/${encodeURIComponent(handle)}`,
     last_updated: new Date().toISOString(),
   };
 }
 
 /**
- * Fetches Codeforces statistics using official Codeforces API endpoints.
+ * Fetches Codeforces statistics using Supabase Edge Function with resilient direct fallback.
  */
 export async function fetchCodeforcesStats(handleInput: string): Promise<{
   data: CodeforcesStats | null;
@@ -531,6 +665,21 @@ export async function fetchCodeforcesStats(handleInput: string): Promise<{
     return { data: null, error: "Codeforces handle is required" };
   }
 
+  // 1. Tier 0: Supabase Edge Function `fetch-codeforces`
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-codeforces", {
+      body: { handle },
+    });
+
+    if (!edgeRes.error && edgeRes.data?.data) {
+      const stats = normalizeCodeforcesStats(edgeRes.data.data);
+      return { data: stats, error: null };
+    }
+  } catch (edgeErr) {
+    console.warn("[CodingProfileService] fetch-codeforces Edge Function fallback:", edgeErr);
+  }
+
+  // 2. Direct API Fallback
   try {
     const timestamp = Date.now();
     const [infoRes, statusRes, ratingRes] = await Promise.allSettled([
@@ -2182,7 +2331,212 @@ export function getAtCoderRankName(rating: number): string {
 }
 
 /**
- * Fetches AtCoder public profile statistics using Kenkoooo AtCoder API, rating badges & resilient history fallbacks.
+ * Normalizes AtCoder stats from raw JSON payload.
+ */
+function normalizeAtCoderStats(raw: any, username: string): AtCoderStats {
+  const rating = typeof raw.rating === "number" ? raw.rating : parseInt(String(raw.rating || 0), 10) || 0;
+  const maxRating = typeof raw.maxRating === "number" ? raw.maxRating : parseInt(String(raw.maxRating || rating), 10) || rating;
+  const rank = raw.rank || getAtCoderRankName(rating);
+
+  const globalRank = typeof raw.globalRank === "number" ? raw.globalRank : (raw.globalRank ? parseInt(String(raw.globalRank), 10) || null : null);
+  const totalSolved = typeof raw.totalSolved === "number" ? raw.totalSolved : (typeof raw.accepted_count === "number" ? raw.accepted_count : parseInt(String(raw.totalSolved || 0), 10) || 0);
+  const competitionsCount = typeof raw.competitionsCount === "number" ? raw.competitionsCount : (typeof raw.rated_matches === "number" ? raw.rated_matches : parseInt(String(raw.competitionsCount || 0), 10) || 0);
+
+  const heuristicRating = typeof raw.heuristicRating === "number" ? raw.heuristicRating : (raw.heuristicRating ? parseInt(String(raw.heuristicRating), 10) || null : null);
+  const heuristicMaxRating = typeof raw.heuristicMaxRating === "number" ? raw.heuristicMaxRating : (raw.heuristicMaxRating ? parseInt(String(raw.heuristicMaxRating), 10) || null : null);
+  const heuristicRank = raw.heuristicRank || (heuristicRating ? getAtCoderRankName(heuristicRating) : null);
+  const heuristicCompetitionsCount = typeof raw.heuristicCompetitionsCount === "number" ? raw.heuristicCompetitionsCount : (raw.heuristicCompetitionsCount ? parseInt(String(raw.heuristicCompetitionsCount), 10) || 0 : 0);
+
+  return {
+    username: username,
+    name: raw.name || null,
+    avatar: raw.avatar || null,
+    country: raw.country || null,
+    countryFlag: raw.countryFlag || null,
+    affiliation: raw.affiliation || null,
+    birthYear: raw.birthYear || null,
+    wins: typeof raw.wins === "number" ? raw.wins : (raw.wins ? parseInt(String(raw.wins), 10) || null : null),
+    rating: rating,
+    maxRating: maxRating > 0 ? maxRating : rating,
+    rank: rank,
+    globalRank: globalRank,
+    totalSolved: totalSolved,
+    competitionsCount: competitionsCount,
+    totalCompetitions: typeof raw.totalCompetitions === "number" ? raw.totalCompetitions : undefined,
+    acceptedCountRank: typeof raw.acceptedCountRank === "number" ? raw.acceptedCountRank : (typeof raw.accepted_count_rank === "number" ? raw.accepted_count_rank : null),
+    ratedPointSum: typeof raw.ratedPointSum === "number" ? raw.ratedPointSum : (typeof raw.rated_point_sum === "number" ? raw.rated_point_sum : undefined),
+    ratedPointSumRank: typeof raw.ratedPointSumRank === "number" ? raw.ratedPointSumRank : (typeof raw.rated_point_sum_rank === "number" ? raw.rated_point_sum_rank : null),
+    highestPerformance: typeof raw.highestPerformance === "number" ? raw.highestPerformance : undefined,
+    bestRank: typeof raw.bestRank === "number" ? raw.bestRank : undefined,
+    lastCompeted: raw.lastCompeted || null,
+    recentContests: Array.isArray(raw.recentContests) ? raw.recentContests : [],
+
+    // Heuristic Stats
+    heuristicRating,
+    heuristicMaxRating,
+    heuristicRank,
+    heuristicCompetitionsCount,
+    heuristicTotalCompetitions: typeof raw.heuristicTotalCompetitions === "number" ? raw.heuristicTotalCompetitions : undefined,
+    heuristicHighestPerformance: typeof raw.heuristicHighestPerformance === "number" ? raw.heuristicHighestPerformance : undefined,
+    heuristicBestRank: typeof raw.heuristicBestRank === "number" ? raw.heuristicBestRank : undefined,
+    heuristicRecentContests: Array.isArray(raw.heuristicRecentContests) ? raw.heuristicRecentContests : undefined,
+
+    profile_url: raw.profile_url || `https://atcoder.jp/users/${encodeURIComponent(username)}`,
+    last_updated: raw.last_updated || new Date().toISOString(),
+  };
+}
+
+/**
+ * Parses raw HTML string from AtCoder user profile.
+ */
+function parseAtCoderProfileHtml(html: string, username: string): Partial<AtCoderStats> | null {
+  if (!html || html.length < 100) return null;
+
+  const parseNum = (val: any): number | null => {
+    if (val === null || val === undefined) return null;
+    const cleaned = String(val).replace(/,/g, "").trim();
+    if (!cleaned || cleaned.toLowerCase().includes("inactive") || cleaned.toLowerCase().includes("na") || cleaned.toLowerCase().includes("null") || cleaned.toLowerCase().includes("unrated")) {
+      return null;
+    }
+    const parsed = parseInt(cleaned, 10);
+    return isNaN(parsed) || parsed < 0 ? null : parsed;
+  };
+
+  let globalRank: number | null = null;
+  let rating = 0;
+  let maxRating = 0;
+  let titleTier = "";
+  let competitionsCount = 0;
+  let lastCompeted: string | null = null;
+  let country: string | null = null;
+  let countryFlag: string | null = null;
+  let affiliation: string | null = null;
+  let birthYear: number | string | null = null;
+  let wins: number | null = null;
+  let avatar: string | null = null;
+
+  // 1. Global Rank
+  const rankMatch =
+    html.match(/<th[^>]*>Rank<\/th>\s*<td[^>]*>\s*(\d+)(?:st|nd|rd|th)?/i) ||
+    html.match(/Rank<\/span>\s*<\/td>\s*<td>\s*(\d+)/i) ||
+    html.match(/Rank[\s\S]*?<td>\s*([0-9]+(?:st|nd|rd|th)?)/i);
+  if (rankMatch) {
+    globalRank = parseNum(rankMatch[1]);
+  }
+
+  // 2. Rating & Rank Color
+  const ratingMatch =
+    html.match(/<th[^>]*>Rating<\/th>\s*<td[^>]*>[\s\S]*?<span[^>]*>(\d+)<\/span>/i) ||
+    html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) ||
+    html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
+  if (ratingMatch) {
+    rating = parseNum(ratingMatch[1]) || 0;
+  }
+
+  // 3. Highest Rating & Title
+  const highestMatch =
+    html.match(/<th[^>]*>Highest Rating<\/th>\s*<td[^>]*>[\s\S]*?<span[^>]*>(\d+)<\/span>/i) ||
+    html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
+  if (highestMatch) {
+    maxRating = parseNum(highestMatch[1]) || rating;
+  }
+
+  const titleMatch =
+    html.match(/<th[^>]*>Highest Rating<\/th>\s*<td[^>]*>[\s\S]*?<span class="bold">([^<]+)<\/span>/i) ||
+    html.match(/Highest Rating[\s\S]*?<span class="bold">([^<]+)<\/span>/i);
+  if (titleMatch) {
+    titleTier = titleMatch[1].trim();
+  }
+
+  // 4. Rated Matches (Contests attended)
+  const matchesMatch =
+    html.match(/<th[^>]*>Rated Matches[\s\S]*?<\/th>\s*<td[^>]*>\s*(\d+)/i) ||
+    html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+  if (matchesMatch) {
+    competitionsCount = parseNum(matchesMatch[1]) || 0;
+  }
+
+  // 5. Last Competed
+  const lastMatch =
+    html.match(/<th[^>]*>Last Competed<\/th>\s*<td[^>]*>\s*([^<]+)/i) ||
+    html.match(/Last Competed<\/span>\s*<\/td>\s*<td>\s*([^<]+)/i);
+  if (lastMatch) {
+    lastCompeted = lastMatch[1].trim();
+  }
+
+  // 6. Country & Flag
+  const countryMatch =
+    html.match(/<th[^>]*>Country\/Region<\/th>\s*<td[^>]*>(?:<img[^>]*src=["']([^"']+)["'][^>]*>)?\s*([^<]+)<\/td>/i) ||
+    html.match(/Country\/Region[\s\S]*?<td>(?:<img[^>]*src=["']([^"']+)["'][^>]*>)?\s*([^<]+)<\/td>/i);
+  if (countryMatch) {
+    if (countryMatch[1]) {
+      const rawFlag = countryMatch[1].trim();
+      countryFlag = rawFlag.startsWith("//") ? `https:${rawFlag}` : rawFlag;
+    }
+    if (countryMatch[2]) {
+      country = countryMatch[2].trim();
+    }
+  }
+
+  // 7. Affiliation
+  const affMatch =
+    html.match(/<th[^>]*>Affiliation<\/th>\s*<td[^>]*>\s*([^<]+)/i) ||
+    html.match(/Affiliation<\/span>\s*<\/td>\s*<td>\s*([^<]+)/i);
+  if (affMatch) {
+    const rawAff = affMatch[1].trim();
+    if (rawAff && rawAff !== "-" && rawAff.toLowerCase() !== "none") {
+      affiliation = rawAff;
+    }
+  }
+
+  // 8. Birth Year
+  const birthMatch =
+    html.match(/<th[^>]*>Birth Year<\/th>\s*<td[^>]*>\s*(\d+)/i) ||
+    html.match(/Birth Year<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+  if (birthMatch) {
+    birthYear = birthMatch[1].trim();
+  }
+
+  // 9. Wins
+  const winsMatch =
+    html.match(/<b>Win<\/b>[\s\S]*?(\d+)<\/p>/i) ||
+    html.match(/Win[\s\S]{0,80}?(\d+)/i);
+  if (winsMatch) {
+    wins = parseNum(winsMatch[1]);
+  }
+
+  // 10. Avatar
+  const avatarMatch =
+    html.match(/class=["']avatar["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/src=["'](https:\/\/img\.atcoder\.jp\/icons\/[^"']+)["']/i);
+  if (avatarMatch) {
+    const rawAvatar = avatarMatch[1].trim();
+    avatar = rawAvatar.startsWith("//") ? `https:${rawAvatar}` : rawAvatar;
+  }
+
+  if (maxRating === 0 && rating > 0) maxRating = rating;
+
+  const rankTier = titleTier || getAtCoderRankName(rating);
+
+  return {
+    username,
+    rating,
+    maxRating,
+    rank: rankTier,
+    globalRank,
+    competitionsCount,
+    lastCompeted,
+    country,
+    countryFlag,
+    affiliation,
+    birthYear,
+    wins,
+    avatar,
+  };
+}
+
+/**
+ * Fetches AtCoder public profile statistics using Supabase Edge Function, Kenkoooo AtCoder API, rating badges & resilient history fallbacks.
  */
 export async function fetchAtCoderStats(usernameInput: string): Promise<{
   data: AtCoderStats | null;
@@ -2194,6 +2548,23 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   }
 
   const cleanHandle = username.trim();
+  const timestamp = Date.now();
+  const profileUrl = `https://atcoder.jp/users/${encodeURIComponent(cleanHandle)}`;
+
+  // Tier 0: Direct Supabase Edge Function (Server-side fetch with full DOM & JSON parsing, no CORS limits)
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-atcoder", {
+      body: { username: cleanHandle },
+    });
+    if (!edgeRes.error && edgeRes.data && edgeRes.data.success && edgeRes.data.data) {
+      const stats = normalizeAtCoderStats(edgeRes.data.data, cleanHandle);
+      if (stats.rating > 0 || stats.totalSolved > 0 || (stats.competitionsCount && stats.competitionsCount > 0) || stats.rank !== "Unrated") {
+        return { data: stats, error: null };
+      }
+    }
+  } catch {
+    // Edge function unreachable or not yet deployed, fallback seamlessly to client microservices & proxies
+  }
 
   let totalSolved = 0;
   let acceptedCountRank: number | null = null;
@@ -2205,6 +2576,16 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   let competitionsCount = 0;
   let highestPerformance = 0;
   let bestRank: number | undefined = undefined;
+  let rankTier = "Unrated";
+  let globalRank: number | null = null;
+  let lastCompeted: string | null = null;
+  let country: string | null = null;
+  let countryFlag: string | null = null;
+  let affiliation: string | null = null;
+  let birthYear: number | string | null = null;
+  let wins: number | null = null;
+  let avatar: string | null = null;
+  let recentContests: any[] = [];
   let userFound = false;
 
   // 1. Kenkoooo AtCoder API (v2 user_info: accepted_count, rated_point_sum, ranks)
@@ -2230,10 +2611,10 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   // 2. Fetch User Rating from high-availability AtCoder badge APIs
   try {
     const [badgeRes, svgRes] = await Promise.allSettled([
-      fetch(`https://atcoder-badges.now.sh/api/atcoder/json/${encodeURIComponent(cleanHandle)}`, {
+      fetch(`https://atcoder-badges.now.sh/api/atcoder/json/${encodeURIComponent(cleanHandle)}?_t=${timestamp}`, {
         signal: AbortSignal.timeout(5000),
       }),
-      fetch(`https://atrating.baoshuo.dev/rating?username=${encodeURIComponent(cleanHandle)}`, {
+      fetch(`https://atrating.baoshuo.dev/rating?username=${encodeURIComponent(cleanHandle)}&_t=${timestamp}`, {
         signal: AbortSignal.timeout(5000),
       }),
     ]);
@@ -2250,9 +2631,7 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
             userFound = true;
           }
         }
-      } catch {
-        // ignore json parse error
-      }
+      } catch { }
     }
 
     // Check SVG Rating API if rating is still 0
@@ -2271,9 +2650,7 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
             userFound = true;
           }
         }
-      } catch {
-        // ignore svg parse error
-      }
+      } catch { }
     }
   } catch (err: any) {
     console.warn("AtCoder rating badge fetch error:", err?.message);
@@ -2282,9 +2659,9 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   // 3. Fetch User Rating & Contest History (via direct fetch or multi-tiered CORS proxies)
   const historyUrls = [
     `https://atcoder.jp/users/${encodeURIComponent(cleanHandle)}/history/json`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json?_t=${timestamp}`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json?_t=${timestamp}`)}`,
   ];
 
   for (const hUrl of historyUrls) {
@@ -2329,84 +2706,107 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
           if (rankArray.length > 0) {
             bestRank = Math.min(...rankArray);
           }
+
+          recentContests = historyData.slice(-10).reverse().map((h: any) => ({
+            name: h.ContestName || h.ContestScreenName || "AtCoder Contest",
+            code: h.ContestScreenName || undefined,
+            rating: typeof h.NewRating === "number" ? h.NewRating : 0,
+            rank: typeof h.Place === "number" ? h.Place : undefined,
+            performance: typeof h.Performance === "number" ? h.Performance : undefined,
+            date: h.EndTime ? h.EndTime.split("T")[0] : undefined,
+          }));
+
           break;
         } else if (Array.isArray(historyData) && historyData.length === 0) {
           userFound = true;
           break;
         }
       }
-    } catch {
-      // try next history proxy
-    }
+    } catch { }
   }
 
-  // 4. Fallback: Direct page scraping via proxies if stats are still zero
-  if (rating === 0 || totalSolved === 0) {
-    const profileUrls = [
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
-    ];
+  // 4. Scrape Full Profile HTML via proxies
+  const profileUrls = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+  ];
 
-    for (const pUrl of profileUrls) {
-      try {
-        const htmlRes = await fetch(pUrl, { signal: AbortSignal.timeout(6000) });
-        if (htmlRes.ok) {
-          let html = "";
-          if (pUrl.includes("api.allorigins.win/get")) {
-            const wrapper = await htmlRes.json();
-            html = wrapper?.contents || "";
-          } else {
-            html = await htmlRes.text();
-          }
+  for (const pUrl of profileUrls) {
+    try {
+      const htmlRes = await fetch(pUrl, { signal: AbortSignal.timeout(6000) });
+      if (htmlRes.ok) {
+        let html = "";
+        if (pUrl.includes("api.allorigins.win/get")) {
+          const wrapper = await htmlRes.json();
+          html = wrapper?.contents || "";
+        } else {
+          html = await htmlRes.text();
+        }
 
-          if (html && (html.includes("User Profile") || html.includes("atcoder.jp") || html.includes("Rating"))) {
-            userFound = true;
-            const ratingMatch =
-              html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) ||
-              html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
-            const maxRatingMatch = html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
-            const matchesMatch = html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
-            const solvedMatch = html.match(/Tasks Solved<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
-
-            if (rating === 0 && ratingMatch) rating = parseInt(ratingMatch[1], 10) || 0;
-            if (maxRating === 0 && maxRatingMatch) maxRating = parseInt(maxRatingMatch[1], 10) || rating;
-            if (competitionsCount === 0 && matchesMatch)
-              competitionsCount = parseInt(matchesMatch[1], 10) || competitionsCount;
-            if (totalSolved === 0 && solvedMatch) totalSolved = parseInt(solvedMatch[1], 10) || 0;
-
-            if (rating > 0 || totalSolved > 0) break;
+        if (html && (html.includes("User Profile") || html.includes("atcoder.jp") || html.includes("Rating"))) {
+          userFound = true;
+          const parsed = parseAtCoderProfileHtml(html, cleanHandle);
+          if (parsed) {
+            if (parsed.rating && !rating) rating = parsed.rating;
+            if (parsed.maxRating && parsed.maxRating > maxRating) maxRating = parsed.maxRating;
+            if (parsed.globalRank) globalRank = parsed.globalRank;
+            if (parsed.competitionsCount && !competitionsCount) competitionsCount = parsed.competitionsCount;
+            if (parsed.rank && parsed.rank !== "Unrated") rankTier = parsed.rank;
+            if (parsed.lastCompeted) lastCompeted = parsed.lastCompeted;
+            if (parsed.country) country = parsed.country;
+            if (parsed.countryFlag) countryFlag = parsed.countryFlag;
+            if (parsed.affiliation) affiliation = parsed.affiliation;
+            if (parsed.birthYear) birthYear = parsed.birthYear;
+            if (parsed.wins) wins = parsed.wins;
+            if (parsed.avatar) avatar = parsed.avatar;
+            break;
           }
         }
-      } catch {
-        // try next profile proxy
       }
-    }
+    } catch { }
   }
 
-  // If maxRating was never set higher than rating, fallback to rating
   if (maxRating < rating) {
     maxRating = rating;
   }
 
-  const rankTitle = getAtCoderRankName(rating);
+  if (!rankTier || rankTier === "Unrated") {
+    rankTier = getAtCoderRankName(rating);
+  }
+
+  if (userFound || rating > 0 || totalSolved > 0 || competitionsCount > 0) {
+    return {
+      data: {
+        username: cleanHandle,
+        rating,
+        maxRating: maxRating || rating,
+        rank: rankTier,
+        globalRank,
+        totalSolved,
+        competitionsCount,
+        acceptedCountRank,
+        ratedPointSum,
+        ratedPointSumRank,
+        highestPerformance: highestPerformance || undefined,
+        bestRank: bestRank || undefined,
+        lastCompeted: lastCompeted || undefined,
+        country: country || undefined,
+        countryFlag: countryFlag || undefined,
+        affiliation: affiliation || undefined,
+        birthYear: birthYear || undefined,
+        wins: wins || undefined,
+        avatar: avatar || undefined,
+        recentContests: recentContests.length > 0 ? recentContests : undefined,
+        last_updated: new Date().toISOString(),
+      },
+      error: null,
+    };
+  }
 
   return {
-    data: {
-      username: cleanHandle,
-      rating,
-      maxRating: maxRating || rating,
-      rank: rankTitle,
-      totalSolved,
-      competitionsCount,
-      acceptedCountRank,
-      ratedPointSum,
-      ratedPointSumRank,
-      highestPerformance: highestPerformance || undefined,
-      bestRank: bestRank || undefined,
-      last_updated: new Date().toISOString(),
-    },
-    error: null,
+    data: null,
+    error: `Could not find AtCoder profile for "${cleanHandle}".`,
   };
 }
 
@@ -2414,6 +2814,27 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
  * Helper to normalize Codewars stats.
  */
 function normalizeCodewarsStats(json: any, username: string): CodewarsStats {
+  if (json && typeof json === "object" && "honor" in json && "totalSolved" in json && "rank" in json) {
+    return {
+      username: json.username || username,
+      name: json.name || null,
+      clan: json.clan || null,
+      avatar: json.avatar || null,
+      honor: typeof json.honor === "number" ? json.honor : 0,
+      rank: json.rank || "Unranked",
+      rankColor: json.rankColor || null,
+      score: typeof json.score === "number" ? json.score : null,
+      leaderboardPosition: typeof json.leaderboardPosition === "number" ? json.leaderboardPosition : null,
+      totalSolved: typeof json.totalSolved === "number" ? json.totalSolved : 0,
+      totalAuthored: typeof json.totalAuthored === "number" ? json.totalAuthored : null,
+      languages: Array.isArray(json.languages) ? json.languages : null,
+      badges: Array.isArray(json.badges) ? json.badges : null,
+      recentChallenges: Array.isArray(json.recentChallenges) ? json.recentChallenges : undefined,
+      profile_url: json.profile_url || `https://www.codewars.com/users/${encodeURIComponent(username)}`,
+      last_updated: json.last_updated || new Date().toISOString(),
+    };
+  }
+
   const name = json?.name || null;
   const clan = json?.clan || null;
   const honor = typeof json?.honor === "number" ? json.honor : 0;
@@ -2446,10 +2867,13 @@ function normalizeCodewarsStats(json: any, username: string): CodewarsStats {
     });
   }
 
+  languages.sort((a, b) => (b.score || 0) - (a.score || 0));
+
   return {
     username,
     name,
     clan,
+    avatar: null,
     honor,
     rank,
     rankColor,
@@ -2459,12 +2883,13 @@ function normalizeCodewarsStats(json: any, username: string): CodewarsStats {
     totalAuthored,
     languages: languages.length > 0 ? languages : null,
     badges: null,
+    profile_url: `https://www.codewars.com/users/${encodeURIComponent(username)}`,
     last_updated: new Date().toISOString(),
   };
 }
 
 /**
- * Fetches Codewars public profile statistics using official Codewars API.
+ * Fetches Codewars public profile statistics using Supabase Edge Function with resilient direct fallbacks.
  */
 export async function fetchCodewarsStats(usernameInput: string): Promise<{
   data: CodewarsStats | null;
@@ -2475,6 +2900,20 @@ export async function fetchCodewarsStats(usernameInput: string): Promise<{
     return { data: null, error: "Codewars username is required" };
   }
 
+  // Tier 0: Direct Supabase Edge Function `fetch-codewars`
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-codewars", {
+      body: { username },
+    });
+    if (!edgeRes.error && edgeRes.data?.data) {
+      const stats = normalizeCodewarsStats(edgeRes.data.data, username);
+      return { data: stats, error: null };
+    }
+  } catch (edgeErr) {
+    console.warn("[CodingProfileService] fetch-codewars Edge Function fallback:", edgeErr);
+  }
+
+  // Tier 1: Direct Codewars API
   try {
     const res = await fetch(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`, {
       signal: AbortSignal.timeout(8000),
@@ -2493,7 +2932,7 @@ export async function fetchCodewarsStats(usernameInput: string): Promise<{
     console.warn("Codewars API fetch error:", err?.message);
   }
 
-  // Fallback via CORS proxy if direct fetch is blocked
+  // Tier 2: Fallback via CORS proxy if direct fetch is blocked
   try {
     const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codewars.com/api/v1/users/${encodeURIComponent(username)}`)}`, {
       signal: AbortSignal.timeout(8000),
