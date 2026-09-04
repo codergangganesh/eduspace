@@ -2048,7 +2048,7 @@ export function getAtCoderRankName(rating: number): string {
 }
 
 /**
- * Fetches AtCoder public profile statistics using Kenkoooo AtCoder API & fallback scrapers.
+ * Fetches AtCoder public profile statistics using Kenkoooo AtCoder API, rating badges & resilient history fallbacks.
  */
 export async function fetchAtCoderStats(usernameInput: string): Promise<{
   data: AtCoderStats | null;
@@ -2071,66 +2071,133 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
   let competitionsCount = 0;
   let highestPerformance = 0;
   let bestRank: number | undefined = undefined;
+  let userFound = false;
 
-  // 1. Kenkoooo AtCoder API (User info & User rating)
+  // 1. Kenkoooo AtCoder API (v2 user_info: accepted_count, rated_point_sum, ranks)
   try {
-    const [infoRes, ratingRes] = await Promise.allSettled([
-      fetch(`https://kenkoooo.com/atcoder/atcoder-api/v3/user/info?user=${encodeURIComponent(cleanHandle)}`, { signal: AbortSignal.timeout(6000) }),
-      fetch(`https://kenkoooo.com/atcoder/atcoder-api/v2/user_info?user=${encodeURIComponent(cleanHandle)}`, { signal: AbortSignal.timeout(6000) })
-    ]);
-
-    if (infoRes.status === "fulfilled" && infoRes.value.ok) {
-      const info = await infoRes.value.json();
-      if (info && (typeof info.accepted_count === "number" || typeof info.rated_point_sum === "number")) {
-        totalSolved = info.accepted_count || 0;
-        acceptedCountRank = typeof info.accepted_count_rank === "number" ? info.accepted_count_rank : null;
-        ratedPointSum = info.rated_point_sum || 0;
-        ratedPointSumRank = typeof info.rated_point_sum_rank === "number" ? info.rated_point_sum_rank : null;
-      }
-    }
-
-    if (ratingRes.status === "fulfilled" && ratingRes.value.ok) {
-      const rInfo = await ratingRes.value.json();
-      if (rInfo) {
-        if (typeof rInfo.rating === "number") rating = rInfo.rating;
-        if (typeof rInfo.highest_rating === "number") maxRating = rInfo.highest_rating;
-        if (typeof rInfo.accepted_count === "number" && totalSolved === 0) totalSolved = rInfo.accepted_count;
+    const kenkooooRes = await fetch(
+      `https://kenkoooo.com/atcoder/atcoder-api/v2/user_info?user=${encodeURIComponent(cleanHandle)}`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (kenkooooRes.ok) {
+      const info = await kenkooooRes.json();
+      if (info && typeof info === "object") {
+        if (typeof info.accepted_count === "number") totalSolved = info.accepted_count;
+        if (typeof info.accepted_count_rank === "number") acceptedCountRank = info.accepted_count_rank;
+        if (typeof info.rated_point_sum === "number") ratedPointSum = info.rated_point_sum;
+        if (typeof info.rated_point_sum_rank === "number") ratedPointSumRank = info.rated_point_sum_rank;
+        if (info.user_id) userFound = true;
       }
     }
   } catch (err: any) {
-    console.warn("Kenkoooo user info API failed, trying fallbacks...", err?.message);
+    console.warn("Kenkoooo user info API fetch error:", err?.message);
   }
 
-  // 2. Fetch User Rating History (via direct fetch or multi-tiered proxies)
+  // 2. Fetch User Rating from high-availability AtCoder badge APIs
+  try {
+    const [badgeRes, svgRes] = await Promise.allSettled([
+      fetch(`https://atcoder-badges.now.sh/api/atcoder/json/${encodeURIComponent(cleanHandle)}`, {
+        signal: AbortSignal.timeout(5000),
+      }),
+      fetch(`https://atrating.baoshuo.dev/rating?username=${encodeURIComponent(cleanHandle)}`, {
+        signal: AbortSignal.timeout(5000),
+      }),
+    ]);
+
+    // Check JSON Badge API
+    if (badgeRes.status === "fulfilled" && badgeRes.value.ok) {
+      try {
+        const badgeJson = await badgeRes.value.json();
+        if (badgeJson && typeof badgeJson.message === "string") {
+          const parsedRating = parseInt(badgeJson.message, 10);
+          if (!isNaN(parsedRating) && parsedRating > 0) {
+            rating = parsedRating;
+            if (parsedRating > maxRating) maxRating = parsedRating;
+            userFound = true;
+          }
+        }
+      } catch {
+        // ignore json parse error
+      }
+    }
+
+    // Check SVG Rating API if rating is still 0
+    if (rating === 0 && svgRes.status === "fulfilled" && svgRes.value.ok) {
+      try {
+        const svgText = await svgRes.value.text();
+        const ariaMatch =
+          svgText.match(/aria-label="[^:]+:\s*([^0-9\n\r]*?)\s*(\d+)"/i) ||
+          svgText.match(/<title>[^:]+:\s*([^0-9\n\r]*?)\s*(\d+)<\/title>/i) ||
+          svgText.match(/font-weight="bold"[^>]*>([^0-9\n\r]*?)\s*(\d+)<\/text>/i);
+        if (ariaMatch && ariaMatch[2]) {
+          const parsedRating = parseInt(ariaMatch[2], 10);
+          if (!isNaN(parsedRating) && parsedRating > 0) {
+            rating = parsedRating;
+            if (parsedRating > maxRating) maxRating = parsedRating;
+            userFound = true;
+          }
+        }
+      } catch {
+        // ignore svg parse error
+      }
+    }
+  } catch (err: any) {
+    console.warn("AtCoder rating badge fetch error:", err?.message);
+  }
+
+  // 3. Fetch User Rating & Contest History (via direct fetch or multi-tiered CORS proxies)
   const historyUrls = [
     `https://atcoder.jp/users/${encodeURIComponent(cleanHandle)}/history/json`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}/history/json`)}`,
   ];
 
   for (const hUrl of historyUrls) {
     try {
       const historyRes = await fetch(hUrl, { signal: AbortSignal.timeout(6000) });
       if (historyRes.ok) {
-        const history = await historyRes.json();
-        if (Array.isArray(history) && history.length > 0) {
-          const ratedContests = history.filter((h: any) => h.IsRated !== false && typeof h.NewRating === "number");
+        let historyData: any = null;
+        if (hUrl.includes("api.allorigins.win/get")) {
+          const wrapper = await historyRes.json();
+          if (wrapper?.contents) {
+            historyData = typeof wrapper.contents === "string" ? JSON.parse(wrapper.contents) : wrapper.contents;
+          }
+        } else {
+          historyData = await historyRes.json();
+        }
+
+        if (Array.isArray(historyData) && historyData.length > 0) {
+          userFound = true;
+          const ratedContests = historyData.filter((h: any) => h.IsRated !== false && typeof h.NewRating === "number");
           competitionsCount = ratedContests.length;
           if (ratedContests.length > 0) {
             const lastContest = ratedContests[ratedContests.length - 1];
-            rating = lastContest.NewRating || 0;
-            maxRating = Math.max(...ratedContests.map((h: any) => h.NewRating || 0));
+            if (lastContest.NewRating) {
+              rating = lastContest.NewRating;
+            }
+            const highestRatingInHistory = Math.max(...ratedContests.map((h: any) => h.NewRating || 0));
+            if (highestRatingInHistory > maxRating) {
+              maxRating = highestRatingInHistory;
+            }
           }
 
-          const perfArray = history.map((h: any) => typeof h.Performance === "number" ? h.Performance : 0).filter(Boolean);
+          const perfArray = historyData
+            .map((h: any) => (typeof h.Performance === "number" ? h.Performance : 0))
+            .filter(Boolean);
           if (perfArray.length > 0) {
             highestPerformance = Math.max(...perfArray);
           }
 
-          const rankArray = history.map((h: any) => typeof h.Place === "number" && h.Place > 0 ? h.Place : Infinity).filter((p) => p !== Infinity);
+          const rankArray = historyData
+            .map((h: any) => (typeof h.Place === "number" && h.Place > 0 ? h.Place : Infinity))
+            .filter((p) => p !== Infinity);
           if (rankArray.length > 0) {
             bestRank = Math.min(...rankArray);
           }
+          break;
+        } else if (Array.isArray(historyData) && historyData.length === 0) {
+          userFound = true;
           break;
         }
       }
@@ -2139,34 +2206,53 @@ export async function fetchAtCoderStats(usernameInput: string): Promise<{
     }
   }
 
-  // 3. Fallback: Direct page scraping via proxies if rating/totalSolved is 0
+  // 4. Fallback: Direct page scraping via proxies if stats are still zero
   if (rating === 0 || totalSolved === 0) {
     const profileUrls = [
       `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
-      `https://corsproxy.io/?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(`https://atcoder.jp/users/${cleanHandle}`)}`,
     ];
 
     for (const pUrl of profileUrls) {
       try {
         const htmlRes = await fetch(pUrl, { signal: AbortSignal.timeout(6000) });
         if (htmlRes.ok) {
-          const html = await htmlRes.text();
-          const ratingMatch = html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) || html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
-          const maxRatingMatch = html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
-          const matchesMatch = html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
-          const solvedMatch = html.match(/Tasks Solved<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+          let html = "";
+          if (pUrl.includes("api.allorigins.win/get")) {
+            const wrapper = await htmlRes.json();
+            html = wrapper?.contents || "";
+          } else {
+            html = await htmlRes.text();
+          }
 
-          if (rating === 0 && ratingMatch) rating = parseInt(ratingMatch[1]) || 0;
-          if (maxRating === 0 && maxRatingMatch) maxRating = parseInt(maxRatingMatch[1]) || rating;
-          if (competitionsCount === 0 && matchesMatch) competitionsCount = parseInt(matchesMatch[1]) || competitionsCount;
-          if (totalSolved === 0 && solvedMatch) totalSolved = parseInt(solvedMatch[1]) || 0;
+          if (html && (html.includes("User Profile") || html.includes("atcoder.jp") || html.includes("Rating"))) {
+            userFound = true;
+            const ratingMatch =
+              html.match(/Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i) ||
+              html.match(/Rating[\s\S]{0,50}?(\d{1,4})/i);
+            const maxRatingMatch = html.match(/Highest Rating<\/span>\s*<\/td>\s*<td>\s*<span[^>]*>(\d+)/i);
+            const matchesMatch = html.match(/Rated Matches<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
+            const solvedMatch = html.match(/Tasks Solved<\/span>\s*<\/td>\s*<td>\s*(\d+)/i);
 
-          if (rating > 0 || totalSolved > 0) break;
+            if (rating === 0 && ratingMatch) rating = parseInt(ratingMatch[1], 10) || 0;
+            if (maxRating === 0 && maxRatingMatch) maxRating = parseInt(maxRatingMatch[1], 10) || rating;
+            if (competitionsCount === 0 && matchesMatch)
+              competitionsCount = parseInt(matchesMatch[1], 10) || competitionsCount;
+            if (totalSolved === 0 && solvedMatch) totalSolved = parseInt(solvedMatch[1], 10) || 0;
+
+            if (rating > 0 || totalSolved > 0) break;
+          }
         }
       } catch {
         // try next profile proxy
       }
     }
+  }
+
+  // If maxRating was never set higher than rating, fallback to rating
+  if (maxRating < rating) {
+    maxRating = rating;
   }
 
   const rankTitle = getAtCoderRankName(rating);
