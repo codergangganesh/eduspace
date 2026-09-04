@@ -1236,6 +1236,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
           hrUsername={hrUsername}
           hrStats={data?.hackerrank}
           lcStats={data?.leetcode}
+          ccStats={data?.codechef}
           ccContests={data?.codechef?.recentContests}
           selectedPlatformFilter={activeTab}
         />

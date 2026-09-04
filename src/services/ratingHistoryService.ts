@@ -1,4 +1,4 @@
-import { CodeChefContestHistory, HackerRankStats, LeetCodeStats } from "@/types/codingProfile";
+import { CodeChefContestHistory, CodeChefStats, HackerRankStats, LeetCodeStats } from "@/types/codingProfile";
 
 export interface RatingPoint {
   platform: "codeforces" | "leetcode" | "codechef" | "codewars" | "hackerrank";
@@ -294,7 +294,8 @@ export async function fetchLeetCodeRatingHistory(
  */
 export async function fetchCodeChefRatingHistory(
   username: string,
-  existingContests?: CodeChefContestHistory[]
+  existingContests?: CodeChefContestHistory[],
+  stats?: CodeChefStats | null
 ): Promise<RatingPoint[]> {
   if (!username || !username.trim()) {
     if (existingContests && existingContests.length > 0) {
@@ -318,69 +319,88 @@ export async function fetchCodeChefRatingHistory(
   }
 
   const cleanUser = username.trim();
+  const timestamp = Date.now();
+  const profileUrl = `https://www.codechef.com/users/${encodeURIComponent(cleanUser)}`;
 
-  // Tier 1: Primary Vercel API proxy
-  try {
-    const res = await fetch(`https://codechef-api.vercel.app/handle/${encodeURIComponent(cleanUser)}`);
-    if (res.ok) {
-      const data = await res.json();
-      const ratingData = data?.ratingData || data?.rating_data || data?.ratingDataList;
-      if (Array.isArray(ratingData) && ratingData.length > 1) {
-        let prev = Number(ratingData[0]?.rating || 1400);
-        return ratingData.map((item: any) => {
-          const dateObj = item.end_date ? new Date(item.end_date) : (item.getyear ? new Date(`${item.getyear}-${item.getmonth}-${item.getday}`) : new Date());
-          const ratingNum = Number(item.rating);
-          const delta = ratingNum - prev;
-          prev = ratingNum;
-          return {
-            platform: "codechef",
-            contestName: item.name || item.code || "CodeChef Contest",
-            rating: ratingNum,
-            date: dateObj.toISOString().split("T")[0],
-            timestamp: Math.floor(dateObj.getTime() / 1000),
-            delta,
-          };
-        });
-      } else if (data?.currentRating || data?.rating) {
-        const r = Number(data.currentRating || data.rating);
-        const maxR = Number(data.highestRating || data.maxRating || r + 40);
-        return generateTrajectoryPoints("codechef", r, maxR, data.contestsParticipated || 7);
-      }
-    }
-  } catch (e) {
-    // continue
-  }
+  const endpoints = [
+    `https://corsproxy.io/?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(`${profileUrl}?_t=${timestamp}`)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(profileUrl)}`,
+  ];
 
-  // Tier 2: Direct HTML scraping via CORS Proxy for var all_rating = [...]
-  try {
-    const corsRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(`https://www.codechef.com/users/${cleanUser}`)}`);
-    if (corsRes.ok) {
-      const html = await corsRes.text();
-      const allRatingMatch = html.match(/var\s+all_rating\s*=\s*(\[[^;]+\]);/i) || html.match(/all_rating\s*=\s*(\[[^;]+\]);/i);
-      if (allRatingMatch) {
-        const parsed = JSON.parse(allRatingMatch[1]);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          let prev = Number(parsed[0]?.rating || 1400);
-          return parsed.map((item: any) => {
-            const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
-            const dateObj = new Date(dateStr);
-            const ratingNum = Number(item.rating);
-            const delta = ratingNum - prev;
-            prev = ratingNum;
-            return {
-              platform: "codechef",
-              contestName: item.name || item.code || "CodeChef Contest",
-              rating: ratingNum,
-              date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
-              timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
-              delta,
-            };
-          });
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        let text = "";
+        try {
+          const json = await res.json();
+          text = json?.contents || json?.data || JSON.stringify(json);
+        } catch {
+          text = await res.text();
+        }
+
+        if (!text || text.includes("Access Denied") || text.includes("403 Forbidden")) continue;
+
+        // 1. Try extracting from Drupal.settings.date_versus_rating
+        try {
+          const drupalMatch = text.match(/Drupal\.settings\s*,\s*(\{[\s\S]*?\})\s*\);/i) || text.match(/date_versus_rating\s*:\s*(\{[\s\S]*?\})\s*,\s*["']user_initial_ratings/i);
+          if (drupalMatch) {
+            const parsedSettings = JSON.parse(drupalMatch[1]);
+            const allContests = parsedSettings.date_versus_rating?.all || parsedSettings.all;
+            if (Array.isArray(allContests) && allContests.length > 0) {
+              let prev = Number(allContests[0]?.rating || 1400);
+              return allContests.map((item: any) => {
+                const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
+                const dateObj = new Date(dateStr);
+                const ratingNum = Number(item.rating);
+                const delta = ratingNum - prev;
+                prev = ratingNum;
+                return {
+                  platform: "codechef",
+                  contestName: item.name || item.code || "CodeChef Contest",
+                  rating: ratingNum,
+                  date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
+                  timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
+                  delta,
+                };
+              });
+            }
+          }
+        } catch { }
+
+        // 2. Try extracting from var all_rating
+        const allRatingMatch = text.match(/var\s+all_rating\s*=\s*(\[[^;]+\]);/i) || text.match(/all_rating\s*=\s*(\[[^;]+\]);/i);
+        if (allRatingMatch) {
+          try {
+            const parsed = JSON.parse(allRatingMatch[1]);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              let prev = Number(parsed[0]?.rating || 1400);
+              return parsed.map((item: any) => {
+                const dateStr = item.end_date ? item.end_date.split(" ")[0] : `${item.getyear}-${String(item.getmonth).padStart(2, "0")}-${String(item.getday).padStart(2, "0")}`;
+                const dateObj = new Date(dateStr);
+                const ratingNum = Number(item.rating);
+                const delta = ratingNum - prev;
+                prev = ratingNum;
+                return {
+                  platform: "codechef",
+                  contestName: item.name || item.code || "CodeChef Contest",
+                  rating: ratingNum,
+                  date: isNaN(dateObj.getTime()) ? new Date().toISOString().split("T")[0] : dateObj.toISOString().split("T")[0],
+                  timestamp: isNaN(dateObj.getTime()) ? Math.floor(Date.now() / 1000) : Math.floor(dateObj.getTime() / 1000),
+                  delta,
+                };
+              });
+            }
+          } catch { }
         }
       }
+    } catch {
+      // Continue next proxy
     }
-  } catch (e) {
-    // fallback
   }
 
   // Fallback to existingContests prop if provided
@@ -400,6 +420,14 @@ export async function fetchCodeChefRatingHistory(
         delta,
       };
     });
+  }
+
+  // Fallback to stats rating trajectory if proxies were blocked
+  if (stats && (stats.rating > 0 || (stats.maxRating && stats.maxRating > 0))) {
+    const currentRating = stats.rating || 1500;
+    const maxRating = stats.maxRating || currentRating;
+    const count = Math.min(25, Math.max(5, stats.contestsParticipated || 12));
+    return generateTrajectoryPoints("codechef", currentRating, maxRating, count);
   }
 
   return [];
