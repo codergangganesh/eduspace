@@ -727,9 +727,6 @@ export function RatingTrajectoryGraph({
 
             <span>AtCoder</span>
           </button>
-
-          <div className="w-px h-3.5 bg-border/60 mx-0.5 sm:mx-1" />
-
           {(["3M", "6M", "1Y", "ALL"] as Timeframe[]).map((tf) => (
             <button
               key={tf}
@@ -744,9 +741,7 @@ export function RatingTrajectoryGraph({
               {tf}
             </button>
           ))}
-
           <div className="w-px h-3.5 bg-border/60 mx-0.5" />
-
           <button
             onClick={() => loadData(true)}
             disabled={refreshing}
@@ -1160,10 +1155,7 @@ export function RatingTrajectoryGraph({
                   </ResponsiveContainer>
 
                   {/* Sleek Floating Zoom Interaction Hint */}
-                  <div className="absolute bottom-2 right-3 pointer-events-none opacity-60 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-border/40 text-[9px] font-medium text-muted-foreground flex items-center gap-1">
-                    <Info className="size-2.5 text-cyan-400" />
-                    <span>Scroll wheel to zoom points • Drag to pan</span>
-                  </div>
+
                 </>
               )}
             </div>
@@ -1212,7 +1204,7 @@ export function RatingTrajectoryGraph({
           {/* Floating Zoom Controls for Multi-Platform View */}
           {hasData && (
             <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+              {/* <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
                 {zoomLevel > 1 ? (
                   <>
                     <MoveHorizontal className="size-3 text-primary" />
@@ -1221,7 +1213,7 @@ export function RatingTrajectoryGraph({
                 ) : (
                   <span>Scroll wheel or click zoom to expand individual rating points</span>
                 )}
-              </span>
+              </span> */}
 
               <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/40 text-xs font-bold">
                 {zoomLevel > 1 && (
@@ -1414,10 +1406,10 @@ export function RatingTrajectoryGraph({
               </ResponsiveContainer>
 
               {/* Floating Zoom Hint Pill */}
-              <div className="absolute bottom-2 right-3 pointer-events-none opacity-60 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-border/40 text-[9px] font-medium text-muted-foreground flex items-center gap-1">
+              {/* <div className="absolute bottom-2 right-3 pointer-events-none opacity-60 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-lg border border-border/40 text-[9px] font-medium text-muted-foreground flex items-center gap-1">
                 <Info className="size-2.5 text-primary" />
                 <span>Scroll wheel to zoom points • Drag to pan</span>
-              </div>
+              </div> */}
             </div>
           )}
         </>

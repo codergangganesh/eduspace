@@ -2056,6 +2056,18 @@ export async function fetchGeeksForGeeksStats(usernameInput: string): Promise<{
   const lowerHandle = cleanHandle.toLowerCase();
   const profileUrl = `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`;
 
+  // Tier 0: Supabase Edge Function fetch-gfg (server-side, bypasses browser CORS)
+  try {
+    const edgeRes = await supabase.functions.invoke("fetch-gfg", {
+      body: { username: cleanHandle },
+    });
+    if (!edgeRes.error && edgeRes.data?.data) {
+      return { data: edgeRes.data.data as GeeksForGeeksStats, error: null };
+    }
+  } catch (edgeErr) {
+    console.warn("[GFG] Edge Function fallback:", edgeErr);
+  }
+
   const parseNum = (val: any): number => {
     if (val === undefined || val === null) return 0;
     const cleaned = String(val).replace(/,/g, "").trim();

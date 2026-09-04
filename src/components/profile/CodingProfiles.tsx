@@ -21,6 +21,7 @@ import { readStoredJson } from "@/lib/storage";
 import { CodingProfilesResponse } from "@/types/codingProfile";
 import { CodingProfileCard } from "./CodingProfileCard";
 import { HackerRankProfileCard } from "./HackerRankProfileCard";
+import { GeeksForGeeksProfileCard } from "./GeeksForGeeksProfileCard";
 import { HuggingFaceProfileCard } from "./HuggingFaceProfileCard";
 import { ChessProfileCard } from "./ChessProfileCard";
 import { CredlyProfileCard } from "./CredlyProfileCard";
@@ -312,6 +313,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     "codewars",
     "atcoder",
     "hackerrank",
+    "geeksforgeeks",
     "huggingface",
     "chess",
     "credly",
@@ -983,6 +985,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
   const isCodewarsMatch = (activeTab === "all" || activeTab === "competitive" || activeTab === "codewars") && matchesSearch("codewars", "Codewars", cwUsername);
   const isAtCoderMatch = (activeTab === "all" || activeTab === "competitive") && matchesSearch("atcoder", "AtCoder", atcoderUsername);
   const isHackerRankMatch = (activeTab === "all" || activeTab === "competitive" || activeTab === "hackerrank") && matchesSearch("hackerrank", "HackerRank", hrUsername);
+  const isGfgMatch = (activeTab === "all" || activeTab === "competitive") && matchesSearch("geeksforgeeks", "GeeksforGeeks", gfgUsername);
   const isHuggingFaceMatch = (activeTab === "all" || activeTab === "competitive" || activeTab === "opensource") && matchesSearch("huggingface", "Hugging Face", hfUsername);
   const isChessMatch = (activeTab === "all" || activeTab === "competitive") && matchesSearch("chess", "Chess.com", chessUsername);
   const isCredlyMatch = (activeTab === "all" || activeTab === "opensource") && matchesSearch("credly", "Credly", credlyUsername);
@@ -997,6 +1000,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     isCodewarsMatch ||
     isAtCoderMatch ||
     isHackerRankMatch ||
+    isGfgMatch ||
     isHuggingFaceMatch ||
     isChessMatch ||
     isCredlyMatch ||
@@ -1012,6 +1016,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
     "codewars",
     "atcoder",
     "hackerrank",
+    "geeksforgeeks",
     "huggingface",
     "chess",
     "credly",
@@ -1124,6 +1129,22 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             onEditHandle={() => handleOpenEdit("hackerrank")}
             onRefresh={() => handleSingleCardRefresh("hackerrank")}
             isRefreshing={Boolean(cardRefreshing.hackerrank || refreshing)}
+            isPinned={isPinned}
+            onTogglePin={onTogglePin}
+          />
+        </PlatformErrorBoundary>
+      );
+    } else if (key === "geeksforgeeks" && isGfgMatch) {
+      rawCard = (
+        <PlatformErrorBoundary platformName="GeeksforGeeks" onRetry={() => handleSingleCardRefresh("geeksforgeeks")}>
+          <GeeksForGeeksProfileCard
+            usernameOrHandle={gfgUsername}
+            stats={data?.geeksforgeeks}
+            error={data?.geeksforgeeksError}
+            onConnect={() => handleOpenEdit("geeksforgeeks")}
+            onEditHandle={() => handleOpenEdit("geeksforgeeks")}
+            onRefresh={() => handleSingleCardRefresh("geeksforgeeks")}
+            isRefreshing={Boolean(cardRefreshing.geeksforgeeks || refreshing)}
             isPinned={isPinned}
             onTogglePin={onTogglePin}
           />
