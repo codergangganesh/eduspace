@@ -1141,6 +1141,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
             usernameOrHandle={gfgUsername}
             stats={data?.geeksforgeeks}
             error={data?.geeksforgeeksError}
+            loading={Boolean(loading || (cardRefreshing.geeksforgeeks && !data?.geeksforgeeks))}
             onConnect={() => handleOpenEdit("geeksforgeeks")}
             onEditHandle={() => handleOpenEdit("geeksforgeeks")}
             onRefresh={() => handleSingleCardRefresh("geeksforgeeks")}
@@ -1665,6 +1666,24 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
                   className={cn(
                     "rounded-xl font-mono text-xs h-10 transition-all duration-300",
                     focusedPlatform === "hackerrank" && "ring-2 ring-primary/80 border-primary bg-primary/[0.03] shadow-sm"
+                  )}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="geeksforgeeks_input" className="text-xs font-semibold flex items-center gap-1.5">
+                  <span>GeeksforGeeks Username</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">(gfg.org/user/…)</span>
+                </Label>
+                <Input
+                  id="geeksforgeeks_input"
+                  placeholder="e.g. ganeshbabu123"
+                  value={geeksforgeeksInput}
+                  onChange={(e) => setGeeksforgeeksInput(e.target.value)}
+                  onFocus={() => setFocusedPlatform("geeksforgeeks")}
+                  className={cn(
+                    "rounded-xl font-mono text-xs h-10 transition-all duration-300",
+                    focusedPlatform === "geeksforgeeks" && "ring-2 ring-green-500/80 border-green-500 bg-green-500/[0.03] shadow-sm"
                   )}
                 />
               </div>
