@@ -1948,16 +1948,10 @@ export default function Profile() {
             </div>
           )}
 
-          {/* SECURITY SECTION (Screen Lock + 2FA + Passkeys + Password + Active Devices) */}
+          {/* SECURITY SECTION (2FA + Passkeys + Password) */}
           {activeTab === "security" && (
             <div className="space-y-6">
-              {/* Card 0: 4-Digit In-App PIN & Biometric Screen Lock */}
-              <PinSecurityCard />
-
-              {/* Card 0.5: Active Sessions & Device Manager */}
-              <ActiveDevicesCard />
-
-              {/* Card 1: Two-Factor Authentication (TOTP / Google Authenticator) */}
+              {/* Two-Factor Authentication (TOTP / Google Authenticator) */}
               <MfaSecurityCard />
 
               {/* Passkeys & Biometrics Card */}
