@@ -107,10 +107,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { code: "en", label: "English" },
     { code: "te", label: "తెలుగు (Telugu)" },
     { code: "hi", label: "हिन्दी (Hindi)" },
-    { code: "es", label: "Español" },
-    { code: "fr", label: "Français" },
-    { code: "de", label: "Deutsch" },
   ];
+
+
 
   const getNavLabel = (label: string) => {
     switch (label) {

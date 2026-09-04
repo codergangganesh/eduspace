@@ -302,11 +302,11 @@ export default function Profile() {
 
   const primaryMobileTabs = isLecturer
     ? visibleProfileTabs.filter(
-        (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "screen-lock" || tab.id === "security" || tab.id === "2fa"
-      )
+      (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "screen-lock" || tab.id === "security" || tab.id === "2fa"
+    )
     : visibleProfileTabs.filter(
-        (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "coding" || tab.id === "social"
-      );
+      (tab) => tab.id === "personal" || tab.id === "academic" || tab.id === "coding" || tab.id === "social"
+    );
   const secondaryMobileTabs = visibleProfileTabs.filter(
     (tab) => !primaryMobileTabs.some((p) => p.id === tab.id)
   );
@@ -2207,8 +2207,9 @@ export default function Profile() {
                   </label>
                   <LanguageSelector className="w-full sm:w-64" />
                   <p className="text-xs text-muted-foreground">
-                    {t("settings.interfaceLanguageDescription", "Choose between English, हिन्दी (Hindi), తెలుగు (Telugu), Español, and more.")}
+                    {t("settings.interfaceLanguageDescription", "Choose between English, తెలుగు (Telugu), and हिन्दी (Hindi).")}
                   </p>
+
                 </div>
 
                 {/* Theme */}

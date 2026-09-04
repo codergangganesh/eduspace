@@ -211,7 +211,6 @@ export default function LecturerDashboard() {
               </Card>
             </div>
 
-
           </div>
         </div>
       </div>

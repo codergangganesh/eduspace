@@ -182,8 +182,9 @@ export default function Settings() {
                   <div>
                     <span className="text-sm font-semibold">{t("settings.interfaceLanguage", "Interface Language")}</span>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("settings.interfaceLanguageDescription", "Choose between English, हिन्दी (Hindi), తెలుగు (Telugu), Español, and more.")}
+                      {t("settings.interfaceLanguageDescription", "Choose between English, తెలుగు (Telugu), and हिन्दी (Hindi).")}
                     </p>
+
                   </div>
                   <div className="w-full sm:w-56">
                     <LanguageSelector />

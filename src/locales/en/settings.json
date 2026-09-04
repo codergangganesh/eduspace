@@ -9,7 +9,7 @@
     "language": "Language & Locale",
     "languageDescription": "Choose the display language for your dashboard, navigation, and coursework.",
     "interfaceLanguage": "Interface Language",
-    "interfaceLanguageDescription": "Choose between English, हिन्दी (Hindi), తెలుగు (Telugu), Español, and more.",
+    "interfaceLanguageDescription": "Choose between English, తెలుగు (Telugu), and हिन्दी (Hindi).",
     "hideDashboardHeader": "Hide Dashboard Header",
     "hideDashboardHeaderDescription": "Remove the top navigation bar from your dashboard interface.",
     "transparency": "Transparency",

@@ -339,7 +339,7 @@ export async function fetchHackerEarthStats(usernameInput: string): Promise<{
         if (!text || text.includes("Access Denied") || text.includes("403 Forbidden") || text.includes("Just a moment...")) {
           continue;
         }
-        
+
         // Try JSON parse first
         try {
           const json = JSON.parse(text);

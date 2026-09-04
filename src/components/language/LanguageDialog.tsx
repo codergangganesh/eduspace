@@ -22,11 +22,6 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: "en", nativeLabel: "English", englishLabel: "English", region: "Global / US / UK" },
   { code: "te", nativeLabel: "తెలుగు", englishLabel: "Telugu", region: "Andhra Pradesh & Telangana" },
   { code: "hi", nativeLabel: "हिन्दी", englishLabel: "Hindi", region: "India" },
-  { code: "es", nativeLabel: "Español", englishLabel: "Spanish", region: "Spain & Latin America" },
-  { code: "fr", nativeLabel: "Français", englishLabel: "French", region: "France & Francophonie" },
-  { code: "de", nativeLabel: "Deutsch", englishLabel: "German", region: "Germany & Central Europe" },
-  { code: "zh", nativeLabel: "中文", englishLabel: "Chinese", region: "Simplified" },
-  { code: "ja", nativeLabel: "日本語", englishLabel: "Japanese", region: "Japan" },
 ];
 
 export function LanguageDialog() {
@@ -64,6 +59,8 @@ export function LanguageDialog() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 py-2 max-h-[60vh] overflow-y-auto pr-1">
           {SUPPORTED_LANGUAGES.map((lang) => {
+
+
             const isSelected = language === lang.code;
             return (
               <button

@@ -212,7 +212,7 @@ export function CodingProfiles({ className }: CodingProfilesProps) {
         localStorage.removeItem(`eduspace_github_token_${user.id}`);
         localStorage.removeItem(`eduspace_wakatime_apikey_${user.id}`);
         localStorage.removeItem(`eduspace_vercel_token_${user.id}`);
-      } catch {}
+      } catch { }
 
       getVercelConnection(user.id).then((res) => {
         if (res.success && res.data) {

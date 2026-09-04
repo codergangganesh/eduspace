@@ -139,14 +139,11 @@ export function Sidebar({ mode, setMode, isCollapsed, onHoverChange }: SidebarPr
 
   const languages = [
     { code: "en", label: "English" },
-    { code: "hi", label: "हिन्दी (Hindi)" },
     { code: "te", label: "తెలుగు (Telugu)" },
-    { code: "es", label: "Español (Spanish)" },
-    { code: "fr", label: "Français (French)" },
-    { code: "de", label: "Deutsch (German)" },
-    { code: "zh", label: "中文 (Chinese)" },
-    { code: "ja", label: "日本語 (Japanese)" },
+    { code: "hi", label: "हिन्दी (Hindi)" },
   ];
+
+
 
   const navItems = isLecturer ? lecturerNavItems : studentNavItems;
 
