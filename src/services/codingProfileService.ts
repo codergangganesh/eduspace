@@ -1759,8 +1759,16 @@ function parseCodeChefHtml(html: string, username: string): CodeChefStats | null
     }
   }
 
-  const avatarMatch = html.match(/class=['"]profileImage['"][^>]*src=['"]([^'"]+)['"]/i) || html.match(/src=['"](https:\/\/cdn\.codechef\.com\/sites\/default\/files\/uploads\/pictures\/[^'"]+)['"]/i);
-  if (avatarMatch) avatar = avatarMatch[1];
+  const avatarMatch =
+    html.match(/class=['"]profileImage['"][^>]*src=['"]([^'"]+)['"]/i) ||
+    html.match(/src=['"](https:\/\/cdn\.codechef\.com\/sites\/default\/files\/uploads\/pictures\/[^'"]+)['"]/i) ||
+    html.match(/<div[^>]*class=['"][^'"]*user-details-container[^'"]*[\s\S]*?<img[^>]*src=['"]([^'"]+)['"]/i) ||
+    html.match(/<img[^>]*class=['"][^'"]*profileImage[^'"]*['"][^>]*src=['"]([^'"]+)['"]/i);
+  if (avatarMatch) {
+    let rawAv = (avatarMatch[1] || avatarMatch[0]).trim();
+    if (rawAv.startsWith("//")) rawAv = `https:${rawAv}`;
+    avatar = rawAv;
+  }
 
   const countryNameMatch = html.match(/class="user-country-name"[^>]*>([^<]+)<\/span>/i) || html.match(/user-country-flag"[^>]*title="([^"]+)"/i);
   if (countryNameMatch) countryName = countryNameMatch[1].trim();

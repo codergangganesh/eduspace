@@ -232,7 +232,7 @@ serve(async (req: Request) => {
       languages: languages.length > 0 ? languages : null,
       badges: badges.length > 0 ? badges : null,
       recentChallenges,
-      avatar: null,
+      avatar: userRes.id ? `https://www.codewars.com/avatars/${userRes.id}` : null,
       profile_url: `https://www.codewars.com/users/${encodeURIComponent(cleanUsername)}`,
       last_updated: new Date().toISOString(),
     };

@@ -105,36 +105,54 @@ export function UserAvatarImage({
     if (!url) return null;
     let clean = url.trim();
     if (clean.startsWith("//")) clean = `https:${clean}`;
+    if (clean === "null" || clean === "undefined" || clean === "#" || clean.length < 5) return null;
     return clean;
   };
 
   const primary = normalizeUrl(src);
   const secondary = normalizeUrl(fallbackSrc);
 
-  const [activeSrc, setActiveSrc] = useState<string | null>(primary || secondary || null);
-  const [failed, setFailed] = useState(false);
+  // Build resilient candidate URL sequence:
+  // 1. Direct primary URL
+  // 2. Direct secondary URL (if distinct)
+  // 3. High-availability global image proxy (CORS-friendly, WebP optimized)
+  // 4. Secondary proxy URL (if distinct)
+  const candidateUrls = React.useMemo(() => {
+    const list: string[] = [];
+    if (primary) {
+      list.push(primary);
+    }
+    if (secondary && secondary !== primary) {
+      list.push(secondary);
+    }
+    if (primary && !primary.startsWith("data:") && !primary.includes("wsrv.nl")) {
+      list.push(`https://wsrv.nl/?url=${encodeURIComponent(primary)}&w=128&h=128&fit=cover`);
+    }
+    if (secondary && secondary !== primary && !secondary.startsWith("data:") && !secondary.includes("wsrv.nl")) {
+      list.push(`https://wsrv.nl/?url=${encodeURIComponent(secondary)}&w=128&h=128&fit=cover`);
+    }
+    return list;
+  }, [primary, secondary]);
+
+  const [candidateIndex, setCandidateIndex] = useState(0);
 
   useEffect(() => {
-    setActiveSrc(primary || secondary || null);
-    setFailed(false);
+    setCandidateIndex(0);
   }, [src, fallbackSrc]);
 
+  const activeSrc = candidateUrls[candidateIndex] || null;
   const initials = (fallbackText || name || "CP").trim().substring(0, 2).toUpperCase();
 
-  if (activeSrc && !failed) {
+  if (activeSrc) {
     return (
       <img
         src={activeSrc}
         alt={name || "User Avatar"}
         referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
+        loading="lazy"
         className={cn(sizeClass, "rounded-lg object-cover border shrink-0 shadow-xs", borderColor)}
         onError={() => {
-          if (secondary && activeSrc !== secondary) {
-            setActiveSrc(secondary);
-          } else {
-            setFailed(true);
-          }
+          setCandidateIndex((prev) => prev + 1);
         }}
       />
     );
@@ -144,7 +162,7 @@ export function UserAvatarImage({
     <div
       className={cn(
         sizeClass,
-        "rounded-lg border flex items-center justify-center font-extrabold text-[11px] shrink-0 shadow-xs",
+        "rounded-lg border flex items-center justify-center font-extrabold text-[11px] shrink-0 shadow-xs select-none",
         fallbackBg,
         fallbackTextColor
       )}

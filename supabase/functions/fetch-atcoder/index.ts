@@ -183,10 +183,11 @@ function parseAtCoderHtml(html: string, username: string): Partial<AtCoderStatsP
 
   // 10. Avatar
   const avatarMatch =
+    html.match(/(?:https?:)?\/\/img\.atcoder\.jp\/icons\/[a-zA-Z0-9_-]+\.(?:png|jpg|jpeg|gif|webp)/i) ||
     html.match(/class=["']avatar["'][^>]*src=["']([^"']+)["']/i) ||
     html.match(/src=["'](https:\/\/img\.atcoder\.jp\/icons\/[^"']+)["']/i);
   if (avatarMatch) {
-    const rawAvatar = avatarMatch[1].trim();
+    const rawAvatar = (avatarMatch[1] || avatarMatch[0]).trim();
     avatar = rawAvatar.startsWith("//") ? `https:${rawAvatar}` : rawAvatar;
   }
 

@@ -283,7 +283,9 @@ export async function fetchHackerRankStats(usernameInput: string): Promise<{
   const certificatesCount = parsedCerts.length;
 
   const name = profileData?.name || profileData?.personal_first_name || scoresData?.name || null;
-  const avatar = profileData?.avatar || profileData?.profile_image || scoresData?.avatar || null;
+  let rawAv = profileData?.avatar || profileData?.profile_image || scoresData?.avatar || null;
+  if (rawAv && rawAv.startsWith("//")) rawAv = `https:${rawAv}`;
+  const avatar = rawAv;
   const country = profileData?.country || scoresData?.country || null;
   const school = profileData?.school || profileData?.college || scoresData?.school || null;
   const level = profileData?.level || scoresData?.level || null;

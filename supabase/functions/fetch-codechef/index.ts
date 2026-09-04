@@ -275,9 +275,16 @@ function parseCodeChefHtml(html: string, username: string): Partial<CodeChefStat
     }
   }
 
-  const avatarMatch = html.match(/class=['"]profileImage['"][^>]*src=['"]([^'"]+)['"]/i) ||
-                      html.match(/src=['"](https:\/\/cdn\.codechef\.com\/sites\/default\/files\/uploads\/pictures\/[^'"]+)['"]/i);
-  if (avatarMatch) avatar = avatarMatch[1];
+  const avatarMatch =
+    html.match(/class=['"]profileImage['"][^>]*src=['"]([^'"]+)['"]/i) ||
+    html.match(/src=['"](https:\/\/cdn\.codechef\.com\/sites\/default\/files\/uploads\/pictures\/[^'"]+)['"]/i) ||
+    html.match(/<div[^>]*class=['"][^'"]*user-details-container[^'"]*[\s\S]*?<img[^>]*src=['"]([^'"]+)['"]/i) ||
+    html.match(/<img[^>]*class=['"][^'"]*profileImage[^'"]*['"][^>]*src=['"]([^'"]+)['"]/i);
+  if (avatarMatch) {
+    let rawAv = (avatarMatch[1] || avatarMatch[0]).trim();
+    if (rawAv.startsWith("//")) rawAv = `https:${rawAv}`;
+    avatar = rawAv;
+  }
 
   const countryNameMatch = html.match(/class="user-country-name"[^>]*>([^<]+)<\/span>/i) ||
                            html.match(/user-country-flag"[^>]*title="([^"]+)"/i);
@@ -411,6 +418,7 @@ serve(async (req: Request) => {
         const d = await codechefApiRes.value.json();
         if (d && d.success !== false) {
           merged = { ...merged, ...d };
+          if (d.profile || d.avatar || d.profile_image || d.profileImage) merged.avatar = d.profile || d.avatar || d.profile_image || d.profileImage;
           if (d.numberOfProblemsSolved) merged.totalSolved = d.numberOfProblemsSolved;
           if (d.currentRating) merged.rating = d.currentRating;
           if (d.highestRating) merged.maxRating = d.highestRating;
@@ -423,6 +431,7 @@ serve(async (req: Request) => {
         const d = await cpRatingRes.value.json();
         if (d && !d.error) {
           merged = { ...merged, ...d };
+          if (d.profile || d.avatar || d.profile_image || d.profileImage) merged.avatar = d.profile || d.avatar || d.profile_image || d.profileImage;
           if (typeof d.participation === "number") {
             merged.contestsParticipated = d.participation;
           }
@@ -441,12 +450,17 @@ serve(async (req: Request) => {
       if (competeApiRes.status === "fulfilled" && competeApiRes.value.ok) {
         const d = await competeApiRes.value.json();
         if (d && !d.error) {
+          if (!merged.avatar && (d.profile || d.avatar || d.profile_image)) merged.avatar = d.profile || d.avatar || d.profile_image;
           if (!merged.institution && d.institution) merged.institution = d.institution;
           if (!merged.studentOrProfessional && d.user_type) merged.studentOrProfessional = d.user_type;
           if (!merged.maxRating && d.max_rank) merged.maxRating = d.max_rank;
           if (!merged.globalRank && d.global_rank) merged.globalRank = parseRank(d.global_rank);
           if (!merged.countryRank && d.country_rank) merged.countryRank = parseRank(d.country_rank);
         }
+      }
+
+      if (merged.avatar && typeof merged.avatar === "string" && merged.avatar.startsWith("//")) {
+        merged.avatar = `https:${merged.avatar}`;
       }
 
       if (!merged.dsaRating && merged.rating) {
